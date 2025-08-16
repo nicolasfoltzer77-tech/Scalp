@@ -17,7 +17,4 @@ def calc_pnl_pct(entry_price: float, exit_price: float, side: int) -> float:
         raise ValueError("Prices must be positive")
     if side not in (1, -1):
         raise ValueError("side must be +1 (long) or -1 (short)")
-    if side == 1:
-        return (exit_price - entry_price) / entry_price * 100.0
-    else:
-        return (entry_price - exit_price) / entry_price * 100.0
+    return (exit_price - entry_price) / entry_price * 100.0 * side
