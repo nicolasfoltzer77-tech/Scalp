@@ -20,7 +20,9 @@ Sécurité
 
 import os, sys, json, time, hmac, hashlib, logging, math
 from urllib.parse import quote
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, IO
+
+from scalp.config import BotConfig, load_config
 
 # ---------------------------------------------------------------------------
 # Dépendances (auto-install si absentes, sans terminal)
@@ -32,45 +34,27 @@ except ModuleNotFoundError:
     subprocess.check_call([sys.executable, "-m", "pip", "install", "requests"])
     import requests
 
-# ---------------------------------------------------------------------------
-# Configuration (via variables d'env conseillées sur Paperspace)
-# ---------------------------------------------------------------------------
-CONFIG = {
-    "MEXC_ACCESS_KEY": os.getenv("MEXC_ACCESS_KEY", "A_METTRE"),
-    "MEXC_SECRET_KEY": os.getenv("MEXC_SECRET_KEY", "B_METTRE"),
-    "PAPER_TRADE": os.getenv("PAPER_TRADE", "true").lower() in ("1","true","yes","y"),
-    "SYMBOL": os.getenv("SYMBOL", "BTC_USDT"),          # format futures: BTC_USDT
-    "INTERVAL": os.getenv("INTERVAL", "Min1"),           # Min1, Min5, Min15, Min60, Hour4, Day1...
-    "EMA_FAST": int(os.getenv("EMA_FAST", "9")),
-    "EMA_SLOW": int(os.getenv("EMA_SLOW", "21")),
-    "RISK_PCT_EQUITY": float(os.getenv("RISK_PCT_EQUITY", "0.01")),  # 1% par trade
-    "LEVERAGE": int(os.getenv("LEVERAGE", "5")),
-    "OPEN_TYPE": int(os.getenv("OPEN_TYPE", "1")),       # 1=isolated, 2=cross
-    "STOP_LOSS_PCT": float(os.getenv("STOP_LOSS_PCT", "0.006")),   # 0.6%
-    "TAKE_PROFIT_PCT": float(os.getenv("TAKE_PROFIT_PCT", "0.012")),# 1.2%
-    "MAX_KLINES": int(os.getenv("MAX_KLINES", "400")),
-    "LOOP_SLEEP_SECS": int(os.getenv("LOOP_SLEEP_SECS", "10")),
-    "RECV_WINDOW": int(os.getenv("RECV_WINDOW", "30")),  # secondes (<=60)
-    "LOG_DIR": os.getenv("LOG_DIR", "./logs"),
-    "BASE_URL": os.getenv("MEXC_CONTRACT_BASE_URL", "https://contract.mexc.com"),
-}
+LOG_JSONL: Optional[IO[str]] = None
 
-# ---------------------------------------------------------------------------
-# Logging
-# ---------------------------------------------------------------------------
-os.makedirs(CONFIG["LOG_DIR"], exist_ok=True)
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s.%(msecs)03d %(levelname)s %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-    handlers=[
-        logging.FileHandler(os.path.join(CONFIG["LOG_DIR"], "bot.log"), encoding="utf-8"),
-        logging.StreamHandler(sys.stdout),
-    ],
-)
-LOG_JSONL = open(os.path.join(CONFIG["LOG_DIR"], "bot_events.jsonl"), "a", encoding="utf-8")
+
+def setup_logging(cfg: BotConfig) -> None:
+    os.makedirs(cfg.log_dir, exist_ok=True)
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s.%(msecs)03d %(levelname)s %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+        handlers=[
+            logging.FileHandler(os.path.join(cfg.log_dir, "bot.log"), encoding="utf-8"),
+            logging.StreamHandler(sys.stdout),
+        ],
+    )
+    global LOG_JSONL
+    LOG_JSONL = open(os.path.join(cfg.log_dir, "bot_events.jsonl"), "a", encoding="utf-8")
+
 
 def log_event(event: str, payload: Dict[str, Any]):
+    if LOG_JSONL is None:
+        return
     payload = dict(payload or {})
     payload["event"] = event
     payload["ts"] = int(time.time() * 1000)
@@ -83,11 +67,13 @@ def log_event(event: str, payload: Dict[str, Any]):
 # Headers: ApiKey, Request-Time (ms), Signature, Content-Type, Recv-Window
 # ---------------------------------------------------------------------------
 class MexcFuturesClient:
-    def __init__(self, access_key: str, secret_key: str, base_url: str, recv_window: int = 30):
+    def __init__(self, access_key: str, secret_key: str, base_url: str,
+                 recv_window: int = 30, paper_trade: bool = True):
         self.ak = access_key
         self.sk = secret_key
         self.base = base_url.rstrip("/")
         self.recv_window = recv_window
+        self.paper_trade = paper_trade
         if not self.ak or not self.sk or self.ak == "A_METTRE" or self.sk == "B_METTRE":
             logging.warning("⚠️ Clés API non définies. Le mode réel ne fonctionnera pas.")
 
@@ -202,12 +188,29 @@ class MexcFuturesClient:
         side: 1=open long, 2=close short, 3=open short, 4=close long
         type: 1=limit, 2=post-only, 3=IOC, 4=FOK, 5=market, 6=convert market to current price
         """
-        if CONFIG["PAPER_TRADE"]:
-            logging.info("PAPER_TRADE=True -> ordre simulé: side=%s vol=%s type=%s price=%s", side, vol, order_type, price)
-            return {"success": True, "paperTrade": True, "simulated": {
-                "symbol": symbol, "side": side, "vol": vol, "type": order_type, "price": price,
-                "openType": open_type, "leverage": leverage, "stopLossPrice": stop_loss, "takeProfitPrice": take_profit
-            }}
+        if self.paper_trade:
+            logging.info(
+                "PAPER_TRADE=True -> ordre simulé: side=%s vol=%s type=%s price=%s",
+                side,
+                vol,
+                order_type,
+                price,
+            )
+            return {
+                "success": True,
+                "paperTrade": True,
+                "simulated": {
+                    "symbol": symbol,
+                    "side": side,
+                    "vol": vol,
+                    "type": order_type,
+                    "price": price,
+                    "openType": open_type,
+                    "leverage": leverage,
+                    "stopLossPrice": stop_loss,
+                    "takeProfitPrice": take_profit,
+                },
+            }
 
         body = {
             "symbol": symbol,
@@ -264,14 +267,20 @@ def cross(last_fast: float, last_slow: float, prev_fast: float, prev_slow: float
     if down: return -1
     return 0
 
-def compute_position_size(contract_detail: Dict[str, Any], equity_usdt: float,
-                          price: float, risk_pct: float, leverage: int) -> int:
+def compute_position_size(
+    contract_detail: Dict[str, Any],
+    equity_usdt: float,
+    price: float,
+    risk_pct: float,
+    leverage: int,
+    symbol: str,
+) -> int:
     contracts = (contract_detail or {}).get("data", [])
     if not isinstance(contracts, list):
         contracts = [contract_detail.get("data")]
     c = None
     for row in contracts:
-        if row and row.get("symbol") == CONFIG["SYMBOL"]:
+        if row and row.get("symbol") == symbol:
             c = row
             break
     if not c:
@@ -291,23 +300,30 @@ def compute_position_size(contract_detail: Dict[str, Any], equity_usdt: float,
 # ---------------------------------------------------------------------------
 # Boucle principale
 # ---------------------------------------------------------------------------
-def main():
-    cfg = CONFIG
+def main(cfg: BotConfig) -> None:
+    setup_logging(cfg)
     client = MexcFuturesClient(
-        access_key=cfg["MEXC_ACCESS_KEY"],
-        secret_key=cfg["MEXC_SECRET_KEY"],
-        base_url=cfg["BASE_URL"],
-        recv_window=cfg["RECV_WINDOW"],
+        access_key=cfg.mexc_access_key,
+        secret_key=cfg.mexc_secret_key,
+        base_url=cfg.base_url,
+        recv_window=cfg.recv_window,
+        paper_trade=cfg.paper_trade,
     )
 
-    symbol = cfg["SYMBOL"]
-    interval = cfg["INTERVAL"]
-    ema_fast_n = cfg["EMA_FAST"]
-    ema_slow_n = cfg["EMA_SLOW"]
+    symbol = cfg.symbol
+    interval = cfg.interval
+    ema_fast_n = cfg.ema_fast
+    ema_slow_n = cfg.ema_slow
 
     logging.info("---- MEXC Futures bot démarré ----")
-    logging.info("SYMBOL=%s | INTERVAL=%s | EMA=%s/%s | PAPER_TRADE=%s",
-                 symbol, interval, ema_fast_n, ema_slow_n, cfg["PAPER_TRADE"])
+    logging.info(
+        "SYMBOL=%s | INTERVAL=%s | EMA=%s/%s | PAPER_TRADE=%s",
+        symbol,
+        interval,
+        ema_fast_n,
+        ema_slow_n,
+        cfg.paper_trade,
+    )
 
     # Specs contrat (taille, minVol, etc.)
     contract_detail = client.get_contract_detail(symbol)
@@ -336,12 +352,12 @@ def main():
             k = client.get_kline(symbol, interval=interval)
             if not (k and k.get("success") and "data" in k and "close" in k["data"]):
                 logging.warning("Réponse klines inattendue: %s", k)
-                time.sleep(cfg["LOOP_SLEEP_SECS"]); continue
+                time.sleep(cfg.loop_sleep_secs); continue
 
-            closes = k["data"]["close"][-cfg["MAX_KLINES"]:]
+            closes = k["data"]["close"][-cfg.max_klines:]
             if len(closes) < max(ema_fast_n, ema_slow_n) + 2:
                 logging.info("Pas assez d’historique pour EMA; retry...")
-                time.sleep(cfg["LOOP_SLEEP_SECS"]); continue
+                time.sleep(cfg.loop_sleep_secs); continue
 
             efull = ema(closes, ema_fast_n)
             eslow = ema(closes, ema_slow_n)
@@ -352,7 +368,7 @@ def main():
             tick = client.get_ticker(symbol)
             if not (tick and tick.get("success") and tick.get("data")):
                 logging.warning("Ticker vide: %s", tick)
-                time.sleep(cfg["LOOP_SLEEP_SECS"]); continue
+                time.sleep(cfg.loop_sleep_secs); continue
             tdata = tick["data"]
             if isinstance(tdata, list):
                 price = None
@@ -361,20 +377,26 @@ def main():
                         price = float(row.get("lastPrice")); break
                 if price is None:
                     logging.warning("Prix introuvable pour %s", symbol)
-                    time.sleep(cfg["LOOP_SLEEP_SECS"]); continue
+                    time.sleep(cfg.loop_sleep_secs); continue
             else:
                 price = float(tdata.get("lastPrice"))
 
-            vol = compute_position_size(contract_detail, equity_usdt, price,
-                                        cfg["RISK_PCT_EQUITY"], cfg["LEVERAGE"])
+            vol = compute_position_size(
+                contract_detail,
+                equity_usdt,
+                price,
+                cfg.risk_pct_equity,
+                cfg.leverage,
+                symbol,
+            )
             if vol <= 0:
                 logging.info("vol calculé = 0; on attend.")
-                time.sleep(cfg["LOOP_SLEEP_SECS"]); continue
+                time.sleep(cfg.loop_sleep_secs); continue
 
-            sl_long = price * (1.0 - cfg["STOP_LOSS_PCT"])
-            tp_long = price * (1.0 + cfg["TAKE_PROFIT_PCT"])
-            sl_short = price * (1.0 + cfg["STOP_LOSS_PCT"])
-            tp_short = price * (1.0 - cfg["TAKE_PROFIT_PCT"])
+            sl_long = price * (1.0 - cfg.stop_loss_pct)
+            tp_long = price * (1.0 + cfg.take_profit_pct)
+            sl_short = price * (1.0 + cfg.stop_loss_pct)
+            tp_short = price * (1.0 - cfg.take_profit_pct)
 
             log_event("signal", {"fast": last_fast, "slow": last_slow, "cross": x,
                                  "price": price, "pos": current_pos, "vol": vol})
@@ -382,31 +404,63 @@ def main():
             # type=5 (market). On passe "price" à titre conservateur.
             if x == +1 and current_pos <= 0:
                 if current_pos < 0:
-                    client.place_order(symbol, side=4, vol=vol, order_type=5, price=price,
-                                       open_type=CONFIG["OPEN_TYPE"], leverage=CONFIG["LEVERAGE"], reduce_only=True)
+                    client.place_order(
+                        symbol,
+                        side=4,
+                        vol=vol,
+                        order_type=5,
+                        price=price,
+                        open_type=cfg.open_type,
+                        leverage=cfg.leverage,
+                        reduce_only=True,
+                    )
                     current_pos = 0; time.sleep(0.3)
-                resp = client.place_order(symbol, side=1, vol=vol, order_type=5, price=price,
-                                          open_type=CONFIG["OPEN_TYPE"], leverage=CONFIG["LEVERAGE"],
-                                          stop_loss=sl_long, take_profit=tp_long)
+                resp = client.place_order(
+                    symbol,
+                    side=1,
+                    vol=vol,
+                    order_type=5,
+                    price=price,
+                    open_type=cfg.open_type,
+                    leverage=cfg.leverage,
+                    stop_loss=sl_long,
+                    take_profit=tp_long,
+                )
                 log_event("order_long", resp)
                 logging.info("→ LONG vol=%s @~%.2f (SL~%.2f / TP~%.2f) [%s]",
-                             vol, price, sl_long, tp_long, "paper" if CONFIG["PAPER_TRADE"] else "live")
+                             vol, price, sl_long, tp_long, "paper" if cfg.paper_trade else "live")
                 current_pos = +1
 
             elif x == -1 and current_pos >= 0:
                 if current_pos > 0:
-                    client.place_order(symbol, side=2, vol=vol, order_type=5, price=price,
-                                       open_type=CONFIG["OPEN_TYPE"], leverage=CONFIG["LEVERAGE"], reduce_only=True)
+                    client.place_order(
+                        symbol,
+                        side=2,
+                        vol=vol,
+                        order_type=5,
+                        price=price,
+                        open_type=cfg.open_type,
+                        leverage=cfg.leverage,
+                        reduce_only=True,
+                    )
                     current_pos = 0; time.sleep(0.3)
-                resp = client.place_order(symbol, side=3, vol=vol, order_type=5, price=price,
-                                          open_type=CONFIG["OPEN_TYPE"], leverage=CONFIG["LEVERAGE"],
-                                          stop_loss=sl_short, take_profit=tp_short)
+                resp = client.place_order(
+                    symbol,
+                    side=3,
+                    vol=vol,
+                    order_type=5,
+                    price=price,
+                    open_type=cfg.open_type,
+                    leverage=cfg.leverage,
+                    stop_loss=sl_short,
+                    take_profit=tp_short,
+                )
                 log_event("order_short", resp)
                 logging.info("→ SHORT vol=%s @~%.2f (SL~%.2f / TP~%.2f) [%s]",
-                             vol, price, sl_short, tp_short, "paper" if CONFIG["PAPER_TRADE"] else "live")
+                             vol, price, sl_short, tp_short, "paper" if cfg.paper_trade else "live")
                 current_pos = -1
 
-            time.sleep(cfg["LOOP_SLEEP_SECS"])
+            time.sleep(cfg.loop_sleep_secs)
 
         except KeyboardInterrupt:
             logging.info("Arrêt manuel.")
@@ -416,4 +470,5 @@ def main():
             time.sleep(3)
 
 if __name__ == "__main__":
-    main()
+    cfg = load_config()
+    main(cfg)
