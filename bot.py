@@ -22,6 +22,8 @@ import os, sys, json, time, hmac, hashlib, logging, math
 from urllib.parse import quote
 from typing import Dict, Any, Optional, List
 
+from scalp.logging_utils import get_jsonl_logger
+
 # ---------------------------------------------------------------------------
 # Dépendances
 # ---------------------------------------------------------------------------
@@ -63,14 +65,12 @@ logging.basicConfig(
         logging.StreamHandler(sys.stdout),
     ],
 )
-LOG_JSONL = open(os.path.join(CONFIG["LOG_DIR"], "bot_events.jsonl"), "a", encoding="utf-8")
 
-def log_event(event: str, payload: Dict[str, Any]):
-    payload = dict(payload or {})
-    payload["event"] = event
-    payload["ts"] = int(time.time() * 1000)
-    LOG_JSONL.write(json.dumps(payload, ensure_ascii=False) + "\n")
-    LOG_JSONL.flush()
+log_event = get_jsonl_logger(
+    os.path.join(CONFIG["LOG_DIR"], "bot_events.jsonl"),
+    max_bytes=5_000_000,
+    backup_count=5,
+)
 
 # ---------------------------------------------------------------------------
 # Client REST Futures (Contract)
