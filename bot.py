@@ -296,6 +296,106 @@ def compute_position_size(contract_detail: Dict[str, Any], equity_usdt: float,
     return max(min_vol, vol)
 
 # ---------------------------------------------------------------------------
+# Sélection des paires de trading
+# ---------------------------------------------------------------------------
+def get_trade_pairs(client: "MexcFuturesClient") -> list[dict]:
+    """Récupère toutes les paires disponibles via ``get_ticker``.
+
+    Parameters
+    ----------
+    client:
+        Instance de :class:`MexcFuturesClient`.
+
+    Returns
+    -------
+    list[dict]
+        Liste des entrées brutes renvoyées par l'API pour chaque paire.
+    """
+
+    tick = client.get_ticker()
+    data = tick.get("data") if isinstance(tick, dict) else []
+    if not data:
+        return []
+    return data if isinstance(data, list) else [data]
+
+
+def select_top_pairs(client: "MexcFuturesClient", top_n: int = 10,
+                     key: str = "volume") -> list[dict]:
+    """Filtre les ``top_n`` paires selon la clé numérique ``key``.
+
+    Les volumes sont convertis en ``float`` et triés par ordre décroissant.
+    Les entrées qui n'ont pas la clé demandée sont considérées avec un volume
+    nul.
+    """
+
+    pairs = get_trade_pairs(client)
+
+    def volume(row: dict) -> float:
+        try:
+            return float(row.get(key, 0))
+        except (TypeError, ValueError):
+            return 0.0
+
+    pairs.sort(key=volume, reverse=True)
+    return pairs[:top_n]
+
+
+def find_trade_positions(client: "MexcFuturesClient", pairs: list[dict],
+                         *, interval: str = "Min1",
+                         ema_fast_n: Optional[int] = None,
+                         ema_slow_n: Optional[int] = None) -> list[dict]:
+    """Applique la stratégie EMA/cross sur une liste de paires.
+
+    Parameters
+    ----------
+    client:
+        Client REST pour interroger l'API.
+    pairs:
+        Liste des dictionnaires renvoyés par :func:`select_top_pairs`.
+    interval:
+        Intervalle de klines utilisé.
+    ema_fast_n, ema_slow_n:
+        Fenêtres EMA; par défaut celles définies dans ``CONFIG``.
+
+    Returns
+    -------
+    list[dict]
+        Liste des signaux détectés sous la forme ``{"symbol": str,
+        "signal": "long"|"short", "price": float}``.
+    """
+
+    ema_fast_n = ema_fast_n or CONFIG.get("EMA_FAST", 9)
+    ema_slow_n = ema_slow_n or CONFIG.get("EMA_SLOW", 21)
+    results: list[dict] = []
+
+    for info in pairs:
+        symbol = info.get("symbol")
+        if not symbol:
+            continue
+        k = client.get_kline(symbol, interval=interval)
+        closes = k.get("data", {}).get("close", []) if isinstance(k, dict) else []
+        if len(closes) < max(ema_fast_n, ema_slow_n) + 2:
+            continue
+
+        efull = ema(closes, ema_fast_n)
+        eslow = ema(closes, ema_slow_n)
+        signal = cross(efull[-1], eslow[-1], efull[-2], eslow[-2])
+        if signal == 1:
+            results.append({
+                "symbol": symbol,
+                "signal": "long",
+                "price": float(info.get("lastPrice", 0.0)),
+            })
+        elif signal == -1:
+            results.append({
+                "symbol": symbol,
+                "signal": "short",
+                "price": float(info.get("lastPrice", 0.0)),
+            })
+
+    return results
+
+# ---------------------------------------------------------------------------
 # Boucle principale
 # ---------------------------------------------------------------------------
 def main():
