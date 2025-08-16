@@ -1,4 +1,17 @@
 # Scalp
+<<< codex/configure-pytest-and-create-tests-directory-ws8qdl
+
+Bot MEXC Futures.
+
+## Tests
+
+Installez les dépendances de développement et lancez la suite :
+
+```bash
+pip install -r requirements-dev.txt
+pytest  # ou make test
+```
+=====
 Bot de trading pour les futures USDT-M de MEXC. Ce projet est **expérimental** et fourni à des fins éducatives.
 
 ## Installation
@@ -52,4 +65,4 @@ Installez les dépendances nécessaires avec :
 pip install -r requirements.txt
 ```
 
-
+>> main
