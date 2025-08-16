@@ -40,6 +40,7 @@ python bot.py
 ```
 
 Les journaux sont écrits dans le dossier `logs/` et affichés sur la console. Le bot tourne en boucle jusqu'à `Ctrl+C`.
+Les ouvertures et fermetures de positions y sont consignées avec leur PnL calculé en pourcentage dans le fichier `bot_events.jsonl`.
 
 ## Avertissement
 

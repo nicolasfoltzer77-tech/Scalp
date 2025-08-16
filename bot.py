@@ -23,6 +23,7 @@ from urllib.parse import quote
 from typing import Dict, Any, Optional, List
 
 from scalp.logging_utils import get_jsonl_logger
+from scalp.metrics import calc_pnl_pct
 
 # ---------------------------------------------------------------------------
 # Dépendances
@@ -329,6 +330,7 @@ def main():
 
     prev_fast = prev_slow = None
     current_pos = 0  # +1 long, -1 short, 0 flat
+    entry_price = None
 
     while True:
         try:
@@ -381,29 +383,65 @@ def main():
             # type=5 (market). On passe "price" à titre conservateur.
             if x == +1 and current_pos <= 0:
                 if current_pos < 0:
-                    client.place_order(symbol, side=4, vol=vol, order_type=5, price=price,
+                    if entry_price is not None:
+                        pnl = calc_pnl_pct(entry_price, price, -1)
+                        log_event("position_closed", {
+                            "side": "short",
+                            "entry": entry_price,
+                            "exit": price,
+                            "pnl_pct": pnl,
+                        })
+                    client.place_order(symbol, side=2, vol=vol, order_type=5, price=price,
                                        open_type=CONFIG["OPEN_TYPE"], leverage=CONFIG["LEVERAGE"], reduce_only=True)
-                    current_pos = 0; time.sleep(0.3)
+                    current_pos = 0
+                    entry_price = None
+                    time.sleep(0.3)
                 resp = client.place_order(symbol, side=1, vol=vol, order_type=5, price=price,
                                           open_type=CONFIG["OPEN_TYPE"], leverage=CONFIG["LEVERAGE"],
                                           stop_loss=sl_long, take_profit=tp_long)
                 log_event("order_long", resp)
                 logging.info("→ LONG vol=%s @~%.2f (SL~%.2f / TP~%.2f) [%s]",
                              vol, price, sl_long, tp_long, "paper" if CONFIG["PAPER_TRADE"] else "live")
+                log_event("position_opened", {
+                    "side": "long",
+                    "price": price,
+                    "vol": vol,
+                    "sl_pct": CONFIG["STOP_LOSS_PCT"] * 100,
+                    "tp_pct": CONFIG["TAKE_PROFIT_PCT"] * 100,
+                })
                 current_pos = +1
+                entry_price = price
 
             elif x == -1 and current_pos >= 0:
                 if current_pos > 0:
-                    client.place_order(symbol, side=2, vol=vol, order_type=5, price=price,
+                    if entry_price is not None:
+                        pnl = calc_pnl_pct(entry_price, price, 1)
+                        log_event("position_closed", {
+                            "side": "long",
+                            "entry": entry_price,
+                            "exit": price,
+                            "pnl_pct": pnl,
+                        })
+                    client.place_order(symbol, side=4, vol=vol, order_type=5, price=price,
                                        open_type=CONFIG["OPEN_TYPE"], leverage=CONFIG["LEVERAGE"], reduce_only=True)
-                    current_pos = 0; time.sleep(0.3)
+                    current_pos = 0
+                    entry_price = None
+                    time.sleep(0.3)
                 resp = client.place_order(symbol, side=3, vol=vol, order_type=5, price=price,
                                           open_type=CONFIG["OPEN_TYPE"], leverage=CONFIG["LEVERAGE"],
                                           stop_loss=sl_short, take_profit=tp_short)
                 log_event("order_short", resp)
                 logging.info("→ SHORT vol=%s @~%.2f (SL~%.2f / TP~%.2f) [%s]",
                              vol, price, sl_short, tp_short, "paper" if CONFIG["PAPER_TRADE"] else "live")
+                log_event("position_opened", {
+                    "side": "short",
+                    "price": price,
+                    "vol": vol,
+                    "sl_pct": CONFIG["STOP_LOSS_PCT"] * 100,
+                    "tp_pct": CONFIG["TAKE_PROFIT_PCT"] * 100,
+                })
                 current_pos = -1
+                entry_price = price
 
             time.sleep(cfg["LOOP_SLEEP_SECS"])
 
