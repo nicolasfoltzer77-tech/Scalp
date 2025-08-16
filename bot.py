@@ -78,11 +78,13 @@ log_event = get_jsonl_logger(
 # Headers: ApiKey, Request-Time (ms), Signature, Content-Type, Recv-Window
 # ---------------------------------------------------------------------------
 class MexcFuturesClient:
-    def __init__(self, access_key: str, secret_key: str, base_url: str, recv_window: int = 30):
+    def __init__(self, access_key: str, secret_key: str, base_url: str,
+                 recv_window: int = 30, paper_trade: bool = True):
         self.ak = access_key
         self.sk = secret_key
         self.base = base_url.rstrip("/")
         self.recv_window = recv_window
+        self.paper_trade = paper_trade
         if not self.ak or not self.sk or self.ak == "A_METTRE" or self.sk == "B_METTRE":
             logging.warning("⚠️ Clés API non définies. Le mode réel ne fonctionnera pas.")
 
@@ -197,7 +199,7 @@ class MexcFuturesClient:
         side: 1=open long, 2=close short, 3=open short, 4=close long
         type: 1=limit, 2=post-only, 3=IOC, 4=FOK, 5=market, 6=convert market to current price
         """
-        if CONFIG["PAPER_TRADE"]:
+        if self.paper_trade:
             logging.info("PAPER_TRADE=True -> ordre simulé: side=%s vol=%s type=%s price=%s", side, vol, order_type, price)
             return {"success": True, "paperTrade": True, "simulated": {
                 "symbol": symbol, "side": side, "vol": vol, "type": order_type, "price": price,
@@ -294,6 +296,7 @@ def main():
         secret_key=cfg["MEXC_SECRET_KEY"],
         base_url=cfg["BASE_URL"],
         recv_window=cfg["RECV_WINDOW"],
+        paper_trade=cfg["PAPER_TRADE"],
     )
 
     symbol = cfg["SYMBOL"]
