@@ -180,6 +180,17 @@ class MexcFuturesClient:
 
     # --- Comptes & positions
     def get_assets(self) -> Dict[str, Any]:
+        if self.paper_trade:
+            return {
+                "success": True,
+                "code": 0,
+                "data": [
+                    {
+                        "currency": "USDT",
+                        "equity": 100.0,
+                    }
+                ],
+            }
         return self._private_request("GET", "/api/v1/private/account/assets")
 
     def get_positions(self) -> Dict[str, Any]:
@@ -264,7 +275,8 @@ def cross(last_fast: float, last_slow: float, prev_fast: float, prev_slow: float
 
 def compute_position_size(contract_detail: Dict[str, Any], equity_usdt: float,
                           price: float, risk_pct: float, leverage: int,
-                          symbol: str) -> int:
+                          symbol: Optional[str] = None) -> int:
+    symbol = symbol or CONFIG.get("SYMBOL")
     contracts = (contract_detail or {}).get("data", [])
     if not isinstance(contracts, list):
         contracts = [contract_detail.get("data")]
