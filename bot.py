@@ -260,13 +260,14 @@ def cross(last_fast: float, last_slow: float, prev_fast: float, prev_slow: float
     return 0
 
 def compute_position_size(contract_detail: Dict[str, Any], equity_usdt: float,
-                          price: float, risk_pct: float, leverage: int) -> int:
+                          price: float, risk_pct: float, leverage: int,
+                          symbol: str) -> int:
     contracts = (contract_detail or {}).get("data", [])
     if not isinstance(contracts, list):
         contracts = [contract_detail.get("data")]
     c = None
     for row in contracts:
-        if row and row.get("symbol") == CONFIG["SYMBOL"]:
+        if row and row.get("symbol") == symbol:
             c = row
             break
     if not c:
@@ -361,7 +362,7 @@ def main():
                 price = float(tdata.get("lastPrice"))
 
             vol = compute_position_size(contract_detail, equity_usdt, price,
-                                        cfg["RISK_PCT_EQUITY"], cfg["LEVERAGE"])
+                                        cfg["RISK_PCT_EQUITY"], cfg["LEVERAGE"], symbol)
             if vol <= 0:
                 logging.info("vol calculé = 0; on attend.")
                 time.sleep(cfg["LOOP_SLEEP_SECS"]); continue
