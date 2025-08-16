@@ -29,6 +29,15 @@ Exemple de configuration :
 export MEXC_ACCESS_KEY="votre_cle"
 export MEXC_SECRET_KEY="votre_secret"
 export PAPER_TRADE=true
+export SYMBOL=BTC_USDT
+export INTERVAL=Min1
+export EMA_FAST=9
+export EMA_SLOW=21
+export RISK_PCT_EQUITY=1
+export LEVERAGE=5
+export STOP_LOSS_PCT=0.5
+export TAKE_PROFIT_PCT=1
+export LOG_DIR=logs
 python bot.py
 ```
 
