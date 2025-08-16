@@ -22,15 +22,12 @@ import os, sys, json, time, hmac, hashlib, logging, math
 from urllib.parse import quote
 from typing import Dict, Any, Optional, List
 
+from scalp.logging_utils import get_jsonl_logger
+
 # ---------------------------------------------------------------------------
-# Dépendances (auto-install si absentes, sans terminal)
+# Dépendances
 # ---------------------------------------------------------------------------
-try:
-    import requests
-except ModuleNotFoundError:
-    import subprocess
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "requests"])
-    import requests
+import requests
 
 # ---------------------------------------------------------------------------
 # Configuration (via variables d'env conseillées sur Paperspace)
@@ -68,14 +65,12 @@ logging.basicConfig(
         logging.StreamHandler(sys.stdout),
     ],
 )
-LOG_JSONL = open(os.path.join(CONFIG["LOG_DIR"], "bot_events.jsonl"), "a", encoding="utf-8")
 
-def log_event(event: str, payload: Dict[str, Any]):
-    payload = dict(payload or {})
-    payload["event"] = event
-    payload["ts"] = int(time.time() * 1000)
-    LOG_JSONL.write(json.dumps(payload, ensure_ascii=False) + "\n")
-    LOG_JSONL.flush()
+log_event = get_jsonl_logger(
+    os.path.join(CONFIG["LOG_DIR"], "bot_events.jsonl"),
+    max_bytes=5_000_000,
+    backup_count=5,
+)
 
 # ---------------------------------------------------------------------------
 # Client REST Futures (Contract)
@@ -83,11 +78,13 @@ def log_event(event: str, payload: Dict[str, Any]):
 # Headers: ApiKey, Request-Time (ms), Signature, Content-Type, Recv-Window
 # ---------------------------------------------------------------------------
 class MexcFuturesClient:
-    def __init__(self, access_key: str, secret_key: str, base_url: str, recv_window: int = 30):
+    def __init__(self, access_key: str, secret_key: str, base_url: str,
+                 recv_window: int = 30, paper_trade: bool = True):
         self.ak = access_key
         self.sk = secret_key
         self.base = base_url.rstrip("/")
         self.recv_window = recv_window
+        self.paper_trade = paper_trade
         if not self.ak or not self.sk or self.ak == "A_METTRE" or self.sk == "B_METTRE":
             logging.warning("⚠️ Clés API non définies. Le mode réel ne fonctionnera pas.")
 
@@ -202,7 +199,7 @@ class MexcFuturesClient:
         side: 1=open long, 2=close short, 3=open short, 4=close long
         type: 1=limit, 2=post-only, 3=IOC, 4=FOK, 5=market, 6=convert market to current price
         """
-        if CONFIG["PAPER_TRADE"]:
+        if self.paper_trade:
             logging.info("PAPER_TRADE=True -> ordre simulé: side=%s vol=%s type=%s price=%s", side, vol, order_type, price)
             return {"success": True, "paperTrade": True, "simulated": {
                 "symbol": symbol, "side": side, "vol": vol, "type": order_type, "price": price,
@@ -265,13 +262,14 @@ def cross(last_fast: float, last_slow: float, prev_fast: float, prev_slow: float
     return 0
 
 def compute_position_size(contract_detail: Dict[str, Any], equity_usdt: float,
-                          price: float, risk_pct: float, leverage: int) -> int:
+                          price: float, risk_pct: float, leverage: int,
+                          symbol: str) -> int:
     contracts = (contract_detail or {}).get("data", [])
     if not isinstance(contracts, list):
         contracts = [contract_detail.get("data")]
     c = None
     for row in contracts:
-        if row and row.get("symbol") == CONFIG["SYMBOL"]:
+        if row and row.get("symbol") == symbol:
             c = row
             break
     if not c:
@@ -298,6 +296,7 @@ def main():
         secret_key=cfg["MEXC_SECRET_KEY"],
         base_url=cfg["BASE_URL"],
         recv_window=cfg["RECV_WINDOW"],
+        paper_trade=cfg["PAPER_TRADE"],
     )
 
     symbol = cfg["SYMBOL"]
@@ -366,7 +365,7 @@ def main():
                 price = float(tdata.get("lastPrice"))
 
             vol = compute_position_size(contract_detail, equity_usdt, price,
-                                        cfg["RISK_PCT_EQUITY"], cfg["LEVERAGE"])
+                                        cfg["RISK_PCT_EQUITY"], cfg["LEVERAGE"], symbol)
             if vol <= 0:
                 logging.info("vol calculé = 0; on attend.")
                 time.sleep(cfg["LOOP_SLEEP_SECS"]); continue
