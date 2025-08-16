@@ -93,3 +93,11 @@ def test_private_request_http_error(monkeypatch):
     assert resp["success"] is False
     assert resp["status_code"] == 418
     assert "teapot" in resp["error"]
+
+
+def test_get_assets_paper_trade():
+    client = MexcFuturesClient("key", "secret", "https://test", paper_trade=True)
+    assets = client.get_assets()
+    assert assets["success"] is True
+    usdt = next((row for row in assets.get("data", []) if row.get("currency") == "USDT"), None)
+    assert usdt and usdt["equity"] == 100.0
