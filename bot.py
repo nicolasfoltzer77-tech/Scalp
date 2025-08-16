@@ -23,14 +23,9 @@ from urllib.parse import quote
 from typing import Dict, Any, Optional, List
 
 # ---------------------------------------------------------------------------
-# Dépendances (auto-install si absentes, sans terminal)
+# Dépendances
 # ---------------------------------------------------------------------------
-try:
-    import requests
-except ModuleNotFoundError:
-    import subprocess
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "requests"])
-    import requests
+import requests
 
 # ---------------------------------------------------------------------------
 # Configuration (via variables d'env conseillées sur Paperspace)
