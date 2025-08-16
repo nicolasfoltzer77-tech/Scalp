@@ -5,7 +5,7 @@ import pytest
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 sys.modules['requests'] = types.ModuleType('requests')
-from bot import compute_position_size
+from scalp.strategy import compute_position_size
 
 
 def test_compute_position_size_basic():
