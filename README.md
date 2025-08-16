@@ -1,5 +1,4 @@
 # Scalp
-
 Bot de trading pour les futures USDT-M de MEXC. Ce projet est **expérimental** et fourni à des fins éducatives.
 
 ## Installation
@@ -45,3 +44,12 @@ Les journaux sont écrits dans le dossier `logs/` et affichés sur la console. L
 ## Avertissement
 
 © 2025 — Usage à vos risques. Ceci n’est pas un conseil financier.
+## Installation
+
+Installez les dépendances nécessaires avec :
+
+```bash
+pip install -r requirements.txt
+```
+
+
