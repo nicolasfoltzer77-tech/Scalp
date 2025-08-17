@@ -79,6 +79,22 @@ log_event = get_jsonl_logger(
     backup_count=5,
 )
 
+
+def check_config() -> None:
+    """Display a color coded status of important environment variables."""
+    critical = {"MEXC_ACCESS_KEY", "MEXC_SECRET_KEY"}
+    optional = {"NOTIFY_URL", "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID"}
+    all_keys = sorted(set(CONFIG.keys()) | optional)
+    red, orange, green, reset = "\033[91m", "\033[93m", "\033[92m", "\033[0m"
+    for key in all_keys:
+        val = os.getenv(key)
+        if key in critical and (not val or val in {"", "A_METTRE", "B_METTRE"}):
+            logging.info("%s%s%s: critique", red, key, reset)
+        elif val:
+            logging.info("%s%s%s: dispo", green, key, reset)
+        else:
+            logging.info("%s%s%s: absente", orange, key, reset)
+
 # ---------------------------------------------------------------------------
 # Client REST Futures (Contract)
 # Signature futures: HMAC_SHA256( accessKey + reqTime + requestParamString )
@@ -429,6 +445,7 @@ def backtest_trades(trades: List[Dict[str, Any]], *,
 # ---------------------------------------------------------------------------
 def main():
     cfg = CONFIG
+    check_config()
     client = MexcFuturesClient(
         access_key=cfg["MEXC_ACCESS_KEY"],
         secret_key=cfg["MEXC_SECRET_KEY"],
