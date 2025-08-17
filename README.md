@@ -28,8 +28,10 @@ Le bot lit sa configuration via des variables d'environnement :
 - `EMA_FAST`, `EMA_SLOW` : périodes des EMA utilisées par la stratégie.
 - `RISK_PCT_EQUITY`, `LEVERAGE`, `STOP_LOSS_PCT`, `TAKE_PROFIT_PCT` : paramètres de gestion du risque.
 - `LOG_DIR` : dossier où seront écrits les fichiers de log.
+
 - `NOTIFY_URL` : URL d'un webhook HTTP pour recevoir les événements (optionnel, peut être utilisé en plus de Telegram).
 - `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` : pour envoyer les notifications sur Telegram (optionnel, peut être combiné avec le webhook).
+
 
 Exemple :
 
@@ -49,6 +51,19 @@ python bot.py
 ```
 
 Les journaux sont écrits dans `logs/` et affichés sur la console. Le bot tourne jusqu'à `Ctrl+C`. Les ouvertures et fermetures de positions sont consignées dans `bot_events.jsonl`.
+
+## Version
+
+La version du bot est stockée dans le fichier `scalp/VERSION` et exposée dans
+le code via la variable `scalp.__version__` :
+
+```python
+from scalp import __version__
+print(__version__)
+```
+
+Pour incrémenter la version, utilisez `scalp.version.bump_version` avec
+`"major"`, `"minor"` ou `"patch"` comme argument.
 
 ## Avertissement
 

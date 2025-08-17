@@ -54,6 +54,7 @@ def test_notify_posts_telegram(monkeypatch):
     assert "bar" in calls[0]["json"]["text"]
 
 
+
 def test_notify_posts_both(monkeypatch):
     calls = []
 
@@ -70,3 +71,4 @@ def test_notify_posts_both(monkeypatch):
     assert len(calls) == 2
     assert calls[0]["url"] == "http://example.com"
     assert calls[1]["url"] == "https://api.telegram.org/botabc/sendMessage"
+
