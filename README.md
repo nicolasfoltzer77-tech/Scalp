@@ -48,6 +48,33 @@ python bot.py
 
 Les journaux sont écrits dans `logs/` et affichés sur la console. Le bot tourne jusqu'à `Ctrl+C`. Les ouvertures et fermetures de positions sont consignées dans `bot_events.jsonl`.
 
+## Version
+
+La version du bot est stockée dans le fichier `scalp/VERSION` et exposée dans
+le code via la variable `scalp.__version__` :
+
+```python
+from scalp import __version__
+print(__version__)
+```
+
+Pour incrémenter la version, utilisez `scalp.version.bump_version` avec
+`"major"`, `"minor"` ou `"patch"` comme argument. La fonction
+`scalp.version.bump_version_from_message` permet également de déterminer
+automatiquement l'incrément à appliquer à partir d'un message de commit
+suivant la convention [Conventional Commits](https://www.conventionalcommits.org).
+
+Exemple d'incrément basé sur un message :
+
+```python
+from scalp.version import bump_version_from_message
+bump_version_from_message("feat: add new strategy")
+```
+
+Exécuté en tant que script, `python -m scalp.version` lit le dernier
+message de commit `git` et met à jour le fichier `VERSION` en
+conséquence.
+
 ## Avertissement
 
 © 2025 — Usage à vos risques. Ceci n'est pas un conseil financier.
