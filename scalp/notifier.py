@@ -5,7 +5,30 @@ import logging
 import os
 from typing import Any, Dict
 
-import requests
+try:  # pragma: no cover - guarded import for optional dependency
+    import requests as _requests
+    # ``requests`` may be provided as a stub during tests. Ensure it exposes a
+    # ``post`` attribute so callers can monkeypatch it reliably.
+    if not hasattr(_requests, "post"):
+        raise ImportError
+    requests = _requests
+except Exception:  # pragma: no cover - fallback when ``requests`` is missing
+    class _Requests:
+        """Minimal stand‑in for :mod:`requests` when the real library is absent."""
+
+        def post(self, *args: Any, **kwargs: Any) -> None:  # pragma: no cover - safety
+            raise RuntimeError("requests.post unavailable")
+
+    requests = _Requests()  # type: ignore[assignment]
+
+
+def _format_text(event: str, payload: Dict[str, Any] | None = None) -> str:
+    """Return a human readable text describing the event payload."""
+    text = event
+    if payload:
+        items = ", ".join(f"{k}={v}" for k, v in payload.items())
+        text = f"{text} {items}"
+    return text
 
 
 def _format_text(event: str, payload: Dict[str, Any] | None = None) -> str:

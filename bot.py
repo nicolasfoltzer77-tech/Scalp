@@ -24,7 +24,8 @@ from typing import Dict, Any, Optional, List
 
 from scalp.logging_utils import get_jsonl_logger
 from scalp.metrics import calc_pnl_pct
-from scalp.notifier import notify
+
+from scalp import __version__
 
 # ---------------------------------------------------------------------------
 # Dépendances
@@ -77,6 +78,22 @@ log_event = get_jsonl_logger(
     max_bytes=5_000_000,
     backup_count=5,
 )
+
+
+def check_config() -> None:
+    """Display a color coded status of important environment variables."""
+    critical = {"MEXC_ACCESS_KEY", "MEXC_SECRET_KEY"}
+    optional = {"NOTIFY_URL", "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID"}
+    all_keys = sorted(set(CONFIG.keys()) | optional)
+    red, orange, green, reset = "\033[91m", "\033[93m", "\033[92m", "\033[0m"
+    for key in all_keys:
+        val = os.getenv(key)
+        if key in critical and (not val or val in {"", "A_METTRE", "B_METTRE"}):
+            logging.info("%s%s%s: critique", red, key, reset)
+        elif val:
+            logging.info("%s%s%s: dispo", green, key, reset)
+        else:
+            logging.info("%s%s%s: absente", orange, key, reset)
 
 # ---------------------------------------------------------------------------
 # Client REST Futures (Contract)
@@ -428,6 +445,7 @@ def backtest_trades(trades: List[Dict[str, Any]], *,
 # ---------------------------------------------------------------------------
 def main():
     cfg = CONFIG
+    check_config()
     client = MexcFuturesClient(
         access_key=cfg["MEXC_ACCESS_KEY"],
         secret_key=cfg["MEXC_SECRET_KEY"],
@@ -443,6 +461,7 @@ def main():
     zero_fee_pairs = set(cfg.get("ZERO_FEE_PAIRS", []))
     fee_rate = 0.0 if symbol in zero_fee_pairs else cfg.get("FEE_RATE", 0.0)
 
+    logging.info("Scalp version %s", __version__)
     logging.info("---- MEXC Futures bot démarré ----")
     logging.info("SYMBOL=%s | INTERVAL=%s | EMA=%s/%s | PAPER_TRADE=%s",
                  symbol, interval, ema_fast_n, ema_slow_n, cfg["PAPER_TRADE"])
