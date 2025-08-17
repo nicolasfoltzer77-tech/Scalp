@@ -24,6 +24,7 @@ from typing import Dict, Any, Optional, List
 
 from scalp.logging_utils import get_jsonl_logger
 from scalp.metrics import calc_pnl_pct
+from scalp.notifier import notify
 
 # ---------------------------------------------------------------------------
 # Dépendances
@@ -468,6 +469,9 @@ def main():
     prev_fast = prev_slow = None
     current_pos = 0  # +1 long, -1 short, 0 flat
     entry_price = None
+    session_pnl = 0.0
+
+    notify("bot_started", {"session_pnl": session_pnl})
 
     while True:
         try:
@@ -522,13 +526,17 @@ def main():
                 if current_pos < 0:
                     if entry_price is not None:
                         pnl = calc_pnl_pct(entry_price, price, -1, fee_rate)
-                        log_event("position_closed", {
+                        payload = {
                             "side": "short",
                             "entry": entry_price,
                             "exit": price,
                             "pnl_pct": pnl,
                             "fee_pct": fee_rate * 2 * 100,
-                        })
+                        }
+                        log_event("position_closed", payload)
+                        session_pnl += pnl
+                        payload["session_pnl"] = session_pnl
+                        notify("position_closed", payload)
                     client.place_order(symbol, side=2, vol=vol, order_type=5, price=price,
                                        open_type=CONFIG["OPEN_TYPE"], leverage=CONFIG["LEVERAGE"], reduce_only=True)
                     current_pos = 0
@@ -540,14 +548,17 @@ def main():
                 log_event("order_long", resp)
                 logging.info("→ LONG vol=%s @~%.2f (SL~%.2f / TP~%.2f) [%s]",
                              vol, price, sl_long, tp_long, "paper" if CONFIG["PAPER_TRADE"] else "live")
-                log_event("position_opened", {
+                open_payload = {
                     "side": "long",
                     "price": price,
                     "vol": vol,
                     "sl_pct": CONFIG["STOP_LOSS_PCT"] * 100,
                     "tp_pct": CONFIG["TAKE_PROFIT_PCT"] * 100,
                     "fee_rate": fee_rate,
-                })
+                    "session_pnl": session_pnl,
+                }
+                log_event("position_opened", open_payload)
+                notify("position_opened", open_payload)
                 current_pos = +1
                 entry_price = price
 
@@ -555,34 +566,41 @@ def main():
                 if current_pos > 0:
                     if entry_price is not None:
                         pnl = calc_pnl_pct(entry_price, price, 1, fee_rate)
-                        log_event("position_closed", {
+                        payload = {
                             "side": "long",
                             "entry": entry_price,
                             "exit": price,
                             "pnl_pct": pnl,
                             "fee_pct": fee_rate * 2 * 100,
-                        })
-                    client.place_order(symbol, side=4, vol=vol, order_type=5, price=price,
-                                       open_type=CONFIG["OPEN_TYPE"], leverage=CONFIG["LEVERAGE"], reduce_only=True)
-                    current_pos = 0
-                    entry_price = None
-                    time.sleep(0.3)
-                resp = client.place_order(symbol, side=3, vol=vol, order_type=5, price=price,
-                                          open_type=CONFIG["OPEN_TYPE"], leverage=CONFIG["LEVERAGE"],
-                                          stop_loss=sl_short, take_profit=tp_short)
-                log_event("order_short", resp)
-                logging.info("→ SHORT vol=%s @~%.2f (SL~%.2f / TP~%.2f) [%s]",
-                             vol, price, sl_short, tp_short, "paper" if CONFIG["PAPER_TRADE"] else "live")
-                log_event("position_opened", {
-                    "side": "short",
-                    "price": price,
-                    "vol": vol,
-                    "sl_pct": CONFIG["STOP_LOSS_PCT"] * 100,
-                    "tp_pct": CONFIG["TAKE_PROFIT_PCT"] * 100,
-                    "fee_rate": fee_rate,
-                })
-                current_pos = -1
-                entry_price = price
+                        }
+                        log_event("position_closed", payload)
+                        session_pnl += pnl
+                        payload["session_pnl"] = session_pnl
+                        notify("position_closed", payload)
+                client.place_order(symbol, side=4, vol=vol, order_type=5, price=price,
+                                   open_type=CONFIG["OPEN_TYPE"], leverage=CONFIG["LEVERAGE"], reduce_only=True)
+                current_pos = 0
+                entry_price = None
+                time.sleep(0.3)
+            resp = client.place_order(symbol, side=3, vol=vol, order_type=5, price=price,
+                                      open_type=CONFIG["OPEN_TYPE"], leverage=CONFIG["LEVERAGE"],
+                                      stop_loss=sl_short, take_profit=tp_short)
+            log_event("order_short", resp)
+            logging.info("→ SHORT vol=%s @~%.2f (SL~%.2f / TP~%.2f) [%s]",
+                         vol, price, sl_short, tp_short, "paper" if CONFIG["PAPER_TRADE"] else "live")
+            open_payload = {
+                "side": "short",
+                "price": price,
+                "vol": vol,
+                "sl_pct": CONFIG["STOP_LOSS_PCT"] * 100,
+                "tp_pct": CONFIG["TAKE_PROFIT_PCT"] * 100,
+                "fee_rate": fee_rate,
+                "session_pnl": session_pnl,
+            }
+            log_event("position_opened", open_payload)
+            notify("position_opened", open_payload)
+            current_pos = -1
+            entry_price = price
 
             time.sleep(cfg["LOOP_SLEEP_SECS"])
 
@@ -592,6 +610,7 @@ def main():
         except Exception as e:
             logging.exception("Erreur boucle principale: %s", str(e))
             time.sleep(3)
+    notify("bot_stopped", {"session_pnl": session_pnl})
 
 if __name__ == "__main__":
     main()
