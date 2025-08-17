@@ -29,6 +29,10 @@ Le bot lit sa configuration via des variables d'environnement :
 - `RISK_PCT_EQUITY`, `LEVERAGE`, `STOP_LOSS_PCT`, `TAKE_PROFIT_PCT` : paramètres de gestion du risque.
 - `LOG_DIR` : dossier où seront écrits les fichiers de log.
 
+- `NOTIFY_URL` : URL d'un webhook HTTP pour recevoir les événements (optionnel, peut être utilisé en plus de Telegram).
+- `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` : pour envoyer les notifications sur Telegram (optionnel, peut être combiné avec le webhook).
+
+
 Exemple :
 
 ```bash
@@ -59,6 +63,7 @@ print(__version__)
 ```
 
 Pour incrémenter la version, utilisez `scalp.version.bump_version` avec
+
 `"major"`, `"minor"` ou `"patch"` comme argument. La fonction
 `scalp.version.bump_version_from_message` permet également de déterminer
 automatiquement l'incrément à appliquer à partir d'un message de commit
@@ -74,6 +79,7 @@ bump_version_from_message("feat: add new strategy")
 Exécuté en tant que script, `python -m scalp.version` lit le dernier
 message de commit `git` et met à jour le fichier `VERSION` en
 conséquence.
+
 
 ## Avertissement
 

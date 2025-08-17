@@ -3,7 +3,9 @@ from __future__ import annotations
 
 from pathlib import Path
 import re
+
 import subprocess
+
 
 # Path to the VERSION file within the package
 _VERSION_FILE = Path(__file__).resolve().parent / "VERSION"
@@ -45,6 +47,7 @@ def bump_version(part: str = "patch") -> str:
     elif part == "minor":
         minor += 1
         patch = 0
+
     elif part == "patch":
         patch += 1
     else:
@@ -89,3 +92,4 @@ def bump_version_from_git() -> str:
 
 if __name__ == "__main__":
     print(bump_version_from_git())
+
