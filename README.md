@@ -28,6 +28,8 @@ Le bot lit sa configuration via des variables d'environnement :
 - `EMA_FAST`, `EMA_SLOW` : périodes des EMA utilisées par la stratégie.
 - `RISK_PCT_EQUITY`, `LEVERAGE`, `STOP_LOSS_PCT`, `TAKE_PROFIT_PCT` : paramètres de gestion du risque.
 - `LOG_DIR` : dossier où seront écrits les fichiers de log.
+- `NOTIFY_URL` : URL d'un webhook HTTP pour recevoir les événements (optionnel).
+- `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` : pour envoyer les notifications sur Telegram (optionnel).
 
 Exemple :
 
