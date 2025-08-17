@@ -24,6 +24,7 @@ from typing import Dict, Any, Optional, List
 
 from scalp.logging_utils import get_jsonl_logger
 from scalp.metrics import calc_pnl_pct
+from scalp import __version__
 
 from scalp import __version__
 
