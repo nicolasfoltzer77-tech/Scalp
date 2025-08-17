@@ -31,6 +31,15 @@ def _format_text(event: str, payload: Dict[str, Any] | None = None) -> str:
     return text
 
 
+def _format_text(event: str, payload: Dict[str, Any] | None = None) -> str:
+    """Return a human readable text describing the event payload."""
+    text = event
+    if payload:
+        items = ", ".join(f"{k}={v}" for k, v in payload.items())
+        text = f"{text} {items}"
+    return text
+
+
 def notify(event: str, payload: Dict[str, Any] | None = None) -> None:
     """Send an event payload to configured endpoints.
 
