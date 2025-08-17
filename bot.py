@@ -51,6 +51,10 @@ CONFIG = {
     "RECV_WINDOW": int(os.getenv("RECV_WINDOW", "30")),  # secondes (<=60)
     "LOG_DIR": os.getenv("LOG_DIR", "./logs"),
     "BASE_URL": os.getenv("MEXC_CONTRACT_BASE_URL", "https://contract.mexc.com"),
+    # Frais de trading (taux de taker par défaut, ex: 0.0006 pour 0.06%)
+    "FEE_RATE": float(os.getenv("FEE_RATE", "0.0")),
+    # Liste des paires sans frais (séparées par des virgules)
+    "ZERO_FEE_PAIRS": [p.strip() for p in os.getenv("ZERO_FEE_PAIRS", "").split(",") if p.strip()],
 }
 
 # ---------------------------------------------------------------------------
@@ -395,6 +399,29 @@ def find_trade_positions(client: "MexcFuturesClient", pairs: list[dict],
 
     return results
 
+
+
+def backtest_trades(trades: List[Dict[str, Any]], *,
+                    fee_rate: Optional[float] = None,
+                    zero_fee_pairs: Optional[List[str]] = None) -> float:
+    """Compute cumulative PnL for a series of trades.
+
+    Each trade dict must contain ``symbol``, ``entry``, ``exit`` and ``side``
+    (+1 long, -1 short). Fees are deducted unless the symbol belongs to
+    ``zero_fee_pairs``.
+    """
+
+    fee_rate = fee_rate if fee_rate is not None else CONFIG.get("FEE_RATE", 0.0)
+    zero_fee = set(zero_fee_pairs or CONFIG.get("ZERO_FEE_PAIRS", []))
+
+    total = 0.0
+    for t in trades:
+        sym = t.get("symbol")
+        fr = 0.0 if sym in zero_fee else fee_rate
+        total += calc_pnl_pct(t["entry"], t["exit"], t["side"], fr)
+    return total
+
+
 # ---------------------------------------------------------------------------
 # Boucle principale
 # ---------------------------------------------------------------------------
@@ -412,6 +439,8 @@ def main():
     interval = cfg["INTERVAL"]
     ema_fast_n = cfg["EMA_FAST"]
     ema_slow_n = cfg["EMA_SLOW"]
+    zero_fee_pairs = set(cfg.get("ZERO_FEE_PAIRS", []))
+    fee_rate = 0.0 if symbol in zero_fee_pairs else cfg.get("FEE_RATE", 0.0)
 
     logging.info("---- MEXC Futures bot démarré ----")
     logging.info("SYMBOL=%s | INTERVAL=%s | EMA=%s/%s | PAPER_TRADE=%s",
@@ -492,12 +521,13 @@ def main():
             if x == +1 and current_pos <= 0:
                 if current_pos < 0:
                     if entry_price is not None:
-                        pnl = calc_pnl_pct(entry_price, price, -1)
+                        pnl = calc_pnl_pct(entry_price, price, -1, fee_rate)
                         log_event("position_closed", {
                             "side": "short",
                             "entry": entry_price,
                             "exit": price,
                             "pnl_pct": pnl,
+                            "fee_pct": fee_rate * 2 * 100,
                         })
                     client.place_order(symbol, side=2, vol=vol, order_type=5, price=price,
                                        open_type=CONFIG["OPEN_TYPE"], leverage=CONFIG["LEVERAGE"], reduce_only=True)
@@ -516,6 +546,7 @@ def main():
                     "vol": vol,
                     "sl_pct": CONFIG["STOP_LOSS_PCT"] * 100,
                     "tp_pct": CONFIG["TAKE_PROFIT_PCT"] * 100,
+                    "fee_rate": fee_rate,
                 })
                 current_pos = +1
                 entry_price = price
@@ -523,12 +554,13 @@ def main():
             elif x == -1 and current_pos >= 0:
                 if current_pos > 0:
                     if entry_price is not None:
-                        pnl = calc_pnl_pct(entry_price, price, 1)
+                        pnl = calc_pnl_pct(entry_price, price, 1, fee_rate)
                         log_event("position_closed", {
                             "side": "long",
                             "entry": entry_price,
                             "exit": price,
                             "pnl_pct": pnl,
+                            "fee_pct": fee_rate * 2 * 100,
                         })
                     client.place_order(symbol, side=4, vol=vol, order_type=5, price=price,
                                        open_type=CONFIG["OPEN_TYPE"], leverage=CONFIG["LEVERAGE"], reduce_only=True)
@@ -547,6 +579,7 @@ def main():
                     "vol": vol,
                     "sl_pct": CONFIG["STOP_LOSS_PCT"] * 100,
                     "tp_pct": CONFIG["TAKE_PROFIT_PCT"] * 100,
+                    "fee_rate": fee_rate,
                 })
                 current_pos = -1
                 entry_price = price
