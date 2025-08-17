@@ -11,6 +11,7 @@ def test_get_version(monkeypatch, tmp_path):
 
 def test_bump_version(monkeypatch, tmp_path):
     vfile = tmp_path / "VERSION"
+
     vfile.write_text("0.1.2\n")
     monkeypatch.setattr(version, "_VERSION_FILE", vfile)
     assert version.bump_version("minor") == "0.2.0"
@@ -32,3 +33,4 @@ def test_bump_from_message(monkeypatch, tmp_path):
     assert version.bump_version_from_message("feat: add x") == "1.1.0"
     assert version.bump_version_from_message("fix: bug") == "1.1.1"
     assert version.bump_version_from_message("feat!: major change") == "2.0.0"
+
