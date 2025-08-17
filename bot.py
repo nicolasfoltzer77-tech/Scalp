@@ -400,6 +400,7 @@ def find_trade_positions(client: "MexcFuturesClient", pairs: list[dict],
     return results
 
 
+
 def backtest_trades(trades: List[Dict[str, Any]], *,
                     fee_rate: Optional[float] = None,
                     zero_fee_pairs: Optional[List[str]] = None) -> float:
@@ -419,6 +420,7 @@ def backtest_trades(trades: List[Dict[str, Any]], *,
         fr = 0.0 if sym in zero_fee else fee_rate
         total += calc_pnl_pct(t["entry"], t["exit"], t["side"], fr)
     return total
+
 
 # ---------------------------------------------------------------------------
 # Boucle principale
