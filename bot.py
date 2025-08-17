@@ -51,6 +51,10 @@ CONFIG = {
     "RECV_WINDOW": int(os.getenv("RECV_WINDOW", "30")),  # secondes (<=60)
     "LOG_DIR": os.getenv("LOG_DIR", "./logs"),
     "BASE_URL": os.getenv("MEXC_CONTRACT_BASE_URL", "https://contract.mexc.com"),
+    # Frais de trading (taux de taker par défaut, ex: 0.0006 pour 0.06%)
+    "FEE_RATE": float(os.getenv("FEE_RATE", "0.0")),
+    # Liste des paires sans frais (séparées par des virgules)
+    "ZERO_FEE_PAIRS": [p.strip() for p in os.getenv("ZERO_FEE_PAIRS", "").split(",") if p.strip()],
 }
 
 # ---------------------------------------------------------------------------
@@ -296,6 +300,127 @@ def compute_position_size(contract_detail: Dict[str, Any], equity_usdt: float,
     return max(min_vol, vol)
 
 # ---------------------------------------------------------------------------
+# Sélection des paires de trading
+# ---------------------------------------------------------------------------
+def get_trade_pairs(client: "MexcFuturesClient") -> list[dict]:
+    """Récupère toutes les paires disponibles via ``get_ticker``.
+
+    Parameters
+    ----------
+    client:
+        Instance de :class:`MexcFuturesClient`.
+
+    Returns
+    -------
+    list[dict]
+        Liste des entrées brutes renvoyées par l'API pour chaque paire.
+    """
+
+    tick = client.get_ticker()
+    data = tick.get("data") if isinstance(tick, dict) else []
+    if not data:
+        return []
+    return data if isinstance(data, list) else [data]
+
+
+def select_top_pairs(client: "MexcFuturesClient", top_n: int = 10,
+                     key: str = "volume") -> list[dict]:
+    """Filtre les ``top_n`` paires selon la clé numérique ``key``.
+
+    Les volumes sont convertis en ``float`` et triés par ordre décroissant.
+    Les entrées qui n'ont pas la clé demandée sont considérées avec un volume
+    nul.
+    """
+
+    pairs = get_trade_pairs(client)
+
+    def volume(row: dict) -> float:
+        try:
+            return float(row.get(key, 0))
+        except (TypeError, ValueError):
+            return 0.0
+
+    pairs.sort(key=volume, reverse=True)
+    return pairs[:top_n]
+
+
+def find_trade_positions(client: "MexcFuturesClient", pairs: list[dict],
+                         *, interval: str = "Min1",
+                         ema_fast_n: Optional[int] = None,
+                         ema_slow_n: Optional[int] = None) -> list[dict]:
+    """Applique la stratégie EMA/cross sur une liste de paires.
+
+    Parameters
+    ----------
+    client:
+        Client REST pour interroger l'API.
+    pairs:
+        Liste des dictionnaires renvoyés par :func:`select_top_pairs`.
+    interval:
+        Intervalle de klines utilisé.
+    ema_fast_n, ema_slow_n:
+        Fenêtres EMA; par défaut celles définies dans ``CONFIG``.
+
+    Returns
+    -------
+    list[dict]
+        Liste des signaux détectés sous la forme ``{"symbol": str,
+        "signal": "long"|"short", "price": float}``.
+    """
+
+    ema_fast_n = ema_fast_n or CONFIG.get("EMA_FAST", 9)
+    ema_slow_n = ema_slow_n or CONFIG.get("EMA_SLOW", 21)
+    results: list[dict] = []
+
+    for info in pairs:
+        symbol = info.get("symbol")
+        if not symbol:
+            continue
+        k = client.get_kline(symbol, interval=interval)
+        closes = k.get("data", {}).get("close", []) if isinstance(k, dict) else []
+        if len(closes) < max(ema_fast_n, ema_slow_n) + 2:
+            continue
+
+        efull = ema(closes, ema_fast_n)
+        eslow = ema(closes, ema_slow_n)
+        signal = cross(efull[-1], eslow[-1], efull[-2], eslow[-2])
+        if signal == 1:
+            results.append({
+                "symbol": symbol,
+                "signal": "long",
+                "price": float(info.get("lastPrice", 0.0)),
+            })
+        elif signal == -1:
+            results.append({
+                "symbol": symbol,
+                "signal": "short",
+                "price": float(info.get("lastPrice", 0.0)),
+            })
+
+    return results
+
+
+def backtest_trades(trades: List[Dict[str, Any]], *,
+                    fee_rate: Optional[float] = None,
+                    zero_fee_pairs: Optional[List[str]] = None) -> float:
+    """Compute cumulative PnL for a series of trades.
+
+    Each trade dict must contain ``symbol``, ``entry``, ``exit`` and ``side``
+    (+1 long, -1 short). Fees are deducted unless the symbol belongs to
+    ``zero_fee_pairs``.
+    """
+
+    fee_rate = fee_rate if fee_rate is not None else CONFIG.get("FEE_RATE", 0.0)
+    zero_fee = set(zero_fee_pairs or CONFIG.get("ZERO_FEE_PAIRS", []))
+
+    total = 0.0
+    for t in trades:
+        sym = t.get("symbol")
+        fr = 0.0 if sym in zero_fee else fee_rate
+        total += calc_pnl_pct(t["entry"], t["exit"], t["side"], fr)
+    return total
+
+# ---------------------------------------------------------------------------
 # Boucle principale
 # ---------------------------------------------------------------------------
 def main():
@@ -312,6 +437,8 @@ def main():
     interval = cfg["INTERVAL"]
     ema_fast_n = cfg["EMA_FAST"]
     ema_slow_n = cfg["EMA_SLOW"]
+    zero_fee_pairs = set(cfg.get("ZERO_FEE_PAIRS", []))
+    fee_rate = 0.0 if symbol in zero_fee_pairs else cfg.get("FEE_RATE", 0.0)
 
     logging.info("---- MEXC Futures bot démarré ----")
     logging.info("SYMBOL=%s | INTERVAL=%s | EMA=%s/%s | PAPER_TRADE=%s",
@@ -392,12 +519,13 @@ def main():
             if x == +1 and current_pos <= 0:
                 if current_pos < 0:
                     if entry_price is not None:
-                        pnl = calc_pnl_pct(entry_price, price, -1)
+                        pnl = calc_pnl_pct(entry_price, price, -1, fee_rate)
                         log_event("position_closed", {
                             "side": "short",
                             "entry": entry_price,
                             "exit": price,
                             "pnl_pct": pnl,
+                            "fee_pct": fee_rate * 2 * 100,
                         })
                     client.place_order(symbol, side=2, vol=vol, order_type=5, price=price,
                                        open_type=CONFIG["OPEN_TYPE"], leverage=CONFIG["LEVERAGE"], reduce_only=True)
@@ -416,6 +544,7 @@ def main():
                     "vol": vol,
                     "sl_pct": CONFIG["STOP_LOSS_PCT"] * 100,
                     "tp_pct": CONFIG["TAKE_PROFIT_PCT"] * 100,
+                    "fee_rate": fee_rate,
                 })
                 current_pos = +1
                 entry_price = price
@@ -423,12 +552,13 @@ def main():
             elif x == -1 and current_pos >= 0:
                 if current_pos > 0:
                     if entry_price is not None:
-                        pnl = calc_pnl_pct(entry_price, price, 1)
+                        pnl = calc_pnl_pct(entry_price, price, 1, fee_rate)
                         log_event("position_closed", {
                             "side": "long",
                             "entry": entry_price,
                             "exit": price,
                             "pnl_pct": pnl,
+                            "fee_pct": fee_rate * 2 * 100,
                         })
                     client.place_order(symbol, side=4, vol=vol, order_type=5, price=price,
                                        open_type=CONFIG["OPEN_TYPE"], leverage=CONFIG["LEVERAGE"], reduce_only=True)
@@ -447,6 +577,7 @@ def main():
                     "vol": vol,
                     "sl_pct": CONFIG["STOP_LOSS_PCT"] * 100,
                     "tp_pct": CONFIG["TAKE_PROFIT_PCT"] * 100,
+                    "fee_rate": fee_rate,
                 })
                 current_pos = -1
                 entry_price = price
