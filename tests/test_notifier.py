@@ -52,3 +52,23 @@ def test_notify_posts_telegram(monkeypatch):
     assert calls[0]["json"]["chat_id"] == "123"
     assert calls[0]["json"]["text"].startswith("evt")
     assert "bar" in calls[0]["json"]["text"]
+
+
+
+def test_notify_posts_both(monkeypatch):
+    calls = []
+
+    def fake_post(url, json=None, timeout=5):
+        calls.append({"url": url, "json": json, "timeout": timeout})
+
+    monkeypatch.setenv("NOTIFY_URL", "http://example.com")
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "abc")
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "123")
+    monkeypatch.setattr(notifier.requests, "post", fake_post)
+
+    notifier.notify("evt", {"bar": 2})
+
+    assert len(calls) == 2
+    assert calls[0]["url"] == "http://example.com"
+    assert calls[1]["url"] == "https://api.telegram.org/botabc/sendMessage"
+
