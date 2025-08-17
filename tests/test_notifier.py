@@ -72,3 +72,37 @@ def test_notify_posts_both(monkeypatch):
     assert calls[0]["url"] == "http://example.com"
     assert calls[1]["url"] == "https://api.telegram.org/botabc/sendMessage"
 
+
+def test_format_text_open_position():
+    payload = {
+        "side": "long",
+        "symbol": "BTCUSDT",
+        "vol": 1,
+        "leverage": 10,
+        "tp_pct": 5,
+        "sl_pct": 2,
+        "hold": "2h",
+    }
+    text = notifier._format_text("position_opened", payload)
+    assert "Ouvre long BTCUSDT" in text
+    assert "Position 1 x10" in text
+    assert "TP +5% / SL -2%" in text
+    assert "durée prévue 2h" in text
+
+
+def test_format_text_closed_position():
+    payload = {
+        "side": "short",
+        "symbol": "ETHUSDT",
+        "vol": 2,
+        "leverage": 5,
+        "pnl_usd": 12,
+        "pnl_pct": 3,
+        "duration": "1h",
+    }
+    text = notifier._format_text("position_closed", payload)
+    assert "Ferme short ETHUSDT" in text
+    assert "Position 2 x5" in text
+    assert "PnL 12 USDT (3%)" in text
+    assert "durée 1h" in text
+
