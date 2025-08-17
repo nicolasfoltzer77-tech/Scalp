@@ -48,6 +48,19 @@ python bot.py
 
 Les journaux sont écrits dans `logs/` et affichés sur la console. Le bot tourne jusqu'à `Ctrl+C`. Les ouvertures et fermetures de positions sont consignées dans `bot_events.jsonl`.
 
+## Version
+
+La version du bot est stockée dans le fichier `scalp/VERSION` et exposée dans
+le code via la variable `scalp.__version__` :
+
+```python
+from scalp import __version__
+print(__version__)
+```
+
+Pour incrémenter la version, utilisez `scalp.version.bump_version` avec
+`"major"`, `"minor"` ou `"patch"` comme argument.
+
 ## Avertissement
 
 © 2025 — Usage à vos risques. Ceci n'est pas un conseil financier.

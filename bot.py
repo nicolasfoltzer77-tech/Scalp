@@ -24,7 +24,8 @@ from typing import Dict, Any, Optional, List
 
 from scalp.logging_utils import get_jsonl_logger
 from scalp.metrics import calc_pnl_pct
-from scalp.notifier import notify
+
+from scalp import __version__
 
 # ---------------------------------------------------------------------------
 # Dépendances
@@ -443,6 +444,7 @@ def main():
     zero_fee_pairs = set(cfg.get("ZERO_FEE_PAIRS", []))
     fee_rate = 0.0 if symbol in zero_fee_pairs else cfg.get("FEE_RATE", 0.0)
 
+    logging.info("Scalp version %s", __version__)
     logging.info("---- MEXC Futures bot démarré ----")
     logging.info("SYMBOL=%s | INTERVAL=%s | EMA=%s/%s | PAPER_TRADE=%s",
                  symbol, interval, ema_fast_n, ema_slow_n, cfg["PAPER_TRADE"])
