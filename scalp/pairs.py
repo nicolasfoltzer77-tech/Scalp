@@ -110,7 +110,10 @@ def send_selected_pairs(
     select_fn: Callable[[Any, int], List[Dict[str, Any]]] = select_top_pairs,
     notify_fn: Callable[[str, Optional[Dict[str, Any]]], None] = notify,
 ) -> None:
-    """Fetch top pairs, drop USD duplicates and notify their list."""
+    """Fetch top pairs, drop USD duplicates and notify their list.
+
+    Returns the payload sent to ``notify_fn`` for convenience.
+    """
 
     def split_symbol(sym: str) -> tuple[str, str]:
         if "_" in sym:
@@ -160,6 +163,8 @@ def send_selected_pairs(
         if red:
             payload["red"] = ", ".join(red)
         notify_fn("pair_list", payload)
+        return payload
+    return {}
 
 
 def heat_score(volatility: float, volume: float, news: bool = False) -> float:
