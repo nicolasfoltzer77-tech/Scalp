@@ -32,6 +32,12 @@ Le bot lit sa configuration via des variables d'environnement :
 - `NOTIFY_URL` : URL d'un webhook HTTP pour recevoir les événements (optionnel, peut être utilisé en plus de Telegram).
 - `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` : pour envoyer les notifications sur Telegram (optionnel, peut être combiné avec le webhook).
 
+Pour éviter de versionner vos clés sensibles, vous pouvez créer un fichier
+`.env` dans le dossier parent du dépôt (par exemple `Notebooks/.env` si le
+code se trouve dans `Notebooks/scalp`).  Ce fichier est automatiquement chargé
+au démarrage et toutes les variables qu'il contient seront disponibles pour le
+bot.
+
 
 Exemple :
 
@@ -51,6 +57,8 @@ python bot.py
 ```
 
 Les journaux sont écrits dans `logs/` et affichés sur la console. Le bot tourne jusqu'à `Ctrl+C`. Les ouvertures et fermetures de positions sont consignées dans `bot_events.jsonl`.
+
+Lors du démarrage, deux notifications Telegram sont émises : la première indique que le bot est lancé, la seconde liste les 20 paires sélectionnées pour la session.
 
 ## Version
 
