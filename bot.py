@@ -27,8 +27,6 @@ from scalp.metrics import calc_pnl_pct
 from scalp.notifier import notify
 from scalp import __version__
 
-from scalp import __version__
-
 # ---------------------------------------------------------------------------
 # Dépendances
 # ---------------------------------------------------------------------------
