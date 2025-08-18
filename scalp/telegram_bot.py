@@ -49,15 +49,17 @@ class TelegramBot:
 
 
         self.main_keyboard = [
-            [{"text": "Solde", "callback_data": "balance"}],
-            [{"text": "Positions", "callback_data": "positions"}],
-            [{"text": "PnL session", "callback_data": "pnl"}],
-            [{"text": "Risque", "callback_data": "risk"}],
-            [{"text": "Reset All", "callback_data": "reset_all"}],
-
-            [{"text": "Stop", "callback_data": "stop"}],
-            [{"text": "Fermer Bot", "callback_data": "shutdown"}],
-
+            [{"text": "Positions ouvertes", "callback_data": "positions"}],
+            [{"text": "Update Cryptos", "callback_data": "update"}],
+            [{"text": "Réglages", "callback_data": "settings"}],
+        ]
+        self.settings_keyboard = [
+            [{"text": "Stop trade", "callback_data": "stop"}],
+            [{"text": "Réglage risk", "callback_data": "risk"}],
+            [{"text": "Reset risk", "callback_data": "reset_risk"}],
+            [{"text": "Arrêt bot", "callback_data": "shutdown"}],
+            [{"text": "Reset total", "callback_data": "reset_all"}],
+            [{"text": "Retour", "callback_data": "back"}],
         ]
         self.risk_keyboard = [
             [
@@ -67,6 +69,9 @@ class TelegramBot:
             ],
             [{"text": "Retour", "callback_data": "back"}],
         ]
+
+        # Show menu on startup with zero PnL session
+        self.send_main_menu(0.0)
 
 
     def _base_symbol(self, symbol: str) -> str:
@@ -86,6 +91,30 @@ class TelegramBot:
         buttons.append([{"text": "Retour", "callback_data": "back"}])
         return buttons
 
+
+    def _menu_text(self, session_pnl: float) -> str:
+        assets = self.client.get_assets()
+        equity = 0.0
+        for row in assets.get("data", []):
+            if row.get("currency") == "USDT":
+                try:
+                    equity = float(row.get("equity", 0.0))
+                except Exception:
+                    equity = 0.0
+                break
+        return (
+            f"Solde: {equity} USDT\n"
+            f"PnL session: {session_pnl} USDT\n"
+            "Choisissez une option:"
+        )
+
+    def send_main_menu(self, session_pnl: float) -> None:
+        self.send(self._menu_text(session_pnl), self.main_keyboard)
+
+    def update_pairs(self) -> None:
+        from bot import update as _update  # lazy import to avoid cycle
+
+        _update(self.client, top_n=20, tg_bot=self)
 
     # ------------------------------------------------------------------
     def _api_url(self, method: str) -> str:
@@ -152,8 +181,8 @@ class TelegramBot:
             if str(chat.get("id")) != self.chat_id:
                 continue
 
-            # Any text message triggers the main menu
-            self.send("Choisissez une option:", self.main_keyboard)
+            # Any text message triggers the main menu with balance and PnL
+            self.send_main_menu(session_pnl)
 
     # ------------------------------------------------------------------
     def handle_callback(
@@ -197,6 +226,20 @@ class TelegramBot:
             return f"PnL session: {session_pnl} USDT", self.main_keyboard
         if data == "risk":
             return "Choisissez le niveau de risque:", self.risk_keyboard
+        if data == "settings":
+            return "Réglages:", self.settings_keyboard
+        if data == "reset_risk":
+            try:
+                self.risk_mgr.reset_day()
+                return "Risque réinitialisé", self.settings_keyboard
+            except Exception:
+                return "Erreur reset risque", self.settings_keyboard
+        if data == "update":
+            try:
+                self.update_pairs()
+                return "Liste cryptos mise à jour", self.main_keyboard
+            except Exception:
+                return "Erreur mise à jour", self.main_keyboard
         if data.startswith("risk"):
             mapping = {
                 "risk_green": 1,
@@ -213,32 +256,32 @@ class TelegramBot:
             try:
                 self.client.close_all_positions()
                 self.risk_mgr.reset_day()
-                return "Positions et risque réinitialisés", self.main_keyboard
+                return "Positions et risque réinitialisés", self.settings_keyboard
             except Exception:
-                return "Erreur reset total", self.main_keyboard
+                return "Erreur reset total", self.settings_keyboard
 
         if data == "stop":
             return "Choisissez la position à fermer:", self._build_stop_keyboard()
         if data == "stop_all":
             try:
                 self.client.close_all_positions()
-                return "Toutes les positions fermées", self.main_keyboard
+                return "Toutes les positions fermées", self.settings_keyboard
             except Exception:
-                return "Erreur fermeture positions", self.main_keyboard
+                return "Erreur fermeture positions", self.settings_keyboard
         if data.startswith("stop_"):
             sym = data[5:]
             try:
                 self.client.close_position(sym)
-                return f"Position {sym} fermée", self.main_keyboard
+                return f"Position {sym} fermée", self.settings_keyboard
             except Exception:
-                return f"Erreur fermeture {sym}", self.main_keyboard
+                return f"Erreur fermeture {sym}", self.settings_keyboard
 
         if data == "shutdown":
             self.stop_requested = True
-            return "Arrêt du bot demandé", self.main_keyboard
+            return "Arrêt du bot demandé", self.settings_keyboard
 
         if data == "back":
-            return "Menu principal:", self.main_keyboard
+            return self._menu_text(session_pnl), self.main_keyboard
         return None, None
 
 
