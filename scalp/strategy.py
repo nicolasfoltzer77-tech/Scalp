@@ -15,7 +15,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Sequence, List, Dict, Optional, Tuple, Any
 
-from .metrics import calc_rsi, calc_atr, calc_pnl_pct
+from .metrics import calc_rsi, calc_atr, calc_pnl_pct, calc_macd
 from .risk import calc_position_size
 
 # ---------------------------------------------------------------------------
@@ -231,6 +231,10 @@ def generate_signal(
     atr_disable_pct: float = 0.2,
     atr_reduce_pct: float = 2.0,
     swing_lookback: int = 5,
+    macd_fast: int = 12,
+    macd_slow: int = 26,
+    macd_signal: int = 9,
+    trend_ema_period: int = 200,
 ) -> Optional[Signal]:
     """Return a trading :class:`Signal` if conditions are met.
 
@@ -243,6 +247,8 @@ def generate_signal(
     * OBV rising or high short‑term volume
     * Multi time frame confirmation (H1 EMA50 slope, RSI15 >/< 50)
     * Micro‑structure breakout of last swing high/low
+    * MACD trend filter
+    * Long‑term trend via configurable EMA filter
     * Order book imbalance and tape filters
     * Dynamic ATR‑based stop‑loss and take‑profit
     * Position sizing via ``calc_position_size``
@@ -258,12 +264,17 @@ def generate_signal(
     price = closes[-1]
     ema20 = ema(closes, 20)
     ema50 = ema(closes, 50)
+    ema_trend = ema(closes, trend_ema_period)
     v = vwap(highs, lows, closes, vols)
     obv_series = obv(closes, vols)
     obv_rising = obv_series[-1] > obv_series[-2]
     vol_last3 = sum(vols[-3:])
     vol_ma20 = sum(vols[-20:]) / 20.0
     vol_rising = vol_last3 > vol_ma20
+
+    macd_val, macd_sig, _ = calc_macd(
+        closes, fast=macd_fast, slow=macd_slow, signal=macd_signal
+    )
 
     # Multi timeframe filters -------------------------------------------------
     trend_dir = 0  # 1 = long only, -1 = short only, 0 = neutral
@@ -318,9 +329,11 @@ def generate_signal(
         price > v
         and ema20[-1] > ema50[-1]
         and rsi_prev <= 40 < rsi_curr
+        and macd_val > macd_sig
         and (obv_rising or vol_rising)
         and (rsi_15 is None or rsi_15 > 50)
         and price > swing_high
+        and price > ema_trend[-1]
         and obi_ok_long
         and tick_ok_long
         and trend_dir >= 0
@@ -335,9 +348,11 @@ def generate_signal(
         price < v
         and ema20[-1] < ema50[-1]
         and rsi_prev >= 60 > rsi_curr
+        and macd_val < macd_sig
         and (obv_series[-1] < obv_series[-2] or vol_rising)
         and (rsi_15 is None or rsi_15 < 50)
         and price < swing_low
+        and price < ema_trend[-1]
         and obi_ok_short
         and tick_ok_short
         and trend_dir <= 0
@@ -383,12 +398,10 @@ class RiskManager:
             self.consecutive_losses += 1
             self.loss_streak += 1
             self.win_streak = 0
-
         else:
             self.consecutive_losses = 0
             self.win_streak += 1
             self.loss_streak = 0
-
         self.daily_pnl_pct += pnl_pct
         if self.daily_pnl_pct <= -self.max_daily_loss_pct:
             self.kill_switch = True
@@ -396,7 +409,6 @@ class RiskManager:
             self.max_daily_profit_pct is not None
             and self.daily_pnl_pct >= self.max_daily_profit_pct
         ):
-
             self.kill_switch = True
         self.risk_pct = adjust_risk_pct(self.risk_pct, self.win_streak, self.loss_streak)
 
