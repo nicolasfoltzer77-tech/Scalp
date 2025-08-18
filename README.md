@@ -63,19 +63,26 @@ python bot.py
 Le terminal reste silencieux au démarrage sauf en cas d'absence de variables critiques (`MEXC_ACCESS_KEY`, `MEXC_SECRET_KEY`). Les journaux sont écrits dans `logs/` et affichés sur la console. Le bot tourne jusqu'à `Ctrl+C`. Les ouvertures et fermetures de positions sont consignées dans `bot_events.jsonl`.
 
 Lors du démarrage, deux notifications Telegram sont émises : la première affiche « Bot démarré » avec un logo, la seconde « Listing : » suivi des 20 paires sélectionnées classées par couleur (🟢 < 1 min, 🟠 < 10 min, 🔴 > 10 min).
+
 Ensuite, un rappel du marché est envoyé chaque minute et l'interface Telegram propose un bouton « Fermer Bot » pour arrêter proprement l'exécution.
+
 
 ## Stratégie
 
-Le bot met en œuvre une stratégie de scalping combinant plusieurs indicateurs techniques :
+Scalp cherche à capter de courts mouvements de tendance tout en coupant
+rapidement les pertes.
 
-- croisement des EMA 20/50 pour les signaux d’entrée ;
-- filtre de tendance via la MACD et une EMA longue configurable ;
-- confirmation par la position du prix par rapport au VWAP et par l’OBV ou un pic de volume ;
-- validation multi‑unités de temps (RSI 15 min, pente de l’EMA 1 h) ;
-- seuils dynamiques de stop‑loss et take‑profit calculés à partir de l’ATR, avec dimensionnement de position basé sur le risque.
+Principes généraux :
 
-Une description détaillée des règles est disponible dans `STRATEGY.md`.
+- sélection de paires liquides à frais nuls et au fort momentum ;
+- trade uniquement dans le sens de la tendance dominante (MACD + EMA longue) ;
+- confirmation multi‑indicateurs (VWAP, volume/OBV, RSI multi‑UT) ;
+- stop‑loss et take‑profit dynamiques basés sur l’ATR avec taille de position
+  calculée selon le risque ;
+- limites quotidiennes pour protéger le capital.
+
+Les règles détaillées et l’algorithme complet sont décrits dans
+`STRATEGY.md`.
 
 ## Version
 

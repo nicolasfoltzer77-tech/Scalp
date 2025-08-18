@@ -2,6 +2,14 @@
 
 Ce document décrit la logique de trading utilisée par le bot **Scalp**. Elle vise un scalping court terme sur les futures USDT‑M de MEXC.
 
+## Principes généraux
+
+- ne traiter que des actifs liquides à fort momentum et à frais nuls ;
+- suivre la tendance dominante et éviter les marchés plats ;
+- utiliser des confirmations multi‑unités de temps pour limiter les faux signaux ;
+- dimensionner chaque position selon un pourcentage fixe du capital ;
+- couper rapidement les pertes et laisser courir les gains via un suivi dynamique.
+
 ## Sélection des paires
 
 1. `scan_pairs` récupère les tickers MEXC et filtre ceux qui sont à **frais nuls**, possèdent un volume quotidien suffisant et un spread réduit.
