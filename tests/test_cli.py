@@ -55,3 +55,17 @@ def test_live_invokes_async_pipeline(monkeypatch):
     cli.main(["live", "--pairs", "BTCUSDT", "ETHUSDT", "--tfs", "1m", "1h"])
     assert called["args"] == (["BTCUSDT", "ETHUSDT"], ["1m", "1h"])
 
+
+def test_bump_version_invokes_helper(monkeypatch):
+    """The ``bump-version`` command calls ``bump_version_from_git``."""
+
+    called = {}
+
+    def fake_bump():  # pragma: no cover - executed via CLI
+        called["called"] = True
+        return "0.1.0"
+
+    monkeypatch.setattr(cli, "bump_version_from_git", fake_bump)
+    cli.main(["bump-version"])
+    assert called["called"] is True
+

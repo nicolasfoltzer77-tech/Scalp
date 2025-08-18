@@ -15,6 +15,8 @@ import argparse
 import asyncio
 from typing import Iterable, List
 
+from scalp.version import bump_version_from_git
+
 
 # ---------------------------------------------------------------------------
 # Placeholder implementations
@@ -90,6 +92,13 @@ def create_parser() -> argparse.ArgumentParser:
     live_p.add_argument("--pairs", nargs="+", required=True, help="trading pairs")
     live_p.add_argument("--tfs", nargs="+", required=True, help="timeframes")
     live_p.set_defaults(func=lambda a: asyncio.run(run_live_pipeline(a.pairs, a.tfs)))
+
+    # --- ``bump-version`` command -------------------------------------
+    bv_p = sub.add_parser(
+        "bump-version",
+        help="update the VERSION file based on the latest git commit",
+    )
+    bv_p.set_defaults(func=lambda a: print(bump_version_from_git()))
 
     return parser
 
