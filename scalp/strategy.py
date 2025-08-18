@@ -234,6 +234,7 @@ def generate_signal(
     macd_fast: int = 12,
     macd_slow: int = 26,
     macd_signal: int = 9,
+    trend_ema_period: int = 200,
 ) -> Optional[Signal]:
     """Return a trading :class:`Signal` if conditions are met.
 
@@ -247,6 +248,7 @@ def generate_signal(
     * Multi time frame confirmation (H1 EMA50 slope, RSI15 >/< 50)
     * Micro‑structure breakout of last swing high/low
     * MACD trend filter
+    * Long‑term trend via configurable EMA filter
     * Order book imbalance and tape filters
     * Dynamic ATR‑based stop‑loss and take‑profit
     * Position sizing via ``calc_position_size``
@@ -262,6 +264,7 @@ def generate_signal(
     price = closes[-1]
     ema20 = ema(closes, 20)
     ema50 = ema(closes, 50)
+    ema_trend = ema(closes, trend_ema_period)
     v = vwap(highs, lows, closes, vols)
     obv_series = obv(closes, vols)
     obv_rising = obv_series[-1] > obv_series[-2]
@@ -330,6 +333,7 @@ def generate_signal(
         and (obv_rising or vol_rising)
         and (rsi_15 is None or rsi_15 > 50)
         and price > swing_high
+        and price > ema_trend[-1]
         and obi_ok_long
         and tick_ok_long
         and trend_dir >= 0
@@ -348,6 +352,7 @@ def generate_signal(
         and (obv_series[-1] < obv_series[-2] or vol_rising)
         and (rsi_15 is None or rsi_15 < 50)
         and price < swing_low
+        and price < ema_trend[-1]
         and obi_ok_short
         and tick_ok_short
         and trend_dir <= 0

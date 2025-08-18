@@ -14,6 +14,7 @@ CONFIG = {
     "MACD_FAST": int(os.getenv("MACD_FAST", "12")),
     "MACD_SLOW": int(os.getenv("MACD_SLOW", "26")),
     "MACD_SIGNAL": int(os.getenv("MACD_SIGNAL", "9")),
+    "EMA_TREND_PERIOD": int(os.getenv("EMA_TREND_PERIOD", "200")),
     "RISK_PCT_EQUITY": float(os.getenv("RISK_PCT_EQUITY", "0.01")),
     "LEVERAGE": int(os.getenv("LEVERAGE", "5")),
     "RISK_LEVEL": int(os.getenv("RISK_LEVEL", "2")),
@@ -34,5 +35,5 @@ CONFIG = {
     "MAX_DAILY_LOSS_PCT": float(os.getenv("MAX_DAILY_LOSS_PCT", "5.0")),
     "MAX_DAILY_PROFIT_PCT": float(os.getenv("MAX_DAILY_PROFIT_PCT", "5.0")),
     "MAX_POSITIONS": int(os.getenv("MAX_POSITIONS", "1")),
-    "ZERO_FEE_PAIRS": ZERO_FEE_PAIRS,
+    "ZERO_FEE_PAIRS": [p.strip() for p in os.getenv("ZERO_FEE_PAIRS", "").split(",") if p.strip()],
 }
