@@ -86,3 +86,27 @@ def test_trailing_and_timeout():
     # timeout
     assert timeout_exit(0, 20, 100, 99, "long", progress_min=15, timeout_min=30)
 
+
+def test_generate_signal_macd_filter(monkeypatch):
+    base = make_ohlcv(step=2)
+    ohlcv_15 = make_ohlcv(n=15, step=2)
+    ohlcv_1h = make_ohlcv(step=2)
+
+    rsi_vals = iter([60, 41, 39])
+    monkeypatch.setattr(strategy, "calc_rsi", lambda *args, **kwargs: next(rsi_vals))
+    monkeypatch.setattr(strategy, "calc_position_size", lambda equity, risk, dist: 100)
+    monkeypatch.setattr(strategy, "calc_atr", lambda *args, **kwargs: 1.0)
+    monkeypatch.setattr(strategy, "calc_macd", lambda *args, **kwargs: (-1.0, 0.0, -1.0))
+
+    sig = strategy.generate_signal(
+        "AAA",
+        base,
+        equity=1_000,
+        risk_pct=0.01,
+        ohlcv_15m=ohlcv_15,
+        ohlcv_1h=ohlcv_1h,
+        order_book={"bid_vol_aggreg": 120, "ask_vol_aggreg": 80},
+        tick_ratio_buy=0.6,
+    )
+    assert sig is None
+
