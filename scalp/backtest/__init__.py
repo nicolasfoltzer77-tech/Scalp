@@ -15,8 +15,13 @@ def backtest_trades(
     *,
     fee_rate: Optional[float] = None,
     zero_fee_pairs: Optional[List[str]] = None,
+    logger: Any | None = None,
 ) -> float:
-    """Compute cumulative PnL for a series of trades."""
+    """Compute cumulative PnL for a series of trades.
+
+    If ``logger`` is provided it must expose a ``log(dict)`` method and each
+    trade will be recorded with the computed PnL.
+    """
     fee_rate = fee_rate if fee_rate is not None else CONFIG.get("FEE_RATE", 0.0)
     zero_fee = set(zero_fee_pairs or CONFIG.get("ZERO_FEE_PAIRS", []))
 
@@ -29,7 +34,22 @@ def backtest_trades(
         if None in (symbol, entry, exit_):
             continue
         frate = 0.0 if symbol in zero_fee else fee_rate
-        pnl += calc_pnl_pct(entry, exit_, side, frate)
+        pnl_trade = calc_pnl_pct(entry, exit_, side, frate)
+        if logger is not None:
+            logger.log(
+                {
+                    "pair": symbol,
+                    "tf": tr.get("tf"),
+                    "dir": "long" if side > 0 else "short",
+                    "entry": entry,
+                    "sl": tr.get("sl"),
+                    "tp": tr.get("tp"),
+                    "score": tr.get("score"),
+                    "reasons": tr.get("reasons"),
+                    "pnl": pnl_trade,
+                }
+            )
+        pnl += pnl_trade
     return pnl
 
 
