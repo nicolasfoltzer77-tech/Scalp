@@ -136,3 +136,11 @@ def test_reset_risk_manager():
     assert bot.risk_mgr.reset_called is True
     assert kb == bot.main_keyboard
 
+
+def test_shutdown_bot():
+    bot = make_bot()
+    resp, kb = bot.handle_callback("shutdown", 0.0)
+    assert "arrêt" in resp.lower()
+    assert bot.stop_requested is True
+    assert kb == bot.main_keyboard
+
