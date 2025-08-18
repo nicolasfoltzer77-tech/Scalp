@@ -26,7 +26,11 @@ Le bot lit sa configuration via des variables d'environnement :
 - `SYMBOL` : symbole du contrat futures, ex. `BTC_USDT`.
 - `INTERVAL` : intervalle des chandeliers, ex. `Min1`, `Min5`.
 - `EMA_FAST`, `EMA_SLOW` : périodes des EMA utilisées par la stratégie.
+- `MACD_FAST`, `MACD_SLOW`, `MACD_SIGNAL` : paramètres du filtre de tendance MACD.
+- `EMA_TREND_PERIOD` : période de l'EMA longue utilisée comme filtre de tendance général.
 - `RISK_PCT_EQUITY`, `LEVERAGE`, `STOP_LOSS_PCT`, `TAKE_PROFIT_PCT` : paramètres de gestion du risque.
+- `ATR_PERIOD`, `TRAIL_ATR_MULT`, `SCALE_IN_ATR_MULT`, `PROGRESS_MIN`, `TIMEOUT_MIN` : réglages pour l'ATR, l'ajout à la position, le trailing stop et la sortie par timeout.
+- `MAX_DAILY_LOSS_PCT`, `MAX_DAILY_PROFIT_PCT`, `MAX_POSITIONS` : limites globales (kill switch après perte ou gain, nombre maximal de positions).
 - `LOG_DIR` : dossier où seront écrits les fichiers de log.
 
 - `NOTIFY_URL` : URL d'un webhook HTTP pour recevoir les événements (optionnel, peut être utilisé en plus de Telegram).
