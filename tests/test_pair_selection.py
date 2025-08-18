@@ -32,6 +32,48 @@ def test_select_top_pairs():
     assert [p["symbol"] for p in top] == ["B", "C"]
 
 
+def test_filter_trade_pairs():
+    class Client:
+        def get_ticker(self, symbol=None):
+            return {
+                "success": True,
+                "data": [
+                    {
+                        "symbol": "AAA",
+                        "volume": "6000000",
+                        "bidPrice": "100",
+                        "askPrice": "100.03",
+                    },  # spread ~3 bps
+                    {
+                        "symbol": "BBB",
+                        "volume": "10000000",
+                        "bidPrice": "50",
+                        "askPrice": "50.1",
+                    },  # spread ~200 bps
+                    {
+                        "symbol": "CCC",
+                        "volume": "7000000",
+                        "bidPrice": "10",
+                        "askPrice": "10.01",
+                    },  # spread ~100 bps
+                    {
+                        "symbol": "DDD",
+                        "volume": "4000000",
+                        "bidPrice": "20",
+                        "askPrice": "20.01",
+                    },  # volume trop faible
+                ],
+            }
+
+    pairs = bot.filter_trade_pairs(
+        Client(),
+        volume_min=5_000_000,
+        max_spread_bps=5,
+        zero_fee_pairs=["AAA", "BBB", "CCC", "DDD"],
+    )
+    assert [p["symbol"] for p in pairs] == ["AAA"]
+
+
 def test_find_trade_positions(monkeypatch):
     class Client:
         def __init__(self):
