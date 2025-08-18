@@ -25,6 +25,9 @@ CONFIG = {
     "BASE_URL": os.getenv("MEXC_CONTRACT_BASE_URL", "https://contract.mexc.com"),
     "FEE_RATE": float(os.getenv("FEE_RATE", "0.0")),
     "MAX_DAILY_LOSS_PCT": float(os.getenv("MAX_DAILY_LOSS_PCT", "5.0")),
+
+    "MAX_DAILY_PROFIT_PCT": float(os.getenv("MAX_DAILY_PROFIT_PCT", "5.0")),
+
     "MAX_POSITIONS": int(os.getenv("MAX_POSITIONS", "1")),
     "ZERO_FEE_PAIRS": [p.strip() for p in os.getenv("ZERO_FEE_PAIRS", "").split(",") if p.strip()],
 }

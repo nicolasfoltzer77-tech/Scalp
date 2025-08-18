@@ -362,13 +362,14 @@ class RiskManager:
     max_positions: int
     risk_pct: float
     aggressive: bool = False
+    max_daily_profit_pct: float | None = None
 
     def __post_init__(self) -> None:
         self.base_risk_pct = self.risk_pct
         self.reset_day()
 
     def reset_day(self) -> None:
-        self.daily_loss_pct = 0.0
+        self.daily_pnl_pct = 0.0
         self.consecutive_losses = 0
         self.win_streak = 0
         self.loss_streak = 0
@@ -382,12 +383,20 @@ class RiskManager:
             self.consecutive_losses += 1
             self.loss_streak += 1
             self.win_streak = 0
-            self.daily_loss_pct += pnl_pct
+
         else:
             self.consecutive_losses = 0
             self.win_streak += 1
             self.loss_streak = 0
-        if self.daily_loss_pct <= -self.max_daily_loss_pct:
+
+        self.daily_pnl_pct += pnl_pct
+        if self.daily_pnl_pct <= -self.max_daily_loss_pct:
+            self.kill_switch = True
+        if (
+            self.max_daily_profit_pct is not None
+            and self.daily_pnl_pct >= self.max_daily_profit_pct
+        ):
+
             self.kill_switch = True
         self.risk_pct = adjust_risk_pct(self.risk_pct, self.win_streak, self.loss_streak)
 
