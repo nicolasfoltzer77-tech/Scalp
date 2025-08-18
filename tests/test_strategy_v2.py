@@ -112,6 +112,7 @@ def test_generate_signal_macd_filter(monkeypatch):
     assert sig is None
 
 
+
 def test_generate_signal_trend_ema_filter(monkeypatch):
     base = make_ohlcv(step=2)
     ohlcv_15 = make_ohlcv(n=15, step=2)
@@ -143,4 +144,4 @@ def test_generate_signal_trend_ema_filter(monkeypatch):
         trend_ema_period=200,
     )
     assert sig is None
-
+    
