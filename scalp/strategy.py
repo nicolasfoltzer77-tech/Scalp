@@ -366,63 +366,6 @@ def generate_signal(
     return None
 
 # ---------------------------------------------------------------------------
-# Risk limits
-# ---------------------------------------------------------------------------
-
-@dataclass
-class RiskManager:
-    """Utility class implementing kill switch, loss limits and risk scaling."""
-
-    max_daily_loss_pct: float
-    max_positions: int
-    risk_pct: float
-    aggressive: bool = False
-    max_daily_profit_pct: float | None = None
-
-    def __post_init__(self) -> None:
-        self.base_risk_pct = self.risk_pct
-        self.reset_day()
-
-    def reset_day(self) -> None:
-        self.daily_pnl_pct = 0.0
-        self.consecutive_losses = 0
-        self.win_streak = 0
-        self.loss_streak = 0
-        self.kill_switch = False
-        self.risk_pct = self.base_risk_pct
-
-    def record_trade(self, pnl_pct: float) -> None:
-        from .risk import adjust_risk_pct
-
-        if pnl_pct < 0:
-            self.consecutive_losses += 1
-            self.loss_streak += 1
-            self.win_streak = 0
-        else:
-            self.consecutive_losses = 0
-            self.win_streak += 1
-            self.loss_streak = 0
-        self.daily_pnl_pct += pnl_pct
-        if self.daily_pnl_pct <= -self.max_daily_loss_pct:
-            self.kill_switch = True
-        if (
-            self.max_daily_profit_pct is not None
-            and self.daily_pnl_pct >= self.max_daily_profit_pct
-        ):
-            self.kill_switch = True
-        self.risk_pct = adjust_risk_pct(self.risk_pct, self.win_streak, self.loss_streak)
-
-    def pause_duration(self) -> int:
-        if self.consecutive_losses >= 5:
-            return 60 * 60
-        if self.consecutive_losses >= 3:
-            return 15 * 60
-        return 0
-
-    def can_open(self, current_positions: int) -> bool:
-        return (not self.kill_switch) and current_positions < self.max_positions
-
-# ---------------------------------------------------------------------------
 # Backtesting utilities
 # ---------------------------------------------------------------------------
 
