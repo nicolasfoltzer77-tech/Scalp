@@ -93,6 +93,19 @@ def _format_text(event: str, payload: Dict[str, Any] | None = None) -> str:
     if event == "bot_started":
         return "🤖 Bot démarré"
     if event == "pair_list":
+        if payload:
+            green = payload.get("green")
+            orange = payload.get("orange")
+            red = payload.get("red")
+            if green or orange or red:
+                lines = ["Listing :"]
+                if green:
+                    lines.append(f"🟢 {green}")
+                if orange:
+                    lines.append(f"🟠 {orange}")
+                if red:
+                    lines.append(f"🔴 {red}")
+                return "\n".join(lines)
         pairs = payload.get("pairs") if payload else ""
         return f"Listing : {pairs}"
 

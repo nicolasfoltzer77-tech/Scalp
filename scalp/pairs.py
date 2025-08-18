@@ -147,7 +147,19 @@ def send_selected_pairs(
         base, _ = split_symbol(sym)
         symbols.append(base)
     if symbols:
-        notify_fn("pair_list", {"pairs": ", ".join(symbols)})
+        n = len(symbols)
+        third = max(n // 3, 1)
+        green = symbols[:third]
+        orange = symbols[third : 2 * third]
+        red = symbols[2 * third :]
+        payload: Dict[str, str] = {}
+        if green:
+            payload["green"] = ", ".join(green)
+        if orange:
+            payload["orange"] = ", ".join(orange)
+        if red:
+            payload["red"] = ", ".join(red)
+        notify_fn("pair_list", payload)
 
 
 def heat_score(volatility: float, volume: float, news: bool = False) -> float:
