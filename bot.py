@@ -656,7 +656,7 @@ def main():
                             "symbol": symbol,
                             "entry": entry_price,
                             "exit": price,
-                            "pnl_usd": round((entry_price - price) * vol, 2),
+                            "pnl_usd": round((entry_price - price) * vol_close, 2),
                             "pnl_pct": pnl,
                             "fee_pct": fee_rate * 2 * 100,
                         }
@@ -718,11 +718,10 @@ def main():
                     "side": "long",
                     "symbol": symbol,
                     "price": price,
-
-                    "vol": vol,
+                    "vol": vol_open,
                     "leverage": CONFIG["LEVERAGE"],
-                    "sl_usd": round((price - sl_long) * vol, 2),
-                    "tp_usd": round((tp_long - price) * vol, 2),
+                    "sl_usd": round((price - sl_long) * vol_open, 2),
+                    "tp_usd": round((tp_long - price) * vol_open, 2),
                     "fee_rate": fee_rate,
                     "session_pnl": session_pnl,
                 }
@@ -740,7 +739,7 @@ def main():
                             "symbol": symbol,
                             "entry": entry_price,
                             "exit": price,
-                            "pnl_usd": round((price - entry_price) * vol, 2),
+                            "pnl_usd": round((price - entry_price) * vol_close, 2),
                             "pnl_pct": pnl,
                             "fee_pct": fee_rate * 2 * 100,
                         }
@@ -762,27 +761,57 @@ def main():
                 entry_price = None
                 time.sleep(0.3)
 
-            resp = client.place_order(symbol, side=3, vol=vol, order_type=5, price=price,
-                                      open_type=CONFIG["OPEN_TYPE"], leverage=CONFIG["LEVERAGE"],
-                                      stop_loss=sl_short, take_profit=tp_short)
-            log_event("order_short", resp)
-            logging.info("→ SHORT vol=%s @~%.2f (SL~%.2f / TP~%.2f) [%s]",
-                         vol, price, sl_short, tp_short, "paper" if CONFIG["PAPER_TRADE"] else "live")
-            open_payload = {
-                "side": "short",
-                "symbol": symbol,
-                "price": price,
-                "vol": vol,
-                "leverage": CONFIG["LEVERAGE"],
-                "sl_usd": round((sl_short - price) * vol, 2),
-                "tp_usd": round((price - tp_short) * vol, 2),
-                "fee_rate": fee_rate,
-                "session_pnl": session_pnl,
-            }
-            log_event("position_opened", open_payload)
-            notify("position_opened", open_payload)
-            current_pos = -1
-            entry_price = price
+                positions = client.get_positions().get("data", [])
+                vol_open, lev = analyse_risque(
+                    contract_detail,
+                    positions,
+                    equity_usdt,
+                    price,
+                    cfg["RISK_PCT_EQUITY"],
+                    cfg["LEVERAGE"],
+                    symbol,
+                    side="short",
+                    risk_level=cfg.get("RISK_LEVEL", 2),
+                )
+                if vol_open <= 0:
+                    logging.info("vol calculé = 0; on attend.")
+                    time.sleep(cfg["LOOP_SLEEP_SECS"])
+                    continue
+                resp = client.place_order(
+                    symbol,
+                    side=3,
+                    vol=vol_open,
+                    order_type=5,
+                    price=price,
+                    open_type=CONFIG["OPEN_TYPE"],
+                    leverage=lev,
+                    stop_loss=sl_short,
+                    take_profit=tp_short,
+                )
+                log_event("order_short", resp)
+                logging.info(
+                    "→ SHORT vol=%s @~%.2f (SL~%.2f / TP~%.2f) [%s]",
+                    vol_open,
+                    price,
+                    sl_short,
+                    tp_short,
+                    "paper" if CONFIG["PAPER_TRADE"] else "live",
+                )
+                open_payload = {
+                    "side": "short",
+                    "symbol": symbol,
+                    "price": price,
+                    "vol": vol_open,
+                    "leverage": CONFIG["LEVERAGE"],
+                    "sl_usd": round((sl_short - price) * vol_open, 2),
+                    "tp_usd": round((price - tp_short) * vol_open, 2),
+                    "fee_rate": fee_rate,
+                    "session_pnl": session_pnl,
+                }
+                log_event("position_opened", open_payload)
+                notify("position_opened", open_payload)
+                current_pos = -1
+                entry_price = price
 
             time.sleep(cfg["LOOP_SLEEP_SECS"])
 
