@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """MEXC USDT-M futures trading bot."""
-
-import json
 import logging
 import os
 import time
@@ -25,7 +23,7 @@ from scalp.trade_utils import (
     timeout_exit,
 )
 from scalp import pairs as _pairs
-from scalp.backtest import backtest_trades
+from scalp.backtest import backtest_trades  # noqa: F401
 from scalp.mexc_client import MexcFuturesClient as _BaseMexcFuturesClient
 
 # ---------------------------------------------------------------------------
@@ -100,7 +98,19 @@ def find_trade_positions(
 
 def send_selected_pairs(client: Any, top_n: int = 20) -> None:
     pairs = select_top_pairs(client, top_n=top_n)
-    symbols = [p.get("symbol") for p in pairs if p.get("symbol")]
+    seen: set[str] = set()
+    symbols: list[str] = []
+    for p in pairs:
+        sym = p.get("symbol")
+        if not sym:
+            continue
+        base = sym.replace("_", "")
+        if base.endswith("USDT"):
+            base = base[:-4]
+        if base in seen:
+            continue
+        seen.add(base)
+        symbols.append(base)
     if symbols:
         notify("pair_list", {"pairs": ", ".join(symbols)})
 
@@ -415,6 +425,7 @@ def main() -> None:
 
             elif x == -1 and current_pos >= 0:
                 if current_pos > 0 and entry_price is not None:
+
                     if close_position(1, price, vol_close):
                         break
 
