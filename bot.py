@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """MEXC USDT-M futures trading bot."""
-
-import json
 import logging
 import os
 import time
@@ -13,7 +11,9 @@ import requests
 from scalp.logging_utils import get_jsonl_logger
 from scalp.metrics import calc_pnl_pct, calc_atr
 from scalp.notifier import notify
+
 from scalp import __version__, RiskManager
+
 from scalp.telegram_bot import init_telegram_bot
 
 from scalp.bot_config import CONFIG
@@ -25,7 +25,7 @@ from scalp.trade_utils import (
     timeout_exit,
 )
 from scalp import pairs as _pairs
-from scalp.backtest import backtest_trades
+from scalp.backtest import backtest_trades  # noqa: F401
 from scalp.mexc_client import MexcFuturesClient as _BaseMexcFuturesClient
 
 # ---------------------------------------------------------------------------
@@ -100,7 +100,19 @@ def find_trade_positions(
 
 def send_selected_pairs(client: Any, top_n: int = 20) -> None:
     pairs = select_top_pairs(client, top_n=top_n)
-    symbols = [p.get("symbol") for p in pairs if p.get("symbol")]
+    seen: set[str] = set()
+    symbols: list[str] = []
+    for p in pairs:
+        sym = p.get("symbol")
+        if not sym:
+            continue
+        base = sym.replace("_", "")
+        if base.endswith("USDT"):
+            base = base[:-4]
+        if base in seen:
+            continue
+        seen.add(base)
+        symbols.append(base)
     if symbols:
         notify("pair_list", {"pairs": ", ".join(symbols)})
 
@@ -122,8 +134,10 @@ def main() -> None:
     risk_mgr = RiskManager(
         max_daily_loss_pct=cfg["MAX_DAILY_LOSS_PCT"],
         max_positions=cfg["MAX_POSITIONS"],
+
         risk_pct=cfg["RISK_PCT_EQUITY"],
     )
+
 
     tg_bot = init_telegram_bot(client, cfg)
 
@@ -350,8 +364,21 @@ def main() -> None:
 
             if x == +1 and current_pos <= 0:
                 if current_pos < 0 and entry_price is not None:
+
                     if close_position(-1, price, vol_close):
                         break
+=======
+                    pnl = calc_pnl_pct(entry_price, price, -1, fee_rate)
+                    payload = {
+                        "side": "short",
+                        "symbol": symbol,
+                        "entry": entry_price,
+                        "exit": price,
+                        "pnl_usd": round((entry_price - price) * vol_close, 2),
+                        "pnl_pct": pnl,
+                        "fee_pct": fee_rate * 2 * 100,
+                    }
+
 
                 positions = client.get_positions().get("data", [])
                 if not risk_mgr.can_open(len(positions)):
@@ -414,8 +441,10 @@ def main() -> None:
 
             elif x == -1 and current_pos >= 0:
                 if current_pos > 0 and entry_price is not None:
+
                     if close_position(1, price, vol_close):
                         break
+
 
                 positions = client.get_positions().get("data", [])
                 if not risk_mgr.can_open(len(positions)):
