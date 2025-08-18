@@ -14,6 +14,7 @@ from scalp.logging_utils import get_jsonl_logger
 from scalp.metrics import calc_pnl_pct
 from scalp.notifier import notify
 from scalp import __version__
+from scalp.telegram_bot import init_telegram_bot
 
 from scalp.bot_config import CONFIG
 from scalp.strategy import ema, cross
@@ -114,6 +115,8 @@ def main() -> None:
         paper_trade=cfg["PAPER_TRADE"],
     )
 
+    tg_bot = init_telegram_bot(client, cfg)
+
     symbol = cfg["SYMBOL"]
     interval = cfg["INTERVAL"]
     ema_fast_n = cfg["EMA_FAST"]
@@ -163,6 +166,12 @@ def main() -> None:
         logging.error("Erreur sélection paires: %s", exc)
 
     while True:
+        if tg_bot:
+            try:
+                tg_bot.handle_updates(session_pnl)
+            except Exception as exc:  # pragma: no cover - robustness
+                logging.error("Erreur commandes Telegram: %s", exc)
+
         try:
             k = client.get_kline(symbol, interval=interval)
             if not (k and k.get("success") and "data" in k and "close" in k["data"]):
