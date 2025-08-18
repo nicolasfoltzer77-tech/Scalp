@@ -11,9 +11,7 @@ import requests
 from scalp.logging_utils import get_jsonl_logger
 from scalp.metrics import calc_pnl_pct, calc_atr
 from scalp.notifier import notify
-
 from scalp import __version__, RiskManager
-
 from scalp.telegram_bot import init_telegram_bot
 
 from scalp.bot_config import CONFIG
@@ -133,7 +131,6 @@ def main() -> None:
     )
     risk_mgr = RiskManager(
         max_daily_loss_pct=cfg["MAX_DAILY_LOSS_PCT"],
-
         max_daily_profit_pct=cfg["MAX_DAILY_PROFIT_PCT"],
         max_positions=cfg["MAX_POSITIONS"],
         risk_pct=cfg["RISK_PCT_EQUITY"],
@@ -364,10 +361,8 @@ def main() -> None:
 
             if x == +1 and current_pos <= 0:
                 if current_pos < 0 and entry_price is not None:
-
                     if close_position(-1, price, vol_close):
                         break
-
 
                 positions = client.get_positions().get("data", [])
                 if not risk_mgr.can_open(len(positions)):
@@ -433,7 +428,6 @@ def main() -> None:
 
                     if close_position(1, price, vol_close):
                         break
-
 
                 positions = client.get_positions().get("data", [])
                 if not risk_mgr.can_open(len(positions)):

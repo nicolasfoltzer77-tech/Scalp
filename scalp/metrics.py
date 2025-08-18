@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import Iterable
 
-__all__ = ["calc_pnl_pct", "calc_rsi", "calc_atr", "backtest_position"]
+__all__ = ["calc_pnl_pct", "calc_rsi", "calc_atr", "calc_macd", "backtest_position"]
 
 
 def calc_pnl_pct(
@@ -135,6 +135,42 @@ def calc_atr(
     for tr in trs[period:]:
         atr = (atr * (period - 1) + tr) / period
     return atr
+
+
+def calc_macd(
+    prices: Sequence[float],
+    fast: int = 12,
+    slow: int = 26,
+    signal: int = 9,
+) -> tuple[float, float, float]:
+    """Return MACD, signal line and histogram values.
+
+    The implementation computes exponential moving averages using Wilder's
+    smoothing. ``prices`` must contain at least ``slow + signal`` elements.
+    """
+
+    prices_list = [float(p) for p in prices]
+    if fast <= 0 or slow <= 0 or signal <= 0:
+        raise ValueError("periods must be positive")
+    min_len = max(fast, slow) + signal
+    if len(prices_list) < min_len:
+        raise ValueError("len(prices) must be >= slow + signal")
+
+    def _ema_series(series: Sequence[float], window: int) -> list[float]:
+        k = 2.0 / (window + 1.0)
+        out = [float(series[0])]
+        for x in series[1:]:
+            out.append(float(x) * k + out[-1] * (1.0 - k))
+        return out
+
+    fast_ema = _ema_series(prices_list, fast)
+    slow_ema = _ema_series(prices_list, slow)
+    macd_series = [f - s for f, s in zip(fast_ema, slow_ema)]
+    signal_series = _ema_series(macd_series, signal)
+    macd_val = macd_series[-1]
+    signal_val = signal_series[-1]
+    hist = macd_val - signal_val
+    return macd_val, signal_val, hist
 
 
 def backtest_position(
