@@ -1,4 +1,5 @@
 """Simple notifier for bot events."""
+
 from __future__ import annotations
 
 import logging
@@ -7,12 +8,14 @@ from typing import Any, Dict
 
 try:  # pragma: no cover - guarded import for optional dependency
     import requests as _requests
+
     # ``requests`` may be provided as a stub during tests. Ensure it exposes a
     # ``post`` attribute so callers can monkeypatch it reliably.
     if not hasattr(_requests, "post"):
         raise ImportError
     requests = _requests
 except Exception:  # pragma: no cover - fallback when ``requests`` is missing
+
     class _Requests:
         """Minimal stand‑in for :mod:`requests` when the real library is absent."""
 
@@ -20,7 +23,6 @@ except Exception:  # pragma: no cover - fallback when ``requests`` is missing
             raise RuntimeError("requests.post unavailable")
 
     requests = _Requests()  # type: ignore[assignment]
-
 
 
 def _pair_name(symbol: str) -> str:
@@ -75,7 +77,7 @@ def _format_text(event: str, payload: Dict[str, Any] | None = None) -> str:
                 if dur is not None:
                     text += f" - durée {dur}"
         return text
-      
+
     text = event
     if payload:
         items = ", ".join(f"{k}={v}" for k, v in payload.items())
