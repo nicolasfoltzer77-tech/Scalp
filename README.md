@@ -58,6 +58,8 @@ python bot.py
 
 Les journaux sont écrits dans `logs/` et affichés sur la console. Le bot tourne jusqu'à `Ctrl+C`. Les ouvertures et fermetures de positions sont consignées dans `bot_events.jsonl`.
 
+Lors du démarrage, deux notifications Telegram sont émises : la première indique que le bot est lancé, la seconde liste les 20 paires sélectionnées pour la session.
+
 ## Version
 
 La version du bot est stockée dans le fichier `scalp/VERSION` et exposée dans
