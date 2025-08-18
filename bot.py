@@ -47,6 +47,7 @@ CONFIG = {
     "EMA_SLOW": int(os.getenv("EMA_SLOW", "21")),
     "RISK_PCT_EQUITY": float(os.getenv("RISK_PCT_EQUITY", "0.01")),  # 1% par trade
     "LEVERAGE": int(os.getenv("LEVERAGE", "5")),
+    "RISK_LEVEL": int(os.getenv("RISK_LEVEL", "2")),
     "OPEN_TYPE": int(os.getenv("OPEN_TYPE", "1")),       # 1=isolated, 2=cross
     "STOP_LOSS_PCT": float(os.getenv("STOP_LOSS_PCT", "0.006")),   # 0.6%
     "TAKE_PROFIT_PCT": float(os.getenv("TAKE_PROFIT_PCT", "0.012")),# 1.2%
@@ -319,6 +320,84 @@ def compute_position_size(contract_detail: Dict[str, Any], equity_usdt: float,
     vol = int(math.floor(vol / vol_unit) * vol_unit)
     return max(min_vol, vol)
 
+
+def analyse_risque(
+    contract_detail: Dict[str, Any],
+    open_positions: List[Dict[str, Any]],
+    equity_usdt: float,
+    price: float,
+    risk_pct: float,
+    base_leverage: int,
+    symbol: Optional[str] = None,
+    side: str = "long",
+    risk_level: int = 2,
+) -> tuple[int, int]:
+    """Analyse le risque avant l'ouverture d'une position.
+
+    Cette fonction calcule le volume de la position et adapte le levier en
+    fonction du ``risk_level``. Elle limite également le nombre de positions
+    ouvertes dans une direction donnée pour ``symbol``.
+
+    Parameters
+    ----------
+    contract_detail:
+        Détail du contrat tel que renvoyé par l'API ``get_contract_detail``.
+    open_positions:
+        Liste des positions actuellement ouvertes.
+    equity_usdt:
+        Capital disponible.
+    price:
+        Prix actuel du sous-jacent.
+    risk_pct:
+        Pourcentage du capital risqué par trade.
+    base_leverage:
+        Levier de base configuré.
+    symbol:
+        Symbole de trading (ex: ``BTC_USDT``).
+    side:
+        Direction envisagée (``"long"`` ou ``"short"``).
+    risk_level:
+        Niveau de risque : 1 (faible), 2 (moyen), 3 (élevé).
+
+    Returns
+    -------
+    tuple[int, int]
+        ``(volume, leverage)`` à utiliser pour l'ordre. ``volume`` vaut ``0`` si
+        la limite de positions est atteinte.
+    """
+
+    symbol = symbol or CONFIG.get("SYMBOL")
+    side = side.lower()
+
+    max_positions_map = {1: 1, 2: 2, 3: 3}
+    leverage_map = {
+        1: max(1, base_leverage // 2),
+        2: base_leverage,
+        3: base_leverage * 2,
+    }
+
+    max_pos = max_positions_map.get(risk_level, max_positions_map[2])
+    leverage = leverage_map.get(risk_level, base_leverage)
+
+    current = 0
+    for pos in open_positions or []:
+        if pos and pos.get("symbol") == symbol:
+            if str(pos.get("side", "")).lower() == side:
+                current += 1
+
+    if current >= max_pos:
+        return 0, leverage
+
+    vol = compute_position_size(
+        contract_detail,
+        equity_usdt=equity_usdt,
+        price=price,
+        risk_pct=risk_pct,
+        leverage=leverage,
+        symbol=symbol,
+    )
+    return vol, leverage
+
 # ---------------------------------------------------------------------------
 # Sélection des paires de trading
 # ---------------------------------------------------------------------------
@@ -540,19 +619,34 @@ def main():
             else:
                 price = float(tdata.get("lastPrice"))
 
-            vol = compute_position_size(contract_detail, equity_usdt, price,
-                                        cfg["RISK_PCT_EQUITY"], cfg["LEVERAGE"], symbol)
-            if vol <= 0:
+            vol_close = compute_position_size(
+                contract_detail,
+                equity_usdt,
+                price,
+                cfg["RISK_PCT_EQUITY"],
+                cfg["LEVERAGE"],
+                symbol,
+            )
+            if vol_close <= 0:
                 logging.info("vol calculé = 0; on attend.")
-                time.sleep(cfg["LOOP_SLEEP_SECS"]); continue
-
+                time.sleep(cfg["LOOP_SLEEP_SECS"])
+                continue
             sl_long = price * (1.0 - cfg["STOP_LOSS_PCT"])
             tp_long = price * (1.0 + cfg["TAKE_PROFIT_PCT"])
             sl_short = price * (1.0 + cfg["STOP_LOSS_PCT"])
             tp_short = price * (1.0 - cfg["TAKE_PROFIT_PCT"])
 
-            log_event("signal", {"fast": last_fast, "slow": last_slow, "cross": x,
-                                 "price": price, "pos": current_pos, "vol": vol})
+            log_event(
+                "signal",
+                {
+                    "fast": last_fast,
+                    "slow": last_slow,
+                    "cross": x,
+                    "price": price,
+                    "pos": current_pos,
+                    "vol": vol_close,
+                },
+            )
 
             # type=5 (market). On passe "price" à titre conservateur.
             if x == +1 and current_pos <= 0:
@@ -572,21 +666,61 @@ def main():
                         session_pnl += pnl
                         payload["session_pnl"] = session_pnl
                         notify("position_closed", payload)
-                    client.place_order(symbol, side=2, vol=vol, order_type=5, price=price,
-                                       open_type=CONFIG["OPEN_TYPE"], leverage=CONFIG["LEVERAGE"], reduce_only=True)
+                    client.place_order(
+                        symbol,
+                        side=2,
+                        vol=vol_close,
+                        order_type=5,
+                        price=price,
+                        open_type=CONFIG["OPEN_TYPE"],
+                        leverage=CONFIG["LEVERAGE"],
+                        reduce_only=True,
+                    )
                     current_pos = 0
                     entry_price = None
                     time.sleep(0.3)
-                resp = client.place_order(symbol, side=1, vol=vol, order_type=5, price=price,
-                                          open_type=CONFIG["OPEN_TYPE"], leverage=CONFIG["LEVERAGE"],
-                                          stop_loss=sl_long, take_profit=tp_long)
+
+                positions = client.get_positions().get("data", [])
+                vol_open, lev = analyse_risque(
+                    contract_detail,
+                    positions,
+                    equity_usdt,
+                    price,
+                    cfg["RISK_PCT_EQUITY"],
+                    cfg["LEVERAGE"],
+                    symbol,
+                    side="long",
+                    risk_level=cfg.get("RISK_LEVEL", 2),
+                )
+                if vol_open <= 0:
+                    logging.info("vol calculé = 0; on attend.")
+                    time.sleep(cfg["LOOP_SLEEP_SECS"])
+                    continue
+                resp = client.place_order(
+                    symbol,
+                    side=1,
+                    vol=vol_open,
+                    order_type=5,
+                    price=price,
+                    open_type=CONFIG["OPEN_TYPE"],
+                    leverage=lev,
+                    stop_loss=sl_long,
+                    take_profit=tp_long,
+                )
                 log_event("order_long", resp)
-                logging.info("→ LONG vol=%s @~%.2f (SL~%.2f / TP~%.2f) [%s]",
-                             vol, price, sl_long, tp_long, "paper" if CONFIG["PAPER_TRADE"] else "live")
+                logging.info(
+                    "→ LONG vol=%s @~%.2f (SL~%.2f / TP~%.2f) [%s]",
+                    vol_open,
+                    price,
+                    sl_long,
+                    tp_long,
+                    "paper" if CONFIG["PAPER_TRADE"] else "live",
+                )
                 open_payload = {
                     "side": "long",
                     "symbol": symbol,
                     "price": price,
+
                     "vol": vol,
                     "leverage": CONFIG["LEVERAGE"],
                     "sl_usd": round((price - sl_long) * vol, 2),
@@ -616,11 +750,20 @@ def main():
                         session_pnl += pnl
                         payload["session_pnl"] = session_pnl
                         notify("position_closed", payload)
-                client.place_order(symbol, side=4, vol=vol, order_type=5, price=price,
-                                   open_type=CONFIG["OPEN_TYPE"], leverage=CONFIG["LEVERAGE"], reduce_only=True)
+                client.place_order(
+                    symbol,
+                    side=4,
+                    vol=vol_close,
+                    order_type=5,
+                    price=price,
+                    open_type=CONFIG["OPEN_TYPE"],
+                    leverage=CONFIG["LEVERAGE"],
+                    reduce_only=True,
+                )
                 current_pos = 0
                 entry_price = None
                 time.sleep(0.3)
+
             resp = client.place_order(symbol, side=3, vol=vol, order_type=5, price=price,
                                       open_type=CONFIG["OPEN_TYPE"], leverage=CONFIG["LEVERAGE"],
                                       stop_loss=sl_short, take_profit=tp_short)

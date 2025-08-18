@@ -22,6 +22,7 @@ except Exception:  # pragma: no cover - fallback when ``requests`` is missing
     requests = _Requests()  # type: ignore[assignment]
 
 
+
 def _pair_name(symbol: str) -> str:
     """Return a human friendly pair name like ``BTC/USDT``."""
     if "_" in symbol:
@@ -31,6 +32,33 @@ def _pair_name(symbol: str) -> str:
     else:
         base, quote = symbol, ""
     return f"{base}/{quote}" if quote else base
+
+
+        if payload:
+            vol = payload.get("vol")
+            lev = payload.get("leverage")
+            if vol is not None and lev is not None:
+                text += f" - Position {vol} x{lev}"
+
+            if event == "position_opened":
+                tp = payload.get("tp_pct")
+                sl = payload.get("sl_pct")
+                if tp is not None and sl is not None:
+                    text += f" - TP +{tp}% / SL -{sl}%"
+                hold = payload.get("hold") or payload.get("expected_duration")
+                if hold is not None:
+                    text += f" - durée prévue {hold}"
+            else:  # position_closed
+                pnl_usd = payload.get("pnl_usd")
+                pnl_pct = payload.get("pnl_pct")
+                if pnl_usd is not None and pnl_pct is not None:
+                    text += f" - PnL {pnl_usd} USDT ({pnl_pct}%)"
+                elif pnl_pct is not None:
+                    text += f" - PnL {pnl_pct}%"
+                dur = payload.get("duration")
+                if dur is not None:
+                    text += f" - durée {dur}"
+        return text
 
 
 def _format_text(event: str, payload: Dict[str, Any] | None = None) -> str:
@@ -74,7 +102,7 @@ def _format_text(event: str, payload: Dict[str, Any] | None = None) -> str:
                 if dur is not None:
                     text += f" - durée {dur}"
         return text
-
+      
     text = event
     if payload:
         items = ", ".join(f"{k}={v}" for k, v in payload.items())

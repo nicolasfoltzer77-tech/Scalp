@@ -79,6 +79,7 @@ def test_format_text_open_position():
         "symbol": "BTCUSDT",
         "vol": 1,
         "leverage": 10,
+
         "tp_usd": 5,
         "sl_usd": 2,
         "hold": "2h",
@@ -87,6 +88,7 @@ def test_format_text_open_position():
     assert "Ouvre long BTC/USDT" in text
     assert "Position 1 x10" in text
     assert "TP +5 USDT / SL -2 USDT" in text
+
     assert "durée prévue 2h" in text
 
 
@@ -101,6 +103,7 @@ def test_format_text_closed_position():
         "duration": "1h",
     }
     text = notifier._format_text("position_closed", payload)
+
     assert "Ferme short ETH/USDT" in text
     assert "Position 2 x5" in text
     assert "PnL 12 USDT (3%)" in text
