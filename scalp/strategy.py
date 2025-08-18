@@ -13,7 +13,7 @@ real‑time trading loops or backtest engines.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterable, Sequence, List, Dict, Optional, Tuple, Any
+from typing import Sequence, List, Dict, Optional, Tuple, Any
 
 from .metrics import calc_rsi, calc_atr, calc_pnl_pct
 from .risk import calc_position_size
@@ -52,8 +52,8 @@ def vwap(highs: Sequence[float], lows: Sequence[float],
 
     tp_vol = 0.0
     vol_sum = 0.0
-    for h, l, c, v in zip(highs, lows, closes, volumes):
-        tp = (h + l + c) / 3.0
+    for h, low, c, v in zip(highs, lows, closes, volumes):
+        tp = (h + low + c) / 3.0
         tp_vol += tp * v
         vol_sum += v
     return tp_vol / vol_sum if vol_sum else 0.0
@@ -383,10 +383,12 @@ class RiskManager:
             self.consecutive_losses += 1
             self.loss_streak += 1
             self.win_streak = 0
+
         else:
             self.consecutive_losses = 0
             self.win_streak += 1
             self.loss_streak = 0
+
         self.daily_pnl_pct += pnl_pct
         if self.daily_pnl_pct <= -self.max_daily_loss_pct:
             self.kill_switch = True
@@ -394,6 +396,7 @@ class RiskManager:
             self.max_daily_profit_pct is not None
             and self.daily_pnl_pct >= self.max_daily_profit_pct
         ):
+
             self.kill_switch = True
         self.risk_pct = adjust_risk_pct(self.risk_pct, self.win_streak, self.loss_streak)
 
