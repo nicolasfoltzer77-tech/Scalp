@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """MEXC USDT-M futures trading bot."""
+import argparse
 import logging
 import os
 import time
@@ -8,7 +9,7 @@ from typing import Any, Dict, Optional, List
 
 import requests
 
-from scalp.logging_utils import get_jsonl_logger
+from scalp.logging_utils import get_jsonl_logger, TradeLogger
 from scalp.metrics import calc_pnl_pct, calc_atr
 from scalp.notifier import notify
 from scalp import __version__, RiskManager
@@ -40,11 +41,13 @@ logging.basicConfig(
         logging.StreamHandler(),
     ],
 )
-log_event = get_jsonl_logger(
-    os.path.join(CONFIG["LOG_DIR"], "bot_events.jsonl"),
-    max_bytes=5_000_000,
-    backup_count=5,
-)
+
+
+def _noop_event(*_: Any, **__: Any) -> None:
+    pass
+
+
+log_event = _noop_event
 
 
 def check_config() -> None:
@@ -104,8 +107,19 @@ def send_selected_pairs(client: Any, top_n: int = 20) -> None:
 # Main trading loop
 # ---------------------------------------------------------------------------
 
-def main() -> None:
+def main(argv: Optional[List[str]] = None) -> None:
+    parser = argparse.ArgumentParser(description="MEXC USDT-M futures trading bot")
+    parser.add_argument("--log-json", action="store_true", help="Enable JSON event logs")
+    args = parser.parse_args(argv)
+
     cfg = CONFIG
+    global log_event
+    if args.log_json:
+        log_event = get_jsonl_logger(
+            os.path.join(cfg["LOG_DIR"], "bot_events.jsonl"),
+            max_bytes=5_000_000,
+            backup_count=5,
+        )
     check_config()
     client = MexcFuturesClient(
         access_key=cfg["MEXC_ACCESS_KEY"],
@@ -119,6 +133,11 @@ def main() -> None:
         max_daily_profit_pct=cfg["MAX_DAILY_PROFIT_PCT"],
         max_positions=cfg["MAX_POSITIONS"],
         risk_pct=cfg["RISK_PCT_EQUITY"],
+    )
+
+    trade_logger = TradeLogger(
+        os.path.join(cfg["LOG_DIR"], "trades.csv"),
+        os.path.join(cfg["LOG_DIR"], "trades.sqlite"),
     )
 
     tg_bot = init_telegram_bot(client, cfg)
@@ -154,11 +173,12 @@ def main() -> None:
     entry_price = None
     entry_time = None
     stop_long = stop_short = None
+    take_profit = None
     session_pnl = 0.0
     last_entry_price = None
 
     def close_position(side: int, price: float, vol: int) -> bool:
-        nonlocal current_pos, entry_price, entry_time, session_pnl, equity_usdt, stop_long, stop_short
+        nonlocal current_pos, entry_price, entry_time, session_pnl, equity_usdt, stop_long, stop_short, take_profit
         pnl = round(calc_pnl_pct(entry_price, price, side, fee_rate), 2)
         payload = {
             "side": "long" if side > 0 else "short",
@@ -195,15 +215,25 @@ def main() -> None:
         if pause:
             logging.info("Pause %s s après série de pertes", pause)
             time.sleep(pause)
+        trade_logger.log(
+            {
+                "pair": symbol,
+                "tf": interval,
+                "dir": "long" if side > 0 else "short",
+                "entry": entry_price,
+                "sl": stop_long if side > 0 else stop_short,
+                "tp": take_profit,
+                "score": None,
+                "reasons": None,
+                "pnl": pnl,
+            }
+        )
         current_pos = 0
         entry_price = None
         entry_time = None
         stop_long = stop_short = None
+        take_profit = None
         last_entry_price = None
-        time.sleep(0.3)
-        return kill
-        entry_time = None
-        stop_long = stop_short = None
         time.sleep(0.3)
         return kill
 
@@ -473,6 +503,7 @@ def main() -> None:
                 entry_time = now_ts
                 stop_long = sl_long
                 stop_short = None
+                take_profit = tp_long
                 last_entry_price = entry_price
 
             elif x == -1 and current_pos >= 0:
@@ -538,6 +569,7 @@ def main() -> None:
                 entry_time = now_ts
                 stop_short = sl_short
                 stop_long = None
+                take_profit = tp_short
                 last_entry_price = entry_price
 
             time.sleep(cfg["LOOP_SLEEP_SECS"])
