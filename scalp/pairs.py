@@ -109,3 +109,56 @@ def send_selected_pairs(client: Any, top_n: int = 20) -> None:
     symbols = [p.get("symbol") for p in pairs if p.get("symbol")]
     if symbols:
         notify("pair_list", {"pairs": ", ".join(symbols)})
+
+
+def heat_score(volatility: float, volume: float, news: bool = False) -> float:
+    """Return a heat score combining volatility, volume and a news flag."""
+    mult = 2.0 if news else 1.0
+    return volatility * volume * mult
+
+
+def select_top_heat_pairs(
+    pairs: List[Dict[str, Any]], *, top_n: int = 3
+) -> List[Dict[str, Any]]:
+    """Return ``top_n`` pairs ranked by ``heat_score``."""
+
+    scored: List[Dict[str, Any]] = []
+    for info in pairs:
+        try:
+            vol = float(info.get("volatility", 0))
+            volume = float(info.get("volume", 0))
+        except (TypeError, ValueError):
+            continue
+        score = heat_score(vol, volume, bool(info.get("news")))
+        row = dict(info)
+        row["heat_score"] = score
+        scored.append(row)
+
+    scored.sort(key=lambda r: r["heat_score"], reverse=True)
+    return scored[:top_n]
+
+
+def decorrelate_pairs(
+    pairs: List[Dict[str, Any]],
+    corr: Dict[str, Dict[str, float]],
+    *,
+    threshold: float = 0.8,
+    top_n: int = 3,
+) -> List[Dict[str, Any]]:
+    """Return top pairs while avoiding highly correlated symbols.
+
+    ``corr`` is a mapping of pair symbol to correlation with other symbols.  Two
+    pairs are considered too correlated when the absolute value of the
+    correlation exceeds ``threshold``.
+    """
+
+    selected: List[Dict[str, Any]] = []
+    for info in select_top_heat_pairs(pairs, top_n=len(pairs)):
+        sym = info.get("symbol")
+        if not sym:
+            continue
+        if all(abs(corr.get(sym, {}).get(p["symbol"], 0.0)) < threshold for p in selected):
+            selected.append(info)
+        if len(selected) >= top_n:
+            break
+    return selected
