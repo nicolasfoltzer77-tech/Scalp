@@ -85,11 +85,11 @@ def test_format_text_open_position():
         "hold": "2h",
     }
     text = notifier._format_text("position_opened", payload)
-    assert "Ouvre long BTC/USDT" in text
-    assert "Position 1 x10" in text
-    assert "TP +5 USDT / SL -2 USDT" in text
-
-    assert "durée prévue 2h" in text
+    lines = text.splitlines()
+    assert lines[0] == "Ouvre long BTC/USDT"
+    assert "Position: 1 x10" in lines[1]
+    assert any("TP: +5 USDT / SL: -2 USDT" in l for l in lines)
+    assert any("Durée prévue: 2h" in l for l in lines)
 
 
 def test_format_text_closed_position():
@@ -103,9 +103,9 @@ def test_format_text_closed_position():
         "duration": "1h",
     }
     text = notifier._format_text("position_closed", payload)
-
-    assert "Ferme short ETH/USDT" in text
-    assert "Position 2 x5" in text
-    assert "PnL 12 USDT (3%)" in text
-    assert "durée 1h" in text
+    lines = text.splitlines()
+    assert lines[0] == "Ferme short ETH/USDT"
+    assert any("Position: 2 x5" in l for l in lines)
+    assert any("PnL: 12 USDT (3%)" in l for l in lines)
+    assert any("Durée: 1h" in l for l in lines)
 
