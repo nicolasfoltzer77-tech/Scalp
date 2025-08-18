@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """MEXC USDT-M futures trading bot."""
-
-import json
 import logging
 import os
 import time
@@ -26,7 +24,7 @@ from scalp.trade_utils import (
     timeout_exit,
 )
 from scalp import pairs as _pairs
-from scalp.backtest import backtest_trades
+from scalp.backtest import backtest_trades  # noqa: F401
 from scalp.mexc_client import MexcFuturesClient as _BaseMexcFuturesClient
 
 # ---------------------------------------------------------------------------
@@ -50,18 +48,16 @@ log_event = get_jsonl_logger(
 
 
 def check_config() -> None:
-    """Display a color coded status of important environment variables."""
+    """Display only missing environment variables."""
     critical = {"MEXC_ACCESS_KEY", "MEXC_SECRET_KEY"}
     optional = {"NOTIFY_URL", "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID"}
     all_keys = sorted(set(CONFIG.keys()) | optional)
-    red, orange, green, reset = "\033[91m", "\033[93m", "\033[92m", "\033[0m"
+    red, orange, reset = "\033[91m", "\033[93m", "\033[0m"
     for key in all_keys:
         val = os.getenv(key)
         if key in critical and (not val or val in {"", "A_METTRE", "B_METTRE"}):
-            logging.info("%s%s%s: critique", red, key, reset)
-        elif val:
-            logging.info("%s%s%s: dispo", green, key, reset)
-        else:
+            logging.warning("%s%s%s: critique", red, key, reset)
+        elif not val:
             logging.info("%s%s%s: absente", orange, key, reset)
 
 
@@ -100,10 +96,12 @@ def find_trade_positions(
 
 
 def send_selected_pairs(client: Any, top_n: int = 20) -> None:
-    pairs = select_top_pairs(client, top_n=top_n)
-    symbols = [p.get("symbol") for p in pairs if p.get("symbol")]
-    if symbols:
-        notify("pair_list", {"pairs": ", ".join(symbols)})
+    _pairs.send_selected_pairs(
+        client,
+        top_n=top_n,
+        select_fn=select_top_pairs,
+        notify_fn=notify,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -217,6 +215,10 @@ def main() -> None:
         entry_time = None
         stop_long = stop_short = None
         last_entry_price = None
+        time.sleep(0.3)
+        return kill
+        entry_time = None
+        stop_long = stop_short = None
         time.sleep(0.3)
         return kill
 
