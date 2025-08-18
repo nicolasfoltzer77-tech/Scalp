@@ -118,88 +118,11 @@ def swing_levels(
 # Pair selection
 # ---------------------------------------------------------------------------
 
-def scan_pairs(
-    client: Any,
-    *,
-    zero_fee_pairs: Sequence[str],
-    volume_min: float = 5_000_000,
-    max_spread_bps: float = 5.0,
-    top_n: int = 20,
-) -> List[Dict[str, Any]]:
-    """First level market scan.
-
-    Only pairs with zero fees, sufficient 24h volume and tight spreads are
-    returned.  The implementation mirrors the behaviour of ``filter_trade_pairs``
-    found in :mod:`bot` but lives in a dedicated module so it can be reused in
-    different contexts.
-    """
-
-    tick = client.get_ticker()
-    data = tick.get("data") if isinstance(tick, dict) else []
-    if not isinstance(data, list):
-        data = [data]
-
-    zero_fee = set(zero_fee_pairs)
-    eligible: List[Dict[str, Any]] = []
-    for row in data:
-        sym = row.get("symbol")
-        if not sym or sym not in zero_fee:
-            continue
-        try:
-            vol = float(row.get("volume", 0))
-            bid = float(row.get("bidPrice", 0))
-            ask = float(row.get("askPrice", 0))
-        except (TypeError, ValueError):
-            continue
-        if vol < volume_min or bid <= 0 or ask <= 0:
-            continue
-        spread_bps = (ask - bid) / ((ask + bid) / 2.0) * 10_000
-        if spread_bps >= max_spread_bps:
-            continue
-        eligible.append(row)
-
-    eligible.sort(key=lambda r: float(r.get("volume", 0)), reverse=True)
-    return eligible[:top_n]
-
-def select_active_pairs(
-    client: Any,
-    pairs: Sequence[Dict[str, Any]],
-    *,
-    interval: str = "Min5",
-    ema_fast: int = 20,
-    ema_slow: int = 50,
-    atr_period: int = 14,
-    top_n: int = 5,
-) -> List[Dict[str, Any]]:
-    """Second level scan retaining 3–5 pairs with active momentum.
-
-    Momentum is determined by the relative position of ``EMA20`` and ``EMA50``
-    while the Average True Range identifies pairs exhibiting strong movement.
-    The function returns the original ticker information augmented with the
-    computed ``atr`` so callers can make further decisions.
-    """
-
-    results: List[Tuple[float, Dict[str, Any]]] = []
-    for info in pairs:
-        sym = info.get("symbol")
-        if not sym:
-            continue
-        k = client.get_kline(sym, interval=interval)
-        kdata = k.get("data") if isinstance(k, dict) else {}
-        closes = kdata.get("close", [])
-        highs = kdata.get("high", [])
-        lows = kdata.get("low", [])
-        if len(closes) < max(ema_slow, atr_period) + 2:
-            continue
-        efast = ema(closes, ema_fast)
-        eslow = ema(closes, ema_slow)
-        if efast[-1] == eslow[-1]:  # no momentum
-            continue
-        atr = calc_atr(highs, lows, closes, atr_period)
-        results.append((atr, info))
-
-    results.sort(key=lambda r: r[0], reverse=True)
-    return [info for _, info in results[:top_n]]
+# The first and second level pair selection helpers now live in
+# :mod:`scalp.selection`.  They are re-exported here for backward compatibility
+# and to keep the public API unchanged.
+from .selection.scanner import scan_pairs  # noqa: E402
+from .selection.momentum import select_active_pairs  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Signal generation
@@ -364,63 +287,6 @@ def generate_signal(
         return Signal(symbol, "short", price, sl, tp1, tp2, qty)
 
     return None
-
-# ---------------------------------------------------------------------------
-# Risk limits
-# ---------------------------------------------------------------------------
-
-@dataclass
-class RiskManager:
-    """Utility class implementing kill switch, loss limits and risk scaling."""
-
-    max_daily_loss_pct: float
-    max_positions: int
-    risk_pct: float
-    aggressive: bool = False
-    max_daily_profit_pct: float | None = None
-
-    def __post_init__(self) -> None:
-        self.base_risk_pct = self.risk_pct
-        self.reset_day()
-
-    def reset_day(self) -> None:
-        self.daily_pnl_pct = 0.0
-        self.consecutive_losses = 0
-        self.win_streak = 0
-        self.loss_streak = 0
-        self.kill_switch = False
-        self.risk_pct = self.base_risk_pct
-
-    def record_trade(self, pnl_pct: float) -> None:
-        from .risk import adjust_risk_pct
-
-        if pnl_pct < 0:
-            self.consecutive_losses += 1
-            self.loss_streak += 1
-            self.win_streak = 0
-        else:
-            self.consecutive_losses = 0
-            self.win_streak += 1
-            self.loss_streak = 0
-        self.daily_pnl_pct += pnl_pct
-        if self.daily_pnl_pct <= -self.max_daily_loss_pct:
-            self.kill_switch = True
-        if (
-            self.max_daily_profit_pct is not None
-            and self.daily_pnl_pct >= self.max_daily_profit_pct
-        ):
-            self.kill_switch = True
-        self.risk_pct = adjust_risk_pct(self.risk_pct, self.win_streak, self.loss_streak)
-
-    def pause_duration(self) -> int:
-        if self.consecutive_losses >= 5:
-            return 60 * 60
-        if self.consecutive_losses >= 3:
-            return 15 * 60
-        return 0
-
-    def can_open(self, current_positions: int) -> bool:
-        return (not self.kill_switch) and current_positions < self.max_positions
 
 # ---------------------------------------------------------------------------
 # Backtesting utilities
