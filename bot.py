@@ -117,6 +117,9 @@ def main() -> None:
     risk_mgr = RiskManager(
         max_daily_loss_pct=cfg["MAX_DAILY_LOSS_PCT"],
         max_positions=cfg["MAX_POSITIONS"],
+
+        risk_pct=cfg["RISK_PCT_EQUITY"],
+
     )
 
     tg_bot = init_telegram_bot(client, cfg)
@@ -218,7 +221,7 @@ def main() -> None:
                 contract_detail,
                 equity_usdt,
                 price,
-                cfg["RISK_PCT_EQUITY"],
+                risk_mgr.risk_pct,
                 cfg["LEVERAGE"],
                 symbol,
             )
@@ -269,7 +272,11 @@ def main() -> None:
                         leverage=CONFIG["LEVERAGE"],
                         reduce_only=True,
                     )
+
+                    equity_usdt *= 1 + pnl / 100.0
                     risk_mgr.record_trade(pnl)
+                    logging.info("Nouveau risk_pct: %.4f", risk_mgr.risk_pct)
+
                     if risk_mgr.kill_switch:
                         logging.warning("Kill switch activé, arrêt du bot.")
                         break
@@ -291,7 +298,7 @@ def main() -> None:
                     positions,
                     equity_usdt,
                     price,
-                    cfg["RISK_PCT_EQUITY"],
+                    risk_mgr.risk_pct,
                     cfg["LEVERAGE"],
                     symbol,
                     side="long",
@@ -363,7 +370,11 @@ def main() -> None:
                         leverage=CONFIG["LEVERAGE"],
                         reduce_only=True,
                     )
+
+                    equity_usdt *= 1 + pnl / 100.0
                     risk_mgr.record_trade(pnl)
+                    logging.info("Nouveau risk_pct: %.4f", risk_mgr.risk_pct)
+
                     if risk_mgr.kill_switch:
                         logging.warning("Kill switch activé, arrêt du bot.")
                         break
@@ -385,7 +396,7 @@ def main() -> None:
                     positions,
                     equity_usdt,
                     price,
-                    cfg["RISK_PCT_EQUITY"],
+                    risk_mgr.risk_pct,
                     cfg["LEVERAGE"],
                     symbol,
                     side="short",
