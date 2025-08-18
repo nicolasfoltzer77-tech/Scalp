@@ -60,9 +60,9 @@ Après configuration, lancez simplement :
 python bot.py
 ```
 
-Les journaux sont écrits dans `logs/` et affichés sur la console. Le bot tourne jusqu'à `Ctrl+C`. Les ouvertures et fermetures de positions sont consignées dans `bot_events.jsonl`.
+Le terminal reste silencieux au démarrage sauf en cas d'absence de variables critiques (`MEXC_ACCESS_KEY`, `MEXC_SECRET_KEY`). Les journaux sont écrits dans `logs/` et affichés sur la console. Le bot tourne jusqu'à `Ctrl+C`. Les ouvertures et fermetures de positions sont consignées dans `bot_events.jsonl`.
 
-Lors du démarrage, deux notifications Telegram sont émises : la première indique que le bot est lancé, la seconde liste les 20 paires sélectionnées pour la session.
+Lors du démarrage, deux notifications Telegram sont émises : la première affiche « Bot démarré » avec un logo, la seconde « Listing : » suivi des 20 paires sélectionnées.
 
 ## Version
 

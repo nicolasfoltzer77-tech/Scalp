@@ -1,6 +1,20 @@
 import os
 
-ZERO_FEE_PAIRS = [p.strip() for p in os.getenv("ZERO_FEE_PAIRS", "").split(",") if p.strip()]
+def _base(sym: str) -> str:
+    if "_" in sym:
+        return sym.split("_", 1)[0]
+    if sym.endswith("USDT"):
+        return sym[:-4]
+    if sym.endswith("USD"):
+        return sym[:-3]
+    return sym
+
+
+ZERO_FEE_PAIRS = [
+    p.strip()
+    for p in os.getenv("ZERO_FEE_PAIRS", "").split(",")
+    if p.strip() and _base(p.strip()) not in {"BTC", "ETH"}
+]
 DEFAULT_SYMBOL = os.getenv("SYMBOL") or (ZERO_FEE_PAIRS[0] if ZERO_FEE_PAIRS else "BTC_USDT")
 
 CONFIG = {
@@ -35,5 +49,5 @@ CONFIG = {
     "MAX_DAILY_LOSS_PCT": float(os.getenv("MAX_DAILY_LOSS_PCT", "5.0")),
     "MAX_DAILY_PROFIT_PCT": float(os.getenv("MAX_DAILY_PROFIT_PCT", "5.0")),
     "MAX_POSITIONS": int(os.getenv("MAX_POSITIONS", "1")),
-    "ZERO_FEE_PAIRS": [p.strip() for p in os.getenv("ZERO_FEE_PAIRS", "").split(",") if p.strip()],
+    "ZERO_FEE_PAIRS": ZERO_FEE_PAIRS,
 }

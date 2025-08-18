@@ -43,10 +43,16 @@ def _format_text(event: str, payload: Dict[str, Any] | None = None) -> str:
     if event in {"position_opened", "position_closed"}:
         action = "Ouvre" if event == "position_opened" else "Ferme"
         side = payload.get("side") if payload else None
+        if side:
+            side = f"{side} {'📈' if side == 'long' else '📉'}"
         symbol = payload.get("symbol") if payload else None
         if symbol:
             symbol = _pair_name(symbol)
-        head = " ".join(p for p in [action, side, symbol] if p)
+        pnl_pct = payload.get("pnl_pct") if payload else None
+        icons = ""
+        if event == "position_closed" and pnl_pct is not None:
+            icons = ("✅🎯" if pnl_pct > 0 else "❌🛑")
+        head = " ".join(p for p in [action, side, symbol, icons] if p)
 
         lines = [head]
         if payload:
@@ -58,37 +64,37 @@ def _format_text(event: str, payload: Dict[str, Any] | None = None) -> str:
             if lev is not None:
                 lines.append(f"Levier: x{lev}")
 
-
             if event == "position_opened":
                 tp_usd = payload.get("tp_usd")
                 sl_usd = payload.get("sl_usd")
                 if tp_usd is not None and sl_usd is not None:
-
                     lines.append(f"TP: +{tp_usd} USDT")
                     lines.append(f"SL: -{sl_usd} USDT")
-
                 else:
                     tp = payload.get("tp_pct")
                     sl = payload.get("sl_pct")
                     if tp is not None and sl is not None:
-
-                        lines.append(f"TP: +{tp}%")
-                        lines.append(f"SL: -{sl}%")
-
+                        lines.append(f"TP: +{tp:.2f}%")
+                        lines.append(f"SL: -{sl:.2f}%")
                 hold = payload.get("hold") or payload.get("expected_duration")
                 if hold is not None:
                     lines.append(f"Durée prévue: {hold}")
             else:  # position_closed
                 pnl_usd = payload.get("pnl_usd")
-                pnl_pct = payload.get("pnl_pct")
                 if pnl_usd is not None and pnl_pct is not None:
-                    lines.append(f"PnL: {pnl_usd} USDT ({pnl_pct}%)")
+                    lines.append(f"PnL: {pnl_usd} USDT ({pnl_pct:.2f}%)")
                 elif pnl_pct is not None:
-                    lines.append(f"PnL: {pnl_pct}%")
+                    lines.append(f"PnL: {pnl_pct:.2f}%")
                 dur = payload.get("duration")
                 if dur is not None:
                     lines.append(f"Durée: {dur}")
         return "\n".join(lines)
+
+    if event == "bot_started":
+        return "🤖 Bot démarré"
+    if event == "pair_list":
+        pairs = payload.get("pairs") if payload else ""
+        return f"Listing : {pairs}"
 
     text = event
     if payload:
