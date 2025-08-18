@@ -41,9 +41,9 @@ from .strategy import (  # noqa: E402
     scan_pairs,
     select_active_pairs,
     generate_signal,
-    RiskManager,
     backtest,
 )
+from .risk.manager import RiskManager  # noqa: E402
 
 __all__ = [
     "get_version",
