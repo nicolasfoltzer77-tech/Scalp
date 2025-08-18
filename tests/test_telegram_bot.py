@@ -119,3 +119,27 @@ def test_handle_unknown():
     assert resp is None
     assert kb is None
 
+
+def test_analysis_button_present():
+    bot = make_bot()
+    assert any(
+        btn["callback_data"] == "analysis" for row in bot.main_keyboard for btn in row
+    )
+
+
+def test_handle_analysis():
+    bot = make_bot(
+        {
+            "ANALYSIS_PAIRS": [
+                {"symbol": "BTC", "status": "ready"},
+                {"symbol": "ETH", "status": "lt10"},
+                {"symbol": "XRP", "status": "gt10"},
+            ]
+        }
+    )
+    resp, kb = bot.handle_callback("analysis", 0.0)
+    assert "BTC" in resp and "prêt à lancer" in resp
+    assert "ETH" in resp and "moins de 10 min" in resp
+    assert "XRP" in resp and "plus de 10 min" in resp
+    assert kb == bot.analysis_keyboard
+
