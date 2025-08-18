@@ -86,6 +86,7 @@ def calc_atr(highs: Sequence[float], lows: Sequence[float], closes: Sequence[flo
         Number of periods to use for the calculation. Must be positive.
     """
 
+
     length = len(highs)
     if length != len(lows) or length != len(closes):
         raise ValueError("Input sequences must have the same length")
@@ -93,6 +94,7 @@ def calc_atr(highs: Sequence[float], lows: Sequence[float], closes: Sequence[flo
         raise ValueError("period must be positive")
     if length < period + 1:
         raise ValueError("Input sequences must have at least period + 1 elements")
+
 
     trs: list[float] = []
     for i in range(1, len(highs)):
