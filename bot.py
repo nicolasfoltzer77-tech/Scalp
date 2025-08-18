@@ -11,7 +11,7 @@ import requests
 
 from scalp.logging_utils import get_jsonl_logger, TradeLogger
 from scalp.metrics import calc_pnl_pct, calc_atr
-from scalp.notifier import notify
+from scalp.notifier import notify, _format_text
 from scalp import __version__, RiskManager
 from scalp.telegram_bot import init_telegram_bot
 
@@ -93,19 +93,22 @@ def find_trade_positions(
     )
 
 
-def send_selected_pairs(client: Any, top_n: int = 20) -> None:
-    _pairs.send_selected_pairs(
+def send_selected_pairs(
+    client: Any, top_n: int = 20, tg_bot: Any | None = None
+) -> None:
+    payload = _pairs.send_selected_pairs(
         client,
         top_n=top_n,
-
         select_fn=filter_trade_pairs,
         notify_fn=notify,
     )
+    if tg_bot and payload:
+        tg_bot.send(_format_text("pair_list", payload))
 
 
-def update(client: Any, top_n: int = 20) -> None:
+def update(client: Any, top_n: int = 20, tg_bot: Any | None = None) -> None:
     """Send a fresh list of pairs to reflect current market conditions."""
-    send_selected_pairs(client, top_n=top_n)
+    send_selected_pairs(client, top_n=top_n, tg_bot=tg_bot)
 
 
 # ---------------------------------------------------------------------------
@@ -244,7 +247,7 @@ def main(argv: Optional[List[str]] = None) -> None:
 
     notify("bot_started")
     try:
-        send_selected_pairs(client, top_n=20)
+        send_selected_pairs(client, top_n=20, tg_bot=tg_bot)
     except Exception as exc:  # pragma: no cover - network
         logging.error("Erreur sélection paires: %s", exc)
     next_update = time.time() + 60
@@ -260,7 +263,7 @@ def main(argv: Optional[List[str]] = None) -> None:
         now = time.time()
         if now >= next_update:
             try:
-                update(client, top_n=20)
+                update(client, top_n=20, tg_bot=tg_bot)
             except Exception as exc:  # pragma: no cover - network
                 logging.error("Erreur update marché: %s", exc)
             next_update = now + 60
