@@ -55,6 +55,27 @@ def test_handle_positions():
     assert "PnL" in resp
 
 
+def test_handle_positions_zero_pnl():
+    bot = make_bot()
+
+    def zero_positions():
+        return {
+            "data": [
+                {
+                    "symbol": "BTC_USDT",
+                    "side": "long",
+                    "vol": 1,
+                    "pnl_usd": 0.0,
+                    "pnl_pct": 0.0,
+                }
+            ]
+        }
+
+    bot.client.get_positions = zero_positions
+    resp, _ = bot.handle_callback("positions", 0.0)
+    assert "PnL: 0.0 USDT" in resp
+
+
 
 def test_handle_pnl():
     bot = make_bot()
