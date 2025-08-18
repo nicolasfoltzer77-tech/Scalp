@@ -112,6 +112,13 @@ Exécuté en tant que script, `python -m scalp.version` lit le dernier
 message de commit `git` et met à jour le fichier `VERSION` en
 conséquence.
 
+La même opération peut être déclenchée depuis la ligne de commande via
+`cli.py` :
+
+```bash
+python cli.py bump-version
+```
+
 
 ## Avertissement
 
