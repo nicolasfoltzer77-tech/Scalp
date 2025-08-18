@@ -34,6 +34,7 @@ class TelegramBot:
         chat_id: str,
         client: Any,
         config: Dict[str, Any],
+        risk_mgr: Any,
         *,
         requests_module: Any = requests,
     ) -> None:
@@ -41,6 +42,7 @@ class TelegramBot:
         self.chat_id = str(chat_id)
         self.client = client
         self.config = config
+        self.risk_mgr = risk_mgr
         self.requests = requests_module
         self.last_update_id: Optional[int] = None
 
@@ -50,6 +52,7 @@ class TelegramBot:
             [{"text": "Positions", "callback_data": "positions"}],
             [{"text": "PnL session", "callback_data": "pnl"}],
             [{"text": "Risque", "callback_data": "risk"}],
+            [{"text": "Reset Risk", "callback_data": "reset_risk"}],
 
             [{"text": "Stop", "callback_data": "stop"}],
 
@@ -202,6 +205,13 @@ class TelegramBot:
                 pass
             return "Niveau de risque inchangé", self.main_keyboard
 
+        if data == "reset_risk":
+            try:
+                self.risk_mgr.reset_day()
+                return "RiskManager réinitialisé", self.main_keyboard
+            except Exception:
+                return "Erreur reset RiskManager", self.main_keyboard
+
         if data == "stop":
             return "Choisissez la position à fermer:", self._build_stop_keyboard()
         if data == "stop_all":
@@ -223,9 +233,9 @@ class TelegramBot:
         return None, None
 
 
-def init_telegram_bot(client: Any, config: Dict[str, Any]) -> Optional[TelegramBot]:
+def init_telegram_bot(client: Any, config: Dict[str, Any], risk_mgr: Any) -> Optional[TelegramBot]:
     token = os.getenv("TELEGRAM_BOT_TOKEN")
     chat_id = os.getenv("TELEGRAM_CHAT_ID")
     if token and chat_id:
-        return TelegramBot(token, chat_id, client, config)
+        return TelegramBot(token, chat_id, client, config, risk_mgr)
     return None
