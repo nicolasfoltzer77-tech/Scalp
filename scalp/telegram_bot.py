@@ -176,11 +176,13 @@ class TelegramBot:
                 base = self._base_symbol(symbol)
                 side = p.get("side")
                 vol = p.get("vol")
-                pnl = p.get("pnl_usd") or p.get("pnl")
+                pnl = p.get("pnl_usd")
+                if pnl is None:
+                    pnl = p.get("pnl")
                 pnl_pct = p.get("pnl_pct")
                 line = f"{base} {side} {vol}"
                 if pnl is not None and pnl_pct is not None:
-                    line += f"\nPnL: {pnl}€ ({pnl_pct}%)"
+                    line += f"\nPnL: {pnl} USDT ({pnl_pct}%)"
                 lines.append(line)
             if not lines:
 
