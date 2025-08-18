@@ -1,4 +1,5 @@
 """Risk management utilities for position sizing."""
+
 from __future__ import annotations
 
 __all__ = ["calc_risk_amount", "calc_position_size"]

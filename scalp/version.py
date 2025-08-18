@@ -1,4 +1,5 @@
 """Utilities for managing the Scalp bot version."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -92,4 +93,3 @@ def bump_version_from_git() -> str:
 
 if __name__ == "__main__":
     print(bump_version_from_git())
-
