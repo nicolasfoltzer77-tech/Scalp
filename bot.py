@@ -133,11 +133,11 @@ def main() -> None:
     )
     risk_mgr = RiskManager(
         max_daily_loss_pct=cfg["MAX_DAILY_LOSS_PCT"],
-        max_positions=cfg["MAX_POSITIONS"],
 
+        max_daily_profit_pct=cfg["MAX_DAILY_PROFIT_PCT"],
+        max_positions=cfg["MAX_POSITIONS"],
         risk_pct=cfg["RISK_PCT_EQUITY"],
     )
-
 
     tg_bot = init_telegram_bot(client, cfg)
 
@@ -367,17 +367,6 @@ def main() -> None:
 
                     if close_position(-1, price, vol_close):
                         break
-=======
-                    pnl = calc_pnl_pct(entry_price, price, -1, fee_rate)
-                    payload = {
-                        "side": "short",
-                        "symbol": symbol,
-                        "entry": entry_price,
-                        "exit": price,
-                        "pnl_usd": round((entry_price - price) * vol_close, 2),
-                        "pnl_pct": pnl,
-                        "fee_pct": fee_rate * 2 * 100,
-                    }
 
 
                 positions = client.get_positions().get("data", [])

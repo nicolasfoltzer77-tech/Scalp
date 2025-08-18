@@ -9,8 +9,20 @@ def test_kill_switch_triggered() -> None:
     assert rm.kill_switch is True
 
 
-def test_pause_and_can_open() -> None:
 
+def test_profit_kill_switch_triggered() -> None:
+    rm = RiskManager(
+        max_daily_loss_pct=10.0,
+        max_daily_profit_pct=3.0,
+        max_positions=1,
+        risk_pct=0.01,
+    )
+    rm.record_trade(1.5)
+    rm.record_trade(1.6)
+    assert rm.kill_switch is True
+
+
+def test_pause_and_can_open() -> None:
     rm = RiskManager(max_daily_loss_pct=10.0, max_positions=1, risk_pct=0.01)
 
     rm.record_trade(-0.5)
