@@ -420,6 +420,14 @@ def find_trade_positions(client: "MexcFuturesClient", pairs: list[dict],
     return results
 
 
+def send_selected_pairs(client: "MexcFuturesClient", top_n: int = 20) -> None:
+    """Fetch top trading pairs and notify their list."""
+    pairs = select_top_pairs(client, top_n=top_n)
+    symbols = [p.get("symbol") for p in pairs if p.get("symbol")]
+    if symbols:
+        notify("pair_list", {"pairs": ", ".join(symbols)})
+
+
 
 def backtest_trades(trades: List[Dict[str, Any]], *,
                     fee_rate: Optional[float] = None,
@@ -493,6 +501,10 @@ def main():
     session_pnl = 0.0
 
     notify("bot_started", {"session_pnl": session_pnl})
+    try:
+        send_selected_pairs(client, top_n=20)
+    except Exception as exc:
+        logging.error("Erreur sélection paires: %s", exc)
 
     while True:
         try:
@@ -549,8 +561,10 @@ def main():
                         pnl = calc_pnl_pct(entry_price, price, -1, fee_rate)
                         payload = {
                             "side": "short",
+                            "symbol": symbol,
                             "entry": entry_price,
                             "exit": price,
+                            "pnl_usd": round((entry_price - price) * vol, 2),
                             "pnl_pct": pnl,
                             "fee_pct": fee_rate * 2 * 100,
                         }
@@ -571,10 +585,12 @@ def main():
                              vol, price, sl_long, tp_long, "paper" if CONFIG["PAPER_TRADE"] else "live")
                 open_payload = {
                     "side": "long",
+                    "symbol": symbol,
                     "price": price,
                     "vol": vol,
-                    "sl_pct": CONFIG["STOP_LOSS_PCT"] * 100,
-                    "tp_pct": CONFIG["TAKE_PROFIT_PCT"] * 100,
+                    "leverage": CONFIG["LEVERAGE"],
+                    "sl_usd": round((price - sl_long) * vol, 2),
+                    "tp_usd": round((tp_long - price) * vol, 2),
                     "fee_rate": fee_rate,
                     "session_pnl": session_pnl,
                 }
@@ -589,8 +605,10 @@ def main():
                         pnl = calc_pnl_pct(entry_price, price, 1, fee_rate)
                         payload = {
                             "side": "long",
+                            "symbol": symbol,
                             "entry": entry_price,
                             "exit": price,
+                            "pnl_usd": round((price - entry_price) * vol, 2),
                             "pnl_pct": pnl,
                             "fee_pct": fee_rate * 2 * 100,
                         }
@@ -611,10 +629,12 @@ def main():
                          vol, price, sl_short, tp_short, "paper" if CONFIG["PAPER_TRADE"] else "live")
             open_payload = {
                 "side": "short",
+                "symbol": symbol,
                 "price": price,
                 "vol": vol,
-                "sl_pct": CONFIG["STOP_LOSS_PCT"] * 100,
-                "tp_pct": CONFIG["TAKE_PROFIT_PCT"] * 100,
+                "leverage": CONFIG["LEVERAGE"],
+                "sl_usd": round((sl_short - price) * vol, 2),
+                "tp_usd": round((price - tp_short) * vol, 2),
                 "fee_rate": fee_rate,
                 "session_pnl": session_pnl,
             }
