@@ -32,11 +32,20 @@ class DummyClient:
 
 
 
+class DummyRiskMgr:
+
+    def __init__(self):
+        self.reset_called = False
+
+    def reset_day(self):
+        self.reset_called = True
+
+
 def make_bot(config=None):
     cfg = {"RISK_LEVEL": 2}
     if config:
         cfg.update(config)
-    return TelegramBot("t", "1", DummyClient(), cfg)
+    return TelegramBot("t", "1", DummyClient(), cfg, DummyRiskMgr())
 
 
 def test_handle_balance():
@@ -118,4 +127,12 @@ def test_handle_unknown():
     resp, kb = bot.handle_callback("foobar", 0.0)
     assert resp is None
     assert kb is None
+
+
+def test_reset_risk_manager():
+    bot = make_bot()
+    resp, kb = bot.handle_callback("reset_risk", 0.0)
+    assert "réinitialisé" in resp.lower()
+    assert bot.risk_mgr.reset_called is True
+    assert kb == bot.main_keyboard
 

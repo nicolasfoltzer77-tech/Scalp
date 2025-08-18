@@ -140,7 +140,7 @@ def main(argv: Optional[List[str]] = None) -> None:
         os.path.join(cfg["LOG_DIR"], "trades.sqlite"),
     )
 
-    tg_bot = init_telegram_bot(client, cfg)
+    tg_bot = init_telegram_bot(client, cfg, risk_mgr)
 
     symbol = cfg["SYMBOL"]
     interval = cfg["INTERVAL"]
