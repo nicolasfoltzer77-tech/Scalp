@@ -12,15 +12,17 @@ def test_send_selected_pairs(monkeypatch):
     monkeypatch.setattr(
         bot,
         "select_top_pairs",
-        lambda client, top_n=20: [
-            {"symbol": "WIFUSDT"},
-            {"symbol": "WIFUSDT"},
-            {"symbol": "BTCUSDT"},
+        lambda client, top_n=60: [
+            {"symbol": "WIFUSDT", "volume": 10},
+            {"symbol": "WIFUSDT", "volume": 9},
+            {"symbol": "BTCUSD", "volume": 8},
+            {"symbol": "BTCUSDT", "volume": 7},
+            {"symbol": "ETHUSDT", "volume": 6},
         ],
     )
 
     bot.send_selected_pairs(object(), top_n=3)
 
     assert sent["event"] == "pair_list"
-    assert sent["payload"]["pairs"] == "WIF, BTC"
+    assert sent["payload"]["pairs"] == "WIF, BTC, ETH"
 
