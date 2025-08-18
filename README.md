@@ -64,6 +64,18 @@ Le terminal reste silencieux au démarrage sauf en cas d'absence de variables cr
 
 Lors du démarrage, deux notifications Telegram sont émises : la première affiche « Bot démarré » avec un logo, la seconde « Listing : » suivi des 20 paires sélectionnées.
 
+## Stratégie
+
+Le bot met en œuvre une stratégie de scalping combinant plusieurs indicateurs techniques :
+
+- croisement des EMA 20/50 pour les signaux d’entrée ;
+- filtre de tendance via la MACD et une EMA longue configurable ;
+- confirmation par la position du prix par rapport au VWAP et par l’OBV ou un pic de volume ;
+- validation multi‑unités de temps (RSI 15 min, pente de l’EMA 1 h) ;
+- seuils dynamiques de stop‑loss et take‑profit calculés à partir de l’ATR, avec dimensionnement de position basé sur le risque.
+
+Une description détaillée des règles est disponible dans `STRATEGY.md`.
+
 ## Version
 
 La version du bot est stockée dans le fichier `scalp/VERSION` et exposée dans
