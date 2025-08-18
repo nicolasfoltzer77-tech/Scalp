@@ -420,6 +420,65 @@ def get_trade_pairs(client: "MexcFuturesClient") -> list[dict]:
     return data if isinstance(data, list) else [data]
 
 
+def filter_trade_pairs(
+    client: "MexcFuturesClient",
+    *,
+    volume_min: float = 5_000_000,
+    max_spread_bps: float = 5.0,
+    zero_fee_pairs: Optional[List[str]] = None,
+    top_n: int = 20,
+) -> list[dict]:
+    """Filtre les paires selon volume, spread et frais nuls.
+
+    Parameters
+    ----------
+    client:
+        Instance du client REST.
+    volume_min:
+        Volume minimal sur 24h (en USDT).
+    max_spread_bps:
+        Écart maximal bid/ask en points de base.
+    zero_fee_pairs:
+        Liste des paires avec frais nuls. Par défaut ``CONFIG['ZERO_FEE_PAIRS']``.
+    top_n:
+        Nombre maximum de paires à retourner.
+
+    Returns
+    -------
+    list[dict]
+        Paires respectant les critères triées par volume décroissant.
+    """
+
+    pairs = get_trade_pairs(client)
+    zero_fee = set(zero_fee_pairs or CONFIG.get("ZERO_FEE_PAIRS", []))
+    eligible: list[dict] = []
+
+    for info in pairs:
+        sym = info.get("symbol")
+        if not sym or sym not in zero_fee:
+            continue
+        try:
+            vol = float(info.get("volume", 0))
+        except (TypeError, ValueError):
+            continue
+        if vol < volume_min:
+            continue
+        try:
+            bid = float(info.get("bidPrice", 0))
+            ask = float(info.get("askPrice", 0))
+        except (TypeError, ValueError):
+            continue
+        if bid <= 0 or ask <= 0:
+            continue
+        spread_bps = (ask - bid) / ((ask + bid) / 2) * 10_000
+        if spread_bps >= max_spread_bps:
+            continue
+        eligible.append(info)
+
+    eligible.sort(key=lambda row: float(row.get("volume", 0)), reverse=True)
+    return eligible[:top_n]
+
+
 def select_top_pairs(client: "MexcFuturesClient", top_n: int = 10,
                      key: str = "volume") -> list[dict]:
     """Filtre les ``top_n`` paires selon la clé numérique ``key``.
