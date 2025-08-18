@@ -106,6 +106,18 @@ def find_trade_positions(
 def send_selected_pairs(client: Any, top_n: int = 20) -> None:
     """Fetch top pairs and notify their list."""
     pairs = select_top_pairs(client, top_n=top_n)
-    symbols = [p.get("symbol") for p in pairs if p.get("symbol")]
+    seen: set[str] = set()
+    symbols: list[str] = []
+    for p in pairs:
+        sym = p.get("symbol")
+        if not sym:
+            continue
+        base = sym.replace("_", "")
+        if base.endswith("USDT"):
+            base = base[:-4]
+        if base in seen:
+            continue
+        seen.add(base)
+        symbols.append(base)
     if symbols:
         notify("pair_list", {"pairs": ", ".join(symbols)})
