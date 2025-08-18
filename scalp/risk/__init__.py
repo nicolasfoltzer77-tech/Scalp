@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-__all__ = ["calc_risk_amount", "calc_position_size", "adjust_risk_pct"]
+__all__ = ["calc_risk_amount", "calc_position_size", "adjust_risk_pct", "RiskManager"]
 
 
 def calc_risk_amount(equity: float, risk_pct: float) -> float:
@@ -86,3 +86,7 @@ def adjust_risk_pct(
     if risk_pct > max_pct:
         return max_pct
     return risk_pct
+
+
+# RiskManager lives in a separate module but is exported here for convenience.
+from .manager import RiskManager  # noqa: E402  (import at end to avoid cycle)
