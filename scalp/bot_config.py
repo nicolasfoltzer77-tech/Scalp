@@ -1,10 +1,13 @@
 import os
 
+ZERO_FEE_PAIRS = [p.strip() for p in os.getenv("ZERO_FEE_PAIRS", "").split(",") if p.strip()]
+DEFAULT_SYMBOL = os.getenv("SYMBOL") or (ZERO_FEE_PAIRS[0] if ZERO_FEE_PAIRS else "BTC_USDT")
+
 CONFIG = {
     "MEXC_ACCESS_KEY": os.getenv("MEXC_ACCESS_KEY", "A_METTRE"),
     "MEXC_SECRET_KEY": os.getenv("MEXC_SECRET_KEY", "B_METTRE"),
     "PAPER_TRADE": os.getenv("PAPER_TRADE", "true").lower() in ("1", "true", "yes", "y"),
-    "SYMBOL": os.getenv("SYMBOL", "BTC_USDT"),
+    "SYMBOL": DEFAULT_SYMBOL,
     "INTERVAL": os.getenv("INTERVAL", "Min1"),
     "EMA_FAST": int(os.getenv("EMA_FAST", "9")),
     "EMA_SLOW": int(os.getenv("EMA_SLOW", "21")),
@@ -29,5 +32,5 @@ CONFIG = {
     "MAX_DAILY_PROFIT_PCT": float(os.getenv("MAX_DAILY_PROFIT_PCT", "5.0")),
 
     "MAX_POSITIONS": int(os.getenv("MAX_POSITIONS", "1")),
-    "ZERO_FEE_PAIRS": [p.strip() for p in os.getenv("ZERO_FEE_PAIRS", "").split(",") if p.strip()],
+    "ZERO_FEE_PAIRS": ZERO_FEE_PAIRS,
 }

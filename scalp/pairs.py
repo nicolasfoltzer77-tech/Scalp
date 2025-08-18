@@ -1,7 +1,7 @@
 """Utilities to select trading pairs and detect signals."""
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Callable
 
 from scalp.bot_config import CONFIG
 from scalp.strategy import ema as default_ema, cross as default_cross
@@ -103,24 +103,51 @@ def find_trade_positions(
     return results
 
 
-def send_selected_pairs(client: Any, top_n: int = 20) -> None:
-    """Fetch top pairs and notify their list."""
-    pairs = select_top_pairs(client, top_n=top_n)
-    seen: set[str] = set()
-    symbols: list[str] = []
-    for p in pairs:
-        sym = p.get("symbol")
+def send_selected_pairs(
+    client: Any,
+    top_n: int = 20,
+    *,
+    select_fn: Callable[[Any, int], List[Dict[str, Any]]] = select_top_pairs,
+    notify_fn: Callable[[str, Optional[Dict[str, Any]]], None] = notify,
+) -> None:
+    """Fetch top pairs, drop USD duplicates and notify their list."""
+
+    def split_symbol(sym: str) -> tuple[str, str]:
+        if "_" in sym:
+            base, quote = sym.split("_", 1)
+        elif sym.endswith("USDT"):
+            base, quote = sym[:-4], "USDT"
+        elif sym.endswith("USD"):
+            base, quote = sym[:-3], "USD"
+        else:
+            base, quote = sym, ""
+        return base, quote
+
+    pairs = select_fn(client, top_n=top_n * 3)
+    by_base: Dict[str, Dict[str, Any]] = {}
+    for info in pairs:
+        sym = info.get("symbol")
         if not sym:
             continue
-        base = sym.replace("_", "")
-        if base.endswith("USDT"):
-            base = base[:-4]
-        if base in seen:
+        base, quote = split_symbol(sym)
+        existing = by_base.get(base)
+        if existing is None or (existing["quote"] != "USDT" and quote == "USDT"):
+            by_base[base] = {"data": info, "quote": quote}
+
+    unique = sorted(
+        (v["data"] for v in by_base.values()),
+        key=lambda row: float(row.get("volume", 0)),
+        reverse=True,
+    )
+    symbols: list[str] = []
+    for row in unique[:top_n]:
+        sym = row.get("symbol")
+        if not sym:
             continue
-        seen.add(base)
+        base, _ = split_symbol(sym)
         symbols.append(base)
     if symbols:
-        notify("pair_list", {"pairs": ", ".join(symbols)})
+        notify_fn("pair_list", {"pairs": ", ".join(symbols)})
 
 
 def heat_score(volatility: float, volume: float, news: bool = False) -> float:
