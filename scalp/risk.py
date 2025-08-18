@@ -2,7 +2,12 @@
 
 from __future__ import annotations
 
-__all__ = ["calc_risk_amount", "calc_position_size", "adjust_risk_pct"]
+__all__ = [
+    "calc_risk_amount",
+    "calc_position_size",
+    "adjust_risk_pct",
+    "dynamic_risk_pct",
+]
 
 
 def calc_risk_amount(equity: float, risk_pct: float) -> float:
@@ -86,3 +91,31 @@ def adjust_risk_pct(
     if risk_pct > max_pct:
         return max_pct
     return risk_pct
+
+
+def dynamic_risk_pct(risk_pct: float, pnl_pct: float, quality: str) -> float:
+    """Adjust ``risk_pct`` based on last trade result and signal quality.
+
+    The risk is reduced by 25% after a losing trade.  When the provided
+    ``quality`` is ``"A"`` and the trade was not a loss, the risk is increased
+    by 10%.  The value is always bounded to the ``[0.001, 0.05]`` interval.
+
+    Parameters
+    ----------
+    risk_pct:
+        Current risk fraction (e.g. ``0.01`` for 1%). Must be positive.
+    pnl_pct:
+        Percentage PnL of the last trade. A negative value denotes a loss.
+    quality:
+        Quality grade of the next setup. Only ``"A"`` triggers an increase.
+    """
+
+    if risk_pct <= 0:
+        raise ValueError("risk_pct must be positive")
+
+    if pnl_pct < 0:
+        risk_pct *= 0.75
+    elif quality.upper() == "A":
+        risk_pct *= 1.10
+
+    return max(0.001, min(0.05, risk_pct))

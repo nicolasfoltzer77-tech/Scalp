@@ -36,14 +36,10 @@ def _load_parent_env() -> None:
 _load_parent_env()
 
 from .version import get_version, bump_version_from_message  # noqa: E402
-from .strategy import (  # noqa: E402
-    Signal,
-    scan_pairs,
-    select_active_pairs,
-    generate_signal,
-    RiskManager,
-    backtest,
-)
+from .strategy import Signal, scan_pairs, select_active_pairs, generate_signal, RiskManager, backtest  # noqa: E402
+from .signals import confluence_quality  # noqa: E402
+from .risk import dynamic_risk_pct  # noqa: E402
+from .opt import run_parallel  # noqa: E402
 
 __all__ = [
     "get_version",
@@ -55,6 +51,9 @@ __all__ = [
     "generate_signal",
     "RiskManager",
     "backtest",
+    "confluence_quality",
+    "dynamic_risk_pct",
+    "run_parallel",
 ]
 
 __version__ = get_version()
