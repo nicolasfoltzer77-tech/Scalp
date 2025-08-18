@@ -14,6 +14,7 @@ from scalp.logging_utils import get_jsonl_logger
 from scalp.metrics import calc_pnl_pct
 from scalp.notifier import notify
 from scalp import __version__
+from scalp.telegram_bot import init_telegram_bot
 
 from scalp.bot_config import CONFIG
 from scalp.strategy import ema, cross
@@ -94,7 +95,19 @@ def find_trade_positions(
 
 def send_selected_pairs(client: Any, top_n: int = 20) -> None:
     pairs = select_top_pairs(client, top_n=top_n)
-    symbols = [p.get("symbol") for p in pairs if p.get("symbol")]
+    seen: set[str] = set()
+    symbols: list[str] = []
+    for p in pairs:
+        sym = p.get("symbol")
+        if not sym:
+            continue
+        base = sym.replace("_", "")
+        if base.endswith("USDT"):
+            base = base[:-4]
+        if base in seen:
+            continue
+        seen.add(base)
+        symbols.append(base)
     if symbols:
         notify("pair_list", {"pairs": ", ".join(symbols)})
 
@@ -113,6 +126,8 @@ def main() -> None:
         recv_window=cfg["RECV_WINDOW"],
         paper_trade=cfg["PAPER_TRADE"],
     )
+
+    tg_bot = init_telegram_bot(client, cfg)
 
     symbol = cfg["SYMBOL"]
     interval = cfg["INTERVAL"]
@@ -163,6 +178,12 @@ def main() -> None:
         logging.error("Erreur sélection paires: %s", exc)
 
     while True:
+        if tg_bot:
+            try:
+                tg_bot.handle_updates(session_pnl)
+            except Exception as exc:  # pragma: no cover - robustness
+                logging.error("Erreur commandes Telegram: %s", exc)
+
         try:
             k = client.get_kline(symbol, interval=interval)
             if not (k and k.get("success") and "data" in k and "close" in k["data"]):
