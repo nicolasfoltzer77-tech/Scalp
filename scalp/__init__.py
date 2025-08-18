@@ -36,7 +36,25 @@ def _load_parent_env() -> None:
 _load_parent_env()
 
 from .version import get_version, bump_version_from_message
+from .strategy import (
+    Signal,
+    scan_pairs,
+    select_active_pairs,
+    generate_signal,
+    RiskManager,
+    backtest,
+)
 
-__all__ = ["get_version", "bump_version_from_message", "__version__"]
+__all__ = [
+    "get_version",
+    "bump_version_from_message",
+    "__version__",
+    "Signal",
+    "scan_pairs",
+    "select_active_pairs",
+    "generate_signal",
+    "RiskManager",
+    "backtest",
+]
 
 __version__ = get_version()
