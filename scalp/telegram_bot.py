@@ -50,6 +50,9 @@ class TelegramBot:
             [{"text": "Positions", "callback_data": "positions"}],
             [{"text": "PnL session", "callback_data": "pnl"}],
             [{"text": "Risque", "callback_data": "risk"}],
+
+            [{"text": "Stop", "callback_data": "stop"}],
+
         ]
         self.risk_keyboard = [
             [
@@ -59,6 +62,24 @@ class TelegramBot:
             ],
             [{"text": "Retour", "callback_data": "back"}],
         ]
+
+
+    def _base_symbol(self, symbol: str) -> str:
+        sym = symbol.replace("_", "")
+        return sym[:-4] if sym.endswith("USDT") else sym
+
+    def _build_stop_keyboard(self) -> list[list[Dict[str, str]]]:
+        pos = self.client.get_positions()
+        buttons: list[list[Dict[str, str]]] = []
+        for p in pos.get("data", []):
+            sym = p.get("symbol")
+            if not sym:
+                continue
+            base = self._base_symbol(sym)
+            buttons.append([{"text": base, "callback_data": f"stop_{base}"}])
+        buttons.append([{"text": "Tous", "callback_data": "stop_all"}])
+        buttons.append([{"text": "Retour", "callback_data": "back"}])
+        return buttons
 
 
     # ------------------------------------------------------------------
@@ -75,7 +96,6 @@ class TelegramBot:
             self.requests.post(self._api_url("sendMessage"), json=payload, timeout=5)
         except Exception as exc:  # pragma: no cover - best effort
             logging.error("Telegram send error: %s", exc)
-
 
     def answer_callback(self, cb_id: str) -> None:
         payload = {"callback_query_id": cb_id}
@@ -137,7 +157,6 @@ class TelegramBot:
         if not data:
             return None, None
         if data == "balance":
-
             assets = self.client.get_assets()
             equity = 0.0
             for row in assets.get("data", []):
@@ -150,14 +169,19 @@ class TelegramBot:
 
             return f"Solde: {equity} USDT", self.main_keyboard
         if data == "positions":
-
             pos = self.client.get_positions()
             lines = []
             for p in pos.get("data", []):
-                symbol = p.get("symbol")
+                symbol = p.get("symbol", "")
+                base = self._base_symbol(symbol)
                 side = p.get("side")
                 vol = p.get("vol")
-                lines.append(f"{symbol} {side} {vol}")
+                pnl = p.get("pnl_usd") or p.get("pnl")
+                pnl_pct = p.get("pnl_pct")
+                line = f"{base} {side} {vol}"
+                if pnl is not None and pnl_pct is not None:
+                    line += f"\nPnL: {pnl}€ ({pnl_pct}%)"
+                lines.append(line)
             if not lines:
 
                 return "Aucune position ouverte", self.main_keyboard
@@ -175,10 +199,26 @@ class TelegramBot:
             except Exception:
                 pass
             return "Niveau de risque inchangé", self.main_keyboard
+
+        if data == "stop":
+            return "Choisissez la position à fermer:", self._build_stop_keyboard()
+        if data == "stop_all":
+            try:
+                self.client.close_all_positions()
+                return "Toutes les positions fermées", self.main_keyboard
+            except Exception:
+                return "Erreur fermeture positions", self.main_keyboard
+        if data.startswith("stop_"):
+            sym = data[5:]
+            try:
+                self.client.close_position(sym)
+                return f"Position {sym} fermée", self.main_keyboard
+            except Exception:
+                return f"Erreur fermeture {sym}", self.main_keyboard
+
         if data == "back":
             return "Menu principal:", self.main_keyboard
         return None, None
-
 
 
 def init_telegram_bot(client: Any, config: Dict[str, Any]) -> Optional[TelegramBot]:
