@@ -124,3 +124,32 @@ def timeout_exit(
         progress = (current_price - entry_price) if side.lower() == "long" else (entry_price - current_price)
         return progress <= 0
     return False
+
+
+def marketable_limit_price(
+    side: str,
+    *,
+    best_bid: float,
+    best_ask: float,
+    slippage: float = 0.001,
+) -> float:
+    """Return price for a marketable limit order with slippage cap.
+
+    Parameters
+    ----------
+    side:
+        ``"buy"`` or ``"sell"``.
+    best_bid, best_ask:
+        Current best bid and ask prices.
+    slippage:
+        Maximum relative slippage allowed (e.g. ``0.001`` = 0.1%).
+    """
+
+    if slippage < 0:
+        raise ValueError("slippage must be non-negative")
+    side = side.lower()
+    if side == "buy":
+        return best_ask * (1.0 + slippage)
+    if side == "sell":
+        return best_bid * (1.0 - slippage)
+    raise ValueError("side must be 'buy' or 'sell'")
