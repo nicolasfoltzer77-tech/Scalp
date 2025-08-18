@@ -1,10 +1,12 @@
 from scalp import RiskManager
-main
+
+
 def test_kill_switch_triggered() -> None:
     rm = RiskManager(max_daily_loss_pct=2.0, max_positions=1, risk_pct=0.01)
     rm.record_trade(-1.0)
     rm.record_trade(-1.5)
     assert rm.kill_switch is True
+
 
 def test_profit_kill_switch_triggered() -> None:
     rm = RiskManager(
