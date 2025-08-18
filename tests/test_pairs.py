@@ -24,5 +24,7 @@ def test_send_selected_pairs(monkeypatch):
     bot.send_selected_pairs(object(), top_n=3)
 
     assert sent["event"] == "pair_list"
-    assert sent["payload"]["pairs"] == "WIF, BTC, DOGE"
+    assert sent["payload"]["green"] == "WIF"
+    assert sent["payload"]["orange"] == "BTC"
+    assert sent["payload"]["red"] == "DOGE"
 

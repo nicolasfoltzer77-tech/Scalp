@@ -45,6 +45,7 @@ class TelegramBot:
         self.risk_mgr = risk_mgr
         self.requests = requests_module
         self.last_update_id: Optional[int] = None
+        self.stop_requested = False
 
 
         self.main_keyboard = [
@@ -55,13 +56,14 @@ class TelegramBot:
             [{"text": "Reset Risk", "callback_data": "reset_risk"}],
 
             [{"text": "Stop", "callback_data": "stop"}],
+            [{"text": "Fermer Bot", "callback_data": "shutdown"}],
 
         ]
         self.risk_keyboard = [
             [
-                {"text": "1", "callback_data": "risk1"},
-                {"text": "2", "callback_data": "risk2"},
-                {"text": "3", "callback_data": "risk3"},
+                {"text": "🟢", "callback_data": "risk_green"},
+                {"text": "🟠", "callback_data": "risk_orange"},
+                {"text": "🔴", "callback_data": "risk_red"},
             ],
             [{"text": "Retour", "callback_data": "back"}],
         ]
@@ -196,13 +198,15 @@ class TelegramBot:
         if data == "risk":
             return "Choisissez le niveau de risque:", self.risk_keyboard
         if data.startswith("risk"):
-            try:
-                lvl = int(data[-1])
-                if lvl in (1, 2, 3):
-                    self.config["RISK_LEVEL"] = lvl
-                    return f"Niveau de risque réglé sur {lvl}", self.main_keyboard
-            except Exception:
-                pass
+            mapping = {
+                "risk_green": 1,
+                "risk_orange": 2,
+                "risk_red": 3,
+            }
+            lvl = mapping.get(data)
+            if lvl:
+                self.config["RISK_LEVEL"] = lvl
+                return f"Niveau de risque réglé sur {lvl}", self.main_keyboard
             return "Niveau de risque inchangé", self.main_keyboard
 
         if data == "reset_risk":
@@ -227,6 +231,10 @@ class TelegramBot:
                 return f"Position {sym} fermée", self.main_keyboard
             except Exception:
                 return f"Erreur fermeture {sym}", self.main_keyboard
+
+        if data == "shutdown":
+            self.stop_requested = True
+            return "Arrêt du bot demandé", self.main_keyboard
 
         if data == "back":
             return "Menu principal:", self.main_keyboard
