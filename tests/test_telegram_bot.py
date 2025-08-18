@@ -96,7 +96,7 @@ def test_handle_pnl():
 def test_handle_risk_change():
     bot = make_bot()
 
-    resp, kb = bot.handle_callback("risk3", 0.0)
+    resp, kb = bot.handle_callback("risk_red", 0.0)
     assert "3" in resp
     assert bot.config["RISK_LEVEL"] == 3
     assert kb == bot.main_keyboard
