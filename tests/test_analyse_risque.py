@@ -1,7 +1,6 @@
 import os
 import sys
 import types
-import pytest
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 sys.modules['requests'] = types.SimpleNamespace(
@@ -10,7 +9,7 @@ sys.modules['requests'] = types.SimpleNamespace(
     HTTPError=Exception,
 )
 
-from bot import analyse_risque
+from bot import analyse_risque  # noqa: E402
 
 
 def make_contract_detail():

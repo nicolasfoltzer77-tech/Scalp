@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 
-from typing import Iterable, Sequence
+from typing import Iterable
 
 __all__ = ["calc_pnl_pct", "calc_rsi", "calc_atr", "backtest_position"]
 
@@ -110,7 +110,7 @@ def calc_atr(
     """
 
     highs_list = [float(h) for h in highs]
-    lows_list = [float(l) for l in lows]
+    lows_list = [float(low) for low in lows]
     closes_list = [float(c) for c in closes]
 
     length = len(highs_list)

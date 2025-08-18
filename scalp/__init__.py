@@ -35,8 +35,8 @@ def _load_parent_env() -> None:
 
 _load_parent_env()
 
-from .version import get_version, bump_version_from_message
-from .strategy import (
+from .version import get_version, bump_version_from_message  # noqa: E402
+from .strategy import (  # noqa: E402
     Signal,
     scan_pairs,
     select_active_pairs,
