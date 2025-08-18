@@ -1,67 +1,29 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-MEXC USDT-M Futures Bot – prêt à coller sur Paperspace
+"""MEXC USDT-M futures trading bot."""
 
-Fonctions clés
-- Récupère les données marché (klines) via REST MEXC "contract" (futures)
-- Stratégie simple (croisement d'EMA) + gestion du risque + SL/TP
-- Place/annule des ordres si PAPER_TRADE=False (endpoints privés)
-- Journalise toutes les requêtes (fichiers .log et .jsonl)
-- AUCUNE commande terminal requise : auto-install de 'requests' si besoin
+import json
+import logging
+import os
+import time
+from typing import Any, Dict, Optional, List
 
-Sécurité
-- Par défaut PAPER_TRADE=True (aucun ordre envoyé)
-- Dimensionne la taille via equity, levier et contractSize
-- Respecte la signature HMAC-SHA256 (headers: ApiKey, Request-Time, Signature)
-
-© 2025 — Usage à vos risques. Ceci n’est pas un conseil financier.
-"""
-
-import os, sys, json, time, hmac, hashlib, logging, math
-from urllib.parse import quote
-from typing import Dict, Any, Optional, List
+import requests
 
 from scalp.logging_utils import get_jsonl_logger
 from scalp.metrics import calc_pnl_pct
 from scalp.notifier import notify
 from scalp import __version__
 
-# ---------------------------------------------------------------------------
-# Dépendances
-# ---------------------------------------------------------------------------
-import requests
+from scalp.bot_config import CONFIG
+from scalp.strategy import ema, cross
+from scalp.trade_utils import compute_position_size, analyse_risque
+from scalp import pairs as _pairs
+from scalp.backtest import backtest_trades
+from scalp.mexc_client import MexcFuturesClient as _BaseMexcFuturesClient
 
 # ---------------------------------------------------------------------------
-# Configuration (via variables d'env conseillées sur Paperspace)
-# ---------------------------------------------------------------------------
-CONFIG = {
-    "MEXC_ACCESS_KEY": os.getenv("MEXC_ACCESS_KEY", "A_METTRE"),
-    "MEXC_SECRET_KEY": os.getenv("MEXC_SECRET_KEY", "B_METTRE"),
-    "PAPER_TRADE": os.getenv("PAPER_TRADE", "true").lower() in ("1","true","yes","y"),
-    "SYMBOL": os.getenv("SYMBOL", "BTC_USDT"),          # format futures: BTC_USDT
-    "INTERVAL": os.getenv("INTERVAL", "Min1"),           # Min1, Min5, Min15, Min60, Hour4, Day1...
-    "EMA_FAST": int(os.getenv("EMA_FAST", "9")),
-    "EMA_SLOW": int(os.getenv("EMA_SLOW", "21")),
-    "RISK_PCT_EQUITY": float(os.getenv("RISK_PCT_EQUITY", "0.01")),  # 1% par trade
-    "LEVERAGE": int(os.getenv("LEVERAGE", "5")),
-    "RISK_LEVEL": int(os.getenv("RISK_LEVEL", "2")),
-    "OPEN_TYPE": int(os.getenv("OPEN_TYPE", "1")),       # 1=isolated, 2=cross
-    "STOP_LOSS_PCT": float(os.getenv("STOP_LOSS_PCT", "0.006")),   # 0.6%
-    "TAKE_PROFIT_PCT": float(os.getenv("TAKE_PROFIT_PCT", "0.012")),# 1.2%
-    "MAX_KLINES": int(os.getenv("MAX_KLINES", "400")),
-    "LOOP_SLEEP_SECS": int(os.getenv("LOOP_SLEEP_SECS", "10")),
-    "RECV_WINDOW": int(os.getenv("RECV_WINDOW", "30")),  # secondes (<=60)
-    "LOG_DIR": os.getenv("LOG_DIR", "./logs"),
-    "BASE_URL": os.getenv("MEXC_CONTRACT_BASE_URL", "https://contract.mexc.com"),
-    # Frais de trading (taux de taker par défaut, ex: 0.0006 pour 0.06%)
-    "FEE_RATE": float(os.getenv("FEE_RATE", "0.0")),
-    # Liste des paires sans frais (séparées par des virgules)
-    "ZERO_FEE_PAIRS": [p.strip() for p in os.getenv("ZERO_FEE_PAIRS", "").split(",") if p.strip()],
-}
-
-# ---------------------------------------------------------------------------
-# Logging
+# Logging setup
 # ---------------------------------------------------------------------------
 os.makedirs(CONFIG["LOG_DIR"], exist_ok=True)
 logging.basicConfig(
@@ -70,10 +32,9 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
     handlers=[
         logging.FileHandler(os.path.join(CONFIG["LOG_DIR"], "bot.log"), encoding="utf-8"),
-        logging.StreamHandler(sys.stdout),
+        logging.StreamHandler(),
     ],
 )
-
 log_event = get_jsonl_logger(
     os.path.join(CONFIG["LOG_DIR"], "bot_events.jsonl"),
     max_bytes=5_000_000,
@@ -96,500 +57,53 @@ def check_config() -> None:
         else:
             logging.info("%s%s%s: absente", orange, key, reset)
 
-# ---------------------------------------------------------------------------
-# Client REST Futures (Contract)
-# Signature futures: HMAC_SHA256( accessKey + reqTime + requestParamString )
-# Headers: ApiKey, Request-Time (ms), Signature, Content-Type, Recv-Window
-# ---------------------------------------------------------------------------
-class MexcFuturesClient:
-    def __init__(self, access_key: str, secret_key: str, base_url: str,
-                 recv_window: int = 30, paper_trade: bool = True):
-        self.ak = access_key
-        self.sk = secret_key
-        self.base = base_url.rstrip("/")
-        self.recv_window = recv_window
-        self.paper_trade = paper_trade
-        if not self.ak or not self.sk or self.ak == "A_METTRE" or self.sk == "B_METTRE":
-            logging.warning("⚠️ Clés API non définies. Le mode réel ne fonctionnera pas.")
 
-    @staticmethod
-    def _ms() -> int:
-        return int(time.time() * 1000)
+class MexcFuturesClient(_BaseMexcFuturesClient):
+    """Wrapper injecting the ``requests`` module and logger."""
 
-    @staticmethod
-    def _urlencode_sorted(params: Dict[str, Any]) -> str:
-        if not params:
-            return ""
-        items = []
-        for k in sorted(params.keys()):
-            v = "" if params[k] is None else str(params[k])
-            items.append(f"{quote(k, safe='')}={quote(v, safe='')}")
-        return "&".join(items)
-
-    def _sign(self, request_param_string: str, req_ms: int) -> str:
-        msg = f"{self.ak}{req_ms}{request_param_string}"
-        return hmac.new(self.sk.encode(), msg.encode(), hashlib.sha256).hexdigest()
-
-    def _headers(self, signature: str, req_ms: int) -> Dict[str, str]:
-        return {
-            "ApiKey": self.ak,
-            "Request-Time": str(req_ms),
-            "Signature": signature,
-            "Content-Type": "application/json",
-            "Recv-Window": str(self.recv_window),
-        }
-
-    # ----------------------- Public -----------------------
-    def get_contract_detail(self, symbol: Optional[str] = None) -> Dict[str, Any]:
-        url = f"{self.base}/api/v1/contract/detail"
-        params = {}
-        if symbol:
-            params["symbol"] = symbol
-        r = requests.get(url, params=params, timeout=15)
-        r.raise_for_status()
-        return r.json()
-
-    def get_kline(self, symbol: str, interval: str = "Min1",
-                  start: Optional[int] = None, end: Optional[int] = None) -> Dict[str, Any]:
-        url = f"{self.base}/api/v1/contract/kline/{symbol}"
-        params = {"interval": interval}
-        if start is not None:
-            params["start"] = int(start)  # en secondes
-        if end is not None:
-            params["end"] = int(end)      # en secondes
-        r = requests.get(url, params=params, timeout=15)
-        r.raise_for_status()
-        return r.json()
-
-    def get_ticker(self, symbol: Optional[str] = None) -> Dict[str, Any]:
-        url = f"{self.base}/api/v1/contract/ticker"
-        params = {}
-        if symbol:
-            params["symbol"] = symbol
-        r = requests.get(url, params=params, timeout=15)
-        r.raise_for_status()
-        return r.json()
-
-    # ----------------------- Privés -----------------------
-    def _private_request(self, method: str, path: str,
-                         params: Optional[Dict[str, Any]] = None,
-                         body: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        method = method.upper()
-        url = f"{self.base}{path}"
-        req_ms = self._ms()
-
-        if method in ("GET", "DELETE"):
-            qs = self._urlencode_sorted(params or {})
-            sig = self._sign(qs, req_ms)
-            headers = self._headers(sig, req_ms)
-            r = requests.request(method, url, params=params, headers=headers, timeout=20)
-        elif method == "POST":
-            body_str = json.dumps(body or {}, separators=(",", ":"), ensure_ascii=False)
-            sig = self._sign(body_str, req_ms)
-            headers = self._headers(sig, req_ms)
-            r = requests.post(url, data=body_str.encode("utf-8"), headers=headers, timeout=20)
-        else:
-            raise ValueError("Méthode non supportée")
-
-        try:
-            r.raise_for_status()
-            data = r.json()
-        except Exception as e:
-            logging.error("Erreur HTTP/JSON %s %s -> %s", method, path, str(e))
-            data = {"success": False, "error": str(e), "status_code": getattr(r, "status_code", None)}
-
-        log_event("http_private", {"method": method, "path": path, "params": params, "body": body, "response": data})
-        return data
-
-    # --- Comptes & positions
-    def get_assets(self) -> Dict[str, Any]:
-        if self.paper_trade:
-            return {
-                "success": True,
-                "code": 0,
-                "data": [
-                    {
-                        "currency": "USDT",
-                        "equity": 100.0,
-                    }
-                ],
-            }
-        return self._private_request("GET", "/api/v1/private/account/assets")
-
-    def get_positions(self) -> Dict[str, Any]:
-        return self._private_request("GET", "/api/v1/private/position/list/history_positions",
-                                     params={"page_num": 1, "page_size": 50})
-
-    def get_open_orders(self, symbol: Optional[str] = None) -> Dict[str, Any]:
-        return self._private_request("GET", "/api/v1/private/order/list/open_orders",
-                                     params={"symbol": symbol} if symbol else None)
-
-    # --- Ordres
-    def place_order(self, symbol: str, side: int, vol: int, order_type: int,
-                    price: Optional[float] = None, open_type: int = 1, leverage: Optional[int] = None,
-                    position_id: Optional[int] = None, external_oid: Optional[str] = None,
-                    stop_loss: Optional[float] = None, take_profit: Optional[float] = None,
-                    reduce_only: Optional[bool] = None, position_mode: Optional[int] = None) -> Dict[str, Any]:
-        """
-        side: 1=open long, 2=close short, 3=open short, 4=close long
-        type: 1=limit, 2=post-only, 3=IOC, 4=FOK, 5=market, 6=convert market to current price
-        """
-        if self.paper_trade:
-            logging.info("PAPER_TRADE=True -> ordre simulé: side=%s vol=%s type=%s price=%s", side, vol, order_type, price)
-            return {"success": True, "paperTrade": True, "simulated": {
-                "symbol": symbol, "side": side, "vol": vol, "type": order_type, "price": price,
-                "openType": open_type, "leverage": leverage, "stopLossPrice": stop_loss, "takeProfitPrice": take_profit
-            }}
-
-        body = {
-            "symbol": symbol,
-            "vol": vol,
-            "side": side,
-            "type": order_type,
-            "openType": open_type,
-        }
-        if price is not None:
-            body["price"] = float(price)
-        if leverage is not None:
-            body["leverage"] = int(leverage)
-        if position_id is not None:
-            body["positionId"] = int(position_id)
-        if external_oid:
-            body["externalOid"] = str(external_oid)[:32]
-        if stop_loss is not None:
-            body["stopLossPrice"] = float(stop_loss)
-        if take_profit is not None:
-            body["takeProfitPrice"] = float(take_profit)
-        if reduce_only is not None:
-            body["reduceOnly"] = bool(reduce_only)
-        if position_mode is not None:
-            body["positionMode"] = int(position_mode)
-
-        return self._private_request("POST", "/api/v1/private/order/submit", body=body)
-
-    def cancel_order(self, order_ids: List[int]) -> Dict[str, Any]:
-        return self._private_request("POST", "/api/v1/private/order/cancel", body=order_ids)
-
-    def cancel_all(self, symbol: Optional[str] = None) -> Dict[str, Any]:
-        body = {"symbol": symbol} if symbol else {}
-        return self._private_request("POST", "/api/v1/private/order/cancel_all", body=body)
-
-# ---------------------------------------------------------------------------
-# Outils stratégie
-# ---------------------------------------------------------------------------
-def ema(series: List[float], window: int) -> List[float]:
-    if window <= 1 or len(series) == 0:
-        return series[:]
-    k = 2 / (window + 1.0)
-    out = []
-    prev = series[0]
-    out.append(prev)
-    for x in series[1:]:
-        prev = x * k + prev * (1 - k)
-        out.append(prev)
-    return out
-
-def cross(last_fast: float, last_slow: float, prev_fast: float, prev_slow: float) -> int:
-    if prev_fast <= prev_slow and last_fast > last_slow:
-        return 1
-    if prev_fast >= prev_slow and last_fast < last_slow:
-        return -1
-    return 0
-
-def compute_position_size(contract_detail: Dict[str, Any], equity_usdt: float,
-                          price: float, risk_pct: float, leverage: int,
-                          symbol: Optional[str] = None) -> int:
-    symbol = symbol or CONFIG.get("SYMBOL")
-    contracts = contract_detail.get("data") or []
-    if not isinstance(contracts, list):
-        contracts = [contracts]
-    contract = next((c for c in contracts if c and c.get("symbol") == symbol), None)
-    if contract is None:
-        raise ValueError("Contract detail introuvable pour le symbole")
-
-    contract_size = float(contract.get("contractSize", 0.0001))
-    vol_unit = int(contract.get("volUnit", 1))
-    min_vol = int(contract.get("minVol", 1))
-
-    notional = equity_usdt * float(risk_pct) * float(leverage)
-    if notional <= 0.0:
-        return 0
-    vol = notional / (price * contract_size)
-    vol = int(math.floor(vol / vol_unit) * vol_unit)
-    return max(min_vol, vol)
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        kwargs.setdefault("requests_module", requests)
+        kwargs.setdefault("log_event", log_event)
+        super().__init__(*args, **kwargs)
 
 
-def analyse_risque(
-    contract_detail: Dict[str, Any],
-    open_positions: List[Dict[str, Any]],
-    equity_usdt: float,
-    price: float,
-    risk_pct: float,
-    base_leverage: int,
-    symbol: Optional[str] = None,
-    side: str = "long",
-    risk_level: int = 2,
-) -> tuple[int, int]:
-    """Analyse le risque avant l'ouverture d'une position.
-
-    Cette fonction calcule le volume de la position et adapte le levier en
-    fonction du ``risk_level``. Elle limite également le nombre de positions
-    ouvertes dans une direction donnée pour ``symbol``.
-
-    Parameters
-    ----------
-    contract_detail:
-        Détail du contrat tel que renvoyé par l'API ``get_contract_detail``.
-    open_positions:
-        Liste des positions actuellement ouvertes.
-    equity_usdt:
-        Capital disponible.
-    price:
-        Prix actuel du sous-jacent.
-    risk_pct:
-        Pourcentage du capital risqué par trade.
-    base_leverage:
-        Levier de base configuré.
-    symbol:
-        Symbole de trading (ex: ``BTC_USDT``).
-    side:
-        Direction envisagée (``"long"`` ou ``"short"``).
-    risk_level:
-        Niveau de risque : 1 (faible), 2 (moyen), 3 (élevé).
-
-    Returns
-    -------
-    tuple[int, int]
-        ``(volume, leverage)`` à utiliser pour l'ordre. ``volume`` vaut ``0`` si
-        la limite de positions est atteinte.
-    """
-
-    symbol = symbol or CONFIG.get("SYMBOL")
-    side = side.lower()
-
-    max_positions_map = {1: 1, 2: 2, 3: 3}
-    leverage_map = {
-        1: max(1, base_leverage // 2),
-        2: base_leverage,
-        3: base_leverage * 2,
-    }
-
-    max_pos = max_positions_map.get(risk_level, max_positions_map[2])
-    leverage = leverage_map.get(risk_level, base_leverage)
-
-    current = 0
-    for pos in open_positions or []:
-        if pos and pos.get("symbol") == symbol:
-            if str(pos.get("side", "")).lower() == side:
-                current += 1
-
-    if current >= max_pos:
-        return 0, leverage
-
-    vol = compute_position_size(
-        contract_detail,
-        equity_usdt=equity_usdt,
-        price=price,
-        risk_pct=risk_pct,
-        leverage=leverage,
-        symbol=symbol,
-    )
-    return vol, leverage
-
-# ---------------------------------------------------------------------------
-# Sélection des paires de trading
-# ---------------------------------------------------------------------------
-def get_trade_pairs(client: "MexcFuturesClient") -> list[dict]:
-    """Récupère toutes les paires disponibles via ``get_ticker``.
-
-    Parameters
-    ----------
-    client:
-        Instance de :class:`MexcFuturesClient`.
-
-    Returns
-    -------
-    list[dict]
-        Liste des entrées brutes renvoyées par l'API pour chaque paire.
-    """
-
-    tick = client.get_ticker()
-    data = tick.get("data") if isinstance(tick, dict) else []
-    if not data:
-        return []
-    return data if isinstance(data, list) else [data]
+# Re-export pair utilities with ability to monkeypatch ``ema``/``cross`` ---------
+get_trade_pairs = _pairs.get_trade_pairs
+filter_trade_pairs = _pairs.filter_trade_pairs
+select_top_pairs = _pairs.select_top_pairs
 
 
-def filter_trade_pairs(
-    client: "MexcFuturesClient",
+def find_trade_positions(
+    client: Any,
+    pairs: List[Dict[str, Any]],
     *,
-    volume_min: float = 5_000_000,
-    max_spread_bps: float = 5.0,
-    zero_fee_pairs: Optional[List[str]] = None,
-    top_n: int = 20,
-) -> list[dict]:
-    """Filtre les paires selon volume, spread et frais nuls.
-
-    Parameters
-    ----------
-    client:
-        Instance du client REST.
-    volume_min:
-        Volume minimal sur 24h (en USDT).
-    max_spread_bps:
-        Écart maximal bid/ask en points de base.
-    zero_fee_pairs:
-        Liste des paires avec frais nuls. Par défaut ``CONFIG['ZERO_FEE_PAIRS']``.
-    top_n:
-        Nombre maximum de paires à retourner.
-
-    Returns
-    -------
-    list[dict]
-        Paires respectant les critères triées par volume décroissant.
-    """
-
-    pairs = get_trade_pairs(client)
-    zero_fee = set(zero_fee_pairs or CONFIG.get("ZERO_FEE_PAIRS", []))
-    eligible: list[dict] = []
-
-    for info in pairs:
-        sym = info.get("symbol")
-        if not sym or sym not in zero_fee:
-            continue
-        try:
-            vol = float(info.get("volume", 0))
-        except (TypeError, ValueError):
-            continue
-        if vol < volume_min:
-            continue
-        try:
-            bid = float(info.get("bidPrice", 0))
-            ask = float(info.get("askPrice", 0))
-        except (TypeError, ValueError):
-            continue
-        if bid <= 0 or ask <= 0:
-            continue
-        spread_bps = (ask - bid) / ((ask + bid) / 2) * 10_000
-        if spread_bps >= max_spread_bps:
-            continue
-        eligible.append(info)
-
-    eligible.sort(key=lambda row: float(row.get("volume", 0)), reverse=True)
-    return eligible[:top_n]
+    interval: str = "Min1",
+    ema_fast_n: Optional[int] = None,
+    ema_slow_n: Optional[int] = None,
+) -> List[Dict[str, Any]]:
+    return _pairs.find_trade_positions(
+        client,
+        pairs,
+        interval=interval,
+        ema_fast_n=ema_fast_n,
+        ema_slow_n=ema_slow_n,
+        ema_func=ema,
+        cross_func=cross,
+    )
 
 
-def select_top_pairs(client: "MexcFuturesClient", top_n: int = 10,
-                     key: str = "volume") -> list[dict]:
-    """Filtre les ``top_n`` paires selon la clé numérique ``key``.
-
-    Les volumes sont convertis en ``float`` et triés par ordre décroissant.
-    Les entrées qui n'ont pas la clé demandée sont considérées avec un volume
-    nul.
-    """
-
-    pairs = get_trade_pairs(client)
-
-    def volume(row: dict) -> float:
-        try:
-            return float(row.get(key, 0))
-        except (TypeError, ValueError):
-            return 0.0
-
-    pairs.sort(key=volume, reverse=True)
-    return pairs[:top_n]
-
-
-def find_trade_positions(client: "MexcFuturesClient", pairs: list[dict],
-                         *, interval: str = "Min1",
-                         ema_fast_n: Optional[int] = None,
-                         ema_slow_n: Optional[int] = None) -> list[dict]:
-    """Applique la stratégie EMA/cross sur une liste de paires.
-
-    Parameters
-    ----------
-    client:
-        Client REST pour interroger l'API.
-    pairs:
-        Liste des dictionnaires renvoyés par :func:`select_top_pairs`.
-    interval:
-        Intervalle de klines utilisé.
-    ema_fast_n, ema_slow_n:
-        Fenêtres EMA; par défaut celles définies dans ``CONFIG``.
-
-    Returns
-    -------
-    list[dict]
-        Liste des signaux détectés sous la forme ``{"symbol": str,
-        "signal": "long"|"short", "price": float}``.
-    """
-
-    ema_fast_n = ema_fast_n or CONFIG.get("EMA_FAST", 9)
-    ema_slow_n = ema_slow_n or CONFIG.get("EMA_SLOW", 21)
-    results: list[dict] = []
-
-    for info in pairs:
-        symbol = info.get("symbol")
-        if not symbol:
-            continue
-        k = client.get_kline(symbol, interval=interval)
-        closes = k.get("data", {}).get("close", []) if isinstance(k, dict) else []
-        if len(closes) < max(ema_fast_n, ema_slow_n) + 2:
-            continue
-
-        efull = ema(closes, ema_fast_n)
-        eslow = ema(closes, ema_slow_n)
-        signal = cross(efull[-1], eslow[-1], efull[-2], eslow[-2])
-        if signal == 1:
-            results.append({
-                "symbol": symbol,
-                "signal": "long",
-                "price": float(info.get("lastPrice", 0.0)),
-            })
-        elif signal == -1:
-            results.append({
-                "symbol": symbol,
-                "signal": "short",
-                "price": float(info.get("lastPrice", 0.0)),
-            })
-
-    return results
-
-
-def send_selected_pairs(client: "MexcFuturesClient", top_n: int = 20) -> None:
-    """Fetch top trading pairs and notify their list."""
+def send_selected_pairs(client: Any, top_n: int = 20) -> None:
     pairs = select_top_pairs(client, top_n=top_n)
     symbols = [p.get("symbol") for p in pairs if p.get("symbol")]
     if symbols:
         notify("pair_list", {"pairs": ", ".join(symbols)})
 
 
-
-def backtest_trades(trades: List[Dict[str, Any]], *,
-                    fee_rate: Optional[float] = None,
-                    zero_fee_pairs: Optional[List[str]] = None) -> float:
-    """Compute cumulative PnL for a series of trades.
-
-    Each trade dict must contain ``symbol``, ``entry``, ``exit`` and ``side``
-    (+1 long, -1 short). Fees are deducted unless the symbol belongs to
-    ``zero_fee_pairs``.
-    """
-
-    fee_rate = fee_rate if fee_rate is not None else CONFIG.get("FEE_RATE", 0.0)
-    zero_fee = set(zero_fee_pairs or CONFIG.get("ZERO_FEE_PAIRS", []))
-
-    total = 0.0
-    for t in trades:
-        sym = t.get("symbol")
-        fr = 0.0 if sym in zero_fee else fee_rate
-        total += calc_pnl_pct(t["entry"], t["exit"], t["side"], fr)
-    return total
-
-
 # ---------------------------------------------------------------------------
-# Boucle principale
+# Main trading loop
 # ---------------------------------------------------------------------------
-def main():
+
+def main() -> None:
     cfg = CONFIG
     check_config()
     client = MexcFuturesClient(
@@ -609,14 +123,18 @@ def main():
 
     logging.info("Scalp version %s", __version__)
     logging.info("---- MEXC Futures bot démarré ----")
-    logging.info("SYMBOL=%s | INTERVAL=%s | EMA=%s/%s | PAPER_TRADE=%s",
-                 symbol, interval, ema_fast_n, ema_slow_n, cfg["PAPER_TRADE"])
+    logging.info(
+        "SYMBOL=%s | INTERVAL=%s | EMA=%s/%s | PAPER_TRADE=%s",
+        symbol,
+        interval,
+        ema_fast_n,
+        ema_slow_n,
+        cfg["PAPER_TRADE"],
+    )
 
-    # Specs contrat (taille, minVol, etc.)
     contract_detail = client.get_contract_detail(symbol)
     log_event("contract_detail", contract_detail)
 
-    # Lecture equity (USDT)
     assets = client.get_assets()
     log_event("assets", assets)
     equity_usdt = 0.0
@@ -628,18 +146,20 @@ def main():
     except Exception:
         pass
     if equity_usdt <= 0:
-        logging.warning("Equity USDT non détectée, fallback symbolique à 100 USDT pour sizing.")
+        logging.warning(
+            "Equity USDT non détectée, fallback symbolique à 100 USDT pour sizing."
+        )
         equity_usdt = 100.0
 
     prev_fast = prev_slow = None
-    current_pos = 0  # +1 long, -1 short, 0 flat
+    current_pos = 0
     entry_price = None
     session_pnl = 0.0
 
     notify("bot_started", {"session_pnl": session_pnl})
     try:
         send_selected_pairs(client, top_n=20)
-    except Exception as exc:
+    except Exception as exc:  # pragma: no cover - network
         logging.error("Erreur sélection paires: %s", exc)
 
     while True:
@@ -647,12 +167,14 @@ def main():
             k = client.get_kline(symbol, interval=interval)
             if not (k and k.get("success") and "data" in k and "close" in k["data"]):
                 logging.warning("Réponse klines inattendue: %s", k)
-                time.sleep(cfg["LOOP_SLEEP_SECS"]); continue
+                time.sleep(cfg["LOOP_SLEEP_SECS"])
+                continue
 
             closes = k["data"]["close"][-cfg["MAX_KLINES"]:]
             if len(closes) < max(ema_fast_n, ema_slow_n) + 2:
                 logging.info("Pas assez d’historique pour EMA; retry...")
-                time.sleep(cfg["LOOP_SLEEP_SECS"]); continue
+                time.sleep(cfg["LOOP_SLEEP_SECS"])
+                continue
 
             efull = ema(closes, ema_fast_n)
             eslow = ema(closes, ema_slow_n)
@@ -663,16 +185,19 @@ def main():
             tick = client.get_ticker(symbol)
             if not (tick and tick.get("success") and tick.get("data")):
                 logging.warning("Ticker vide: %s", tick)
-                time.sleep(cfg["LOOP_SLEEP_SECS"]); continue
+                time.sleep(cfg["LOOP_SLEEP_SECS"])
+                continue
             tdata = tick["data"]
             if isinstance(tdata, list):
                 price = None
                 for row in tdata:
                     if row.get("symbol") == symbol:
-                        price = float(row.get("lastPrice")); break
+                        price = float(row.get("lastPrice"))
+                        break
                 if price is None:
                     logging.warning("Prix introuvable pour %s", symbol)
-                    time.sleep(cfg["LOOP_SLEEP_SECS"]); continue
+                    time.sleep(cfg["LOOP_SLEEP_SECS"])
+                    continue
             else:
                 price = float(tdata.get("lastPrice"))
 
@@ -705,24 +230,22 @@ def main():
                 },
             )
 
-            # type=5 (market). On passe "price" à titre conservateur.
             if x == +1 and current_pos <= 0:
-                if current_pos < 0:
-                    if entry_price is not None:
-                        pnl = calc_pnl_pct(entry_price, price, -1, fee_rate)
-                        payload = {
-                            "side": "short",
-                            "symbol": symbol,
-                            "entry": entry_price,
-                            "exit": price,
-                            "pnl_usd": round((entry_price - price) * vol_close, 2),
-                            "pnl_pct": pnl,
-                            "fee_pct": fee_rate * 2 * 100,
-                        }
-                        log_event("position_closed", payload)
-                        session_pnl += pnl
-                        payload["session_pnl"] = session_pnl
-                        notify("position_closed", payload)
+                if current_pos < 0 and entry_price is not None:
+                    pnl = calc_pnl_pct(entry_price, price, -1, fee_rate)
+                    payload = {
+                        "side": "short",
+                        "symbol": symbol,
+                        "entry": entry_price,
+                        "exit": price,
+                        "pnl_usd": round((entry_price - price) * vol_close, 2),
+                        "pnl_pct": pnl,
+                        "fee_pct": fee_rate * 2 * 100,
+                    }
+                    log_event("position_closed", payload)
+                    session_pnl += pnl
+                    payload["session_pnl"] = session_pnl
+                    notify("position_closed", payload)
                     client.place_order(
                         symbol,
                         side=2,
@@ -790,35 +313,34 @@ def main():
                 entry_price = price
 
             elif x == -1 and current_pos >= 0:
-                if current_pos > 0:
-                    if entry_price is not None:
-                        pnl = calc_pnl_pct(entry_price, price, 1, fee_rate)
-                        payload = {
-                            "side": "long",
-                            "symbol": symbol,
-                            "entry": entry_price,
-                            "exit": price,
-                            "pnl_usd": round((price - entry_price) * vol_close, 2),
-                            "pnl_pct": pnl,
-                            "fee_pct": fee_rate * 2 * 100,
-                        }
-                        log_event("position_closed", payload)
-                        session_pnl += pnl
-                        payload["session_pnl"] = session_pnl
-                        notify("position_closed", payload)
-                client.place_order(
-                    symbol,
-                    side=4,
-                    vol=vol_close,
-                    order_type=5,
-                    price=price,
-                    open_type=CONFIG["OPEN_TYPE"],
-                    leverage=CONFIG["LEVERAGE"],
-                    reduce_only=True,
-                )
-                current_pos = 0
-                entry_price = None
-                time.sleep(0.3)
+                if current_pos > 0 and entry_price is not None:
+                    pnl = calc_pnl_pct(entry_price, price, 1, fee_rate)
+                    payload = {
+                        "side": "long",
+                        "symbol": symbol,
+                        "entry": entry_price,
+                        "exit": price,
+                        "pnl_usd": round((price - entry_price) * vol_close, 2),
+                        "pnl_pct": pnl,
+                        "fee_pct": fee_rate * 2 * 100,
+                    }
+                    log_event("position_closed", payload)
+                    session_pnl += pnl
+                    payload["session_pnl"] = session_pnl
+                    notify("position_closed", payload)
+                    client.place_order(
+                        symbol,
+                        side=4,
+                        vol=vol_close,
+                        order_type=5,
+                        price=price,
+                        open_type=CONFIG["OPEN_TYPE"],
+                        leverage=CONFIG["LEVERAGE"],
+                        reduce_only=True,
+                    )
+                    current_pos = 0
+                    entry_price = None
+                    time.sleep(0.3)
 
                 positions = client.get_positions().get("data", [])
                 vol_open, lev = analyse_risque(
@@ -877,10 +399,11 @@ def main():
         except KeyboardInterrupt:
             logging.info("Arrêt manuel.")
             break
-        except Exception as e:
+        except Exception as e:  # pragma: no cover - safeguard
             logging.exception("Erreur boucle principale: %s", str(e))
             time.sleep(3)
     notify("bot_stopped", {"session_pnl": session_pnl})
 
-if __name__ == "__main__":
+
+if __name__ == "__main__":  # pragma: no cover - manual run
     main()
