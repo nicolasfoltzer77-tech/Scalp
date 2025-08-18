@@ -23,7 +23,7 @@ Le bot lit sa configuration via des variables d'environnement :
 
 - `MEXC_ACCESS_KEY`, `MEXC_SECRET_KEY` : clés API MEXC (laisser les valeurs par défaut pour rester en mode papier).
 - `PAPER_TRADE` (`true`/`false`) : par défaut `true`, n'envoie aucun ordre réel.
-- `SYMBOL` : symbole du contrat futures, ex. `BTC_USDT`.
+- `SYMBOL` : symbole du contrat futures (par défaut, première paire de `ZERO_FEE_PAIRS` ou `BTC_USDT`).
 - `INTERVAL` : intervalle des chandeliers, ex. `Min1`, `Min5`.
 - `EMA_FAST`, `EMA_SLOW` : périodes des EMA utilisées par la stratégie.
 - `RISK_PCT_EQUITY`, `LEVERAGE`, `STOP_LOSS_PCT`, `TAKE_PROFIT_PCT` : paramètres de gestion du risque.
@@ -59,9 +59,9 @@ Après configuration, lancez simplement :
 python bot.py
 ```
 
-Les journaux sont écrits dans `logs/` et affichés sur la console. Le bot tourne jusqu'à `Ctrl+C`. Les ouvertures et fermetures de positions sont consignées dans `bot_events.jsonl`.
+Le terminal reste silencieux au démarrage sauf en cas d'absence de variables critiques (`MEXC_ACCESS_KEY`, `MEXC_SECRET_KEY`). Les journaux sont écrits dans `logs/` et affichés sur la console. Le bot tourne jusqu'à `Ctrl+C`. Les ouvertures et fermetures de positions sont consignées dans `bot_events.jsonl`.
 
-Lors du démarrage, deux notifications Telegram sont émises : la première indique que le bot est lancé, la seconde liste les 20 paires sélectionnées pour la session.
+Lors du démarrage, deux notifications Telegram sont émises : la première affiche « Bot démarré » avec un logo, la seconde « Listing : » suivi des 20 paires sélectionnées.
 
 ## Version
 
