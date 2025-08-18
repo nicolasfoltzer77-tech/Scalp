@@ -49,19 +49,12 @@ log_event = get_jsonl_logger(
 
 
 def check_config() -> None:
-    """Display a color coded status of important environment variables."""
+    """Log only missing critical environment variables."""
     critical = {"MEXC_ACCESS_KEY", "MEXC_SECRET_KEY"}
-    optional = {"NOTIFY_URL", "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID"}
-    all_keys = sorted(set(CONFIG.keys()) | optional)
-    red, orange, green, reset = "\033[91m", "\033[93m", "\033[92m", "\033[0m"
-    for key in all_keys:
+    for key in critical:
         val = os.getenv(key)
-        if key in critical and (not val or val in {"", "A_METTRE", "B_METTRE"}):
-            logging.info("%s%s%s: critique", red, key, reset)
-        elif val:
-            logging.info("%s%s%s: dispo", green, key, reset)
-        else:
-            logging.info("%s%s%s: absente", orange, key, reset)
+        if not val or val in {"", "A_METTRE", "B_METTRE"}:
+            logging.warning("%s manquante", key)
 
 
 class MexcFuturesClient(_BaseMexcFuturesClient):
@@ -99,22 +92,12 @@ def find_trade_positions(
 
 
 def send_selected_pairs(client: Any, top_n: int = 20) -> None:
-    pairs = select_top_pairs(client, top_n=top_n)
-    seen: set[str] = set()
-    symbols: list[str] = []
-    for p in pairs:
-        sym = p.get("symbol")
-        if not sym:
-            continue
-        base = sym.replace("_", "")
-        if base.endswith("USDT"):
-            base = base[:-4]
-        if base in seen:
-            continue
-        seen.add(base)
-        symbols.append(base)
-    if symbols:
-        notify("pair_list", {"pairs": ", ".join(symbols)})
+    _pairs.send_selected_pairs(
+        client,
+        top_n=top_n,
+        select_fn=filter_trade_pairs,
+        notify_fn=notify,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -148,17 +131,6 @@ def main() -> None:
     zero_fee_pairs = set(cfg.get("ZERO_FEE_PAIRS", []))
     fee_rate = 0.0 if symbol in zero_fee_pairs else cfg.get("FEE_RATE", 0.0)
 
-    logging.info("Scalp version %s", __version__)
-    logging.info("---- MEXC Futures bot démarré ----")
-    logging.info(
-        "SYMBOL=%s | INTERVAL=%s | EMA=%s/%s | PAPER_TRADE=%s",
-        symbol,
-        interval,
-        ema_fast_n,
-        ema_slow_n,
-        cfg["PAPER_TRADE"],
-    )
-
     contract_detail = client.get_contract_detail(symbol)
     log_event("contract_detail", contract_detail)
 
@@ -187,7 +159,7 @@ def main() -> None:
 
     def close_position(side: int, price: float, vol: int) -> bool:
         nonlocal current_pos, entry_price, entry_time, session_pnl, equity_usdt, stop_long, stop_short
-        pnl = calc_pnl_pct(entry_price, price, side, fee_rate)
+        pnl = round(calc_pnl_pct(entry_price, price, side, fee_rate), 2)
         payload = {
             "side": "long" if side > 0 else "short",
             "symbol": symbol,
@@ -230,7 +202,7 @@ def main() -> None:
         time.sleep(0.3)
         return kill
 
-    notify("bot_started", {"session_pnl": session_pnl})
+    notify("bot_started")
     try:
         send_selected_pairs(client, top_n=20)
     except Exception as exc:  # pragma: no cover - network
