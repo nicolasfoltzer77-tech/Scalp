@@ -1,15 +1,15 @@
-"""Backtesting utilities."""
+"""Backtesting helpers and optimisation utilities."""
 
-from .engine import (
-    BacktestEngine,
-    dynamic_risk_pct,
-    apply_trailing,
-    run_backtest,
+from .optimize import (
+    param_space_default,
+    eval_params_one,
+    run_param_sweep,
+    optimize,
 )
 
 __all__ = [
-    "BacktestEngine",
-    "dynamic_risk_pct",
-    "apply_trailing",
-    "run_backtest",
+    "param_space_default",
+    "eval_params_one",
+    "run_param_sweep",
+    "optimize",
 ]
