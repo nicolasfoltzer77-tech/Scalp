@@ -1,9 +1,11 @@
 
 
+
 import os
 import sys
 import pytest
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+
 
 
 from scalp.metrics import calc_rsi, calc_atr
@@ -17,6 +19,13 @@ def test_calc_rsi_uptrend():
 def test_calc_rsi_downtrend():
     prices = list(range(15, 0, -1))  # strictly decreasing
     assert calc_rsi(prices, period=14) == pytest.approx(0.0)
+
+
+
+def test_calc_rsi_flat():
+    prices = [1.0] * 15  # no movement
+    assert calc_rsi(prices, period=14) == pytest.approx(50.0)
+
 
 
 def test_calc_atr_constant_range():
