@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-__all__ = ["calc_risk_amount", "calc_position_size"]
+__all__ = ["calc_risk_amount", "calc_position_size", "adjust_risk_pct"]
 
 
 def calc_risk_amount(equity: float, risk_pct: float) -> float:
@@ -42,3 +42,47 @@ def calc_position_size(equity: float, risk_pct: float, stop_distance: float) -> 
         raise ValueError("stop_distance must be positive")
     risk_amount = calc_risk_amount(equity, risk_pct)
     return risk_amount / stop_distance
+
+
+def adjust_risk_pct(
+    risk_pct: float,
+    win_streak: int,
+    loss_streak: int,
+    *,
+    increase: float = 0.12,
+    decrease: float = 0.25,
+    min_pct: float = 0.001,
+    max_pct: float = 0.05,
+) -> float:
+    """Return ``risk_pct`` adjusted by recent performance.
+
+    After two consecutive winning trades the risk percentage is increased by
+    ``increase`` (default 12%).  After two consecutive losses it is reduced by
+    ``decrease`` (default 25%).  The result is bounded by ``min_pct`` and
+    ``max_pct``.
+
+    Parameters
+    ----------
+    risk_pct:
+        Current risk fraction (e.g. ``0.01`` for 1%).  Must be positive.
+    win_streak / loss_streak:
+        Number of consecutive wins or losses.
+    increase / decrease:
+        Fractional adjustments applied when the respective streak is reached.
+    min_pct / max_pct:
+        Hard limits for the adjusted risk.
+    """
+
+    if risk_pct <= 0:
+        raise ValueError("risk_pct must be positive")
+
+    if win_streak >= 2:
+        risk_pct *= 1.0 + increase
+    if loss_streak >= 2:
+        risk_pct *= 1.0 - decrease
+
+    if risk_pct < min_pct:
+        return min_pct
+    if risk_pct > max_pct:
+        return max_pct
+    return risk_pct

@@ -28,3 +28,25 @@ def backtest_trades(
         frate = 0.0 if symbol in zero_fee else fee_rate
         pnl += calc_pnl_pct(entry, exit_, side, frate)
     return pnl
+
+
+def walk_forward_windows(series: List[Any], train: int, test: int):
+    """Yield sequential ``(train, test)`` windows for walk-forward analysis.
+
+    Parameters
+    ----------
+    series:
+        Ordered data sequence.  The function simply slices the input and does
+        not inspect the values.
+    train, test:
+        Number of elements for the training and testing windows respectively.
+    """
+
+    end = len(series) - train - test + 1
+    step = test if test > 0 else 1
+    for start in range(0, max(0, end), step):
+        train_slice = series[start : start + train]
+        test_slice = series[start + train : start + train + test]
+        if len(test_slice) < test or len(train_slice) < train:
+            break
+        yield train_slice, test_slice

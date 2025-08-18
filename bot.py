@@ -11,7 +11,9 @@ import requests
 from scalp.logging_utils import get_jsonl_logger
 from scalp.metrics import calc_pnl_pct
 from scalp.notifier import notify
+
 from scalp import __version__
+
 from scalp.telegram_bot import init_telegram_bot
 
 from scalp.bot_config import CONFIG
@@ -124,6 +126,12 @@ def main() -> None:
         recv_window=cfg["RECV_WINDOW"],
         paper_trade=cfg["PAPER_TRADE"],
     )
+    risk_mgr = RiskManager(
+        max_daily_loss_pct=cfg["MAX_DAILY_LOSS_PCT"],
+        max_positions=cfg["MAX_POSITIONS"],
+    )
+
+    tg_bot = init_telegram_bot(client, cfg)
 
     tg_bot = init_telegram_bot(client, cfg)
 
@@ -275,11 +283,23 @@ def main() -> None:
                         leverage=CONFIG["LEVERAGE"],
                         reduce_only=True,
                     )
+                    risk_mgr.record_trade(pnl)
+                    if risk_mgr.kill_switch:
+                        logging.warning("Kill switch activé, arrêt du bot.")
+                        break
+                    pause = risk_mgr.pause_duration()
+                    if pause:
+                        logging.info("Pause %s s après série de pertes", pause)
+                        time.sleep(pause)
                     current_pos = 0
                     entry_price = None
                     time.sleep(0.3)
 
                 positions = client.get_positions().get("data", [])
+                if not risk_mgr.can_open(len(positions)):
+                    logging.info("RiskManager: limites atteintes, on attend.")
+                    time.sleep(cfg["LOOP_SLEEP_SECS"])
+                    continue
                 vol_open, lev = analyse_risque(
                     contract_detail,
                     positions,
@@ -357,11 +377,23 @@ def main() -> None:
                         leverage=CONFIG["LEVERAGE"],
                         reduce_only=True,
                     )
+                    risk_mgr.record_trade(pnl)
+                    if risk_mgr.kill_switch:
+                        logging.warning("Kill switch activé, arrêt du bot.")
+                        break
+                    pause = risk_mgr.pause_duration()
+                    if pause:
+                        logging.info("Pause %s s après série de pertes", pause)
+                        time.sleep(pause)
                     current_pos = 0
                     entry_price = None
                     time.sleep(0.3)
 
                 positions = client.get_positions().get("data", [])
+                if not risk_mgr.can_open(len(positions)):
+                    logging.info("RiskManager: limites atteintes, on attend.")
+                    time.sleep(cfg["LOOP_SLEEP_SECS"])
+                    continue
                 vol_open, lev = analyse_risque(
                     contract_detail,
                     positions,
