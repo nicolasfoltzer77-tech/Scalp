@@ -66,15 +66,20 @@ Lors du démarrage, deux notifications Telegram sont émises : la première affi
 
 ## Stratégie
 
-Le bot met en œuvre une stratégie de scalping combinant plusieurs indicateurs techniques :
+Scalp cherche à capter de courts mouvements de tendance tout en coupant
+rapidement les pertes.
 
-- croisement des EMA 20/50 pour les signaux d’entrée ;
-- filtre de tendance via la MACD et une EMA longue configurable ;
-- confirmation par la position du prix par rapport au VWAP et par l’OBV ou un pic de volume ;
-- validation multi‑unités de temps (RSI 15 min, pente de l’EMA 1 h) ;
-- seuils dynamiques de stop‑loss et take‑profit calculés à partir de l’ATR, avec dimensionnement de position basé sur le risque.
+Principes généraux :
 
-Une description détaillée des règles est disponible dans `STRATEGY.md`.
+- sélection de paires liquides à frais nuls et au fort momentum ;
+- trade uniquement dans le sens de la tendance dominante (MACD + EMA longue) ;
+- confirmation multi‑indicateurs (VWAP, volume/OBV, RSI multi‑UT) ;
+- stop‑loss et take‑profit dynamiques basés sur l’ATR avec taille de position
+  calculée selon le risque ;
+- limites quotidiennes pour protéger le capital.
+
+Les règles détaillées et l’algorithme complet sont décrits dans
+`STRATEGY.md`.
 
 ## Version
 
