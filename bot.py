@@ -103,6 +103,11 @@ def send_selected_pairs(client: Any, top_n: int = 20) -> None:
     )
 
 
+def update(client: Any, top_n: int = 20) -> None:
+    """Send a fresh list of pairs to reflect current market conditions."""
+    send_selected_pairs(client, top_n=top_n)
+
+
 # ---------------------------------------------------------------------------
 # Main trading loop
 # ---------------------------------------------------------------------------
@@ -242,13 +247,23 @@ def main(argv: Optional[List[str]] = None) -> None:
         send_selected_pairs(client, top_n=20)
     except Exception as exc:  # pragma: no cover - network
         logging.error("Erreur sélection paires: %s", exc)
-
+    next_update = time.time() + 60
     while True:
         if tg_bot:
             try:
                 tg_bot.handle_updates(session_pnl)
+                if getattr(tg_bot, "stop_requested", False):
+                    break
             except Exception as exc:  # pragma: no cover - robustness
                 logging.error("Erreur commandes Telegram: %s", exc)
+
+        now = time.time()
+        if now >= next_update:
+            try:
+                update(client, top_n=20)
+            except Exception as exc:  # pragma: no cover - network
+                logging.error("Erreur update marché: %s", exc)
+            next_update = now + 60
 
         try:
             k = client.get_kline(symbol, interval=interval)

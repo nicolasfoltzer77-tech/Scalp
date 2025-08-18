@@ -64,6 +64,9 @@ Le terminal reste silencieux au démarrage sauf en cas d'absence de variables cr
 
 Lors du démarrage, deux notifications Telegram sont émises : la première affiche « Bot démarré » avec un logo, la seconde « Listing : » suivi des 20 paires sélectionnées classées par couleur (🟢 < 1 min, 🟠 < 10 min, 🔴 > 10 min).
 
+Ensuite, un rappel du marché est envoyé chaque minute et l'interface Telegram propose un bouton « Fermer Bot » pour arrêter proprement l'exécution.
+
+
 ## Stratégie
 
 Scalp cherche à capter de courts mouvements de tendance tout en coupant

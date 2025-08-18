@@ -45,6 +45,7 @@ class TelegramBot:
         self.risk_mgr = risk_mgr
         self.requests = requests_module
         self.last_update_id: Optional[int] = None
+        self.stop_requested = False
 
 
         self.main_keyboard = [
@@ -55,6 +56,7 @@ class TelegramBot:
             [{"text": "Reset Risk", "callback_data": "reset_risk"}],
 
             [{"text": "Stop", "callback_data": "stop"}],
+            [{"text": "Fermer Bot", "callback_data": "shutdown"}],
 
         ]
         self.risk_keyboard = [
@@ -229,6 +231,10 @@ class TelegramBot:
                 return f"Position {sym} fermée", self.main_keyboard
             except Exception:
                 return f"Erreur fermeture {sym}", self.main_keyboard
+
+        if data == "shutdown":
+            self.stop_requested = True
+            return "Arrêt du bot demandé", self.main_keyboard
 
         if data == "back":
             return "Menu principal:", self.main_keyboard
