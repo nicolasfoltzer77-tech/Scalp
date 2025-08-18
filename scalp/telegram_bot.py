@@ -59,9 +59,9 @@ class TelegramBot:
         ]
         self.risk_keyboard = [
             [
-                {"text": "1", "callback_data": "risk1"},
-                {"text": "2", "callback_data": "risk2"},
-                {"text": "3", "callback_data": "risk3"},
+                {"text": "🟢", "callback_data": "risk_green"},
+                {"text": "🟠", "callback_data": "risk_orange"},
+                {"text": "🔴", "callback_data": "risk_red"},
             ],
             [{"text": "Retour", "callback_data": "back"}],
         ]
@@ -196,13 +196,15 @@ class TelegramBot:
         if data == "risk":
             return "Choisissez le niveau de risque:", self.risk_keyboard
         if data.startswith("risk"):
-            try:
-                lvl = int(data[-1])
-                if lvl in (1, 2, 3):
-                    self.config["RISK_LEVEL"] = lvl
-                    return f"Niveau de risque réglé sur {lvl}", self.main_keyboard
-            except Exception:
-                pass
+            mapping = {
+                "risk_green": 1,
+                "risk_orange": 2,
+                "risk_red": 3,
+            }
+            lvl = mapping.get(data)
+            if lvl:
+                self.config["RISK_LEVEL"] = lvl
+                return f"Niveau de risque réglé sur {lvl}", self.main_keyboard
             return "Niveau de risque inchangé", self.main_keyboard
 
         if data == "reset_risk":

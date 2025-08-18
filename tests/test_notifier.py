@@ -116,7 +116,9 @@ def test_format_text_closed_position():
 
 def test_format_text_pair_list_and_start():
     assert notifier._format_text("bot_started") == "🤖 Bot démarré"
-    text = notifier._format_text("pair_list", {"pairs": "AAA, BBB"})
-    assert text == "Listing : AAA, BBB"
+    text = notifier._format_text(
+        "pair_list", {"green": "AAA", "orange": "BBB", "red": "CCC"}
+    )
+    assert text == "Listing :\n🟢 AAA\n🟠 BBB\n🔴 CCC"
 
 
