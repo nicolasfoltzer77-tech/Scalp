@@ -87,6 +87,34 @@ def trailing_stop(side: str, current_price: float, atr: float, sl: float, *, mul
     return min(sl, new_sl)
 
 
+def break_even_stop(
+    side: str,
+    entry_price: float,
+    current_price: float,
+    atr: float,
+    sl: float,
+    *,
+    mult: float = 1.0,
+) -> float:
+    """Move stop loss to break-even after a favourable move.
+
+    Once price advances ``mult`` times the ``atr`` from ``entry_price`` the
+    original stop loss ``sl`` is tightened to the entry.  This helps lock in
+    profits while still giving the trade room to develop.
+    """
+
+    side = side.lower()
+    if side == "long":
+        if current_price - entry_price >= mult * atr:
+            return max(sl, entry_price)
+        return sl
+    if side == "short":
+        if entry_price - current_price >= mult * atr:
+            return min(sl, entry_price)
+        return sl
+    raise ValueError("side must be 'long' or 'short'")
+
+
 def should_scale_in(
     entry_price: float,
     current_price: float,
