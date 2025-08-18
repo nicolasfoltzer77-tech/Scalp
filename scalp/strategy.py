@@ -87,6 +87,33 @@ def cross(last_fast: float, last_slow: float, prev_fast: float, prev_slow: float
         return -1
     return 0
 
+
+def order_book_imbalance(bid_vol: float, ask_vol: float) -> float:
+    """Compute order book imbalance.
+
+    The value is normalised between ``-1`` and ``1`` where positive numbers
+    indicate bid dominance.  ``0`` is returned when both volumes are zero.
+    """
+
+    total = bid_vol + ask_vol
+    return (bid_vol - ask_vol) / total if total else 0.0
+
+
+def swing_levels(
+    highs: Sequence[float], lows: Sequence[float], lookback: int
+) -> Tuple[float, float]:
+    """Return the most recent swing high and swing low.
+
+    ``lookback`` defines how many completed candles are inspected.  The current
+    candle is excluded to avoid look‑ahead bias.
+    """
+
+    if len(highs) < lookback + 1 or len(lows) < lookback + 1:
+        return highs[-1], lows[-1]
+    high = max(highs[-lookback - 1 : -1])
+    low = min(lows[-lookback - 1 : -1])
+    return high, low
+
 # ---------------------------------------------------------------------------
 # Pair selection
 # ---------------------------------------------------------------------------
@@ -197,6 +224,13 @@ def generate_signal(
     *,
     equity: float,
     risk_pct: float,
+    ohlcv_15m: Optional[Dict[str, Sequence[float]]] = None,
+    ohlcv_1h: Optional[Dict[str, Sequence[float]]] = None,
+    order_book: Optional[Dict[str, float]] = None,
+    tick_ratio_buy: Optional[float] = None,
+    atr_disable_pct: float = 0.2,
+    atr_reduce_pct: float = 2.0,
+    swing_lookback: int = 5,
 ) -> Optional[Signal]:
     """Return a trading :class:`Signal` if conditions are met.
 
@@ -207,6 +241,9 @@ def generate_signal(
     * price positioned relative to VWAP and EMA20/EMA50 trend
     * RSI(14) crossing key levels (40/60)
     * OBV rising or high short‑term volume
+    * Multi time frame confirmation (H1 EMA50 slope, RSI15 >/< 50)
+    * Micro‑structure breakout of last swing high/low
+    * Order book imbalance and tape filters
     * Dynamic ATR‑based stop‑loss and take‑profit
     * Position sizing via ``calc_position_size``
     """
@@ -228,23 +265,65 @@ def generate_signal(
     vol_ma20 = sum(vols[-20:]) / 20.0
     vol_rising = vol_last3 > vol_ma20
 
-    # RSI crossing logic
+    # Multi timeframe filters -------------------------------------------------
+    trend_dir = 0  # 1 = long only, -1 = short only, 0 = neutral
+    if ohlcv_1h:
+        h_closes = [float(x) for x in ohlcv_1h.get("close", [])]
+        if len(h_closes) >= 52:
+            h_ema50 = ema(h_closes, 50)
+            if len(h_ema50) >= 2:
+                slope = h_ema50[-1] - h_ema50[-2]
+                if slope > 0:
+                    trend_dir = 1
+                elif slope < 0:
+                    trend_dir = -1
+
+    rsi_15 = None
+    if ohlcv_15m:
+        m_closes = [float(x) for x in ohlcv_15m.get("close", [])]
+        if len(m_closes) >= 15:
+            rsi_15 = calc_rsi(m_closes, 14)
+
+    # RSI crossing logic (5m)
     rsi_curr = calc_rsi(closes[-15:], 14)
     rsi_prev = calc_rsi(closes[-16:-1], 14)
 
     atr = calc_atr(highs, lows, closes, 14)
+    atr_pct = atr / price * 100.0 if price else 0.0
+    if atr_pct < atr_disable_pct:
+        return None
+    size_mult = 0.5 if atr_pct > atr_reduce_pct else 1.0
+
     sl_dist = 0.5 * atr
     tp1_dist = 1.0 * atr
     tp2_dist = 1.5 * atr
 
+    swing_high, swing_low = swing_levels(highs, lows, swing_lookback)
+
+    obi_ok_long = obi_ok_short = True
+    if order_book is not None:
+        bid = float(order_book.get("bid_vol_aggreg", 0))
+        ask = float(order_book.get("ask_vol_aggreg", 0))
+        obi = order_book_imbalance(bid, ask)
+        obi_ok_long = obi > 0.1
+        obi_ok_short = obi < -0.1
+
+    tick_ok_long = tick_ratio_buy is None or tick_ratio_buy > 0.55
+    tick_ok_short = tick_ratio_buy is None or tick_ratio_buy < 0.45
+
     def _size(dist: float) -> float:
-        return calc_position_size(equity, risk_pct, dist)
+        return calc_position_size(equity, risk_pct, dist) * size_mult
 
     if (
         price > v
         and ema20[-1] > ema50[-1]
         and rsi_prev <= 40 < rsi_curr
         and (obv_rising or vol_rising)
+        and (rsi_15 is None or rsi_15 > 50)
+        and price > swing_high
+        and obi_ok_long
+        and tick_ok_long
+        and trend_dir >= 0
     ):
         sl = price - sl_dist
         tp1 = price + tp1_dist
@@ -257,6 +336,11 @@ def generate_signal(
         and ema20[-1] < ema50[-1]
         and rsi_prev >= 60 > rsi_curr
         and (obv_series[-1] < obv_series[-2] or vol_rising)
+        and (rsi_15 is None or rsi_15 < 50)
+        and price < swing_low
+        and obi_ok_short
+        and tick_ok_short
+        and trend_dir <= 0
     ):
         sl = price + sl_dist
         tp1 = price - tp1_dist

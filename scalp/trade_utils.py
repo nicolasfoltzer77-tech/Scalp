@@ -75,3 +75,52 @@ def analyse_risque(
         symbol=symbol,
     )
     return vol, leverage
+
+
+def trailing_stop(side: str, current_price: float, atr: float, sl: float, *, mult: float = 0.75) -> float:
+    """Update a stop loss using a trailing ATR multiple."""
+
+    if side.lower() == "long":
+        new_sl = current_price - mult * atr
+        return max(sl, new_sl)
+    new_sl = current_price + mult * atr
+    return min(sl, new_sl)
+
+
+def should_scale_in(
+    entry_price: float,
+    current_price: float,
+    last_entry: float,
+    atr: float,
+    side: str,
+    *,
+    distance_mult: float = 0.5,
+) -> bool:
+    """Return ``True`` when price moved sufficiently to add to the position."""
+
+    if side.lower() == "long":
+        target = last_entry + distance_mult * atr
+        return current_price >= target
+    target = last_entry - distance_mult * atr
+    return current_price <= target
+
+
+def timeout_exit(
+    entry_time: float,
+    now: float,
+    entry_price: float,
+    current_price: float,
+    side: str,
+    *,
+    progress_min: float = 15.0,
+    timeout_min: float = 30.0,
+) -> bool:
+    """Return ``True`` when a position should be closed for lack of progress."""
+
+    elapsed = now - entry_time
+    if elapsed >= timeout_min:
+        return True
+    if elapsed >= progress_min:
+        progress = (current_price - entry_price) if side.lower() == "long" else (entry_price - current_price)
+        return progress <= 0
+    return False
