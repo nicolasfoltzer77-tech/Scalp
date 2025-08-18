@@ -54,21 +54,27 @@ def _format_text(event: str, payload: Dict[str, Any] | None = None) -> str:
             if vol is not None:
                 lines.append(f"Position: {vol}")
             lev = payload.get("leverage")
+
             if lev is not None:
                 lines.append(f"Levier: x{lev}")
+
 
             if event == "position_opened":
                 tp_usd = payload.get("tp_usd")
                 sl_usd = payload.get("sl_usd")
                 if tp_usd is not None and sl_usd is not None:
+
                     lines.append(f"TP: +{tp_usd} USDT")
                     lines.append(f"SL: -{sl_usd} USDT")
+
                 else:
                     tp = payload.get("tp_pct")
                     sl = payload.get("sl_pct")
                     if tp is not None and sl is not None:
+
                         lines.append(f"TP: +{tp}%")
                         lines.append(f"SL: -{sl}%")
+
                 hold = payload.get("hold") or payload.get("expected_duration")
                 if hold is not None:
                     lines.append(f"Durée prévue: {hold}")

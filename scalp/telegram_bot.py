@@ -21,9 +21,11 @@ except Exception:  # pragma: no cover
 class TelegramBot:
     """Minimal Telegram bot using the HTTP API.
 
+
     The bot exposes a simple *menu* based interface with clickable buttons so
     users do not have to remember text commands.  A sub-menu lets the user set
     the risk level.
+
     """
 
     def __init__(
@@ -42,12 +44,15 @@ class TelegramBot:
         self.requests = requests_module
         self.last_update_id: Optional[int] = None
 
+
         self.main_keyboard = [
             [{"text": "Solde", "callback_data": "balance"}],
             [{"text": "Positions", "callback_data": "positions"}],
             [{"text": "PnL session", "callback_data": "pnl"}],
             [{"text": "Risque", "callback_data": "risk"}],
+
             [{"text": "Stop", "callback_data": "stop"}],
+
         ]
         self.risk_keyboard = [
             [
@@ -57,6 +62,7 @@ class TelegramBot:
             ],
             [{"text": "Retour", "callback_data": "back"}],
         ]
+
 
     def _base_symbol(self, symbol: str) -> str:
         sym = symbol.replace("_", "")
@@ -75,14 +81,17 @@ class TelegramBot:
         buttons.append([{"text": "Retour", "callback_data": "back"}])
         return buttons
 
+
     # ------------------------------------------------------------------
     def _api_url(self, method: str) -> str:
         return f"https://api.telegram.org/bot{self.token}/{method}"
+
 
     def send(self, text: str, keyboard: Optional[list[list[Dict[str, str]]]] = None) -> None:
         payload: Dict[str, Any] = {"chat_id": self.chat_id, "text": text}
         if keyboard:
             payload["reply_markup"] = {"inline_keyboard": keyboard}
+
         try:  # pragma: no cover - network
             self.requests.post(self._api_url("sendMessage"), json=payload, timeout=5)
         except Exception as exc:  # pragma: no cover - best effort
@@ -96,6 +105,7 @@ class TelegramBot:
             )
         except Exception as exc:  # pragma: no cover - best effort
             logging.error("Telegram answerCallback error: %s", exc)
+
 
     # ------------------------------------------------------------------
     def fetch_updates(self) -> list[Dict[str, Any]]:
@@ -117,6 +127,7 @@ class TelegramBot:
     # ------------------------------------------------------------------
     def handle_updates(self, session_pnl: float) -> None:
         for update in self.fetch_updates():
+
             callback = update.get("callback_query")
             if callback:
                 if str(callback.get("from", {}).get("id")) != self.chat_id:
@@ -130,10 +141,12 @@ class TelegramBot:
                     self.answer_callback(cb_id)
                 continue
 
+
             msg = update.get("message") or {}
             chat = msg.get("chat") or {}
             if str(chat.get("id")) != self.chat_id:
                 continue
+
             # Any text message triggers the main menu
             self.send("Choisissez une option:", self.main_keyboard)
 
@@ -153,6 +166,7 @@ class TelegramBot:
                     except Exception:
                         equity = 0.0
                     break
+
             return f"Solde: {equity} USDT", self.main_keyboard
         if data == "positions":
             pos = self.client.get_positions()
@@ -169,6 +183,7 @@ class TelegramBot:
                     line += f"\nPnL: {pnl}€ ({pnl_pct}%)"
                 lines.append(line)
             if not lines:
+
                 return "Aucune position ouverte", self.main_keyboard
             return "Positions:\n" + "\n".join(lines), self.main_keyboard
         if data == "pnl":
@@ -184,6 +199,7 @@ class TelegramBot:
             except Exception:
                 pass
             return "Niveau de risque inchangé", self.main_keyboard
+
         if data == "stop":
             return "Choisissez la position à fermer:", self._build_stop_keyboard()
         if data == "stop_all":
@@ -199,6 +215,7 @@ class TelegramBot:
                 return f"Position {sym} fermée", self.main_keyboard
             except Exception:
                 return f"Erreur fermeture {sym}", self.main_keyboard
+
         if data == "back":
             return "Menu principal:", self.main_keyboard
         return None, None

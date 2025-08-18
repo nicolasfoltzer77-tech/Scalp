@@ -86,6 +86,7 @@ def test_format_text_open_position():
     }
     text = notifier._format_text("position_opened", payload)
     lines = text.splitlines()
+
     assert lines[0] == "Ouvre long BTC"
     assert lines[1] == "Position: 1"
     assert lines[2] == "Levier: x10"
@@ -111,4 +112,5 @@ def test_format_text_closed_position():
     assert lines[2] == "Levier: x5"
     assert any("PnL: 12 USDT (3%)" in line for line in lines)
     assert any("Durée: 1h" in line for line in lines)
+
 
