@@ -1,14 +1,19 @@
 from scalp import RiskManager
 
+
+
 def test_kill_switch_triggered() -> None:
     rm = RiskManager(max_daily_loss_pct=2.0, max_positions=1, risk_pct=0.01)
+
     rm.record_trade(-1.0)
     rm.record_trade(-1.5)
     assert rm.kill_switch is True
 
 
 def test_pause_and_can_open() -> None:
+
     rm = RiskManager(max_daily_loss_pct=10.0, max_positions=1, risk_pct=0.01)
+
     rm.record_trade(-0.5)
     rm.record_trade(-0.6)
     rm.record_trade(-0.7)
@@ -20,6 +25,7 @@ def test_pause_and_can_open() -> None:
     assert rm.can_open(1) is False
 
 
+
 def test_risk_pct_scaling() -> None:
     rm = RiskManager(max_daily_loss_pct=10.0, max_positions=1, risk_pct=0.01)
     rm.record_trade(1.0)
@@ -28,3 +34,4 @@ def test_risk_pct_scaling() -> None:
     rm.record_trade(-1.0)
     rm.record_trade(-1.0)
     assert rm.risk_pct < 0.01
+
