@@ -9,16 +9,21 @@ from typing import Any, Dict, Optional, List
 import requests
 
 from scalp.logging_utils import get_jsonl_logger
-from scalp.metrics import calc_pnl_pct
+from scalp.metrics import calc_pnl_pct, calc_atr
 from scalp.notifier import notify
 
-from scalp import __version__
+from scalp import __version__, RiskManager
 
 from scalp.telegram_bot import init_telegram_bot
 
 from scalp.bot_config import CONFIG
 from scalp.strategy import ema, cross
-from scalp.trade_utils import compute_position_size, analyse_risque
+from scalp.trade_utils import (
+    compute_position_size,
+    analyse_risque,
+    trailing_stop,
+    timeout_exit,
+)
 from scalp import pairs as _pairs
 from scalp.backtest import backtest_trades  # noqa: F401
 from scalp.mexc_client import MexcFuturesClient as _BaseMexcFuturesClient
@@ -129,9 +134,10 @@ def main() -> None:
     risk_mgr = RiskManager(
         max_daily_loss_pct=cfg["MAX_DAILY_LOSS_PCT"],
         max_positions=cfg["MAX_POSITIONS"],
+
+        risk_pct=cfg["RISK_PCT_EQUITY"],
     )
 
-    tg_bot = init_telegram_bot(client, cfg)
 
     tg_bot = init_telegram_bot(client, cfg)
 
@@ -175,7 +181,54 @@ def main() -> None:
     prev_fast = prev_slow = None
     current_pos = 0
     entry_price = None
+    entry_time = None
+    stop_long = stop_short = None
     session_pnl = 0.0
+
+    def close_position(side: int, price: float, vol: int) -> bool:
+        nonlocal current_pos, entry_price, entry_time, session_pnl, equity_usdt, stop_long, stop_short
+        pnl = calc_pnl_pct(entry_price, price, side, fee_rate)
+        payload = {
+            "side": "long" if side > 0 else "short",
+            "symbol": symbol,
+            "entry": entry_price,
+            "exit": price,
+            "pnl_usd": round((price - entry_price) * vol, 2)
+            if side > 0
+            else round((entry_price - price) * vol, 2),
+            "pnl_pct": pnl,
+            "fee_pct": fee_rate * 2 * 100,
+        }
+        log_event("position_closed", payload)
+        session_pnl += pnl
+        payload["session_pnl"] = session_pnl
+        notify("position_closed", payload)
+        client.place_order(
+            symbol,
+            side=4 if side > 0 else 2,
+            vol=vol,
+            order_type=5,
+            price=price,
+            open_type=CONFIG["OPEN_TYPE"],
+            leverage=CONFIG["LEVERAGE"],
+            reduce_only=True,
+        )
+        equity_usdt *= 1 + pnl / 100.0
+        risk_mgr.record_trade(pnl)
+        logging.info("Nouveau risk_pct: %.4f", risk_mgr.risk_pct)
+        kill = risk_mgr.kill_switch
+        if kill:
+            logging.warning("Kill switch activé, arrêt du bot.")
+        pause = risk_mgr.pause_duration()
+        if pause:
+            logging.info("Pause %s s après série de pertes", pause)
+            time.sleep(pause)
+        current_pos = 0
+        entry_price = None
+        entry_time = None
+        stop_long = stop_short = None
+        time.sleep(0.3)
+        return kill
 
     notify("bot_started", {"session_pnl": session_pnl})
     try:
@@ -197,9 +250,13 @@ def main() -> None:
                 time.sleep(cfg["LOOP_SLEEP_SECS"])
                 continue
 
-            closes = k["data"]["close"][-cfg["MAX_KLINES"]:]
-            if len(closes) < max(ema_fast_n, ema_slow_n) + 2:
-                logging.info("Pas assez d’historique pour EMA; retry...")
+            data = k["data"]
+            closes = data["close"][-cfg["MAX_KLINES"]:]
+            highs = data["high"][-cfg["MAX_KLINES"]:]
+            lows = data["low"][-cfg["MAX_KLINES"]:]
+            min_len = max(ema_fast_n, ema_slow_n, cfg["ATR_PERIOD"]) + 2
+            if len(closes) < min_len:
+                logging.info("Pas assez d’historique pour EMA/ATR; retry...")
                 time.sleep(cfg["LOOP_SLEEP_SECS"])
                 continue
 
@@ -208,6 +265,12 @@ def main() -> None:
             last_fast, prev_fast = efull[-1], efull[-2]
             last_slow, prev_slow = eslow[-1], eslow[-2]
             x = cross(last_fast, last_slow, prev_fast, prev_slow)
+            atr = calc_atr(
+                highs[-(cfg["ATR_PERIOD"] + 1) :],
+                lows[-(cfg["ATR_PERIOD"] + 1) :],
+                closes[-(cfg["ATR_PERIOD"] + 1) :],
+                period=cfg["ATR_PERIOD"],
+            )
 
             tick = client.get_ticker(symbol)
             if not (tick and tick.get("success") and tick.get("data")):
@@ -232,7 +295,7 @@ def main() -> None:
                 contract_detail,
                 equity_usdt,
                 price,
-                cfg["RISK_PCT_EQUITY"],
+                risk_mgr.risk_pct,
                 cfg["LEVERAGE"],
                 symbol,
             )
@@ -244,6 +307,48 @@ def main() -> None:
             tp_long = price * (1.0 + cfg["TAKE_PROFIT_PCT"])
             sl_short = price * (1.0 + cfg["STOP_LOSS_PCT"])
             tp_short = price * (1.0 - cfg["TAKE_PROFIT_PCT"])
+
+            now_ts = time.time()
+            if current_pos > 0 and entry_price is not None and stop_long is not None:
+                stop_long = trailing_stop(
+                    "long",
+                    current_price=price,
+                    atr=atr,
+                    sl=stop_long,
+                    mult=cfg["TRAIL_ATR_MULT"],
+                )
+                if price <= stop_long or timeout_exit(
+                    entry_time,
+                    now_ts,
+                    entry_price,
+                    price,
+                    "long",
+                    progress_min=cfg["PROGRESS_MIN"],
+                    timeout_min=cfg["TIMEOUT_MIN"],
+                ):
+                    if close_position(1, price, vol_close):
+                        break
+                    continue
+            elif current_pos < 0 and entry_price is not None and stop_short is not None:
+                stop_short = trailing_stop(
+                    "short",
+                    current_price=price,
+                    atr=atr,
+                    sl=stop_short,
+                    mult=cfg["TRAIL_ATR_MULT"],
+                )
+                if price >= stop_short or timeout_exit(
+                    entry_time,
+                    now_ts,
+                    entry_price,
+                    price,
+                    "short",
+                    progress_min=cfg["PROGRESS_MIN"],
+                    timeout_min=cfg["TIMEOUT_MIN"],
+                ):
+                    if close_position(-1, price, vol_close):
+                        break
+                    continue
 
             log_event(
                 "signal",
@@ -259,6 +364,10 @@ def main() -> None:
 
             if x == +1 and current_pos <= 0:
                 if current_pos < 0 and entry_price is not None:
+
+                    if close_position(-1, price, vol_close):
+                        break
+=======
                     pnl = calc_pnl_pct(entry_price, price, -1, fee_rate)
                     payload = {
                         "side": "short",
@@ -269,31 +378,7 @@ def main() -> None:
                         "pnl_pct": pnl,
                         "fee_pct": fee_rate * 2 * 100,
                     }
-                    log_event("position_closed", payload)
-                    session_pnl += pnl
-                    payload["session_pnl"] = session_pnl
-                    notify("position_closed", payload)
-                    client.place_order(
-                        symbol,
-                        side=2,
-                        vol=vol_close,
-                        order_type=5,
-                        price=price,
-                        open_type=CONFIG["OPEN_TYPE"],
-                        leverage=CONFIG["LEVERAGE"],
-                        reduce_only=True,
-                    )
-                    risk_mgr.record_trade(pnl)
-                    if risk_mgr.kill_switch:
-                        logging.warning("Kill switch activé, arrêt du bot.")
-                        break
-                    pause = risk_mgr.pause_duration()
-                    if pause:
-                        logging.info("Pause %s s après série de pertes", pause)
-                        time.sleep(pause)
-                    current_pos = 0
-                    entry_price = None
-                    time.sleep(0.3)
+
 
                 positions = client.get_positions().get("data", [])
                 if not risk_mgr.can_open(len(positions)):
@@ -305,7 +390,7 @@ def main() -> None:
                     positions,
                     equity_usdt,
                     price,
-                    cfg["RISK_PCT_EQUITY"],
+                    risk_mgr.risk_pct,
                     cfg["LEVERAGE"],
                     symbol,
                     side="long",
@@ -350,44 +435,16 @@ def main() -> None:
                 notify("position_opened", open_payload)
                 current_pos = +1
                 entry_price = price
+                entry_time = now_ts
+                stop_long = sl_long
+                stop_short = None
 
             elif x == -1 and current_pos >= 0:
                 if current_pos > 0 and entry_price is not None:
-                    pnl = calc_pnl_pct(entry_price, price, 1, fee_rate)
-                    payload = {
-                        "side": "long",
-                        "symbol": symbol,
-                        "entry": entry_price,
-                        "exit": price,
-                        "pnl_usd": round((price - entry_price) * vol_close, 2),
-                        "pnl_pct": pnl,
-                        "fee_pct": fee_rate * 2 * 100,
-                    }
-                    log_event("position_closed", payload)
-                    session_pnl += pnl
-                    payload["session_pnl"] = session_pnl
-                    notify("position_closed", payload)
-                    client.place_order(
-                        symbol,
-                        side=4,
-                        vol=vol_close,
-                        order_type=5,
-                        price=price,
-                        open_type=CONFIG["OPEN_TYPE"],
-                        leverage=CONFIG["LEVERAGE"],
-                        reduce_only=True,
-                    )
-                    risk_mgr.record_trade(pnl)
-                    if risk_mgr.kill_switch:
-                        logging.warning("Kill switch activé, arrêt du bot.")
+
+                    if close_position(1, price, vol_close):
                         break
-                    pause = risk_mgr.pause_duration()
-                    if pause:
-                        logging.info("Pause %s s après série de pertes", pause)
-                        time.sleep(pause)
-                    current_pos = 0
-                    entry_price = None
-                    time.sleep(0.3)
+
 
                 positions = client.get_positions().get("data", [])
                 if not risk_mgr.can_open(len(positions)):
@@ -399,7 +456,7 @@ def main() -> None:
                     positions,
                     equity_usdt,
                     price,
-                    cfg["RISK_PCT_EQUITY"],
+                    risk_mgr.risk_pct,
                     cfg["LEVERAGE"],
                     symbol,
                     side="short",
@@ -444,6 +501,9 @@ def main() -> None:
                 notify("position_opened", open_payload)
                 current_pos = -1
                 entry_price = price
+                entry_time = now_ts
+                stop_short = sl_short
+                stop_long = None
 
             time.sleep(cfg["LOOP_SLEEP_SECS"])
 
