@@ -53,7 +53,7 @@ class TelegramBot:
             [{"text": "Positions", "callback_data": "positions"}],
             [{"text": "PnL session", "callback_data": "pnl"}],
             [{"text": "Risque", "callback_data": "risk"}],
-            [{"text": "Reset Risk", "callback_data": "reset_risk"}],
+            [{"text": "Reset All", "callback_data": "reset_all"}],
 
             [{"text": "Stop", "callback_data": "stop"}],
             [{"text": "Fermer Bot", "callback_data": "shutdown"}],
@@ -209,12 +209,13 @@ class TelegramBot:
                 return f"Niveau de risque réglé sur {lvl}", self.main_keyboard
             return "Niveau de risque inchangé", self.main_keyboard
 
-        if data == "reset_risk":
+        if data == "reset_all":
             try:
+                self.client.close_all_positions()
                 self.risk_mgr.reset_day()
-                return "RiskManager réinitialisé", self.main_keyboard
+                return "Positions et risque réinitialisés", self.main_keyboard
             except Exception:
-                return "Erreur reset RiskManager", self.main_keyboard
+                return "Erreur reset total", self.main_keyboard
 
         if data == "stop":
             return "Choisissez la position à fermer:", self._build_stop_keyboard()
