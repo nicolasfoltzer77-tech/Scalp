@@ -73,6 +73,20 @@ def obv(closes: Sequence[float], volumes: Sequence[float]) -> List[float]:
             out.append(out[-1])
     return out
 
+
+def cross(last_fast: float, last_slow: float, prev_fast: float, prev_slow: float) -> int:
+    """Detect a crossing between two series.
+
+    Returns ``1`` for a bullish crossover, ``-1`` for a bearish crossover and
+    ``0`` otherwise.
+    """
+
+    if prev_fast <= prev_slow and last_fast > last_slow:
+        return 1
+    if prev_fast >= prev_slow and last_fast < last_slow:
+        return -1
+    return 0
+
 # ---------------------------------------------------------------------------
 # Pair selection
 # ---------------------------------------------------------------------------
