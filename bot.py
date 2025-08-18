@@ -20,6 +20,7 @@ from scalp.trade_utils import (
     compute_position_size,
     analyse_risque,
     trailing_stop,
+    should_scale_in,
     timeout_exit,
 )
 from scalp import pairs as _pairs
@@ -169,6 +170,53 @@ def main() -> None:
     entry_time = None
     stop_long = stop_short = None
     session_pnl = 0.0
+    last_entry_price = None
+
+    def close_position(side: int, price: float, vol: int) -> bool:
+        nonlocal current_pos, entry_price, entry_time, session_pnl, equity_usdt, stop_long, stop_short, last_entry_price
+        pnl = calc_pnl_pct(entry_price, price, side, fee_rate)
+        payload = {
+            "side": "long" if side > 0 else "short",
+            "symbol": symbol,
+            "entry": entry_price,
+            "exit": price,
+            "pnl_usd": round((price - entry_price) * vol, 2)
+            if side > 0
+            else round((entry_price - price) * vol, 2),
+            "pnl_pct": pnl,
+            "fee_pct": fee_rate * 2 * 100,
+        }
+        log_event("position_closed", payload)
+        session_pnl += pnl
+        payload["session_pnl"] = session_pnl
+        notify("position_closed", payload)
+        client.place_order(
+            symbol,
+            side=4 if side > 0 else 2,
+            vol=vol,
+            order_type=5,
+            price=price,
+            open_type=CONFIG["OPEN_TYPE"],
+            leverage=CONFIG["LEVERAGE"],
+            reduce_only=True,
+        )
+        equity_usdt *= 1 + pnl / 100.0
+        risk_mgr.record_trade(pnl)
+        logging.info("Nouveau risk_pct: %.4f", risk_mgr.risk_pct)
+        kill = risk_mgr.kill_switch
+        if kill:
+            logging.warning("Kill switch activé, arrêt du bot.")
+        pause = risk_mgr.pause_duration()
+        if pause:
+            logging.info("Pause %s s après série de pertes", pause)
+            time.sleep(pause)
+        current_pos = 0
+        entry_price = None
+        entry_time = None
+        stop_long = stop_short = None
+        last_entry_price = None
+        time.sleep(0.3)
+        return kill
 
     def close_position(side: int, price: float, vol: int) -> bool:
         nonlocal current_pos, entry_price, entry_time, session_pnl, equity_usdt, stop_long, stop_short
@@ -335,6 +383,77 @@ def main() -> None:
                         break
                     continue
 
+            if (
+                current_pos > 0
+                and entry_price is not None
+                and last_entry_price is not None
+                and should_scale_in(
+                    entry_price,
+                    price,
+                    last_entry_price,
+                    atr,
+                    "long",
+                    distance_mult=cfg["SCALE_IN_ATR_MULT"],
+                )
+            ):
+                positions = client.get_positions().get("data", [])
+                if risk_mgr.can_open(len(positions)):
+                    vol_add = compute_position_size(
+                        contract_detail,
+                        equity_usdt,
+                        price,
+                        risk_mgr.risk_pct,
+                        cfg["LEVERAGE"],
+                        symbol,
+                    )
+                    if vol_add > 0:
+                        resp = client.place_order(
+                            symbol,
+                            side=1,
+                            vol=vol_add,
+                            order_type=5,
+                            price=price,
+                            open_type=CONFIG["OPEN_TYPE"],
+                            leverage=cfg["LEVERAGE"],
+                        )
+                        log_event("scale_in_long", resp)
+                        last_entry_price = price
+            elif (
+                current_pos < 0
+                and entry_price is not None
+                and last_entry_price is not None
+                and should_scale_in(
+                    entry_price,
+                    price,
+                    last_entry_price,
+                    atr,
+                    "short",
+                    distance_mult=cfg["SCALE_IN_ATR_MULT"],
+                )
+            ):
+                positions = client.get_positions().get("data", [])
+                if risk_mgr.can_open(len(positions)):
+                    vol_add = compute_position_size(
+                        contract_detail,
+                        equity_usdt,
+                        price,
+                        risk_mgr.risk_pct,
+                        cfg["LEVERAGE"],
+                        symbol,
+                    )
+                    if vol_add > 0:
+                        resp = client.place_order(
+                            symbol,
+                            side=3,
+                            vol=vol_add,
+                            order_type=5,
+                            price=price,
+                            open_type=CONFIG["OPEN_TYPE"],
+                            leverage=cfg["LEVERAGE"],
+                        )
+                        log_event("scale_in_short", resp)
+                        last_entry_price = price
+
             log_event(
                 "signal",
                 {
@@ -410,10 +529,10 @@ def main() -> None:
                 entry_time = now_ts
                 stop_long = sl_long
                 stop_short = None
+                last_entry_price = entry_price
 
             elif x == -1 and current_pos >= 0:
                 if current_pos > 0 and entry_price is not None:
-
                     if close_position(1, price, vol_close):
                         break
 
@@ -475,6 +594,7 @@ def main() -> None:
                 entry_time = now_ts
                 stop_short = sl_short
                 stop_long = None
+                last_entry_price = entry_price
 
             time.sleep(cfg["LOOP_SLEEP_SECS"])
 

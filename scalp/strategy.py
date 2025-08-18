@@ -404,7 +404,6 @@ class RiskManager:
             self.max_daily_profit_pct is not None
             and self.daily_pnl_pct >= self.max_daily_profit_pct
         ):
-
             self.kill_switch = True
         self.risk_pct = adjust_risk_pct(self.risk_pct, self.win_streak, self.loss_streak)
 

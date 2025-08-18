@@ -83,6 +83,7 @@ def test_trailing_and_timeout():
     assert sl == pytest.approx(102.5)
     # scaling
     assert should_scale_in(100, 105, 100, 10, "long") is True
+    assert should_scale_in(100, 95, 100, 10, "short") is True
     # timeout
     assert timeout_exit(0, 20, 100, 99, "long", progress_min=15, timeout_min=30)
 

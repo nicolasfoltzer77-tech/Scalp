@@ -19,6 +19,7 @@ CONFIG = {
     "TAKE_PROFIT_PCT": float(os.getenv("TAKE_PROFIT_PCT", "0.012")),
     "ATR_PERIOD": int(os.getenv("ATR_PERIOD", "14")),
     "TRAIL_ATR_MULT": float(os.getenv("TRAIL_ATR_MULT", "0.75")),
+    "SCALE_IN_ATR_MULT": float(os.getenv("SCALE_IN_ATR_MULT", "0.5")),
     "PROGRESS_MIN": float(os.getenv("PROGRESS_MIN", "15")),
     "TIMEOUT_MIN": float(os.getenv("TIMEOUT_MIN", "30")),
     "MAX_KLINES": int(os.getenv("MAX_KLINES", "400")),
