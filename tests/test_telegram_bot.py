@@ -129,11 +129,12 @@ def test_handle_unknown():
     assert kb is None
 
 
-def test_reset_risk_manager():
+def test_reset_all():
     bot = make_bot()
-    resp, kb = bot.handle_callback("reset_risk", 0.0)
-    assert "réinitialisé" in resp.lower()
+    resp, kb = bot.handle_callback("reset_all", 0.0)
+    assert "réinitialisés" in resp.lower()
     assert bot.risk_mgr.reset_called is True
+    assert bot.client.closed_all is True
     assert kb == bot.main_keyboard
 
 
