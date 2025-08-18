@@ -41,11 +41,24 @@ class DummyRiskMgr:
         self.reset_called = True
 
 
-def make_bot(config=None):
+class DummyRequests:
+    def __init__(self):
+        self.posts = []
+
+    def post(self, url, json=None, timeout=5):
+        self.posts.append((url, json))
+
+    def get(self, url, params=None, timeout=5):  # pragma: no cover - unused
+        return type("R", (), {"json": lambda self: {}, "raise_for_status": lambda self: None})()
+
+
+def make_bot(config=None, requests_module=None):
     cfg = {"RISK_LEVEL": 2}
     if config:
         cfg.update(config)
-    return TelegramBot("t", "1", DummyClient(), cfg, DummyRiskMgr())
+    if requests_module is None:
+        requests_module = DummyRequests()
+    return TelegramBot("t", "1", DummyClient(), cfg, DummyRiskMgr(), requests_module=requests_module)
 
 
 def test_handle_balance():
@@ -135,7 +148,7 @@ def test_reset_all():
     assert "réinitialisés" in resp.lower()
     assert bot.risk_mgr.reset_called is True
     assert bot.client.closed_all is True
-    assert kb == bot.main_keyboard
+    assert kb == bot.settings_keyboard
 
 
 def test_shutdown_bot():
@@ -143,5 +156,38 @@ def test_shutdown_bot():
     resp, kb = bot.handle_callback("shutdown", 0.0)
     assert "arrêt" in resp.lower()
     assert bot.stop_requested is True
+    assert kb == bot.settings_keyboard
+
+
+def test_start_sends_menu():
+    req = DummyRequests()
+    make_bot(requests_module=req)
+    assert req.posts
+    text = req.posts[0][1]["text"]
+    assert "Solde" in text and "PnL session" in text
+
+
+def test_settings_menu_and_reset_risk():
+    bot = make_bot()
+    resp, kb = bot.handle_callback("settings", 0.0)
+    assert "réglages" in resp.lower()
+    assert kb == bot.settings_keyboard
+    resp, kb = bot.handle_callback("reset_risk", 0.0)
+    assert "risque" in resp.lower()
+    assert bot.risk_mgr.reset_called is True
+    assert kb == bot.settings_keyboard
+
+
+def test_update_button(monkeypatch):
+    bot = make_bot()
+    called = {}
+
+    def fake_update():
+        called["called"] = True
+
+    bot.update_pairs = fake_update
+    resp, kb = bot.handle_callback("update", 0.0)
+    assert called["called"] is True
+    assert "mise à jour" in resp.lower()
     assert kb == bot.main_keyboard
 
