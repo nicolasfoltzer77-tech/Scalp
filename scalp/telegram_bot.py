@@ -50,6 +50,7 @@ class TelegramBot:
             [{"text": "Positions", "callback_data": "positions"}],
             [{"text": "PnL session", "callback_data": "pnl"}],
             [{"text": "Risque", "callback_data": "risk"}],
+            [{"text": "Analyse", "callback_data": "analysis"}],
 
             [{"text": "Stop", "callback_data": "stop"}],
 
@@ -60,6 +61,10 @@ class TelegramBot:
                 {"text": "2", "callback_data": "risk2"},
                 {"text": "3", "callback_data": "risk3"},
             ],
+            [{"text": "Retour", "callback_data": "back"}],
+        ]
+        self.analysis_keyboard = [
+            [{"text": "Actualiser", "callback_data": "analysis"}],
             [{"text": "Retour", "callback_data": "back"}],
         ]
 
@@ -188,6 +193,22 @@ class TelegramBot:
 
                 return "Aucune position ouverte", self.main_keyboard
             return "Positions:\n" + "\n".join(lines), self.main_keyboard
+        if data == "analysis":
+            pairs = self.config.get("ANALYSIS_PAIRS", [])
+            if not pairs:
+                return "Aucune paire sélectionnée", self.analysis_keyboard
+            lines = []
+            for info in pairs:
+                sym = info.get("symbol") or info.get("sym") or "?"
+                status = info.get("status")
+                if status == "ready":
+                    txt = "prêt à lancer"
+                elif status == "lt10":
+                    txt = "dans moins de 10 min"
+                else:
+                    txt = "dans plus de 10 min"
+                lines.append(f"{sym}: {txt}")
+            return "Analyse détaillée:\n" + "\n".join(lines), self.analysis_keyboard
         if data == "pnl":
             return f"PnL session: {session_pnl} USDT", self.main_keyboard
         if data == "risk":
