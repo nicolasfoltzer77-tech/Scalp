@@ -75,7 +75,7 @@ class HttpClient:
 
         try:
             return resp.json()
-        except ValueError as exc:  # invalid JSON
+        except ValueError:  # invalid JSON
             msg = "Invalid JSON in response"
             logging.error("%s for %s: %s", msg, url, resp.text)
             return {"success": False, "error": msg, "text": resp.text}
