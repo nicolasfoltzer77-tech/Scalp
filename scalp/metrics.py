@@ -1,9 +1,11 @@
 """Utility metrics for trading calculations."""
 from __future__ import annotations
 
+
 from typing import Iterable, Sequence
 
 __all__ = ["calc_pnl_pct", "calc_rsi", "calc_atr", "backtest_position"]
+
 
 
 def calc_pnl_pct(entry_price: float, exit_price: float, side: int, fee_rate: float = 0.0) -> float:
@@ -32,8 +34,10 @@ def calc_pnl_pct(entry_price: float, exit_price: float, side: int, fee_rate: flo
     return pnl - fee_pct
 
 
+
 def calc_rsi(prices: Iterable[float], period: int = 14) -> float:
     """Compute the Relative Strength Index (RSI) using Wilder's smoothing.
+
 
     Parameters
     ----------
@@ -44,17 +48,21 @@ def calc_rsi(prices: Iterable[float], period: int = 14) -> float:
         length of ``prices`` must be at least ``period + 1``.
     """
 
+
     prices_list = [float(p) for p in prices]
 
     if period <= 0:
         raise ValueError("period must be positive")
     if len(prices_list) < period + 1:
+
         raise ValueError("len(prices) must be >= period + 1")
 
     gains: list[float] = []
     losses: list[float] = []
     for i in range(1, period + 1):
+
         diff = prices_list[i] - prices_list[i - 1]
+
         if diff >= 0:
             gains.append(diff)
             losses.append(0.0)
@@ -65,12 +73,15 @@ def calc_rsi(prices: Iterable[float], period: int = 14) -> float:
     avg_gain = sum(gains) / period
     avg_loss = sum(losses) / period
 
+
     for i in range(period + 1, len(prices_list)):
         diff = prices_list[i] - prices_list[i - 1]
+
         gain = max(diff, 0.0)
         loss = max(-diff, 0.0)
         avg_gain = (avg_gain * (period - 1) + gain) / period
         avg_loss = (avg_loss * (period - 1) + loss) / period
+
 
     if avg_gain == 0 and avg_loss == 0:
         return 50.0
@@ -78,12 +89,15 @@ def calc_rsi(prices: Iterable[float], period: int = 14) -> float:
         return 100.0
     if avg_gain == 0:
         return 0.0
+>>>>>> main
     rs = avg_gain / avg_loss
     return 100.0 - (100.0 / (1.0 + rs))
 
 
+
 def calc_atr(highs: Iterable[float], lows: Iterable[float], closes: Iterable[float], period: int = 14) -> float:
     """Compute the Average True Range (ATR) using Wilder's smoothing.
+
 
     Parameters
     ----------
@@ -94,17 +108,20 @@ def calc_atr(highs: Iterable[float], lows: Iterable[float], closes: Iterable[flo
         Number of periods to use for the calculation. Must be positive.
     """
 
+
     highs_list = [float(h) for h in highs]
     lows_list = [float(l) for l in lows]
     closes_list = [float(c) for c in closes]
 
     length = len(highs_list)
     if length != len(lows_list) or length != len(closes_list):
+
         raise ValueError("Input sequences must have the same length")
     if period <= 0:
         raise ValueError("period must be positive")
     if length < period + 1:
         raise ValueError("Input sequences must have at least period + 1 elements")
+
 
     trs: list[float] = []
     for i in range(1, len(highs_list)):
@@ -112,6 +129,7 @@ def calc_atr(highs: Iterable[float], lows: Iterable[float], closes: Iterable[flo
             highs_list[i] - lows_list[i],
             abs(highs_list[i] - closes_list[i - 1]),
             abs(lows_list[i] - closes_list[i - 1]),
+
         )
         trs.append(tr)
 
