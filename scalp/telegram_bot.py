@@ -21,8 +21,11 @@ except Exception:  # pragma: no cover
 class TelegramBot:
     """Minimal Telegram bot using the HTTP API.
 
-    It polls updates and answers a few text commands allowing the user to
-    inspect the trading session.
+
+    The bot exposes a simple *menu* based interface with clickable buttons so
+    users do not have to remember text commands.  A sub-menu lets the user set
+    the risk level.
+
     """
 
     def __init__(
@@ -41,16 +44,48 @@ class TelegramBot:
         self.requests = requests_module
         self.last_update_id: Optional[int] = None
 
+
+        self.main_keyboard = [
+            [{"text": "Solde", "callback_data": "balance"}],
+            [{"text": "Positions", "callback_data": "positions"}],
+            [{"text": "PnL session", "callback_data": "pnl"}],
+            [{"text": "Risque", "callback_data": "risk"}],
+        ]
+        self.risk_keyboard = [
+            [
+                {"text": "1", "callback_data": "risk1"},
+                {"text": "2", "callback_data": "risk2"},
+                {"text": "3", "callback_data": "risk3"},
+            ],
+            [{"text": "Retour", "callback_data": "back"}],
+        ]
+
+
     # ------------------------------------------------------------------
     def _api_url(self, method: str) -> str:
         return f"https://api.telegram.org/bot{self.token}/{method}"
 
-    def send(self, text: str) -> None:
-        payload = {"chat_id": self.chat_id, "text": text}
+
+    def send(self, text: str, keyboard: Optional[list[list[Dict[str, str]]]] = None) -> None:
+        payload: Dict[str, Any] = {"chat_id": self.chat_id, "text": text}
+        if keyboard:
+            payload["reply_markup"] = {"inline_keyboard": keyboard}
+
         try:  # pragma: no cover - network
             self.requests.post(self._api_url("sendMessage"), json=payload, timeout=5)
         except Exception as exc:  # pragma: no cover - best effort
             logging.error("Telegram send error: %s", exc)
+
+
+    def answer_callback(self, cb_id: str) -> None:
+        payload = {"callback_query_id": cb_id}
+        try:  # pragma: no cover - network
+            self.requests.post(
+                self._api_url("answerCallbackQuery"), json=payload, timeout=5
+            )
+        except Exception as exc:  # pragma: no cover - best effort
+            logging.error("Telegram answerCallback error: %s", exc)
+
 
     # ------------------------------------------------------------------
     def fetch_updates(self) -> list[Dict[str, Any]]:
@@ -72,32 +107,37 @@ class TelegramBot:
     # ------------------------------------------------------------------
     def handle_updates(self, session_pnl: float) -> None:
         for update in self.fetch_updates():
+
+            callback = update.get("callback_query")
+            if callback:
+                if str(callback.get("from", {}).get("id")) != self.chat_id:
+                    continue
+                data = callback.get("data", "")
+                reply, kb = self.handle_callback(data, session_pnl)
+                if reply:
+                    self.send(reply, kb)
+                cb_id = callback.get("id")
+                if cb_id:
+                    self.answer_callback(cb_id)
+                continue
+
+
             msg = update.get("message") or {}
             chat = msg.get("chat") or {}
             if str(chat.get("id")) != self.chat_id:
                 continue
-            text = msg.get("text", "")
-            reply = self.handle_command(text, session_pnl)
-            if reply:
-                self.send(reply)
+
+            # Any text message triggers the main menu
+            self.send("Choisissez une option:", self.main_keyboard)
 
     # ------------------------------------------------------------------
-    def handle_command(self, text: str, session_pnl: float) -> Optional[str]:
-        if not text:
-            return None
-        parts = text.strip().split()
-        cmd = parts[0].lower()
-        arg = parts[1:] if len(parts) > 1 else []
+    def handle_callback(
+        self, data: str, session_pnl: float
+    ) -> tuple[Optional[str], Optional[list[list[Dict[str, str]]]]]:
+        if not data:
+            return None, None
+        if data == "balance":
 
-        if cmd == "/help":
-            return (
-                "Commandes:\n"
-                "/balance - solde compte\n"
-                "/positions - positions ouvertes\n"
-                "/pnl - PnL session\n"
-                "/risk [1-3] - niveau de risque"
-            )
-        if cmd == "/balance":
             assets = self.client.get_assets()
             equity = 0.0
             for row in assets.get("data", []):
@@ -107,8 +147,10 @@ class TelegramBot:
                     except Exception:
                         equity = 0.0
                     break
-            return f"Solde: {equity} USDT"
-        if cmd == "/positions":
+
+            return f"Solde: {equity} USDT", self.main_keyboard
+        if data == "positions":
+
             pos = self.client.get_positions()
             lines = []
             for p in pos.get("data", []):
@@ -117,21 +159,26 @@ class TelegramBot:
                 vol = p.get("vol")
                 lines.append(f"{symbol} {side} {vol}")
             if not lines:
-                return "Aucune position ouverte"
-            return "Positions:\n" + "\n".join(lines)
-        if cmd in {"/pnl", "/session"}:
-            return f"PnL session: {session_pnl} USDT"
-        if cmd == "/risk":
-            if arg:
-                try:
-                    lvl = int(arg[0])
-                    if lvl in (1, 2, 3):
-                        self.config["RISK_LEVEL"] = lvl
-                        return f"Niveau de risque réglé sur {lvl}"
-                except ValueError:
-                    pass
-            return f"Niveau de risque actuel: {self.config.get('RISK_LEVEL', 2)}"
-        return "Commande inconnue. Tapez /help"
+
+                return "Aucune position ouverte", self.main_keyboard
+            return "Positions:\n" + "\n".join(lines), self.main_keyboard
+        if data == "pnl":
+            return f"PnL session: {session_pnl} USDT", self.main_keyboard
+        if data == "risk":
+            return "Choisissez le niveau de risque:", self.risk_keyboard
+        if data.startswith("risk"):
+            try:
+                lvl = int(data[-1])
+                if lvl in (1, 2, 3):
+                    self.config["RISK_LEVEL"] = lvl
+                    return f"Niveau de risque réglé sur {lvl}", self.main_keyboard
+            except Exception:
+                pass
+            return "Niveau de risque inchangé", self.main_keyboard
+        if data == "back":
+            return "Menu principal:", self.main_keyboard
+        return None, None
+
 
 
 def init_telegram_bot(client: Any, config: Dict[str, Any]) -> Optional[TelegramBot]:
