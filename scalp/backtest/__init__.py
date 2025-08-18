@@ -5,6 +5,9 @@ from typing import Any, Dict, List, Optional
 
 from scalp.bot_config import CONFIG
 from scalp.metrics import calc_pnl_pct
+from .walkforward import walk_forward
+
+__all__ = ["backtest_trades", "walk_forward_windows", "walk_forward"]
 
 
 def backtest_trades(
