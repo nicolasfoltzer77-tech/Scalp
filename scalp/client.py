@@ -11,7 +11,12 @@ class HTTPError(RuntimeError):
 
 
 class HttpClient:
-    """Simple HTTP client with persistent session and retry logic."""
+    """Simple HTTP client with persistent session and retry logic.
+
+    The client exposes a :py:meth:`close` method and implements the context
+    manager protocol so it can be used with ``with`` statements to ensure
+    that the underlying :class:`requests.Session` is properly closed.
+    """
 
     def __init__(
         self,
@@ -42,6 +47,19 @@ class HttpClient:
         adapter = HTTPAdapter(max_retries=retry)
         self.session.mount("http://", adapter)
         self.session.mount("https://", adapter)
+
+    def close(self) -> None:
+        """Close the underlying :class:`requests.Session`."""
+        self.session.close()
+
+    # ------------------------------------------------------------------
+    # Context manager support
+    # ------------------------------------------------------------------
+    def __enter__(self) -> "HttpClient":
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> None:  # type: ignore[override]
+        self.close()
 
     def request(
         self,

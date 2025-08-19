@@ -23,12 +23,13 @@ def test_send_selected_pairs(monkeypatch):
         ],
     )
 
-    bot.send_selected_pairs(object(), top_n=4)
+    payload = bot.send_selected_pairs(object(), top_n=4)
 
     assert sent["event"] == "pair_list"
     assert sent["payload"]["green"] == "WIF"
     assert sent["payload"]["orange"] == "BTC"
     assert sent["payload"]["red"] == "DOGE, ETH"
+    assert payload == sent["payload"]
 
 
 def test_filter_trade_pairs_all_pairs(monkeypatch):

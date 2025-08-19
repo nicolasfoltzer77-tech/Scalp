@@ -122,3 +122,22 @@ def test_format_text_pair_list_and_start():
     assert text == "Listing :\n🟢 AAA\n🟠 BBB\n🔴 CCC"
 
 
+def test_format_pair_list_helper():
+    payload = {"green": "AAA", "orange": "BBB", "red": "CCC"}
+    text = notifier._format_pair_list(payload)
+    assert text == "Listing :\n🟢 AAA\n🟠 BBB\n🔴 CCC"
+
+
+def test_format_position_event_helper():
+    payload = {
+        "side": "long",
+        "symbol": "BTCUSDT",
+        "vol": 1,
+        "leverage": 10,
+        "tp_pct": 5,
+        "sl_pct": 2,
+    }
+    text = notifier._format_position_event("position_opened", payload)
+    assert text.splitlines()[0] == "Ouvre long 📈 BTC"
+
+
