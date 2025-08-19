@@ -59,7 +59,9 @@ def fetch_zero_fee_pairs_from_mexc(base_url: str | None = None) -> List[str]:
     pairs_with_fees = fetch_pairs_with_fees_from_mexc(base_url)
 
     pairs = [sym for sym, maker, taker in pairs_with_fees if taker == 0 and maker == 0]
-    return [p for p in pairs if _base(p) not in {"BTC", "ETH"}]
+    zero_fee = [p for p in pairs if _base(p) not in {"BTC", "ETH"}]
+    print(f"Zero-fee pairs: {zero_fee}")
+    return zero_fee
 
 
 def load_zero_fee_pairs() -> List[str]:
