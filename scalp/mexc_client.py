@@ -301,3 +301,4 @@ class MexcFuturesClient:
         except Exception as exc:  # pragma: no cover - best effort
             logging.error("Erreur fermeture de toutes les positions: %s", exc)
         return {"success": True, "data": results}
+      
