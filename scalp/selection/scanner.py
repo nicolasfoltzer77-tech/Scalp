@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Sequence
+from typing import Any, Dict, List
 
 
 def scan_pairs(
     client: Any,
     *,
-    zero_fee_pairs: Sequence[str],
     volume_min: float = 5_000_000,
     max_spread_bps: float = 5.0,
     min_hourly_vol: float = 0.0,
@@ -20,8 +19,6 @@ def scan_pairs(
     ----------
     client: Any
         Client instance exposing ``get_ticker`` and ``get_kline`` methods.
-    zero_fee_pairs: Sequence[str]
-        Symbols eligible for zero fees on the exchange.
     volume_min: float, optional
         Minimum 24h volume required to keep a pair.
     max_spread_bps: float, optional
@@ -38,12 +35,11 @@ def scan_pairs(
     if not isinstance(data, list):
         data = [data]
 
-    zero_fee = set(zero_fee_pairs)
     eligible: List[Dict[str, Any]] = []
 
     for row in data:
         sym = row.get("symbol")
-        if not sym or sym not in zero_fee:
+        if not sym:
             continue
         try:
             vol = float(row.get("volume", 0))
