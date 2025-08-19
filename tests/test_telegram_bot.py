@@ -126,11 +126,13 @@ def test_risk_menu():
 def test_stop_menu_and_actions():
     bot = make_bot()
     resp, kb = bot.handle_callback("stop", 0.0)
-    assert any(btn["callback_data"] == "stop_BTC" for row in kb for btn in row)
+    assert any(
+        btn["callback_data"] == "stop_BTC_USDT" for row in kb for btn in row
+    )
     assert any(btn["callback_data"] == "stop_all" for row in kb for btn in row)
-    resp, _ = bot.handle_callback("stop_BTC", 0.0)
+    resp, _ = bot.handle_callback("stop_BTC_USDT", 0.0)
     assert "fermée" in resp.lower()
-    assert bot.client.closed == ["BTC"]
+    assert bot.client.closed == ["BTC_USDT"]
     resp, _ = bot.handle_callback("stop_all", 0.0)
     assert bot.client.closed_all is True
 
