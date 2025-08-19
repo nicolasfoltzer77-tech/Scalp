@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""MEXC USDT-M futures trading bot."""
+"""MEXC USDT spot trading bot."""
 import argparse
 import logging
 import os
@@ -26,7 +26,7 @@ from scalp.trade_utils import (
 )
 from scalp import pairs as _pairs
 from scalp.backtest import backtest_trades  # noqa: F401
-from scalp.mexc_client import MexcFuturesClient as _BaseMexcFuturesClient
+from scalp.mexc_client import MexcSpotClient as _BaseMexcSpotClient
 
 # ---------------------------------------------------------------------------
 # Logging setup
@@ -59,7 +59,7 @@ def check_config() -> None:
             logging.warning("%s manquante", key)
 
 
-class MexcFuturesClient(_BaseMexcFuturesClient):
+class MexcSpotClient(_BaseMexcSpotClient):
     """Wrapper injecting the ``requests`` module and logger."""
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
@@ -121,7 +121,7 @@ def update(client: Any, top_n: int = 20, tg_bot: Any | None = None) -> Dict[str,
 # ---------------------------------------------------------------------------
 
 def main(argv: Optional[List[str]] = None) -> None:
-    parser = argparse.ArgumentParser(description="MEXC USDT-M futures trading bot")
+    parser = argparse.ArgumentParser(description="MEXC USDT spot trading bot")
     parser.add_argument("--log-json", action="store_true", help="Enable JSON event logs")
     args = parser.parse_args(argv)
 
@@ -134,7 +134,7 @@ def main(argv: Optional[List[str]] = None) -> None:
             backup_count=5,
         )
     check_config()
-    client = MexcFuturesClient(
+    client = MexcSpotClient(
         access_key=cfg["MEXC_ACCESS_KEY"],
         secret_key=cfg["MEXC_SECRET_KEY"],
         base_url=cfg["BASE_URL"],
@@ -181,7 +181,7 @@ def main(argv: Optional[List[str]] = None) -> None:
     contract_detail = client.get_contract_detail(symbol)
     log_event("contract_detail", contract_detail)
 
-    assets = client.get_assets()
+    assets = client.get_account()
     log_event("assets", assets)
     equity_usdt = 0.0
     try:
@@ -231,7 +231,6 @@ def main(argv: Optional[List[str]] = None) -> None:
             order_type=5,
             price=price,
             open_type=CONFIG["OPEN_TYPE"],
-            leverage=CONFIG["LEVERAGE"],
             reduce_only=True,
         )
         equity_usdt *= 1 + pnl / 100.0
@@ -340,12 +339,10 @@ def main(argv: Optional[List[str]] = None) -> None:
                 price = float(tdata.get("lastPrice"))
 
             vol_close = compute_position_size(
-                contract_detail,
                 equity_usdt,
                 price,
                 risk_mgr.risk_pct,
-                cfg["LEVERAGE"],
-                symbol,
+                symbol=symbol,
             )
             if vol_close <= 0:
                 logging.info("vol calculé = 0; on attend.")
@@ -414,12 +411,10 @@ def main(argv: Optional[List[str]] = None) -> None:
                 positions = client.get_positions().get("data", [])
                 if risk_mgr.can_open(len(positions)):
                     vol_add = compute_position_size(
-                        contract_detail,
                         equity_usdt,
                         price,
                         risk_mgr.risk_pct,
-                        cfg["LEVERAGE"],
-                        symbol,
+                        symbol=symbol,
                     )
                     if vol_add > 0:
                         resp = client.place_order(
@@ -429,7 +424,6 @@ def main(argv: Optional[List[str]] = None) -> None:
                             order_type=5,
                             price=price,
                             open_type=CONFIG["OPEN_TYPE"],
-                            leverage=cfg["LEVERAGE"],
                         )
                         log_event("scale_in_long", resp)
                         last_entry_price = price
@@ -449,12 +443,10 @@ def main(argv: Optional[List[str]] = None) -> None:
                 positions = client.get_positions().get("data", [])
                 if risk_mgr.can_open(len(positions)):
                     vol_add = compute_position_size(
-                        contract_detail,
                         equity_usdt,
                         price,
                         risk_mgr.risk_pct,
-                        cfg["LEVERAGE"],
-                        symbol,
+                        symbol=symbol,
                     )
                     if vol_add > 0:
                         resp = client.place_order(
@@ -464,7 +456,6 @@ def main(argv: Optional[List[str]] = None) -> None:
                             order_type=5,
                             price=price,
                             open_type=CONFIG["OPEN_TYPE"],
-                            leverage=cfg["LEVERAGE"],
                         )
                         log_event("scale_in_short", resp)
                         last_entry_price = price
@@ -491,14 +482,12 @@ def main(argv: Optional[List[str]] = None) -> None:
                     logging.info("RiskManager: limites atteintes, on attend.")
                     time.sleep(cfg["LOOP_SLEEP_SECS"])
                     continue
-                vol_open, lev = analyse_risque(
-                    contract_detail,
+                vol_open = analyse_risque(
                     positions,
                     equity_usdt,
                     price,
                     risk_mgr.risk_pct,
-                    cfg["LEVERAGE"],
-                    symbol,
+                    symbol=symbol,
                     side="long",
                     risk_level=cfg.get("RISK_LEVEL", 2),
                 )
@@ -513,7 +502,6 @@ def main(argv: Optional[List[str]] = None) -> None:
                     order_type=5,
                     price=price,
                     open_type=CONFIG["OPEN_TYPE"],
-                    leverage=lev,
                     stop_loss=sl_long,
                     take_profit=tp_long,
                 )
@@ -531,7 +519,6 @@ def main(argv: Optional[List[str]] = None) -> None:
                     "symbol": symbol,
                     "price": price,
                     "vol": vol_open,
-                    "leverage": CONFIG["LEVERAGE"],
                     "sl_usd": round((price - sl_long) * vol_open, 2),
                     "tp_usd": round((tp_long - price) * vol_open, 2),
                     "fee_rate": fee_rate,
@@ -557,14 +544,12 @@ def main(argv: Optional[List[str]] = None) -> None:
                     logging.info("RiskManager: limites atteintes, on attend.")
                     time.sleep(cfg["LOOP_SLEEP_SECS"])
                     continue
-                vol_open, lev = analyse_risque(
-                    contract_detail,
+                vol_open = analyse_risque(
                     positions,
                     equity_usdt,
                     price,
                     risk_mgr.risk_pct,
-                    cfg["LEVERAGE"],
-                    symbol,
+                    symbol=symbol,
                     side="short",
                     risk_level=cfg.get("RISK_LEVEL", 2),
                 )
@@ -579,7 +564,6 @@ def main(argv: Optional[List[str]] = None) -> None:
                     order_type=5,
                     price=price,
                     open_type=CONFIG["OPEN_TYPE"],
-                    leverage=lev,
                     stop_loss=sl_short,
                     take_profit=tp_short,
                 )
@@ -597,7 +581,6 @@ def main(argv: Optional[List[str]] = None) -> None:
                     "symbol": symbol,
                     "price": price,
                     "vol": vol_open,
-                    "leverage": CONFIG["LEVERAGE"],
                     "sl_usd": round((sl_short - price) * vol_open, 2),
                     "tp_usd": round((price - tp_short) * vol_open, 2),
                     "fee_rate": fee_rate,

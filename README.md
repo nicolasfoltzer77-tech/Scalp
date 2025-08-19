@@ -1,6 +1,6 @@
 # Scalp
 
-Bot de trading pour les futures USDT-M de MEXC. Ce projet est **expérimental** et fourni à des fins éducatives.
+Bot de trading pour le marché spot USDT de MEXC. Ce projet est **expérimental** et fourni à des fins éducatives.
 
 ## Installation
 
@@ -23,7 +23,7 @@ Le bot lit sa configuration via des variables d'environnement :
 
 - `MEXC_ACCESS_KEY`, `MEXC_SECRET_KEY` : clés API MEXC (laisser les valeurs par défaut pour rester en mode papier).
 - `PAPER_TRADE` (`true`/`false`) : par défaut `true`, n'envoie aucun ordre réel.
-- `SYMBOL` : symbole du contrat futures (par défaut, première paire de `ZERO_FEE_PAIRS` ou `BTC_USDT`).
+- `SYMBOL` : symbole de la paire spot (par défaut, première paire de `ZERO_FEE_PAIRS` ou `BTC_USDT`).
 - `INTERVAL` : intervalle des chandeliers, ex. `Min1`, `Min5`.
 - `EMA_FAST`, `EMA_SLOW` : périodes des EMA utilisées par la stratégie.
 - `MACD_FAST`, `MACD_SLOW`, `MACD_SIGNAL` : paramètres du filtre de tendance MACD.

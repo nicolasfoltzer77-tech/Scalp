@@ -8,7 +8,7 @@ class DummyClient:
         self.closed_all = False
 
 
-    def get_assets(self):
+    def get_account(self):
         return {"data": [{"currency": "USDT", "equity": 123.45}]}
 
     def get_positions(self):

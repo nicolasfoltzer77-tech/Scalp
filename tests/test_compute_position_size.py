@@ -9,45 +9,16 @@ from bot import compute_position_size  # noqa: E402
 
 
 def test_compute_position_size_basic():
-    contract_detail = {
-        "data": [
-            {
-                "symbol": "BTC_USDT",
-                "contractSize": 0.01,
-                "volUnit": 1,
-                "minVol": 1,
-            }
-        ]
-    }
-    vol = compute_position_size(contract_detail, equity_usdt=1000, price=50000,
-                                risk_pct=0.01, leverage=10, symbol="BTC_USDT")
-    assert vol == 1
+    qty = compute_position_size(equity_usdt=1000, price=50000, risk_pct=0.01)
+    assert qty == 0  # 10 USDT / 50k -> 0 BTC
 
 
-def test_compute_position_size_symbol_not_found():
-    contract_detail = {"data": [{"symbol": "ETH_USDT", "contractSize": 0.1}]}
-    with pytest.raises(ValueError):
-        compute_position_size(contract_detail, equity_usdt=1000, price=500,
-                                risk_pct=0.01, leverage=10, symbol="BTC_USDT")
+def test_compute_position_size_positive():
+    qty = compute_position_size(equity_usdt=1000, price=100, risk_pct=0.1)
+    assert qty == 1  # 100 USDT / 100 = 1
 
 
-def test_compute_position_size_invalid_price():
-    contract_detail = {
-        "data": [
-            {
-                "symbol": "BTC_USDT",
-                "contractSize": 0.01,
-                "volUnit": 1,
-                "minVol": 1,
-            }
-        ]
-    }
-    vol = compute_position_size(
-        contract_detail,
-        equity_usdt=1000,
-        price=0,
-        risk_pct=0.01,
-        leverage=10,
-        symbol="BTC_USDT",
-    )
-    assert vol == 0
+def test_compute_position_size_invalid():
+    assert compute_position_size(0, 100, 0.1) == 0
+    assert compute_position_size(1000, -1, 0.1) == 0
+    assert compute_position_size(1000, 100, -0.1) == 0
