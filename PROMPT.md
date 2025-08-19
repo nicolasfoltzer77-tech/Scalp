@@ -1,13 +1,13 @@
 # Prompt de re-création du bot Scalp (version spot)
 
-Ce fichier résume les modules et fonctions essentiels afin de recréer le bot de trading **spot** MEXC (paires USDT) à partir de zéro. Chaque fonction liste son rôle principal et les paramètres indispensables. Le fichier `.env` contenant les clés API se trouve dans le dossier parent du bot.
+Ce fichier résume les modules et fonctions essentiels afin de recréer le bot de trading **spot** Bitget (paires USDT) à partir de zéro. Chaque fonction liste son rôle principal et les paramètres indispensables. Le fichier `.env` contenant les clés API se trouve dans le dossier parent du bot.
 
 ## Structure principale
 
 ### bot.py
 - `_noop_event(*args, **kwargs)` : fonction vide pour le logging d'événements.
-- `check_config()` : vérifie la présence des clés API MEXC et journalise un avertissement si elles manquent.
-- `MexcSpotClient` : sous-classe du client spot MEXC qui injecte `requests` et la fonction `log_event`.
+- `check_config()` : vérifie la présence des clés API Bitget et journalise un avertissement si elles manquent.
+- `BitgetSpotClient` : sous-classe du client spot Bitget qui injecte `requests` et la fonction `log_event`.
 - `find_trade_positions(client, pairs, interval="Min1", ema_fast_n=None, ema_slow_n=None)` : applique la stratégie EMA sur une liste de paires et renvoie les signaux.
 - `send_selected_pairs(client, top_n=20, tg_bot=None)` : sélectionne et notifie les paires les plus actives.
 - `update(client, top_n=20, tg_bot=None)` : rafraîchit la liste des paires et renvoie la charge utile envoyée.
@@ -28,9 +28,9 @@ Ce fichier résume les modules et fonctions essentiels afin de recréer le bot d
 
 ### bot_config.py
 - `_base(sym)` : renvoie l’actif de base pour un symbole.
-- `fetch_pairs_with_fees_from_mexc(base_url=None)` : récupère les paires et leurs frais sur MEXC.
-- `fetch_zero_fee_pairs_from_mexc(base_url=None)` : renvoie les paires à frais nuls.
-- `load_zero_fee_pairs()` : charge les paires sans frais depuis l’environnement ou MEXC.
+- `fetch_pairs_with_fees_from_bitget(base_url=None)` : récupère les paires et leurs frais sur Bitget.
+- `fetch_zero_fee_pairs_from_bitget(base_url=None)` : renvoie les paires à frais nuls.
+- `load_zero_fee_pairs()` : charge les paires sans frais depuis l’environnement ou Bitget.
 - `CONFIG` : dictionnaire global des paramètres (clés API, symbole, EMA, ATR, risques, etc.).
 
 ### metrics.py
@@ -76,8 +76,8 @@ Ce fichier résume les modules et fonctions essentiels afin de recréer le bot d
 - `get_jsonl_logger(path, max_bytes=0, backup_count=0)` : renvoie une fonction de logging JSONL avec rotation optionnelle.
 - `TradeLogger(csv_path, sqlite_path)` : enregistre chaque trade dans un CSV et une base SQLite (`log(data)`).
 
-### mexc_client.py
-- `MexcSpotClient(access_key, secret_key, base_url, recv_window=30, paper_trade=True, requests_module=requests, log_event=None)` : client REST léger pour le marché spot.
+### bitget_client.py
+- `BitgetSpotClient(access_key, secret_key, base_url, recv_window=30, paper_trade=True, requests_module=requests, log_event=None)` : client REST léger pour le marché spot.
   - `get_symbol_info(symbol=None)`, `get_kline(symbol, interval="Min1", start=None, end=None)`, `get_ticker(symbol=None)`.
   - `_private_request(method, path, params=None, body=None)` : signe et exécute les requêtes privées.
   - `get_account()`, `get_open_orders(symbol=None)`.
@@ -102,7 +102,7 @@ Ce fichier résume les modules et fonctions essentiels afin de recréer le bot d
 - `init_telegram_bot(client, config, risk_mgr)` : instancie un `TelegramBot` si les variables d’environnement `TELEGRAM_BOT_TOKEN` et `TELEGRAM_CHAT_ID` sont définies.
 
 ## Utilisation
-1. Définir les variables d’environnement (clés MEXC, token Telegram, etc.).
+1. Définir les variables d’environnement (clés Bitget, token Telegram, etc.).
 2. Exécuter `init.py` pour installer les dépendances.
 3. Lancer `bot.py` pour démarrer le trading.
 4. Utiliser `cli.py` pour les outils d’optimisation ou de tests.
