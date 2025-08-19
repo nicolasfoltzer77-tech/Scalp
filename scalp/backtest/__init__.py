@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-from scalp.bot_config import CONFIG, get_zero_fee_pairs
+from scalp.bot_config import CONFIG
 from scalp.metrics import calc_pnl_pct
 from .walkforward import walk_forward
 
@@ -14,7 +14,6 @@ def backtest_trades(
     trades: List[Dict[str, Any]],
     *,
     fee_rate: Optional[float] = None,
-    zero_fee_pairs: Optional[List[str]] = None,
     logger: Any | None = None,
 ) -> float:
     """Compute cumulative PnL for a series of trades.
@@ -23,7 +22,6 @@ def backtest_trades(
     trade will be recorded with the computed PnL.
     """
     fee_rate = fee_rate if fee_rate is not None else CONFIG.get("FEE_RATE", 0.0)
-    zero_fee = set(zero_fee_pairs or get_zero_fee_pairs())
 
     pnl = 0.0
     for tr in trades:
@@ -33,8 +31,7 @@ def backtest_trades(
         side = tr.get("side", 1)
         if None in (symbol, entry, exit_):
             continue
-        frate = 0.0 if symbol in zero_fee else fee_rate
-        pnl_trade = calc_pnl_pct(entry, exit_, side, frate)
+        pnl_trade = calc_pnl_pct(entry, exit_, side, fee_rate)
         if logger is not None:
             logger.log(
                 {
