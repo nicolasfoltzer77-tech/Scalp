@@ -95,7 +95,8 @@ def find_trade_positions(
 
 def send_selected_pairs(
     client: Any, top_n: int = 20, tg_bot: Any | None = None
-) -> None:
+) -> Dict[str, str]:
+    """Send the selected trading pairs and return the payload."""
     payload = _pairs.send_selected_pairs(
         client,
         top_n=top_n,
@@ -104,11 +105,15 @@ def send_selected_pairs(
     )
     if tg_bot and payload:
         tg_bot.send(_format_text("pair_list", payload))
+    return payload
 
 
-def update(client: Any, top_n: int = 20, tg_bot: Any | None = None) -> None:
+def update(client: Any, top_n: int = 20, tg_bot: Any | None = None) -> Dict[str, str]:
     """Send a fresh list of pairs to reflect current market conditions."""
-    send_selected_pairs(client, top_n=top_n, tg_bot=tg_bot)
+    payload = send_selected_pairs(client, top_n=top_n, tg_bot=tg_bot)
+    text = _format_text("pair_list", payload)
+    logging.info(text)
+    return payload
 
 
 # ---------------------------------------------------------------------------
