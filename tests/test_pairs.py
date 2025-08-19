@@ -18,18 +18,20 @@ def test_send_selected_pairs(monkeypatch):
             {"symbol": "BTCUSD", "volume": 8},
             {"symbol": "BTCUSDT", "volume": 7},
             {"symbol": "DOGEUSDT", "volume": 6},
+            {"symbol": "ETHUSDC", "volume": 5},
+            {"symbol": "ETHUSDT", "volume": 4},
         ],
     )
 
-    bot.send_selected_pairs(object(), top_n=3)
+    bot.send_selected_pairs(object(), top_n=4)
 
     assert sent["event"] == "pair_list"
     assert sent["payload"]["green"] == "WIF"
     assert sent["payload"]["orange"] == "BTC"
-    assert sent["payload"]["red"] == "DOGE"
+    assert sent["payload"]["red"] == "DOGE, ETH"
 
 
-def test_filter_trade_pairs_no_zero_fee(monkeypatch):
+def test_filter_trade_pairs_all_pairs(monkeypatch):
     class DummyClient:
         def get_ticker(self):
             return {
@@ -40,7 +42,6 @@ def test_filter_trade_pairs_no_zero_fee(monkeypatch):
             }
 
     client = DummyClient()
-    # With no zero-fee pairs configured, the function should return all pairs
     res = bot.filter_trade_pairs(client, volume_min=0, max_spread_bps=10, top_n=5)
     assert [r["symbol"] for r in res] == ["BTCUSDT", "ETHUSDT"]
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Callable
 
-from scalp.bot_config import CONFIG, load_zero_fee_pairs
+from scalp.bot_config import CONFIG
 from scalp.strategy import ema as default_ema, cross as default_cross
 from scalp.notifier import notify
 
@@ -22,20 +22,15 @@ def filter_trade_pairs(
     *,
     volume_min: float = 5_000_000,
     max_spread_bps: float = 5.0,
-    zero_fee_pairs: Optional[List[str]] = None,
     top_n: int = 20,
 ) -> List[Dict[str, Any]]:
-    """Filter pairs by volume, spread and zero fees."""
+    """Filter pairs by volume and spread."""
     pairs = get_trade_pairs(client)
-    zero_fee = set(zero_fee_pairs or load_zero_fee_pairs())
     eligible: List[Dict[str, Any]] = []
 
     for info in pairs:
         sym = info.get("symbol")
-        # Only enforce the zero-fee filter when a list is provided.  Previously,
-        # an empty configuration would discard every pair, resulting in an empty
-        # listing on Telegram.
-        if not sym or (zero_fee and sym not in zero_fee):
+        if not sym:
             continue
         try:
             vol = float(info.get("volume", 0))
@@ -113,7 +108,7 @@ def send_selected_pairs(
     select_fn: Callable[[Any, int], List[Dict[str, Any]]] = select_top_pairs,
     notify_fn: Callable[[str, Optional[Dict[str, Any]]], None] = notify,
 ) -> None:
-    """Fetch top pairs, drop USD duplicates and notify their list.
+    """Fetch top pairs, drop USD/USDT/USDC duplicates and notify their list.
 
     Returns the payload sent to ``notify_fn`` for convenience.
     """
@@ -123,6 +118,8 @@ def send_selected_pairs(
             base, quote = sym.split("_", 1)
         elif sym.endswith("USDT"):
             base, quote = sym[:-4], "USDT"
+        elif sym.endswith("USDC"):
+            base, quote = sym[:-4], "USDC"
         elif sym.endswith("USD"):
             base, quote = sym[:-3], "USD"
         else:
@@ -137,7 +134,8 @@ def send_selected_pairs(
             continue
         base, quote = split_symbol(sym)
         existing = by_base.get(base)
-        if existing is None or (existing["quote"] != "USDT" and quote == "USDT"):
+        priority = {"USDT": 3, "USDC": 2, "USD": 1}
+        if existing is None or priority.get(quote, 0) > priority.get(existing["quote"], 0):
             by_base[base] = {"data": info, "quote": quote}
 
     unique = sorted(

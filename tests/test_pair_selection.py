@@ -69,7 +69,6 @@ def test_filter_trade_pairs():
         Client(),
         volume_min=5_000_000,
         max_spread_bps=5,
-        zero_fee_pairs=["AAA", "BBB", "CCC", "DDD"],
     )
     assert [p["symbol"] for p in pairs] == ["AAA"]
 
