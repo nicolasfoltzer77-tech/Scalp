@@ -1,13 +1,13 @@
-# Prompt de re-création du bot Scalp
+# Prompt de re-création du bot Scalp (version spot)
 
-Ce fichier résume les modules et fonctions essentiels afin de recréer le bot de trading MEXC USDT-M à partir de zéro. Chaque fonction liste son rôle principal et les paramètres indispensables.
+Ce fichier résume les modules et fonctions essentiels afin de recréer le bot de trading **spot** MEXC (paires USDT) à partir de zéro. Chaque fonction liste son rôle principal et les paramètres indispensables. Le fichier `.env` contenant les clés API se trouve dans le dossier parent du bot.
 
 ## Structure principale
 
 ### bot.py
 - `_noop_event(*args, **kwargs)` : fonction vide pour le logging d'événements.
 - `check_config()` : vérifie la présence des clés API MEXC et journalise un avertissement si elles manquent.
-- `MexcFuturesClient` : sous-classe du client MEXC qui injecte `requests` et la fonction `log_event`.
+- `MexcSpotClient` : sous-classe du client spot MEXC qui injecte `requests` et la fonction `log_event`.
 - `find_trade_positions(client, pairs, interval="Min1", ema_fast_n=None, ema_slow_n=None)` : applique la stratégie EMA sur une liste de paires et renvoie les signaux.
 - `send_selected_pairs(client, top_n=20, tg_bot=None)` : sélectionne et notifie les paires les plus actives.
 - `update(client, top_n=20, tg_bot=None)` : rafraîchit la liste des paires et renvoie la charge utile envoyée.
@@ -52,11 +52,11 @@ Ce fichier résume les modules et fonctions essentiels afin de recréer le bot d
 - `scan_pairs` et `select_active_pairs` sont re-exportés pour la sélection des paires.
 
 ### trade_utils.py
-- `compute_position_size(contract_detail, equity_usdt, price, risk_pct, leverage, symbol=None)` : calcule le volume à trader selon le risque.
-- `analyse_risque(contract_detail, open_positions, equity_usdt, price, risk_pct, base_leverage, symbol=None, side="long", risk_level=2)` : renvoie `(volume, levier)` en fonction de l’exposition actuelle.
+- `compute_position_size(equity_usdt, price, risk_pct, symbol=None)` : calcule la quantité à acheter/vendre en fonction du risque et du prix.
+- `analyse_risque(open_positions, equity_usdt, price, risk_pct, symbol=None, side="long", risk_level=2)` : renvoie la taille de position conseillée selon l’exposition actuelle (sans effet de levier).
 - `trailing_stop(side, current_price, atr, sl, mult=0.75)` : met à jour le stop loss en fonction de l'ATR.
 - `break_even_stop(side, entry_price, current_price, atr, sl, mult=1.0)` : déplace le stop loss à break-even après un mouvement favorable.
-- `should_scale_in(entry_price, current_price, last_entry, atr, side, distance_mult=0.5)` : indique si la position doit être renfortée.
+- `should_scale_in(entry_price, current_price, last_entry, atr, side, distance_mult=0.5)` : indique si la position doit être renforcée.
 - `timeout_exit(entry_time, now, entry_price, current_price, side, progress_min=15, timeout_min=30)` : ferme une position si aucune progression n’est constatée.
 - `marketable_limit_price(side, best_bid, best_ask, slippage=0.001)` : calcule un prix limite pour une exécution quasi immédiate.
 
@@ -77,11 +77,11 @@ Ce fichier résume les modules et fonctions essentiels afin de recréer le bot d
 - `TradeLogger(csv_path, sqlite_path)` : enregistre chaque trade dans un CSV et une base SQLite (`log(data)`).
 
 ### mexc_client.py
-- `MexcFuturesClient(access_key, secret_key, base_url, recv_window=30, paper_trade=True, requests_module=requests, log_event=None)` : client REST léger.
-  - `get_contract_detail(symbol=None)`, `get_kline(symbol, interval="Min1", start=None, end=None)`, `get_ticker(symbol=None)`.
+- `MexcSpotClient(access_key, secret_key, base_url, recv_window=30, paper_trade=True, requests_module=requests, log_event=None)` : client REST léger pour le marché spot.
+  - `get_symbol_info(symbol=None)`, `get_kline(symbol, interval="Min1", start=None, end=None)`, `get_ticker(symbol=None)`.
   - `_private_request(method, path, params=None, body=None)` : signe et exécute les requêtes privées.
-  - `get_assets()`, `get_positions()`, `get_open_orders(symbol=None)`.
-  - `place_order(symbol, side, vol, order_type, price=None, open_type=1, leverage=1, reduce_only=False, stop_loss=None, take_profit=None)`.
+  - `get_account()`, `get_open_orders(symbol=None)`.
+  - `place_order(symbol, side, quantity, order_type, price=None, reduce_only=False, stop_loss=None, take_profit=None)`.
   - `cancel_order(symbol, order_id)`, `cancel_all(symbol)`.
 
 ### pairs.py
