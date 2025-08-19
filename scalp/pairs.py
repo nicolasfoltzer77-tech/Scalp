@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Callable
 
-from scalp.bot_config import CONFIG
+from scalp.bot_config import CONFIG, load_zero_fee_pairs
 from scalp.strategy import ema as default_ema, cross as default_cross
 from scalp.notifier import notify
 
@@ -27,7 +27,7 @@ def filter_trade_pairs(
 ) -> List[Dict[str, Any]]:
     """Filter pairs by volume, spread and zero fees."""
     pairs = get_trade_pairs(client)
-    zero_fee = set(zero_fee_pairs or CONFIG.get("ZERO_FEE_PAIRS", []))
+    zero_fee = set(zero_fee_pairs or load_zero_fee_pairs())
     eligible: List[Dict[str, Any]] = []
 
     for info in pairs:
