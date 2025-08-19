@@ -1,6 +1,7 @@
 import json
 import hmac
 import hashlib
+import base64
 import pytest
 import bot
 from bot import BitgetFuturesClient
