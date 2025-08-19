@@ -193,3 +193,11 @@ def test_update_button(monkeypatch):
     assert "mise à jour" in resp.lower()
     assert kb == bot.main_keyboard
 
+
+def test_stop_no_positions():
+    bot = make_bot()
+    bot.client.get_positions = lambda: {"data": []}
+    resp, kb = bot.handle_callback("stop", 0.0)
+    assert "aucune crypto" in resp.lower()
+    assert kb == bot.settings_keyboard
+
