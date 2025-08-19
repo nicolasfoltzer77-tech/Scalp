@@ -1,5 +1,5 @@
 import os
-from typing import List
+from typing import List, Tuple
 
 import requests
 
@@ -15,13 +15,13 @@ def _base(sym: str) -> str:
     return sym
 
 
-def fetch_zero_fee_pairs_from_mexc(base_url: str | None = None) -> List[str]:
-    """Query MEXC for symbols with zero maker/taker fees.
+def fetch_pairs_with_fees_from_mexc(
+    base_url: str | None = None,
+) -> List[Tuple[str, float, float]]:
+    """Retrieve trading pairs and their maker/taker fee rates from MEXC.
 
-    The endpoint ``/api/v1/contract/fee-rate`` returns the maker and taker fee
-    for each contract symbol. We keep only the markets where both fees are
-    reported as ``0``. In case of network or parsing errors, an empty list is
-    returned.
+    The function prints each pair as it is parsed so that callers can observe
+    the data returned by the exchange step by step.
     """
 
     base = base_url or os.getenv("MEXC_CONTRACT_BASE_URL", "https://contract.mexc.com")
@@ -32,7 +32,7 @@ def fetch_zero_fee_pairs_from_mexc(base_url: str | None = None) -> List[str]:
     except Exception:
         return []
 
-    pairs: List[str] = []
+    results: List[Tuple[str, float, float]] = []
     for row in data.get("data", []):
         sym = row.get("symbol")
         try:
@@ -40,9 +40,28 @@ def fetch_zero_fee_pairs_from_mexc(base_url: str | None = None) -> List[str]:
             maker = float(row.get("makerFeeRate", 1))
         except (TypeError, ValueError):
             continue
-        if taker == 0 and maker == 0 and sym:
-            pairs.append(sym)
-    return [p for p in pairs if _base(p) not in {"BTC", "ETH"}]
+        if not sym:
+            continue
+        print(f"{sym}: maker={maker}, taker={taker}")
+        results.append((sym, maker, taker))
+    return results
+
+
+def fetch_zero_fee_pairs_from_mexc(base_url: str | None = None) -> List[str]:
+    """Query MEXC for symbols with zero maker/taker fees.
+
+    The endpoint ``/api/v1/contract/fee-rate`` returns the maker and taker fee
+    for each contract symbol. We keep only the markets where both fees are
+    reported as ``0``. In case of network or parsing errors, an empty list is
+    returned.
+    """
+
+    pairs_with_fees = fetch_pairs_with_fees_from_mexc(base_url)
+
+    pairs = [sym for sym, maker, taker in pairs_with_fees if taker == 0 and maker == 0]
+    zero_fee = [p for p in pairs if _base(p) not in {"BTC", "ETH"}]
+    print(f"Zero-fee pairs: {zero_fee}")
+    return zero_fee
 
 
 def load_zero_fee_pairs() -> List[str]:
