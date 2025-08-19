@@ -2,6 +2,7 @@ import os
 import time
 import hmac
 import hashlib
+import base64
 import logging
 from argparse import ArgumentParser
 from pathlib import Path
@@ -49,7 +50,9 @@ class BitgetClient:
             params["timestamp"] = self._timestamp()
             params["recvWindow"] = RECV_WINDOW
             query = urlencode(params)
-            signature = hmac.new(self.api_secret.encode(), query.encode(), hashlib.sha256).hexdigest()
+            signature = base64.b64encode(
+                hmac.new(self.api_secret.encode(), query.encode(), hashlib.sha256).digest()
+            ).decode()
             query += f"&signature={signature}"
             headers = {"X-BITGET-APIKEY": self.api_key}
             if method.upper() == "GET":
