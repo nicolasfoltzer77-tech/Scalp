@@ -5,25 +5,10 @@ from typing import List, Tuple
 import requests
 
 
-def _base(sym: str) -> str:
-    """Return base asset for a symbol like ``BTC_USDT`` or ``BTCUSDT``."""
-    if "_" in sym:
-        return sym.split("_", 1)[0]
-    if sym.endswith("USDT"):
-        return sym[:-4]
-    if sym.endswith("USD"):
-        return sym[:-3]
-    return sym
-
-
 def fetch_pairs_with_fees_from_mexc(
     base_url: str | None = None,
 ) -> List[Tuple[str, float, float]]:
-    """Retrieve trading pairs and their maker/taker fee rates from MEXC.
-
-    The function prints each pair as it is parsed so that callers can observe
-    the data returned by the exchange step by step.
-    """
+    """Retrieve trading pairs and their maker/taker fee rates from MEXC."""
 
     base = base_url or os.getenv("MEXC_CONTRACT_BASE_URL", "https://contract.mexc.com")
     url = f"{base}/api/v1/contract/fee-rate"
@@ -46,45 +31,6 @@ def fetch_pairs_with_fees_from_mexc(
         logging.debug("%s: maker=%s, taker=%s", sym, maker, taker)
         results.append((sym, maker, taker))
     return results
-
-
-def fetch_zero_fee_pairs_from_mexc(base_url: str | None = None) -> List[str]:
-    """Query MEXC for symbols with zero maker/taker fees.
-
-    The endpoint ``/api/v1/contract/fee-rate`` returns the maker and taker fee
-    for each contract symbol. We keep only the markets where both fees are
-    reported as ``0``. In case of network or parsing errors, an empty list is
-    returned.
-    """
-
-    pairs_with_fees = fetch_pairs_with_fees_from_mexc(base_url)
-
-    pairs = [sym for sym, maker, taker in pairs_with_fees if taker == 0 and maker == 0]
-    zero_fee = [p for p in pairs if _base(p) not in {"BTC", "ETH"}]
-    logging.debug("Zero-fee pairs: %s", zero_fee)
-    return zero_fee
-
-
-def load_zero_fee_pairs() -> List[str]:
-    """Load zero-fee pairs from env or from MEXC."""
-
-    env = os.getenv("ZERO_FEE_PAIRS")
-    if env:
-        pairs = [p.strip() for p in env.split(",") if p.strip()]
-        return [p for p in pairs if _base(p) not in {"BTC", "ETH"}]
-    return fetch_zero_fee_pairs_from_mexc()
-
-
-_ZERO_FEE_PAIRS: List[str] | None = None
-
-
-def get_zero_fee_pairs() -> List[str]:
-    """Return cached zero-fee pairs loading them on first access."""
-
-    global _ZERO_FEE_PAIRS
-    if _ZERO_FEE_PAIRS is None:
-        _ZERO_FEE_PAIRS = load_zero_fee_pairs()
-    return _ZERO_FEE_PAIRS
 
 
 DEFAULT_SYMBOL = os.getenv("SYMBOL") or "BTC_USDT"
@@ -121,6 +67,5 @@ CONFIG = {
     "MAX_DAILY_LOSS_PCT": float(os.getenv("MAX_DAILY_LOSS_PCT", "5.0")),
     "MAX_DAILY_PROFIT_PCT": float(os.getenv("MAX_DAILY_PROFIT_PCT", "5.0")),
     "MAX_POSITIONS": int(os.getenv("MAX_POSITIONS", "1")),
-    "ZERO_FEE_PAIRS": [],  # loaded lazily via ``get_zero_fee_pairs``
 }
 

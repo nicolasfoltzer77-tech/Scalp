@@ -27,10 +27,7 @@ Ce fichier résume les modules et fonctions essentiels afin de recréer le bot d
 ## Modules `scalp`
 
 ### bot_config.py
-- `_base(sym)` : renvoie l’actif de base pour un symbole.
 - `fetch_pairs_with_fees_from_mexc(base_url=None)` : récupère les paires et leurs frais sur MEXC.
-- `fetch_zero_fee_pairs_from_mexc(base_url=None)` : renvoie les paires à frais nuls.
-- `load_zero_fee_pairs()` : charge les paires sans frais depuis l’environnement ou MEXC.
 - `CONFIG` : dictionnaire global des paramètres (clés API, symbole, EMA, ATR, risques, etc.).
 
 ### metrics.py

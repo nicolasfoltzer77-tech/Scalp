@@ -23,7 +23,7 @@ Le bot lit sa configuration via des variables d'environnement :
 
 - `MEXC_ACCESS_KEY`, `MEXC_SECRET_KEY` : clés API MEXC (laisser les valeurs par défaut pour rester en mode papier).
 - `PAPER_TRADE` (`true`/`false`) : par défaut `true`, n'envoie aucun ordre réel.
-- `SYMBOL` : symbole du contrat futures (par défaut, première paire de `ZERO_FEE_PAIRS` ou `BTC_USDT`).
+- `SYMBOL` : symbole du contrat futures (par défaut `BTC_USDT`).
 - `INTERVAL` : intervalle des chandeliers, ex. `Min1`, `Min5`.
 - `EMA_FAST`, `EMA_SLOW` : périodes des EMA utilisées par la stratégie.
 - `MACD_FAST`, `MACD_SLOW`, `MACD_SIGNAL` : paramètres du filtre de tendance MACD.
@@ -33,8 +33,8 @@ Le bot lit sa configuration via des variables d'environnement :
 - `MAX_DAILY_LOSS_PCT`, `MAX_DAILY_PROFIT_PCT`, `MAX_POSITIONS` : limites globales (kill switch après perte ou gain, nombre maximal de positions).
 - `LOG_DIR` : dossier où seront écrits les fichiers de log.
 
-- `NOTIFY_URL` : URL d'un webhook HTTP pour recevoir les événements (optionnel, peut être utilisé en plus de Telegram).
-- `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` : pour envoyer les notifications sur Telegram (optionnel, peut être combiné avec le webhook).
+-- `NOTIFY_URL` : URL d'un webhook HTTP pour recevoir les événements (optionnel, peut être utilisé en plus de Telegram).
+-- `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` : pour envoyer les notifications sur Telegram (optionnel, peut être combiné avec le webhook).
 
 Pour éviter de versionner vos clés sensibles, vous pouvez créer un fichier
 `.env` dans le dossier parent du dépôt (par exemple `Notebooks/.env` si le
@@ -74,7 +74,7 @@ rapidement les pertes.
 
 Principes généraux :
 
-- sélection de paires liquides à frais nuls et au fort momentum ;
+- sélection de paires liquides au fort momentum ;
 - trade uniquement dans le sens de la tendance dominante (MACD + EMA longue) ;
 - confirmation multi‑indicateurs (VWAP, volume/OBV, RSI multi‑UT) ;
 - stop‑loss et take‑profit dynamiques basés sur l’ATR avec taille de position
