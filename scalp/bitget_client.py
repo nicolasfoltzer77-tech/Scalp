@@ -3,13 +3,14 @@ import logging
 import time
 import hmac
 import hashlib
+import base64
 from typing import Any, Dict, List, Optional
 
 import requests
 
 
 class BitgetFuturesClient:
-    """Lightweight REST client for Bitget futures endpoints."""
+    """Lightweight REST client for Bitget LAPI v3 futures endpoints."""
 
     def __init__(
         self,
@@ -21,6 +22,7 @@ class BitgetFuturesClient:
         paper_trade: bool = True,
         requests_module: Any = requests,
         log_event: Optional[Any] = None,
+        passphrase: Optional[str] = None,
     ) -> None:
         self.ak = access_key
         self.sk = secret_key
@@ -29,9 +31,10 @@ class BitgetFuturesClient:
         self.paper_trade = paper_trade
         self.requests = requests_module
         self.log_event = log_event or (lambda *a, **k: None)
+        self.passphrase = passphrase
         if not self.ak or not self.sk or self.ak == "A_METTRE" or self.sk == "B_METTRE":
             logging.warning(
-                "\u26a0\ufe0f Cl\u00e9s API non d\u00e9finies. Le mode r\u00e9el ne fonctionnera pas."
+                "\u26a0\ufe0f Cl\u00e9s API non d\u00e9finies. Le mode r\u00e9el ne fonctionnera pas.",
             )
 
     # ------------------------------------------------------------------
@@ -51,24 +54,26 @@ class BitgetFuturesClient:
             items.append(f"{k}={v}")
         return "&".join(items)
 
-    def _sign(self, request_param_string: str, req_ms: int) -> str:
-        msg = f"{self.ak}{req_ms}{request_param_string}"
-        return hmac.new(self.sk.encode(), msg.encode(), hashlib.sha256).hexdigest()
+    def _sign(self, prehash: str) -> str:
+        mac = hmac.new(self.sk.encode(), prehash.encode(), hashlib.sha256).digest()
+        return base64.b64encode(mac).decode()
 
-    def _headers(self, signature: str, req_ms: int) -> Dict[str, str]:
-        return {
-            "ApiKey": self.ak,
-            "Request-Time": str(req_ms),
-            "Signature": signature,
+    def _headers(self, signature: str, timestamp: int) -> Dict[str, str]:
+        headers = {
+            "ACCESS-KEY": self.ak,
+            "ACCESS-SIGN": signature,
+            "ACCESS-TIMESTAMP": str(timestamp),
             "Content-Type": "application/json",
-            "Recv-Window": str(self.recv_window),
         }
+        if self.passphrase:
+            headers["ACCESS-PASSPHRASE"] = self.passphrase
+        return headers
 
     # ------------------------------------------------------------------
     # Public endpoints
     # ------------------------------------------------------------------
     def get_contract_detail(self, symbol: Optional[str] = None) -> Dict[str, Any]:
-        url = f"{self.base}/api/v1/contract/detail"
+        url = f"{self.base}/api/v3/mix/market/contract-detail"
         params: Dict[str, Any] = {}
         if symbol:
             params["symbol"] = symbol
@@ -83,18 +88,18 @@ class BitgetFuturesClient:
         start: Optional[int] = None,
         end: Optional[int] = None,
     ) -> Dict[str, Any]:
-        url = f"{self.base}/api/v1/contract/kline/{symbol}"
-        params: Dict[str, Any] = {"interval": interval}
+        url = f"{self.base}/api/v3/mix/market/candles/{symbol}"
+        params: Dict[str, Any] = {"granularity": interval}
         if start is not None:
-            params["start"] = int(start)
+            params["startTime"] = int(start)
         if end is not None:
-            params["end"] = int(end)
+            params["endTime"] = int(end)
         r = self.requests.get(url, params=params, timeout=15)
         r.raise_for_status()
         return r.json()
 
     def get_ticker(self, symbol: Optional[str] = None) -> Dict[str, Any]:
-        url = f"{self.base}/api/v1/contract/ticker"
+        url = f"{self.base}/api/v3/mix/market/ticker"
         params: Dict[str, Any] = {}
         if symbol:
             params["symbol"] = symbol
@@ -115,17 +120,18 @@ class BitgetFuturesClient:
     ) -> Dict[str, Any]:
         method = method.upper()
         url = f"{self.base}{path}"
-        req_ms = self._ms()
+        ts = self._ms()
 
         if method in ("GET", "DELETE"):
             qs = self._urlencode_sorted(params or {})
-            sig = self._sign(qs, req_ms)
-            headers = self._headers(sig, req_ms)
+            req_path = path + (f"?{qs}" if qs else "")
+            sig = self._sign(f"{ts}{method}{req_path}")
+            headers = self._headers(sig, ts)
             r = self.requests.request(method, url, params=params, headers=headers, timeout=20)
         elif method == "POST":
             body_str = json.dumps(body or {}, separators=(",", ":"), ensure_ascii=False)
-            sig = self._sign(body_str, req_ms)
-            headers = self._headers(sig, req_ms)
+            sig = self._sign(f"{ts}{method}{path}{body_str}")
+            headers = self._headers(sig, ts)
             r = self.requests.post(url, data=body_str.encode("utf-8"), headers=headers, timeout=20)
         else:
             raise ValueError("M\u00e9thode non support\u00e9e")
@@ -159,13 +165,13 @@ class BitgetFuturesClient:
                     }
                 ],
             }
-        return self._private_request("GET", "/api/v1/private/account/assets")
+        return self._private_request("GET", "/api/v3/mix/account/accounts")
 
     def get_positions(self) -> Dict[str, Any]:
         data = self._private_request(
             "GET",
-            "/api/v1/private/position/list/history_positions",
-            params={"page_num": 1, "page_size": 50},
+            "/api/v3/mix/position/all-position",
+            params={"productType": "umcbl"},
         )
         try:
             positions = data.get("data", [])
@@ -185,7 +191,7 @@ class BitgetFuturesClient:
     def get_open_orders(self, symbol: Optional[str] = None) -> Dict[str, Any]:
         return self._private_request(
             "GET",
-            "/api/v1/private/order/list/open_orders",
+            "/api/v3/mix/order/current",
             params={"symbol": symbol} if symbol else None,
         )
 
@@ -234,9 +240,9 @@ class BitgetFuturesClient:
 
         body = {
             "symbol": symbol,
-            "vol": vol,
+            "size": vol,
             "side": side,
-            "type": order_type,
+            "orderType": order_type,
             "openType": open_type,
         }
         if price is not None:
@@ -246,7 +252,7 @@ class BitgetFuturesClient:
         if position_id is not None:
             body["positionId"] = int(position_id)
         if external_oid:
-            body["externalOid"] = str(external_oid)[:32]
+            body["clientOid"] = str(external_oid)[:32]
         if stop_loss is not None:
             body["stopLossPrice"] = float(stop_loss)
         if take_profit is not None:
@@ -256,42 +262,26 @@ class BitgetFuturesClient:
         if position_mode is not None:
             body["positionMode"] = int(position_mode)
 
-        return self._private_request("POST", "/api/v1/private/order/submit", body=body)
+        return self._private_request("POST", "/api/v3/mix/order/place", body=body)
 
     def cancel_order(self, order_ids: List[int]) -> Dict[str, Any]:
-        return self._private_request("POST", "/api/v1/private/order/cancel", body=order_ids)
+        return self._private_request(
+            "POST", "/api/v3/mix/order/cancel-order", body={"orderIds": order_ids}
+        )
 
     def cancel_all(self, symbol: Optional[str] = None) -> Dict[str, Any]:
         body = {"symbol": symbol} if symbol else {}
-        return self._private_request("POST", "/api/v1/private/order/cancel_all", body=body)
+        return self._private_request("POST", "/api/v3/mix/order/cancel-all-order", body=body)
 
     def close_position(self, symbol: str) -> Dict[str, Any]:
-        """Close an open position for ``symbol``.
-
-        The Bitget API exposes dedicated endpoints to force close positions.
-        On startup the trading bot uses this method to ensure no leftover
-        positions remain from a previous run.  When running in paper mode the
-        request is still logged but otherwise has no effect.
-        """
-
+        """Close an open position for ``symbol``."""
         body = {"symbol": symbol}
         return self._private_request(
-            "POST", "/api/v1/private/position/close_position", body=body
+            "POST", "/api/v3/mix/position/close-position", body=body
         )
 
     def close_all_positions(self) -> Dict[str, Any]:
-        """Close all open positions.
-
-        The official API does not provide a working bulk close endpoint; the
-        previous implementation hit a non-existent route resulting in HTTP 404
-        errors.  We therefore emulate the behaviour by retrieving currently
-        opened positions and calling :meth:`close_position` for each symbol.
-
-        Returns a dictionary containing the individual responses for
-        transparency, but callers typically only care that the method
-        completes without raising.
-        """
-
+        """Close all open positions."""
         results = []
         try:
             for pos in self.get_positions().get("data", []):
@@ -301,4 +291,3 @@ class BitgetFuturesClient:
         except Exception as exc:  # pragma: no cover - best effort
             logging.error("Erreur fermeture de toutes les positions: %s", exc)
         return {"success": True, "data": results}
-      

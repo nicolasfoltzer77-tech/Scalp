@@ -1,6 +1,7 @@
 import json
 import hmac
 import hashlib
+import base64
 import pytest
 import bot
 from bot import BitgetFuturesClient
@@ -37,9 +38,13 @@ def test_private_request_get_signature(monkeypatch):
     resp = client._private_request("GET", "/api/test", params={"b": "2", "a": "1"})
     assert resp["success"] is True
     qs = "a=1&b=2"
-    expected = hmac.new(b"secret", f"key1000{qs}".encode(), hashlib.sha256).hexdigest()
-    assert called["headers"]["Signature"] == expected
-    assert called["headers"]["ApiKey"] == "key"
+    prehash = f"1000GET/api/test?{qs}"
+    expected = base64.b64encode(
+        hmac.new(b"secret", prehash.encode(), hashlib.sha256).digest()
+    ).decode()
+    assert called["headers"]["ACCESS-SIGN"] == expected
+    assert called["headers"]["ACCESS-KEY"] == "key"
+    assert called["headers"]["ACCESS-TIMESTAMP"] == "1000"
     assert called["params"] == {"b": "2", "a": "1"}
 
 
@@ -68,9 +73,13 @@ def test_private_request_post_signature(monkeypatch):
     resp = client._private_request("POST", "/api/test", body={"a": 1, "b": 2})
     assert resp["success"] is True
     body = json.dumps({"a": 1, "b": 2}, separators=(",", ":"), ensure_ascii=False)
-    expected = hmac.new(b"secret", f"key1000{body}".encode(), hashlib.sha256).hexdigest()
-    assert called["headers"]["Signature"] == expected
-    assert called["headers"]["ApiKey"] == "key"
+    prehash = f"1000POST/api/test{body}"
+    expected = base64.b64encode(
+        hmac.new(b"secret", prehash.encode(), hashlib.sha256).digest()
+    ).decode()
+    assert called["headers"]["ACCESS-SIGN"] == expected
+    assert called["headers"]["ACCESS-KEY"] == "key"
+    assert called["headers"]["ACCESS-TIMESTAMP"] == "1000"
     assert called["data"].decode("utf-8") == body
 
 
