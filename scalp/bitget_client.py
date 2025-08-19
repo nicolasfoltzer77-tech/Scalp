@@ -8,8 +8,8 @@ from typing import Any, Dict, List, Optional
 import requests
 
 
-class MexcFuturesClient:
-    """Lightweight REST client for MEXC futures endpoints."""
+class BitgetFuturesClient:
+    """Lightweight REST client for Bitget futures endpoints."""
 
     def __init__(
         self,
@@ -268,7 +268,7 @@ class MexcFuturesClient:
     def close_position(self, symbol: str) -> Dict[str, Any]:
         """Close an open position for ``symbol``.
 
-        The MEXC API exposes dedicated endpoints to force close positions.
+        The Bitget API exposes dedicated endpoints to force close positions.
         On startup the trading bot uses this method to ensure no leftover
         positions remain from a previous run.  When running in paper mode the
         request is still logged but otherwise has no effect.

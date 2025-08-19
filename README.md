@@ -1,6 +1,6 @@
 # Scalp
 
-Bot de trading pour les futures USDT-M de MEXC. Ce projet est **expérimental** et fourni à des fins éducatives.
+Bot de trading pour les futures USDT-M de Bitget. Ce projet est **expérimental** et fourni à des fins éducatives.
 
 ## Installation
 
@@ -21,7 +21,7 @@ pytest  # ou make test
 
 Le bot lit sa configuration via des variables d'environnement :
 
-- `MEXC_ACCESS_KEY`, `MEXC_SECRET_KEY` : clés API MEXC (laisser les valeurs par défaut pour rester en mode papier).
+- `BITGET_ACCESS_KEY`, `BITGET_SECRET_KEY` : clés API Bitget (laisser les valeurs par défaut pour rester en mode papier).
 - `PAPER_TRADE` (`true`/`false`) : par défaut `true`, n'envoie aucun ordre réel.
 - `SYMBOL` : symbole du contrat futures (par défaut, première paire de `ZERO_FEE_PAIRS` ou `BTC_USDT`).
 - `INTERVAL` : intervalle des chandeliers, ex. `Min1`, `Min5`.
@@ -46,8 +46,8 @@ bot.
 Exemple :
 
 ```bash
-export MEXC_ACCESS_KEY="votre_cle"
-export MEXC_SECRET_KEY="votre_secret"
+export BITGET_ACCESS_KEY="votre_cle"
+export BITGET_SECRET_KEY="votre_secret"
 export PAPER_TRADE=true
 python bot.py
 ```
@@ -60,7 +60,7 @@ Après configuration, lancez simplement :
 python bot.py
 ```
 
-Le terminal reste silencieux au démarrage sauf en cas d'absence de variables critiques (`MEXC_ACCESS_KEY`, `MEXC_SECRET_KEY`). Les journaux sont écrits dans `logs/` et affichés sur la console. Le bot tourne jusqu'à `Ctrl+C`. Les ouvertures et fermetures de positions sont consignées dans `bot_events.jsonl`.
+Le terminal reste silencieux au démarrage sauf en cas d'absence de variables critiques (`BITGET_ACCESS_KEY`, `BITGET_SECRET_KEY`). Les journaux sont écrits dans `logs/` et affichés sur la console. Le bot tourne jusqu'à `Ctrl+C`. Les ouvertures et fermetures de positions sont consignées dans `bot_events.jsonl`.
 
 Lors du démarrage, deux notifications Telegram sont émises : la première affiche « Bot démarré » avec un logo, la seconde « Listing : » suivi des 20 paires sélectionnées classées par couleur (🟢 < 1 min, 🟠 < 10 min, 🔴 > 10 min).
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""MEXC USDT-M futures trading bot."""
+"""Bitget USDT-M futures trading bot."""
 import argparse
 import logging
 import os
@@ -26,7 +26,7 @@ from scalp.trade_utils import (
 )
 from scalp import pairs as _pairs
 from scalp.backtest import backtest_trades  # noqa: F401
-from scalp.mexc_client import MexcFuturesClient as _BaseMexcFuturesClient
+from scalp.bitget_client import BitgetFuturesClient as _BaseBitgetFuturesClient
 
 # ---------------------------------------------------------------------------
 # Logging setup
@@ -52,14 +52,14 @@ log_event = _noop_event
 
 def check_config() -> None:
     """Log only missing critical environment variables."""
-    critical = {"MEXC_ACCESS_KEY", "MEXC_SECRET_KEY"}
+    critical = {"BITGET_ACCESS_KEY", "BITGET_SECRET_KEY"}
     for key in critical:
         val = os.getenv(key)
         if not val or val in {"", "A_METTRE", "B_METTRE"}:
             logging.warning("%s manquante", key)
 
 
-class MexcFuturesClient(_BaseMexcFuturesClient):
+class BitgetFuturesClient(_BaseBitgetFuturesClient):
     """Wrapper injecting the ``requests`` module and logger."""
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
@@ -121,7 +121,7 @@ def update(client: Any, top_n: int = 20, tg_bot: Any | None = None) -> Dict[str,
 # ---------------------------------------------------------------------------
 
 def main(argv: Optional[List[str]] = None) -> None:
-    parser = argparse.ArgumentParser(description="MEXC USDT-M futures trading bot")
+    parser = argparse.ArgumentParser(description="Bitget USDT-M futures trading bot")
     parser.add_argument("--log-json", action="store_true", help="Enable JSON event logs")
     args = parser.parse_args(argv)
 
@@ -134,9 +134,9 @@ def main(argv: Optional[List[str]] = None) -> None:
             backup_count=5,
         )
     check_config()
-    client = MexcFuturesClient(
-        access_key=cfg["MEXC_ACCESS_KEY"],
-        secret_key=cfg["MEXC_SECRET_KEY"],
+    client = BitgetFuturesClient(
+        access_key=cfg["BITGET_ACCESS_KEY"],
+        secret_key=cfg["BITGET_SECRET_KEY"],
         base_url=cfg["BASE_URL"],
         recv_window=cfg["RECV_WINDOW"],
         paper_trade=cfg["PAPER_TRADE"],
