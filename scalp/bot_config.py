@@ -1,6 +1,11 @@
 import os
+from typing import List
+
+import requests
+
 
 def _base(sym: str) -> str:
+    """Return base asset for a symbol like ``BTC_USDT`` or ``BTCUSDT``."""
     if "_" in sym:
         return sym.split("_", 1)[0]
     if sym.endswith("USDT"):
@@ -10,11 +15,47 @@ def _base(sym: str) -> str:
     return sym
 
 
-ZERO_FEE_PAIRS = [
-    p.strip()
-    for p in os.getenv("ZERO_FEE_PAIRS", "").split(",")
-    if p.strip() and _base(p.strip()) not in {"BTC", "ETH"}
-]
+def fetch_zero_fee_pairs_from_mexc(base_url: str | None = None) -> List[str]:
+    """Query MEXC for symbols with zero maker/taker fees.
+
+    The endpoint ``/api/v1/contract/fee-rate`` returns the maker and taker fee
+    for each contract symbol. We keep only the markets where both fees are
+    reported as ``0``. In case of network or parsing errors, an empty list is
+    returned.
+    """
+
+    base = base_url or os.getenv("MEXC_CONTRACT_BASE_URL", "https://contract.mexc.com")
+    url = f"{base}/api/v1/contract/fee-rate"
+    try:
+        resp = requests.get(url, timeout=5)
+        data = resp.json()
+    except Exception:
+        return []
+
+    pairs: List[str] = []
+    for row in data.get("data", []):
+        sym = row.get("symbol")
+        try:
+            taker = float(row.get("takerFeeRate", 1))
+            maker = float(row.get("makerFeeRate", 1))
+        except (TypeError, ValueError):
+            continue
+        if taker == 0 and maker == 0 and sym:
+            pairs.append(sym)
+    return [p for p in pairs if _base(p) not in {"BTC", "ETH"}]
+
+
+def load_zero_fee_pairs() -> List[str]:
+    """Load zero-fee pairs from env or from MEXC."""
+
+    env = os.getenv("ZERO_FEE_PAIRS")
+    if env:
+        pairs = [p.strip() for p in env.split(",") if p.strip()]
+        return [p for p in pairs if _base(p) not in {"BTC", "ETH"}]
+    return fetch_zero_fee_pairs_from_mexc()
+
+
+ZERO_FEE_PAIRS = load_zero_fee_pairs()
 DEFAULT_SYMBOL = os.getenv("SYMBOL") or (ZERO_FEE_PAIRS[0] if ZERO_FEE_PAIRS else "BTC_USDT")
 
 CONFIG = {
@@ -51,3 +92,4 @@ CONFIG = {
     "MAX_POSITIONS": int(os.getenv("MAX_POSITIONS", "1")),
     "ZERO_FEE_PAIRS": ZERO_FEE_PAIRS,
 }
+
