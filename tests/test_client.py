@@ -104,6 +104,14 @@ def test_get_assets_paper_trade():
 
 
 def test_http_client_context_manager(monkeypatch):
+    import sys
+    import importlib
+    sys.modules.pop('requests', None)
+    real_requests = importlib.import_module('requests')
+    sys.modules['requests'] = real_requests
+    import scalp.client as http_client
+    importlib.reload(http_client)
+
     closed = {"count": 0}
 
     class DummySession:

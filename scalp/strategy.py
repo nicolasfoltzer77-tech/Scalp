@@ -308,7 +308,6 @@ def backtest(
     *,
     equity_start: float = 1_000.0,
     fee_rate: float = 0.0,
-    zero_fee_pairs: Optional[Sequence[str]] = None,
 ) -> Dict[str, float]:
     """Evaluate a list of trade dictionaries.
 
@@ -317,7 +316,6 @@ def backtest(
     common performance metrics to quickly evaluate the strategy.
     """
 
-    zero_fee = set(zero_fee_pairs or [])
     equity = equity_start
     equity_curve = [equity]
     pnl_pct_list: List[float] = []
@@ -326,8 +324,7 @@ def backtest(
     total_duration = 0.0
 
     for t in trades:
-        fr = 0.0 if t.get("symbol") in zero_fee else fee_rate
-        pnl_pct = calc_pnl_pct(t["entry"], t["exit"], t["side"], fr)
+        pnl_pct = calc_pnl_pct(t["entry"], t["exit"], t["side"], fee_rate)
         pnl_pct_list.append(pnl_pct)
         if pnl_pct >= 0:
             wins += 1
