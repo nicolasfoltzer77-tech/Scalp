@@ -57,3 +57,14 @@ class WebsocketManager:
                 logging.warning("websocket heartbeat failed: %s", exc)
                 await self.run()
                 break
+
+    async def stop(self) -> None:
+        """Cancel the heartbeat task if it is running."""
+        task = self._heartbeat_task
+        if task and not task.done():
+            task.cancel()
+            try:
+                await task
+            except BaseException:  # pragma: no cover - cancellation
+                pass
+        self._heartbeat_task = None
