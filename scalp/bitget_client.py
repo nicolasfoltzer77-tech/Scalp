@@ -3,6 +3,7 @@ import logging
 import time
 import hmac
 import hashlib
+import base64
 from typing import Any, Dict, List, Optional
 
 import requests
