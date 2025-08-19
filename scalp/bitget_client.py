@@ -10,7 +10,7 @@ import requests
 
 
 class BitgetFuturesClient:
-    """Lightweight REST client for Bitget LAPI v3 futures endpoints."""
+    """Lightweight REST client for Bitget LAPI v2 futures endpoints."""
 
     def __init__(
         self,
@@ -55,14 +55,14 @@ class BitgetFuturesClient:
         return "&".join(items)
 
     def _sign(self, prehash: str) -> str:
-        mac = hmac.new(self.sk.encode(), prehash.encode(), hashlib.sha256).digest()
-        return base64.b64encode(mac).decode()
+        return hmac.new(self.sk.encode(), prehash.encode(), hashlib.sha256).hexdigest()
 
     def _headers(self, signature: str, timestamp: int) -> Dict[str, str]:
         headers = {
             "ACCESS-KEY": self.ak,
             "ACCESS-SIGN": signature,
             "ACCESS-TIMESTAMP": str(timestamp),
+            "ACCESS-RECV-WINDOW": str(self.recv_window),
             "Content-Type": "application/json",
         }
         if self.passphrase:
@@ -73,7 +73,7 @@ class BitgetFuturesClient:
     # Public endpoints
     # ------------------------------------------------------------------
     def get_contract_detail(self, symbol: Optional[str] = None) -> Dict[str, Any]:
-        url = f"{self.base}/api/v3/mix/market/contract-detail"
+        url = f"{self.base}/api/v2/mix/market/contract-detail"
         params: Dict[str, Any] = {}
         if symbol:
             params["symbol"] = symbol
@@ -88,7 +88,7 @@ class BitgetFuturesClient:
         start: Optional[int] = None,
         end: Optional[int] = None,
     ) -> Dict[str, Any]:
-        url = f"{self.base}/api/v3/mix/market/candles/{symbol}"
+        url = f"{self.base}/api/v2/mix/market/candles/{symbol}"
         params: Dict[str, Any] = {"granularity": interval}
         if start is not None:
             params["startTime"] = int(start)
@@ -99,7 +99,7 @@ class BitgetFuturesClient:
         return r.json()
 
     def get_ticker(self, symbol: Optional[str] = None) -> Dict[str, Any]:
-        url = f"{self.base}/api/v3/mix/market/ticker"
+        url = f"{self.base}/api/v2/mix/market/ticker"
         params: Dict[str, Any] = {}
         if symbol:
             params["symbol"] = symbol
@@ -165,12 +165,12 @@ class BitgetFuturesClient:
                     }
                 ],
             }
-        return self._private_request("GET", "/api/v3/mix/account/accounts")
+        return self._private_request("GET", "/api/v2/mix/account/accounts")
 
     def get_positions(self) -> Dict[str, Any]:
         data = self._private_request(
             "GET",
-            "/api/v3/mix/position/all-position",
+            "/api/v2/mix/position/all-position",
             params={"productType": "umcbl"},
         )
         try:
@@ -191,7 +191,7 @@ class BitgetFuturesClient:
     def get_open_orders(self, symbol: Optional[str] = None) -> Dict[str, Any]:
         return self._private_request(
             "GET",
-            "/api/v3/mix/order/current",
+            "/api/v2/mix/order/current",
             params={"symbol": symbol} if symbol else None,
         )
 
@@ -262,22 +262,22 @@ class BitgetFuturesClient:
         if position_mode is not None:
             body["positionMode"] = int(position_mode)
 
-        return self._private_request("POST", "/api/v3/mix/order/place", body=body)
+        return self._private_request("POST", "/api/v2/mix/order/place", body=body)
 
     def cancel_order(self, order_ids: List[int]) -> Dict[str, Any]:
         return self._private_request(
-            "POST", "/api/v3/mix/order/cancel-order", body={"orderIds": order_ids}
+            "POST", "/api/v2/mix/order/cancel-order", body={"orderIds": order_ids}
         )
 
     def cancel_all(self, symbol: Optional[str] = None) -> Dict[str, Any]:
         body = {"symbol": symbol} if symbol else {}
-        return self._private_request("POST", "/api/v3/mix/order/cancel-all-order", body=body)
+        return self._private_request("POST", "/api/v2/mix/order/cancel-all-order", body=body)
 
     def close_position(self, symbol: str) -> Dict[str, Any]:
         """Close an open position for ``symbol``."""
         body = {"symbol": symbol}
         return self._private_request(
-            "POST", "/api/v3/mix/position/close-position", body=body
+            "POST", "/api/v2/mix/position/close-position", body=body
         )
 
     def close_all_positions(self) -> Dict[str, Any]:

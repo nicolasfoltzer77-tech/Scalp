@@ -39,12 +39,11 @@ def test_private_request_get_signature(monkeypatch):
     assert resp["success"] is True
     qs = "a=1&b=2"
     prehash = f"1000GET/api/test?{qs}"
-    expected = base64.b64encode(
-        hmac.new(b"secret", prehash.encode(), hashlib.sha256).digest()
-    ).decode()
+    expected = hmac.new(b"secret", prehash.encode(), hashlib.sha256).hexdigest()
     assert called["headers"]["ACCESS-SIGN"] == expected
     assert called["headers"]["ACCESS-KEY"] == "key"
     assert called["headers"]["ACCESS-TIMESTAMP"] == "1000"
+    assert called["headers"]["ACCESS-RECV-WINDOW"] == "30"
     assert called["params"] == {"b": "2", "a": "1"}
 
 
@@ -74,12 +73,11 @@ def test_private_request_post_signature(monkeypatch):
     assert resp["success"] is True
     body = json.dumps({"a": 1, "b": 2}, separators=(",", ":"), ensure_ascii=False)
     prehash = f"1000POST/api/test{body}"
-    expected = base64.b64encode(
-        hmac.new(b"secret", prehash.encode(), hashlib.sha256).digest()
-    ).decode()
+    expected = hmac.new(b"secret", prehash.encode(), hashlib.sha256).hexdigest()
     assert called["headers"]["ACCESS-SIGN"] == expected
     assert called["headers"]["ACCESS-KEY"] == "key"
     assert called["headers"]["ACCESS-TIMESTAMP"] == "1000"
+    assert called["headers"]["ACCESS-RECV-WINDOW"] == "30"
     assert called["data"].decode("utf-8") == body
 
 
