@@ -250,3 +250,27 @@ class MexcFuturesClient:
     def cancel_all(self, symbol: Optional[str] = None) -> Dict[str, Any]:
         body = {"symbol": symbol} if symbol else {}
         return self._private_request("POST", "/api/v1/private/order/cancel_all", body=body)
+
+    def close_position(self, symbol: str) -> Dict[str, Any]:
+        """Close an open position for ``symbol``.
+
+        The MEXC API exposes dedicated endpoints to force close positions.
+        On startup the trading bot uses this method to ensure no leftover
+        positions remain from a previous run.  When running in paper mode the
+        request is still logged but otherwise has no effect.
+        """
+
+        body = {"symbol": symbol}
+        return self._private_request(
+            "POST", "/api/v1/private/position/close_position", body=body
+        )
+
+    def close_all_positions(self) -> Dict[str, Any]:
+        """Close all open positions.
+
+        Used during bot initialisation to guarantee a clean trading state.
+        """
+
+        return self._private_request(
+            "POST", "/api/v1/private/position/close_all_positions", body={}
+        )
