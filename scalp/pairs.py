@@ -32,7 +32,10 @@ def filter_trade_pairs(
 
     for info in pairs:
         sym = info.get("symbol")
-        if not sym or sym not in zero_fee:
+        # Only enforce the zero-fee filter when a list is provided.  Previously,
+        # an empty configuration would discard every pair, resulting in an empty
+        # listing on Telegram.
+        if not sym or (zero_fee and sym not in zero_fee):
             continue
         try:
             vol = float(info.get("volume", 0))
