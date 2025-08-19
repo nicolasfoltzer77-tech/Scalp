@@ -64,8 +64,7 @@ def eval_params_one(grid_item: Dict[str, Any]) -> Dict[str, Any]:
     params = dict(grid_item)
     trades = params.pop("trades", [])
     fee_rate = params.pop("fee_rate", None)
-    zero_fee = params.pop("zero_fee_pairs", None)
-    pnl = backtest_trades(trades, fee_rate=fee_rate, zero_fee_pairs=zero_fee)
+    pnl = backtest_trades(trades, fee_rate=fee_rate)
     params["pnl"] = pnl
     return params
 
