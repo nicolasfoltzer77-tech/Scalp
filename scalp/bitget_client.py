@@ -55,7 +55,9 @@ class BitgetFuturesClient:
         return "&".join(items)
 
     def _sign(self, prehash: str) -> str:
-        return hmac.new(self.sk.encode(), prehash.encode(), hashlib.sha256).hexdigest()
+        """Return a base64-encoded HMAC SHA256 signature."""
+        digest = hmac.new(self.sk.encode(), prehash.encode(), hashlib.sha256).digest()
+        return base64.b64encode(digest).decode()
 
     def _headers(self, signature: str, timestamp: int) -> Dict[str, str]:
         headers = {
