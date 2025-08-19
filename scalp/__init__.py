@@ -1,24 +1,33 @@
 """Utilities and helpers for Scalp bot.
 
-This module also looks for a ``.env`` file located one directory above the
-repository (e.g. ``Notebooks/.env`` when the project lives in
-``Notebooks/scalp``) and loads any variables found there.  This allows users to
-store private API keys outside of the git repository while still making them
-available to the bot at runtime.
+When the bot is executed from ``notebook/spot/mexc_bot.py`` it expects secret
+keys to live in ``notebook/.env``.  On import this module attempts to load the
+variables from that file so that API keys can remain outside of the repository
+yet still be available at runtime.
 """
 
 from __future__ import annotations
 
 import os
 from pathlib import Path
+import sys
 
 
 def _load_parent_env() -> None:
-    """Load environment variables from ``../.env`` if present."""
+    """Load environment variables from ``../.env`` relative to the entry script.
 
-    env_file = Path(__file__).resolve().parents[2] / ".env"
+    The bot is typically launched from ``notebook/spot/mexc_bot.py`` and keys
+    are expected to be stored one directory above (``notebook/.env``).  If that
+    file is not found the function falls back to the historical behaviour of
+    checking ``../.env`` relative to the package itself.
+    """
+
+    script_path = Path(sys.argv[0]).resolve()
+    env_file = script_path.parent.parent / ".env"
     if not env_file.exists():
-        return
+        env_file = Path(__file__).resolve().parents[2] / ".env"
+        if not env_file.exists():
+            return
 
     try:
         from dotenv import load_dotenv
