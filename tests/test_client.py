@@ -3,7 +3,7 @@ import hmac
 import hashlib
 import pytest
 import bot
-from bot import MexcFuturesClient
+from bot import MexcSpotClient
 
 
 @pytest.fixture(autouse=True)
@@ -12,8 +12,8 @@ def no_log_event(monkeypatch):
 
 
 def test_private_request_get_signature(monkeypatch):
-    client = MexcFuturesClient("key", "secret", "https://test")
-    monkeypatch.setattr(MexcFuturesClient, "_ms", staticmethod(lambda: 1000))
+    client = MexcSpotClient("key", "secret", "https://test")
+    monkeypatch.setattr(MexcSpotClient, "_ms", staticmethod(lambda: 1000))
 
     called = {}
 
@@ -44,8 +44,8 @@ def test_private_request_get_signature(monkeypatch):
 
 
 def test_private_request_post_signature(monkeypatch):
-    client = MexcFuturesClient("key", "secret", "https://test")
-    monkeypatch.setattr(MexcFuturesClient, "_ms", staticmethod(lambda: 1000))
+    client = MexcSpotClient("key", "secret", "https://test")
+    monkeypatch.setattr(MexcSpotClient, "_ms", staticmethod(lambda: 1000))
 
     called = {}
 
@@ -75,8 +75,8 @@ def test_private_request_post_signature(monkeypatch):
 
 
 def test_private_request_http_error(monkeypatch):
-    client = MexcFuturesClient("key", "secret", "https://test")
-    monkeypatch.setattr(MexcFuturesClient, "_ms", staticmethod(lambda: 1000))
+    client = MexcSpotClient("key", "secret", "https://test")
+    monkeypatch.setattr(MexcSpotClient, "_ms", staticmethod(lambda: 1000))
 
     class Resp:
         status_code = 418
@@ -96,8 +96,8 @@ def test_private_request_http_error(monkeypatch):
 
 
 def test_get_assets_paper_trade():
-    client = MexcFuturesClient("key", "secret", "https://test", paper_trade=True)
-    assets = client.get_assets()
+    client = MexcSpotClient("key", "secret", "https://test", paper_trade=True)
+    assets = client.get_account()
     assert assets["success"] is True
     usdt = next((row for row in assets.get("data", []) if row.get("currency") == "USDT"), None)
     assert usdt and usdt["equity"] == 100.0

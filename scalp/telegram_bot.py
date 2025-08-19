@@ -96,7 +96,7 @@ class TelegramBot:
 
 
     def _menu_text(self, session_pnl: float) -> str:
-        assets = self.client.get_assets()
+        assets = self.client.get_account()
         equity = 0.0
         for row in assets.get("data", []):
             if row.get("currency") == "USDT":
@@ -194,7 +194,7 @@ class TelegramBot:
         if not data:
             return None, None
         if data == "balance":
-            assets = self.client.get_assets()
+            assets = self.client.get_account()
             equity = 0.0
             for row in assets.get("data", []):
                 if row.get("currency") == "USDT":

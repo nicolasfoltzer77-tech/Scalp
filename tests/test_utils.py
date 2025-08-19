@@ -1,5 +1,7 @@
 import pytest
-from bot import ema, cross, compute_position_size, CONFIG
+import pytest
+
+from bot import ema, cross, compute_position_size
 
 
 def test_ema_basic():
@@ -15,21 +17,11 @@ def test_cross_up_down_none():
 
 
 def test_compute_position_size():
-    detail = {
-        "data": [
-            {
-                "symbol": CONFIG["SYMBOL"],
-                "contractSize": 0.001,
-                "volUnit": 1,
-                "minVol": 1,
-            }
-        ]
-    }
-    vol = compute_position_size(detail, equity_usdt=100.0, price=20000.0,
-                                risk_pct=0.01, leverage=5)
-    assert vol == 1
+    vol = compute_position_size(equity_usdt=100.0, price=20000.0, risk_pct=0.05)
+    assert vol == 0
 
 
-def test_compute_position_size_missing_symbol():
-    with pytest.raises(ValueError):
-        compute_position_size({"data": []}, 100.0, 1.0, 0.01, 5)
+def test_compute_position_size_invalid_inputs():
+    assert compute_position_size(-100.0, 20000.0, 0.01) == 0
+    assert compute_position_size(100.0, -1.0, 0.01) == 0
+    assert compute_position_size(100.0, 1.0, -0.5) == 0

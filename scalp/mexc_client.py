@@ -8,8 +8,8 @@ from typing import Any, Dict, List, Optional
 import requests
 
 
-class MexcFuturesClient:
-    """Lightweight REST client for MEXC futures endpoints."""
+class MexcSpotClient:
+    """Lightweight REST client for MEXC spot endpoints."""
 
     def __init__(
         self,
@@ -147,7 +147,12 @@ class MexcFuturesClient:
         return data
 
     # Accounts & positions -------------------------------------------------
-    def get_assets(self) -> Dict[str, Any]:
+    def get_account(self) -> Dict[str, Any]:
+        """Return account balances.
+
+        In paper-trade mode a deterministic balance is provided to facilitate
+        testing without hitting the real API."""
+
         if self.paper_trade:
             return {
                 "success": True,

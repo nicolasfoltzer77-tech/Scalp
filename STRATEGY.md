@@ -1,6 +1,6 @@
 # Stratégie de trading
 
-Ce document décrit la logique de trading utilisée par le bot **Scalp**. Elle vise un scalping court terme sur les futures USDT‑M de MEXC.
+Ce document décrit la logique de trading utilisée par le bot **Scalp**. Elle vise un scalping court terme sur le marché spot USDT de MEXC.
 
 ## Principes généraux
 
