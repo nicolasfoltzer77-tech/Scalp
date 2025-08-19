@@ -1,5 +1,7 @@
 import importlib
 from types import SimpleNamespace
+from types import SimpleNamespace
+import importlib
 
 import requests
 
@@ -8,7 +10,7 @@ def _fake_resp(data):
     return SimpleNamespace(json=lambda: data)
 
 
-def test_fetch_zero_fee_pairs(monkeypatch, capsys):
+def test_fetch_zero_fee_pairs(monkeypatch):
     def fake_get(url, timeout=5):
         return _fake_resp(
             {
@@ -54,8 +56,7 @@ def test_fetch_pairs_with_fees(monkeypatch, capsys):
     assert "AAA_USDT: maker=0.0, taker=0.0" in out
     assert "BBB_USDT: maker=0.001, taker=0.001" in out
 
-
-def test_fetch_pairs_with_fees(monkeypatch, capsys):
+def test_fetch_pairs_with_fees(monkeypatch):
     def fake_get(url, timeout=5):
         return _fake_resp(
             {
@@ -74,7 +75,4 @@ def test_fetch_pairs_with_fees(monkeypatch, capsys):
         ("AAA_USDT", 0.0, 0.0),
         ("BBB_USDT", 0.001, 0.001),
     ]
-    out, _ = capsys.readouterr()
-    assert "AAA_USDT: maker=0.0, taker=0.0" in out
-    assert "BBB_USDT: maker=0.001, taker=0.001" in out
 

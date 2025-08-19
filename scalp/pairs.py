@@ -107,10 +107,12 @@ def send_selected_pairs(
     *,
     select_fn: Callable[[Any, int], List[Dict[str, Any]]] = select_top_pairs,
     notify_fn: Callable[[str, Optional[Dict[str, Any]]], None] = notify,
-) -> None:
+) -> Dict[str, str]:
     """Fetch top pairs, drop USD/USDT/USDC duplicates and notify their list.
 
-    Returns the payload sent to ``notify_fn`` for convenience.
+    Returns the payload sent to ``notify_fn``. The mapping contains the
+    comma-separated symbols for each color group (``green``, ``orange`` and
+    ``red``) or an empty dictionary when no pairs are available.
     """
 
     def split_symbol(sym: str) -> tuple[str, str]:

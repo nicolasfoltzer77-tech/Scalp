@@ -101,3 +101,37 @@ def test_get_assets_paper_trade():
     assert assets["success"] is True
     usdt = next((row for row in assets.get("data", []) if row.get("currency") == "USDT"), None)
     assert usdt and usdt["equity"] == 100.0
+
+
+def test_http_client_context_manager(monkeypatch):
+    closed = {"count": 0}
+
+    class DummySession:
+        def mount(self, *a, **k):
+            pass
+
+        def request(self, *a, **k):
+            class Resp:
+                def raise_for_status(self):
+                    pass
+
+                def json(self):
+                    return {}
+
+                text = "{}"
+
+            return Resp()
+
+        def close(self):
+            closed["count"] += 1
+
+    monkeypatch.setattr(http_client.requests, "Session", lambda: DummySession())
+
+    http = http_client.HttpClient("http://example.com")
+    http.close()
+    assert closed["count"] == 1
+
+    closed["count"] = 0
+    with http_client.HttpClient("http://example.com") as hc:
+        hc.request("GET", "/")
+    assert closed["count"] == 1
