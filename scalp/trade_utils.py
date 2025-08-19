@@ -15,7 +15,16 @@ def compute_position_size(
     leverage: int,
     symbol: Optional[str] = None,
 ) -> int:
-    """Return contract volume to trade for the given risk parameters."""
+    """Return contract volume to trade for the given risk parameters.
+
+    The original implementation assumed ``price`` and contract metadata were
+    always valid which could lead to divide-by-zero errors or negative volumes
+    when the upstream API returned incomplete data.  To harden the sizing logic
+    we now validate these inputs and simply return ``0`` whenever they are
+    non‑positive.  The caller interprets a zero volume as a cue to skip the
+    trade, keeping the bot running without raising exceptions.
+    """
+
     symbol = symbol or CONFIG.get("SYMBOL")
     contracts = contract_detail.get("data") or []
     if not isinstance(contracts, list):
@@ -27,6 +36,9 @@ def compute_position_size(
     contract_size = float(contract.get("contractSize", 0.0001))
     vol_unit = int(contract.get("volUnit", 1))
     min_vol = int(contract.get("minVol", 1))
+
+    if price <= 0 or contract_size <= 0 or vol_unit <= 0 or min_vol <= 0:
+        return 0
 
     notional = equity_usdt * float(risk_pct) * float(leverage)
     if notional <= 0.0:

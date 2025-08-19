@@ -29,3 +29,25 @@ def test_compute_position_size_symbol_not_found():
     with pytest.raises(ValueError):
         compute_position_size(contract_detail, equity_usdt=1000, price=500,
                                 risk_pct=0.01, leverage=10, symbol="BTC_USDT")
+
+
+def test_compute_position_size_invalid_price():
+    contract_detail = {
+        "data": [
+            {
+                "symbol": "BTC_USDT",
+                "contractSize": 0.01,
+                "volUnit": 1,
+                "minVol": 1,
+            }
+        ]
+    }
+    vol = compute_position_size(
+        contract_detail,
+        equity_usdt=1000,
+        price=0,
+        risk_pct=0.01,
+        leverage=10,
+        symbol="BTC_USDT",
+    )
+    assert vol == 0
