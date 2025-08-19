@@ -108,11 +108,12 @@ def send_selected_pairs(
     return payload
 
 
-def update(client: Any, top_n: int = 20, tg_bot: Any | None = None) -> None:
+def update(client: Any, top_n: int = 20, tg_bot: Any | None = None) -> Dict[str, str]:
     """Send a fresh list of pairs to reflect current market conditions."""
     payload = send_selected_pairs(client, top_n=top_n, tg_bot=tg_bot)
-    if payload:
-        print(_format_text("pair_list", payload))
+    text = _format_text("pair_list", payload)
+    logging.info(text)
+    return payload
 
 
 # ---------------------------------------------------------------------------
