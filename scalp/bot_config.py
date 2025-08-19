@@ -1,5 +1,5 @@
 import os
-from typing import List
+from typing import List, Tuple
 
 import requests
 
@@ -15,13 +15,13 @@ def _base(sym: str) -> str:
     return sym
 
 
-def fetch_zero_fee_pairs_from_mexc(base_url: str | None = None) -> List[str]:
-    """Query MEXC for symbols with zero maker/taker fees.
+def fetch_pairs_with_fees_from_mexc(
+    base_url: str | None = None,
+) -> List[Tuple[str, float, float]]:
+    """Retrieve trading pairs and their maker/taker fee rates from MEXC.
 
-    The endpoint ``/api/v1/contract/fee-rate`` returns the maker and taker fee
-    for each contract symbol. We keep only the markets where both fees are
-    reported as ``0``. In case of network or parsing errors, an empty list is
-    returned.
+    The function prints each pair as it is parsed so that callers can observe
+    the data returned by the exchange step by step.
     """
 
     base = base_url or os.getenv("MEXC_CONTRACT_BASE_URL", "https://contract.mexc.com")
@@ -32,7 +32,7 @@ def fetch_zero_fee_pairs_from_mexc(base_url: str | None = None) -> List[str]:
     except Exception:
         return []
 
-    pairs: List[str] = []
+    results: List[Tuple[str, float, float]] = []
     for row in data.get("data", []):
         sym = row.get("symbol")
         try:
@@ -40,23 +40,42 @@ def fetch_zero_fee_pairs_from_mexc(base_url: str | None = None) -> List[str]:
             maker = float(row.get("makerFeeRate", 1))
         except (TypeError, ValueError):
             continue
-        if taker == 0 and maker == 0 and sym:
-            pairs.append(sym)
-    return [p for p in pairs if _base(p) not in {"BTC", "ETH"}]
+        if not sym:
+            continue
+        print(f"{sym}: maker={maker}, taker={taker}")
+        results.append((sym, maker, taker))
+    return results
 
 
-def load_zero_fee_pairs() -> List[str]:
-    """Load zero-fee pairs from env or from MEXC."""
+def fetch_pairs_from_mexc(base_url: str | None = None) -> List[str]:
+    """Query MEXC for available contract symbols.
+
+    The endpoint ``/api/v1/contract/fee-rate`` returns the maker and taker fee
+    for each contract symbol. We now return every symbol provided by the API
+    (still excluding BTC and ETH) so that callers can see the full list instead
+    of filtering to only zero-fee markets.
+    """
+
+    pairs_with_fees = fetch_pairs_with_fees_from_mexc(base_url)
+
+    pairs = [sym for sym, _maker, _taker in pairs_with_fees]
+    filtered = [p for p in pairs if _base(p) not in {"BTC", "ETH"}]
+    print(f"Pairs: {filtered}")
+    return filtered
+
+
+def load_pairs() -> List[str]:
+    """Load trading pairs from env or from MEXC."""
 
     env = os.getenv("ZERO_FEE_PAIRS")
     if env:
         pairs = [p.strip() for p in env.split(",") if p.strip()]
         return [p for p in pairs if _base(p) not in {"BTC", "ETH"}]
-    return fetch_zero_fee_pairs_from_mexc()
+    return fetch_pairs_from_mexc()
 
 
-ZERO_FEE_PAIRS = load_zero_fee_pairs()
-DEFAULT_SYMBOL = os.getenv("SYMBOL") or (ZERO_FEE_PAIRS[0] if ZERO_FEE_PAIRS else "BTC_USDT")
+PAIRS = load_pairs()
+DEFAULT_SYMBOL = os.getenv("SYMBOL") or (PAIRS[0] if PAIRS else "BTC_USDT")
 
 CONFIG = {
     "MEXC_ACCESS_KEY": os.getenv("MEXC_ACCESS_KEY", "A_METTRE"),
@@ -90,6 +109,6 @@ CONFIG = {
     "MAX_DAILY_LOSS_PCT": float(os.getenv("MAX_DAILY_LOSS_PCT", "5.0")),
     "MAX_DAILY_PROFIT_PCT": float(os.getenv("MAX_DAILY_PROFIT_PCT", "5.0")),
     "MAX_POSITIONS": int(os.getenv("MAX_POSITIONS", "1")),
-    "ZERO_FEE_PAIRS": ZERO_FEE_PAIRS,
+    "PAIRS": PAIRS,
 }
 
