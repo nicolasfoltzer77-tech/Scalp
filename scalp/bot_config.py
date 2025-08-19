@@ -1,3 +1,4 @@
+import logging
 import os
 from typing import List, Tuple
 
@@ -42,7 +43,7 @@ def fetch_pairs_with_fees_from_mexc(
             continue
         if not sym:
             continue
-        print(f"{sym}: maker={maker}, taker={taker}")
+        logging.debug("%s: maker=%s, taker=%s", sym, maker, taker)
         results.append((sym, maker, taker))
     return results
 
@@ -60,7 +61,7 @@ def fetch_zero_fee_pairs_from_mexc(base_url: str | None = None) -> List[str]:
 
     pairs = [sym for sym, maker, taker in pairs_with_fees if taker == 0 and maker == 0]
     zero_fee = [p for p in pairs if _base(p) not in {"BTC", "ETH"}]
-    print(f"Zero-fee pairs: {zero_fee}")
+    logging.debug("Zero-fee pairs: %s", zero_fee)
     return zero_fee
 
 
@@ -74,8 +75,19 @@ def load_zero_fee_pairs() -> List[str]:
     return fetch_zero_fee_pairs_from_mexc()
 
 
-ZERO_FEE_PAIRS = load_zero_fee_pairs()
-DEFAULT_SYMBOL = os.getenv("SYMBOL") or (ZERO_FEE_PAIRS[0] if ZERO_FEE_PAIRS else "BTC_USDT")
+_ZERO_FEE_PAIRS: List[str] | None = None
+
+
+def get_zero_fee_pairs() -> List[str]:
+    """Return cached zero-fee pairs loading them on first access."""
+
+    global _ZERO_FEE_PAIRS
+    if _ZERO_FEE_PAIRS is None:
+        _ZERO_FEE_PAIRS = load_zero_fee_pairs()
+    return _ZERO_FEE_PAIRS
+
+
+DEFAULT_SYMBOL = os.getenv("SYMBOL") or "BTC_USDT"
 
 CONFIG = {
     "MEXC_ACCESS_KEY": os.getenv("MEXC_ACCESS_KEY", "A_METTRE"),
@@ -109,6 +121,6 @@ CONFIG = {
     "MAX_DAILY_LOSS_PCT": float(os.getenv("MAX_DAILY_LOSS_PCT", "5.0")),
     "MAX_DAILY_PROFIT_PCT": float(os.getenv("MAX_DAILY_PROFIT_PCT", "5.0")),
     "MAX_POSITIONS": int(os.getenv("MAX_POSITIONS", "1")),
-    "ZERO_FEE_PAIRS": ZERO_FEE_PAIRS,
+    "ZERO_FEE_PAIRS": [],  # loaded lazily via ``get_zero_fee_pairs``
 }
 
