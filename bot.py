@@ -15,7 +15,7 @@ from scalp.notifier import notify, _format_text
 from scalp import __version__, RiskManager
 from scalp.telegram_bot import init_telegram_bot
 
-from scalp.bot_config import CONFIG
+from scalp.bot_config import CONFIG, load_zero_fee_pairs
 from scalp.strategy import ema, cross
 from scalp.trade_utils import (
     compute_position_size,
@@ -170,7 +170,7 @@ def main(argv: Optional[List[str]] = None) -> None:
     interval = cfg["INTERVAL"]
     ema_fast_n = cfg["EMA_FAST"]
     ema_slow_n = cfg["EMA_SLOW"]
-    zero_fee_pairs = set(cfg.get("ZERO_FEE_PAIRS", []))
+    zero_fee_pairs = set(load_zero_fee_pairs())
     fee_rate = 0.0 if symbol in zero_fee_pairs else cfg.get("FEE_RATE", 0.0)
 
     contract_detail = client.get_contract_detail(symbol)
