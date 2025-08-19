@@ -3,14 +3,7 @@ import hmac
 import hashlib
 import pytest
 import bot
-from bot import MexcFuturesClient
-import sys
-import importlib
-
-sys.modules.pop("requests", None)
-real_requests = importlib.import_module("requests")
-sys.modules["requests"] = real_requests
-import scalp.client as http_client
+from bot import BitgetFuturesClient
 
 
 @pytest.fixture(autouse=True)
@@ -19,8 +12,8 @@ def no_log_event(monkeypatch):
 
 
 def test_private_request_get_signature(monkeypatch):
-    client = MexcFuturesClient("key", "secret", "https://test")
-    monkeypatch.setattr(MexcFuturesClient, "_ms", staticmethod(lambda: 1000))
+    client = BitgetFuturesClient("key", "secret", "https://test")
+    monkeypatch.setattr(BitgetFuturesClient, "_ms", staticmethod(lambda: 1000))
 
     called = {}
 
@@ -51,8 +44,8 @@ def test_private_request_get_signature(monkeypatch):
 
 
 def test_private_request_post_signature(monkeypatch):
-    client = MexcFuturesClient("key", "secret", "https://test")
-    monkeypatch.setattr(MexcFuturesClient, "_ms", staticmethod(lambda: 1000))
+    client = BitgetFuturesClient("key", "secret", "https://test")
+    monkeypatch.setattr(BitgetFuturesClient, "_ms", staticmethod(lambda: 1000))
 
     called = {}
 
@@ -82,8 +75,8 @@ def test_private_request_post_signature(monkeypatch):
 
 
 def test_private_request_http_error(monkeypatch):
-    client = MexcFuturesClient("key", "secret", "https://test")
-    monkeypatch.setattr(MexcFuturesClient, "_ms", staticmethod(lambda: 1000))
+    client = BitgetFuturesClient("key", "secret", "https://test")
+    monkeypatch.setattr(BitgetFuturesClient, "_ms", staticmethod(lambda: 1000))
 
     class Resp:
         status_code = 418
@@ -103,7 +96,7 @@ def test_private_request_http_error(monkeypatch):
 
 
 def test_get_assets_paper_trade():
-    client = MexcFuturesClient("key", "secret", "https://test", paper_trade=True)
+    client = BitgetFuturesClient("key", "secret", "https://test", paper_trade=True)
     assets = client.get_assets()
     assert assets["success"] is True
     usdt = next((row for row in assets.get("data", []) if row.get("currency") == "USDT"), None)

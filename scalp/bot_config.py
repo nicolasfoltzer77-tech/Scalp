@@ -16,16 +16,16 @@ def _base(sym: str) -> str:
     return sym
 
 
-def fetch_pairs_with_fees_from_mexc(
+def fetch_pairs_with_fees_from_bitget(
     base_url: str | None = None,
 ) -> List[Tuple[str, float, float]]:
-    """Retrieve trading pairs and their maker/taker fee rates from MEXC.
+    """Retrieve trading pairs and their maker/taker fee rates from Bitget.
 
     The function prints each pair as it is parsed so that callers can observe
     the data returned by the exchange step by step.
     """
 
-    base = base_url or os.getenv("MEXC_CONTRACT_BASE_URL", "https://contract.mexc.com")
+    base = base_url or os.getenv("BITGET_CONTRACT_BASE_URL", "https://api.bitget.com")
     url = f"{base}/api/v1/contract/fee-rate"
     try:
         resp = requests.get(url, timeout=5)
@@ -48,8 +48,8 @@ def fetch_pairs_with_fees_from_mexc(
     return results
 
 
-def fetch_zero_fee_pairs_from_mexc(base_url: str | None = None) -> List[str]:
-    """Query MEXC for symbols with zero maker/taker fees.
+def fetch_zero_fee_pairs_from_bitget(base_url: str | None = None) -> List[str]:
+    """Query Bitget for symbols with zero maker/taker fees.
 
     The endpoint ``/api/v1/contract/fee-rate`` returns the maker and taker fee
     for each contract symbol. We keep only the markets where both fees are
@@ -57,7 +57,7 @@ def fetch_zero_fee_pairs_from_mexc(base_url: str | None = None) -> List[str]:
     returned.
     """
 
-    pairs_with_fees = fetch_pairs_with_fees_from_mexc(base_url)
+    pairs_with_fees = fetch_pairs_with_fees_from_bitget(base_url)
 
     pairs = [sym for sym, maker, taker in pairs_with_fees if taker == 0 and maker == 0]
     zero_fee = [p for p in pairs if _base(p) not in {"BTC", "ETH"}]
@@ -66,13 +66,13 @@ def fetch_zero_fee_pairs_from_mexc(base_url: str | None = None) -> List[str]:
 
 
 def load_zero_fee_pairs() -> List[str]:
-    """Load zero-fee pairs from env or from MEXC."""
+    """Load zero-fee pairs from env or from Bitget."""
 
     env = os.getenv("ZERO_FEE_PAIRS")
     if env:
         pairs = [p.strip() for p in env.split(",") if p.strip()]
         return [p for p in pairs if _base(p) not in {"BTC", "ETH"}]
-    return fetch_zero_fee_pairs_from_mexc()
+    return fetch_zero_fee_pairs_from_bitget()
 
 
 _ZERO_FEE_PAIRS: List[str] | None = None
@@ -90,8 +90,8 @@ def get_zero_fee_pairs() -> List[str]:
 DEFAULT_SYMBOL = os.getenv("SYMBOL") or "BTC_USDT"
 
 CONFIG = {
-    "MEXC_ACCESS_KEY": os.getenv("MEXC_ACCESS_KEY", "A_METTRE"),
-    "MEXC_SECRET_KEY": os.getenv("MEXC_SECRET_KEY", "B_METTRE"),
+    "BITGET_ACCESS_KEY": os.getenv("BITGET_ACCESS_KEY", "A_METTRE"),
+    "BITGET_SECRET_KEY": os.getenv("BITGET_SECRET_KEY", "B_METTRE"),
     "PAPER_TRADE": os.getenv("PAPER_TRADE", "true").lower() in ("1", "true", "yes", "y"),
     "SYMBOL": DEFAULT_SYMBOL,
     "INTERVAL": os.getenv("INTERVAL", "Min1"),
@@ -116,7 +116,7 @@ CONFIG = {
     "LOOP_SLEEP_SECS": int(os.getenv("LOOP_SLEEP_SECS", "10")),
     "RECV_WINDOW": int(os.getenv("RECV_WINDOW", "30")),
     "LOG_DIR": os.getenv("LOG_DIR", "./logs"),
-    "BASE_URL": os.getenv("MEXC_CONTRACT_BASE_URL", "https://contract.mexc.com"),
+    "BASE_URL": os.getenv("BITGET_CONTRACT_BASE_URL", "https://api.bitget.com"),
     "FEE_RATE": float(os.getenv("FEE_RATE", "0.0")),
     "MAX_DAILY_LOSS_PCT": float(os.getenv("MAX_DAILY_LOSS_PCT", "5.0")),
     "MAX_DAILY_PROFIT_PCT": float(os.getenv("MAX_DAILY_PROFIT_PCT", "5.0")),
