@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-from scalp.bot_config import CONFIG, load_zero_fee_pairs
+from scalp.bot_config import CONFIG
 from scalp.metrics import calc_pnl_pct
 from .walkforward import walk_forward
 
@@ -23,7 +23,7 @@ def backtest_trades(
     trade will be recorded with the computed PnL.
     """
     fee_rate = fee_rate if fee_rate is not None else CONFIG.get("FEE_RATE", 0.0)
-    zero_fee = set(zero_fee_pairs or load_zero_fee_pairs())
+    zero_fee = set(zero_fee_pairs or [])
 
     pnl = 0.0
     for tr in trades:

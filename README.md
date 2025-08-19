@@ -23,7 +23,8 @@ Le bot lit sa configuration via des variables d'environnement :
 
 - `MEXC_ACCESS_KEY`, `MEXC_SECRET_KEY` : clés API MEXC (laisser les valeurs par défaut pour rester en mode papier).
 - `PAPER_TRADE` (`true`/`false`) : par défaut `true`, n'envoie aucun ordre réel.
-- `SYMBOL` : symbole du contrat futures (par défaut, première paire de `ZERO_FEE_PAIRS` ou `BTC_USDT`).
+- `SYMBOL` : symbole du contrat futures (par défaut, première paire retournée par MEXC ou `BTC_USDT`).
+- `PAIRS` : liste optionnelle de paires séparées par des virgules (une seule par actif de base).
 - `INTERVAL` : intervalle des chandeliers, ex. `Min1`, `Min5`.
 - `EMA_FAST`, `EMA_SLOW` : périodes des EMA utilisées par la stratégie.
 - `MACD_FAST`, `MACD_SLOW`, `MACD_SIGNAL` : paramètres du filtre de tendance MACD.
@@ -74,7 +75,7 @@ rapidement les pertes.
 
 Principes généraux :
 
-- sélection de paires liquides à frais nuls et au fort momentum ;
+- sélection de paires liquides au fort momentum ;
 - trade uniquement dans le sens de la tendance dominante (MACD + EMA longue) ;
 - confirmation multi‑indicateurs (VWAP, volume/OBV, RSI multi‑UT) ;
 - stop‑loss et take‑profit dynamiques basés sur l’ATR avec taille de position

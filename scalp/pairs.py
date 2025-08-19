@@ -1,9 +1,9 @@
 """Utilities to select trading pairs and detect signals."""
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Callable
+from typing import Any, Dict, List, Callable
 
-from scalp.bot_config import CONFIG, load_zero_fee_pairs
+from scalp.bot_config import CONFIG
 from scalp.strategy import ema as default_ema, cross as default_cross
 from scalp.notifier import notify
 
@@ -22,20 +22,15 @@ def filter_trade_pairs(
     *,
     volume_min: float = 5_000_000,
     max_spread_bps: float = 5.0,
-    zero_fee_pairs: Optional[List[str]] = None,
     top_n: int = 20,
 ) -> List[Dict[str, Any]]:
-    """Filter pairs by volume, spread and zero fees."""
+    """Filter pairs by volume and spread."""
     pairs = get_trade_pairs(client)
-    zero_fee = set(zero_fee_pairs or load_zero_fee_pairs())
     eligible: List[Dict[str, Any]] = []
 
     for info in pairs:
         sym = info.get("symbol")
-        # Only enforce the zero-fee filter when a list is provided.  Previously,
-        # an empty configuration would discard every pair, resulting in an empty
-        # listing on Telegram.
-        if not sym or (zero_fee and sym not in zero_fee):
+        if not sym:
             continue
         try:
             vol = float(info.get("volume", 0))
