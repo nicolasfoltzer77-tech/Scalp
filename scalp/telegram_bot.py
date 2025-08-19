@@ -86,7 +86,10 @@ class TelegramBot:
             if not sym:
                 continue
             base = self._base_symbol(sym)
-            buttons.append([{"text": base, "callback_data": f"stop_{base}"}])
+            # Use the full symbol in the callback so we can properly
+            # identify the position to close.  Only the label shows the
+            # base asset to keep the interface concise.
+            buttons.append([{"text": base, "callback_data": f"stop_{sym}"}])
         buttons.append([{"text": "Tous", "callback_data": "stop_all"}])
         buttons.append([{"text": "Retour", "callback_data": "back"}])
         return buttons
