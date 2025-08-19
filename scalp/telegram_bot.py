@@ -261,23 +261,26 @@ class TelegramBot:
                 self.risk_mgr.reset_day()
                 return "Positions et risque réinitialisés", self.settings_keyboard
             except Exception:
-                return "Erreur reset total", self.settings_keyboard
+                return "Erreur lors du reset total", self.settings_keyboard
 
         if data == "stop":
+            pos = self.client.get_positions()
+            if not pos.get("data"):
+                return "Aucune crypto sélectionnée", self.settings_keyboard
             return "Choisissez la position à fermer:", self._build_stop_keyboard()
         if data == "stop_all":
             try:
                 self.client.close_all_positions()
                 return "Toutes les positions fermées", self.settings_keyboard
             except Exception:
-                return "Erreur fermeture positions", self.settings_keyboard
+                return "Erreur arrêt trade", self.settings_keyboard
         if data.startswith("stop_"):
             sym = data[5:]
             try:
                 self.client.close_position(sym)
                 return f"Position {sym} fermée", self.settings_keyboard
             except Exception:
-                return f"Erreur fermeture {sym}", self.settings_keyboard
+                return f"Erreur arrêt trade {sym}", self.settings_keyboard
 
         if data == "shutdown":
             self.stop_requested = True
