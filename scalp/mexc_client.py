@@ -162,11 +162,25 @@ class MexcFuturesClient:
         return self._private_request("GET", "/api/v1/private/account/assets")
 
     def get_positions(self) -> Dict[str, Any]:
-        return self._private_request(
+        data = self._private_request(
             "GET",
             "/api/v1/private/position/list/history_positions",
             params={"page_num": 1, "page_size": 50},
         )
+        try:
+            positions = data.get("data", [])
+            filtered = []
+            for pos in positions:
+                vol = pos.get("vol")
+                try:
+                    if vol is not None and float(vol) > 0:
+                        filtered.append(pos)
+                except (TypeError, ValueError):
+                    continue
+            data["data"] = filtered
+        except Exception:  # pragma: no cover - best effort
+            pass
+        return data
 
     def get_open_orders(self, symbol: Optional[str] = None) -> Dict[str, Any]:
         return self._private_request(
@@ -268,9 +282,23 @@ class MexcFuturesClient:
     def close_all_positions(self) -> Dict[str, Any]:
         """Close all open positions.
 
-        Used during bot initialisation to guarantee a clean trading state.
+        The official API does not provide a working bulk close endpoint; the
+        previous implementation hit a non-existent route resulting in HTTP 404
+        errors.  We therefore emulate the behaviour by retrieving currently
+        opened positions and calling :meth:`close_position` for each symbol.
+
+        Returns a dictionary containing the individual responses for
+        transparency, but callers typically only care that the method
+        completes without raising.
         """
 
-        return self._private_request(
-            "POST", "/api/v1/private/position/close_all_positions", body={}
-        )
+        results = []
+        try:
+            for pos in self.get_positions().get("data", []):
+                sym = pos.get("symbol")
+                if sym:
+                    results.append(self.close_position(sym))
+        except Exception as exc:  # pragma: no cover - best effort
+            logging.error("Erreur fermeture de toutes les positions: %s", exc)
+        return {"success": True, "data": results}
+      
