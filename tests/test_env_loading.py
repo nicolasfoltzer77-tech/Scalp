@@ -14,22 +14,22 @@ def test_parent_env_loaded(tmp_path, monkeypatch) -> None:
     notebook = tmp_path / "notebook"
     spot = notebook / "spot"
     spot.mkdir(parents=True)
-    mexc_bot = spot / "mexc_bot.py"
-    mexc_bot.write_text("")
+    bitget_bot = spot / "bitget_bot.py"
+    bitget_bot.write_text("")
     env_file = notebook / ".env"
-    env_file.write_text("MEXC_ACCESS_KEY=from_env\n")
+    env_file.write_text("BITGET_ACCESS_KEY=from_env\n")
 
-    old = os.environ.pop("MEXC_ACCESS_KEY", None)
-    monkeypatch.setattr(sys, "argv", [str(mexc_bot)])
+    old = os.environ.pop("BITGET_ACCESS_KEY", None)
+    monkeypatch.setattr(sys, "argv", [str(bitget_bot)])
     import scalp
 
     importlib.reload(scalp)
 
     try:
-        assert os.getenv("MEXC_ACCESS_KEY") == "from_env"
+        assert os.getenv("BITGET_ACCESS_KEY") == "from_env"
     finally:
         env_file.unlink(missing_ok=True)
         if old is None:
-            os.environ.pop("MEXC_ACCESS_KEY", None)
+            os.environ.pop("BITGET_ACCESS_KEY", None)
         else:
-            os.environ["MEXC_ACCESS_KEY"] = old
+            os.environ["BITGET_ACCESS_KEY"] = old

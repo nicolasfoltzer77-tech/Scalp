@@ -1,6 +1,6 @@
 """Utilities and helpers for Scalp bot.
 
-When the bot is executed from ``notebook/spot/mexc_bot.py`` it expects secret
+When the bot is executed from ``notebook/spot/bitget_bot.py`` it expects secret
 keys to live in ``notebook/.env``.  On import this module attempts to load the
 variables from that file so that API keys can remain outside of the repository
 yet still be available at runtime.
@@ -16,7 +16,7 @@ import sys
 def _load_parent_env() -> None:
     """Load environment variables from ``../.env`` relative to the entry script.
 
-    The bot is typically launched from ``notebook/spot/mexc_bot.py`` and keys
+    The bot is typically launched from ``notebook/spot/bitget_bot.py`` and keys
     are expected to be stored one directory above (``notebook/.env``).  If that
     file is not found the function falls back to the historical behaviour of
     checking ``../.env`` relative to the package itself.

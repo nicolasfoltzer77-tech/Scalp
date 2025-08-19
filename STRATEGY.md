@@ -1,6 +1,6 @@
 # Stratégie de trading
 
-Ce document décrit la logique de trading utilisée par le bot **Scalp**. Elle vise un scalping court terme sur les futures USDT‑M de MEXC.
+Ce document décrit la logique de trading utilisée par le bot **Scalp**. Elle vise un scalping court terme sur les futures USDT‑M de Bitget.
 
 ## Principes généraux
 
@@ -12,7 +12,7 @@ Ce document décrit la logique de trading utilisée par le bot **Scalp**. Elle v
 
 ## Sélection des paires
 
-1. `scan_pairs` récupère les tickers MEXC et filtre ceux qui sont à **frais nuls**, possèdent un volume quotidien suffisant et un spread réduit.
+1. `scan_pairs` récupère les tickers Bitget et filtre ceux qui sont à **frais nuls**, possèdent un volume quotidien suffisant et un spread réduit.
 2. `select_active_pairs` affine la liste en conservant les paires présentant le plus de **momentum** :
    - croisement entre EMA20 et EMA50 ;
    - ATR élevé pour privilégier les actifs volatils.

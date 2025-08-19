@@ -11,27 +11,27 @@ from urllib.parse import urlencode
 import requests
 from dotenv import load_dotenv
 
-BASE_URL = "https://api.mexc.com"
+BASE_URL = "https://api.bitget.com"
 RECV_WINDOW = 5000
 
 
 def load_keys() -> Dict[str, str]:
     parent = Path(__file__).resolve().parent.parent
     load_dotenv(parent / ".env")
-    api_key = os.getenv("MEXC_API_KEY")
-    api_secret = os.getenv("MEXC_API_SECRET")
+    api_key = os.getenv("BITGET_API_KEY")
+    api_secret = os.getenv("BITGET_API_SECRET")
     if not api_key or not api_secret:
         raise RuntimeError("API keys not found in environment")
     return {"key": api_key, "secret": api_secret}
 
 
-class MEXCClient:
+class BitgetClient:
     def __init__(self) -> None:
         creds = load_keys()
         self.api_key = creds["key"]
         self.api_secret = creds["secret"]
         self.session = requests.Session()
-        self.session.headers.update({"X-MEXC-APIKEY": self.api_key})
+        self.session.headers.update({"X-BITGET-APIKEY": self.api_key})
         self.time_offset = self._compute_time_offset()
 
     def _compute_time_offset(self) -> int:
@@ -51,7 +51,7 @@ class MEXCClient:
             query = urlencode(params)
             signature = hmac.new(self.api_secret.encode(), query.encode(), hashlib.sha256).hexdigest()
             query += f"&signature={signature}"
-            headers = {"X-MEXC-APIKEY": self.api_key}
+            headers = {"X-BITGET-APIKEY": self.api_key}
             if method.upper() == "GET":
                 url = f"{BASE_URL}{path}?{query}"
                 resp = self.session.get(url, headers=headers)
@@ -99,7 +99,7 @@ def sma(values: List[float], period: int) -> float:
     return sum(values[-period:]) / period
 
 
-def analyze(client: MEXCClient, symbol: str, quote_usdt: float, dry_run: bool) -> None:
+def analyze(client: BitgetClient, symbol: str, quote_usdt: float, dry_run: bool) -> None:
     kl = client.klines(symbol, limit=50)
     closes = [float(k[4]) for k in kl]
     sma9_prev = sma(closes[:-1], 9)
@@ -110,7 +110,7 @@ def analyze(client: MEXCClient, symbol: str, quote_usdt: float, dry_run: bool) -
     cross_up = sma9_prev <= sma21_prev and sma9_curr > sma21_curr
     cross_down = sma9_prev >= sma21_prev and sma9_curr < sma21_curr
 
-    log = logging.getLogger("mexc_bot")
+    log = logging.getLogger("bitget_bot")
 
     if cross_up:
         book = client.book_ticker(symbol)
@@ -163,7 +163,7 @@ def interval_seconds(interval: str) -> int:
 
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-    parser = ArgumentParser(description="MEXC SMA crossover bot")
+    parser = ArgumentParser(description="Bitget SMA crossover bot")
     parser.add_argument("--symbol", default="BTCUSDT")
     parser.add_argument("--quote-usdt", type=float, default=10.0)
     parser.add_argument("--interval", default="1m")
@@ -173,14 +173,14 @@ def main() -> None:
     parser.set_defaults(dry_run=True)
     args = parser.parse_args()
 
-    client = MEXCClient()
+    client = BitgetClient()
     delay = interval_seconds(args.interval)
 
     while True:
         try:
             analyze(client, args.symbol, args.quote_usdt, args.dry_run)
         except Exception as exc:
-            logging.getLogger("mexc_bot").error("Error: %s", exc, exc_info=True)
+            logging.getLogger("bitget_bot").error("Error: %s", exc, exc_info=True)
         if not args.loop:
             break
         time.sleep(delay)
