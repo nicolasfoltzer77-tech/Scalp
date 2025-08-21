@@ -477,7 +477,7 @@ class BitgetFuturesClient:
         if position_mode is not None:
             body["positionMode"] = int(position_mode)
 
-        return self._private_request("POST", "/api/v2/mix/order/place", body=body)
+        return self._private_request("POST", "/api/v2/mix/order/place-order", body=body)
 
     def cancel_order(self, order_ids: List[int]) -> Dict[str, Any]:
         if self.paper_trade:
