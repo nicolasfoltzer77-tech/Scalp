@@ -12,3 +12,12 @@ def test_check_config_only_logs_critical_missing(monkeypatch, caplog):
     assert any("BITGET_ACCESS_KEY" in m for m in messages)
     assert any("BITGET_SECRET_KEY" in m for m in messages)
     assert all("NOTIFY_URL" not in m for m in messages)
+
+
+def test_check_config_does_not_log_present_keys(monkeypatch, caplog):
+    monkeypatch.setenv("BITGET_ACCESS_KEY", "abcdef")
+    monkeypatch.setenv("BITGET_SECRET_KEY", "abcdef")
+    monkeypatch.setenv("BITGET_PASSPHRASE", "abcdef")
+    with caplog.at_level(logging.INFO):
+        check_config()
+    assert caplog.records == []
