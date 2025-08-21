@@ -72,6 +72,8 @@ class BitgetFuturesClient:
             logging.warning(
                 "\u26a0\ufe0f Cl\u00e9s API non d\u00e9finies. Le mode r\u00e9el ne fonctionnera pas.",
             )
+        # Cache for contract precision details to avoid repeated network calls
+        self._contract_cache: Dict[str, Dict[str, Any]] = {}
 
     # ------------------------------------------------------------------
     # Helpers
@@ -156,6 +158,30 @@ class BitgetFuturesClient:
             return {"success": False, "code": 404, "data": None}
         r.raise_for_status()
         return r.json()
+
+    # ------------------------------------------------------------------
+    def _get_contract_precision(self, symbol: str) -> tuple[int, int]:
+        """Return price and volume precision for ``symbol``.
+
+        Results are cached to minimise HTTP requests. If the contract
+        information cannot be retrieved, ``(0, 0)`` is returned.
+        """
+        sym = self._format_symbol(symbol)
+        info = self._contract_cache.get(sym)
+        if info is None:
+            detail = self.get_contract_detail(sym)
+            try:
+                data = detail.get("data", [])
+                if isinstance(data, list) and data:
+                    info = data[0]
+                else:
+                    info = {}
+            except Exception:
+                info = {}
+            self._contract_cache[sym] = info
+        price_place = int(info.get("pricePlace") or 0)
+        volume_place = int(info.get("volumePlace") or 0)
+        return price_place, volume_place
 
     def get_kline(
         self,
@@ -316,10 +342,22 @@ class BitgetFuturesClient:
         data = self._private_request(
             "GET", "/api/v2/mix/account/accounts", params=params
         )
+        if isinstance(data, dict):
+            data.setdefault("success", str(data.get("code")) == "00000")
         try:
             for row in data.get("data", []):
                 if "currency" not in row and row.get("marginCoin"):
-                    row["currency"] = row["marginCoin"]
+                    row["currency"] = str(row["marginCoin"]).upper()
+                if "equity" not in row:
+                    for key in ("usdtEquity", "available", "cashBalance"):
+                        val = row.get(key)
+                        if val is not None:
+                            row["equity"] = val
+                            break
+                try:
+                    row["equity"] = float(row["equity"])
+                except Exception:
+                    pass
         except Exception:  # pragma: no cover - best effort
             pass
         return data
@@ -483,6 +521,18 @@ class BitgetFuturesClient:
 
         if margin_coin is None:
             margin_coin = _DEFAULT_MARGIN_COIN.get(self.product_type)
+
+        # ------------------------------------------------------------------
+        # Precision handling
+        # ------------------------------------------------------------------
+        try:
+            price_place, volume_place = self._get_contract_precision(symbol)
+        except Exception:  # pragma: no cover - best effort
+            price_place = volume_place = 0
+        if price is not None:
+            price = round(float(price), price_place)
+        if vol is not None:
+            vol = round(float(vol), volume_place)
 
         body = {
             "symbol": self._format_symbol(symbol),
