@@ -463,7 +463,6 @@ class BitgetFuturesClient:
         external_oid: Optional[str] = None,
         stop_loss: Optional[float] = None,
         take_profit: Optional[float] = None,
-        reduce_only: Optional[bool] = None,
         position_mode: Optional[int] = None,
         margin_coin: Optional[str] = None,
         time_in_force: str = "normal",
@@ -502,20 +501,19 @@ class BitgetFuturesClient:
         # Parameter mapping
         # ------------------------------------------------------------------
         side_map = {
-            1: ("buy", "long", False),
-            2: ("buy", "short", True),
-            3: ("sell", "short", False),
-            4: ("sell", "long", True),
+            1: ("buy", "long"),
+            2: ("buy", "short"),
+            3: ("sell", "short"),
+            4: ("sell", "long"),
         }
         if isinstance(side, int):
             mapped = side_map.get(side)
             if not mapped:
                 raise ValueError(f"Invalid side value: {side}")
-            side_str, pos_side, reduce_side = mapped
+            side_str, pos_side = mapped
         else:
             side_str = str(side)
             pos_side = None
-            reduce_side = None
 
         order_map = {1: "market", 2: "limit", 3: "post_only", 4: "fok", 5: "limit"}
         if isinstance(order_type, int):
@@ -569,10 +567,6 @@ class BitgetFuturesClient:
             body["stopLossPrice"] = float(stop_loss)
         if take_profit is not None:
             body["takeProfitPrice"] = float(take_profit)
-        if reduce_only is not None:
-            body["reduceOnly"] = bool(reduce_only)
-        elif reduce_side is not None:
-            body["reduceOnly"] = reduce_side
         if position_mode is not None:
             body["posMode"] = "one_way_mode" if int(position_mode) == 1 else "hedge_mode"
         elif pos_side is not None:

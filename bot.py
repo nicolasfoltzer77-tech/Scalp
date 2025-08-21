@@ -302,7 +302,6 @@ def main(argv: Optional[List[str]] = None) -> None:
             price=price,
             open_type=CONFIG["OPEN_TYPE"],
             leverage=CONFIG["LEVERAGE"],
-            reduce_only=True,
         )
         equity_usdt *= 1 + pnl / 100.0
         risk_mgr.record_trade(pnl)
