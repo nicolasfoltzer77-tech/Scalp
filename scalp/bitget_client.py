@@ -32,6 +32,16 @@ _GRANULARITY_ALIASES = {
 }
 
 
+# Default margin coin for each product type. Some authenticated endpoints
+# require ``marginCoin`` in addition to ``productType``; supplying a sensible
+# default avoids ``400 Bad Request`` responses when the caller does not provide
+# it explicitly.
+_DEFAULT_MARGIN_COIN = {
+    "USDT-FUTURES": "USDT",
+    "USDC-FUTURES": "USDC",
+}
+
+
 class BitgetFuturesClient:
     """Lightweight REST client for Bitget LAPI v2 futures endpoints."""
 
@@ -254,7 +264,7 @@ class BitgetFuturesClient:
         return data
 
     # Accounts & positions -------------------------------------------------
-    def get_assets(self) -> Dict[str, Any]:
+    def get_assets(self, margin_coin: Optional[str] = None) -> Dict[str, Any]:
         if self.paper_trade:
             return {
                 "success": True,
@@ -266,7 +276,15 @@ class BitgetFuturesClient:
                     }
                 ],
             }
-        return self._private_request("GET", "/api/v2/mix/account/accounts")
+
+        params = {"productType": self.product_type}
+        if margin_coin is None:
+            margin_coin = _DEFAULT_MARGIN_COIN.get(self.product_type)
+        if margin_coin:
+            params["marginCoin"] = margin_coin
+        return self._private_request(
+            "GET", "/api/v2/mix/account/accounts", params=params
+        )
 
     def get_positions(self, product_type: Optional[str] = None) -> Dict[str, Any]:
         if self.paper_trade:
@@ -446,6 +464,8 @@ class BitgetFuturesClient:
         body = {"productType": self.product_type}
         if symbol:
             body["symbol"] = self._format_symbol(symbol)
+        if margin_coin is None:
+            margin_coin = _DEFAULT_MARGIN_COIN.get(self.product_type)
         if margin_coin:
             body["marginCoin"] = margin_coin
         return self._private_request(
