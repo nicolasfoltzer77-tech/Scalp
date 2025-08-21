@@ -72,7 +72,7 @@ def find_trade_positions(
     client: Any,
     pairs: List[Dict[str, Any]],
     *,
-    interval: str = "Min1",
+    interval: str = "1m",
     ema_fast_n: Optional[int] = None,
     ema_slow_n: Optional[int] = None,
     ema_func=default_ema,

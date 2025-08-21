@@ -189,7 +189,29 @@ def test_get_kline_query_params(monkeypatch):
     assert called["params"] == {
         "symbol": "BTCUSDT",
         "productType": "USDT-FUTURES",
-        "granularity": "Min1",
+        "granularity": "1m",
+    }
+
+
+def test_get_open_orders_endpoint(monkeypatch):
+    client = BitgetFuturesClient("key", "secret", "https://test")
+
+    called = {}
+
+    def fake_private(self, method, path, params=None, body=None):
+        called["method"] = method
+        called["path"] = path
+        called["params"] = params
+        return {"success": True}
+
+    monkeypatch.setattr(BitgetFuturesClient, "_private_request", fake_private)
+
+    client.get_open_orders("BTCUSDT_UMCBL")
+
+    assert called["path"] == "/api/v2/mix/order/orders-pending"
+    assert called["params"] == {
+        "productType": "USDT-FUTURES",
+        "symbol": "BTCUSDT",
     }
 
 
