@@ -152,9 +152,7 @@ def find_trade_positions(
     )
 
 
-def send_selected_pairs(
-    client: Any, top_n: int = 20, tg_bot: Any | None = None
-) -> Dict[str, str]:
+def send_selected_pairs(client: Any, top_n: int = 20) -> Dict[str, str]:
     """Send the selected trading pairs and return the payload."""
     payload = _pairs.send_selected_pairs(
         client,
@@ -162,14 +160,12 @@ def send_selected_pairs(
         select_fn=filter_trade_pairs,
         notify_fn=notify,
     )
-    if tg_bot and payload:
-        tg_bot.send(_format_text("pair_list", payload))
     return payload
 
 
-def update(client: Any, top_n: int = 20, tg_bot: Any | None = None) -> Dict[str, str]:
+def update(client: Any, top_n: int = 20) -> Dict[str, str]:
     """Send a fresh list of pairs to reflect current market conditions."""
-    payload = send_selected_pairs(client, top_n=top_n, tg_bot=tg_bot)
+    payload = send_selected_pairs(client, top_n=top_n)
     text = _format_text("pair_list", payload)
     logging.info(text)
     return payload
@@ -340,7 +336,7 @@ def main(argv: Optional[List[str]] = None) -> None:
 
     notify("bot_started")
     try:
-        update(client, top_n=20, tg_bot=tg_bot)
+        update(client, top_n=20)
     except Exception as exc:  # pragma: no cover - network
         logging.error("Erreur sélection paires: %s", exc)
     if tg_bot:
@@ -358,7 +354,7 @@ def main(argv: Optional[List[str]] = None) -> None:
         now = time.time()
         if now >= next_update:
             try:
-                update(client, top_n=20, tg_bot=tg_bot)
+                update(client, top_n=20)
             except Exception as exc:  # pragma: no cover - network
                 logging.error("Erreur update marché: %s", exc)
             next_update = now + 60
