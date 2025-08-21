@@ -149,7 +149,8 @@ def notify(event: str, payload: Dict[str, Any] | None = None) -> None:
     # Telegram notification
     token = os.getenv("TELEGRAM_BOT_TOKEN")
     chat_id = os.getenv("TELEGRAM_CHAT_ID")
-    if token and chat_id:
+    # ``pair_list`` notifications are intentionally not forwarded to Telegram
+    if token and chat_id and event != "pair_list":
         text = _format_text(event, payload or {})
         t_url = f"https://api.telegram.org/bot{token}/sendMessage"
         t_payload = {"chat_id": chat_id, "text": text}
