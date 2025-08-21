@@ -4,10 +4,15 @@ import os
 DEFAULT_SYMBOL = os.getenv("SYMBOL") or "BTC_USDT"
 
 CONFIG = {
-    "BITGET_ACCESS_KEY": os.getenv("BITGET_ACCESS_KEY", "A_METTRE"),
-    "BITGET_SECRET_KEY": os.getenv("BITGET_SECRET_KEY", "B_METTRE"),
+    "BITGET_ACCESS_KEY": os.getenv("BITGET_API_KEY")
+    or os.getenv("BITGET_ACCESS_KEY", "A_METTRE"),
+    "BITGET_SECRET_KEY": os.getenv("BITGET_API_SECRET")
+    or os.getenv("BITGET_SECRET_KEY", "B_METTRE"),
+    "BITGET_PASSPHRASE": os.getenv("BITGET_API_PASSPHRASE", ""),
     "PAPER_TRADE": os.getenv("PAPER_TRADE", "true").lower() in ("1", "true", "yes", "y"),
     "SYMBOL": DEFAULT_SYMBOL,
+    "PRODUCT_TYPE": os.getenv("BITGET_PRODUCT_TYPE", "umcbl"),
+    "MARGIN_COIN": os.getenv("BITGET_MARGIN_COIN", "USDT"),
     "INTERVAL": os.getenv("INTERVAL", "Min1"),
     "EMA_FAST": int(os.getenv("EMA_FAST", "9")),
     "EMA_SLOW": int(os.getenv("EMA_SLOW", "21")),

@@ -4,6 +4,7 @@ import time
 import hmac
 import hashlib
 import base64
+import uuid
 from typing import Any, Dict, List, Optional
 
 import requests
@@ -169,11 +170,11 @@ class BitgetFuturesClient:
             }
         return self._private_request("GET", "/api/v2/mix/account/accounts")
 
-    def get_positions(self) -> Dict[str, Any]:
+    def get_positions(self, product_type: str = "umcbl") -> Dict[str, Any]:
         data = self._private_request(
             "GET",
             "/api/v2/mix/position/all-position",
-            params={"productType": "umcbl"},
+            params={"productType": product_type},
         )
         try:
             positions = data.get("data", [])
@@ -195,6 +196,53 @@ class BitgetFuturesClient:
             "GET",
             "/api/v2/mix/order/current",
             params={"symbol": symbol} if symbol else None,
+        )
+
+    # Account configuration -------------------------------------------------
+    def set_position_mode_one_way(self, symbol: str, product_type: str) -> Dict[str, Any]:
+        body = {"productType": product_type, "symbol": symbol, "posMode": "one_way_mode"}
+        return self._private_request("POST", "/api/v2/mix/account/set-position-mode", body=body)
+
+    def set_leverage(
+        self, symbol: str, product_type: str, margin_coin: str, leverage: int
+    ) -> Dict[str, Any]:
+        body = {
+            "symbol": symbol,
+            "productType": product_type,
+            "marginCoin": margin_coin,
+            "leverage": int(leverage),
+        }
+        return self._private_request(
+            "POST", "/api/v2/mix/account/set-leverage", body=body
+        )
+
+    def place_market_order_one_way(
+        self,
+        symbol: str,
+        side: str,
+        size: float,
+        product_type: str,
+        margin_coin: str,
+        *,
+        time_in_force: str = "normal",
+    ) -> Dict[str, Any]:
+        side = side.lower()
+        if side not in {"buy", "sell"}:
+            raise ValueError("side must be 'buy' or 'sell'")
+        body = {
+            "symbol": symbol,
+            "productType": product_type,
+            "marginCoin": margin_coin,
+            "marginMode": "crossed",
+            "posMode": "one_way_mode",
+            "orderType": "market",
+            "side": side,
+            "size": str(size),
+            "timeInForceValue": time_in_force,
+            "clientOid": str(uuid.uuid4())[:32],
+        }
+        return self._private_request(
+            "POST", "/api/v2/mix/order/place-order", body=body
         )
 
     # Orders ---------------------------------------------------------------
@@ -282,11 +330,11 @@ class BitgetFuturesClient:
             "POST", "/api/v2/mix/position/close-position", body=body
         )
 
-    def close_all_positions(self) -> Dict[str, Any]:
+    def close_all_positions(self, product_type: str = "umcbl") -> Dict[str, Any]:
         """Close all open positions."""
         results = []
         try:
-            for pos in self.get_positions().get("data", []):
+            for pos in self.get_positions(product_type).get("data", []):
                 sym = pos.get("symbol")
                 if sym:
                     results.append(self.close_position(sym))
