@@ -23,12 +23,14 @@ def test_send_selected_pairs(monkeypatch):
         ],
     )
 
+    monkeypatch.setitem(bot.CONFIG, "ALLOWED_SYMBOLS", ["BTCUSDT", "ETHUSDT"])
+
     payload = bot.send_selected_pairs(object(), top_n=4)
 
     assert sent["event"] == "pair_list"
-    assert sent["payload"]["green"] == "WIF"
-    assert sent["payload"]["orange"] == "BTC"
-    assert sent["payload"]["red"] == "DOGE, ETH"
+    assert sent["payload"]["green"] == "BTC"
+    assert sent["payload"]["orange"] == "ETH"
+    assert "red" not in sent["payload"]
     assert payload == sent["payload"]
 
 
