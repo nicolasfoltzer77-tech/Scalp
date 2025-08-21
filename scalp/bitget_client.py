@@ -481,15 +481,15 @@ class BitgetFuturesClient:
                 "PAPER_TRADE=True -> annulation simulée de tous les ordres"
             )
             return {"success": True, "code": 0}
-        params = {"productType": self.product_type}
+        body = {"productType": self.product_type}
         if symbol:
-            params["symbol"] = self._format_symbol(symbol)
+            body["symbol"] = self._format_symbol(symbol)
         if margin_coin is None:
             margin_coin = _DEFAULT_MARGIN_COIN.get(self.product_type)
         if margin_coin:
-            params["marginCoin"] = margin_coin
+            body["marginCoin"] = margin_coin
         return self._private_request(
-            "POST", "/api/v2/mix/order/cancel-all-orders", params=params
+            "POST", "/api/v2/mix/order/cancel-all-orders", body=body
         )
 
     def close_position(
