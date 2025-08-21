@@ -50,7 +50,19 @@ def test_extract_available_balance_fallback():
     assert extract_available_balance(assets) == 150.5
 
 
-def test_extract_available_balance_equity():
+def test_extract_available_balance_equity_only():
+    assets = {
+        "data": [
+            {
+                "currency": "USDT",
+                "equity": "42",
+            }
+        ]
+    }
+    assert extract_available_balance(assets) == 42.0
+
+
+def test_extract_available_balance_zero_available_returns_zero():
     assets = {
         "data": [
             {
@@ -61,4 +73,4 @@ def test_extract_available_balance_equity():
             }
         ]
     }
-    assert extract_available_balance(assets) == 42.0
+    assert extract_available_balance(assets) == 0.0

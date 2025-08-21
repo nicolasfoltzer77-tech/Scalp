@@ -13,18 +13,25 @@ def extract_available_balance(assets: Dict[str, Any], currency: str = "USDT") ->
     The exchange may expose multiple fields depending on account mode and API
     version.  We iterate through the known keys, returning the first positive
     value encountered.  ``0.0`` is returned when no usable balance can be
-    determined.
+    determined.  The helper only falls back to the more generic ``equity``
+    fields when the granular balance keys are absent; if the exchange reports
+    them with a ``0`` value we honour that and return ``0.0`` to avoid sizing
+    orders against unavailable funds.
     """
 
     for row in assets.get("data", []):
         if row.get("currency") != currency:
             continue
+
+        has_balance_field = False
         for key in (
             "available",
             "availableBalance",
             "availableMargin",
             "cashBalance",
         ):
+            if key in row:
+                has_balance_field = True
             val = row.get(key)
             if val is None:
                 continue
@@ -34,6 +41,10 @@ def extract_available_balance(assets: Dict[str, Any], currency: str = "USDT") ->
                 continue
             if eq > 0:
                 return eq
+
+        if has_balance_field:
+            return 0.0
+
         for key in ("equity", "usdtEquity"):
             val = row.get(key)
             if val is None:
