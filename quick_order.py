@@ -63,9 +63,13 @@ price = None
 try:
     data = tick.get("data")
     if isinstance(data, list) and data:
-        price = float(data[0].get("lastPrice"))
+        price_str = data[0].get("lastPr") or data[0].get("lastPrice")
+        if price_str is not None:
+            price = float(price_str)
     elif isinstance(data, dict):
-        price = float(data.get("lastPrice"))
+        price_str = data.get("lastPr") or data.get("lastPrice")
+        if price_str is not None:
+            price = float(price_str)
 except Exception:
     pass
 if price is None or price <= 0:
