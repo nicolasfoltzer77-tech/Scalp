@@ -52,7 +52,7 @@ log_event = _noop_event
 
 def check_config() -> None:
     """Log only missing critical environment variables."""
-    critical = {"BITGET_ACCESS_KEY", "BITGET_SECRET_KEY"}
+    critical = {"BITGET_ACCESS_KEY", "BITGET_SECRET_KEY", "BITGET_PASSPHRASE"}
     for key in critical:
         val = os.getenv(key)
         if not val or val in {"", "A_METTRE", "B_METTRE"}:
