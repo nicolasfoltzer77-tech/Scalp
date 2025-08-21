@@ -154,3 +154,36 @@ def test_http_client_context_manager(monkeypatch):
     with http_client.HttpClient("http://example.com") as hc:
         hc.request("GET", "/")
     assert closed["count"] == 1
+
+
+def test_get_kline_query_params(monkeypatch):
+    """Ensure ``get_kline`` hits the correct endpoint and passes symbol as a
+    query parameter. The previous implementation embedded the symbol in the
+    path which resulted in a 404 from Bitget."""
+
+    client = BitgetFuturesClient("key", "secret", "https://test")
+
+    called = {}
+
+    def fake_get(url, params=None, timeout=None):
+        called["url"] = url
+        called["params"] = params
+
+        class Resp:
+            def raise_for_status(self):
+                pass
+
+            def json(self):
+                return {"data": []}
+
+        return Resp()
+
+    # Some tests replace ``bot.requests`` with a lightweight namespace that
+    # doesn't define ``get``. ``raising=False`` ensures the attribute is added
+    # even if missing so we can observe the call.
+    monkeypatch.setattr(bot.requests, "get", fake_get, raising=False)
+
+    client.get_kline("BTC_USDT", interval="Min1")
+
+    assert called["url"].endswith("/api/v2/mix/market/candles")
+    assert called["params"] == {"symbol": "BTC_USDT", "granularity": "Min1"}

@@ -94,8 +94,11 @@ class BitgetFuturesClient:
         start: Optional[int] = None,
         end: Optional[int] = None,
     ) -> Dict[str, Any]:
-        url = f"{self.base}/api/v2/mix/market/candles/{symbol}"
-        params: Dict[str, Any] = {"granularity": interval}
+        # Endpoint expects the trading pair in query parameters rather than
+        # encoded in the path. Using ``/candles/{symbol}`` results in a 404
+        # response from Bitget. See: https://api.bitget.com/api/v2/mix/market/candles
+        url = f"{self.base}/api/v2/mix/market/candles"
+        params: Dict[str, Any] = {"symbol": symbol, "granularity": interval}
         if start is not None:
             params["startTime"] = int(start)
         if end is not None:
