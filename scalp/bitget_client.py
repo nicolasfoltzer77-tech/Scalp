@@ -427,8 +427,15 @@ class BitgetFuturesClient:
         take_profit: Optional[float] = None,
         reduce_only: Optional[bool] = None,
         position_mode: Optional[int] = None,
+        margin_coin: Optional[str] = None,
+        time_in_force: str = "normal",
     ) -> Dict[str, Any]:
-        """Submit an order."""
+        """Submit an order.
+
+        This helper keeps backward compatibility with the older numeric
+        parameters used by the bot while translating them to the string based
+        fields required by Bitget's v2 API.
+        """
         if self.paper_trade:
             logging.info(
                 "PAPER_TRADE=True -> ordre simul\u00e9: side=%s vol=%s type=%s price=%s",
@@ -453,13 +460,41 @@ class BitgetFuturesClient:
                 },
             }
 
+        # ------------------------------------------------------------------
+        # Parameter mapping
+        # ------------------------------------------------------------------
+        side_map = {1: "open_long", 2: "close_short", 3: "open_short", 4: "close_long"}
+        if isinstance(side, int):
+            side_str = side_map.get(side)
+            if not side_str:
+                raise ValueError(f"Invalid side value: {side}")
+        else:
+            side_str = str(side)
+
+        order_map = {1: "market", 2: "limit", 3: "post_only", 4: "fok", 5: "limit"}
+        if isinstance(order_type, int):
+            order_str = order_map.get(order_type)
+            if order_str is None:
+                order_str = "limit" if price is not None else "market"
+        else:
+            order_str = str(order_type)
+
+        margin_mode = "crossed" if int(open_type) == 1 else "isolated"
+
+        if margin_coin is None:
+            margin_coin = _DEFAULT_MARGIN_COIN.get(self.product_type)
+
         body = {
             "symbol": self._format_symbol(symbol),
+            "productType": self.product_type,
+            "marginMode": margin_mode,
+            "orderType": order_str,
+            "side": side_str,
             "size": vol,
-            "side": side,
-            "orderType": order_type,
-            "openType": open_type,
+            "timeInForceValue": time_in_force,
         }
+        if margin_coin:
+            body["marginCoin"] = margin_coin
         if price is not None:
             body["price"] = float(price)
         if leverage is not None:
@@ -468,6 +503,8 @@ class BitgetFuturesClient:
             body["positionId"] = int(position_id)
         if external_oid:
             body["clientOid"] = str(external_oid)[:32]
+        else:
+            body["clientOid"] = str(uuid.uuid4())[:32]
         if stop_loss is not None:
             body["stopLossPrice"] = float(stop_loss)
         if take_profit is not None:
@@ -475,7 +512,7 @@ class BitgetFuturesClient:
         if reduce_only is not None:
             body["reduceOnly"] = bool(reduce_only)
         if position_mode is not None:
-            body["positionMode"] = int(position_mode)
+            body["posMode"] = "one_way_mode" if int(position_mode) == 1 else "hedge_mode"
 
         return self._private_request("POST", "/api/v2/mix/order/place-order", body=body)
 
