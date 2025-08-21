@@ -32,6 +32,7 @@ Le bot lit sa configuration via des variables d'environnement :
 - `ATR_PERIOD`, `TRAIL_ATR_MULT`, `SCALE_IN_ATR_MULT`, `PROGRESS_MIN`, `TIMEOUT_MIN` : réglages pour l'ATR, l'ajout à la position, le trailing stop et la sortie par timeout.
 - `MAX_DAILY_LOSS_PCT`, `MAX_DAILY_PROFIT_PCT`, `MAX_POSITIONS` (par défaut 3) : limites globales (kill switch après perte ou gain, nombre maximal de positions).
 - `LOG_DIR` : dossier où seront écrits les fichiers de log.
+- `ALLOWED_SYMBOLS` : liste de paires autorisées séparées par des virgules. Vide par défaut pour autoriser toutes les paires.
 
 - `NOTIFY_URL` : URL d'un webhook HTTP pour recevoir les événements (optionnel, peut être utilisé en plus de Telegram).
 - `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` : pour envoyer les notifications sur Telegram (optionnel, peut être combiné avec le webhook).
