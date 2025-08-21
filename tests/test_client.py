@@ -269,12 +269,12 @@ def test_cancel_all_endpoint(monkeypatch):
 
     assert called["method"] == "POST"
     assert called["path"] == "/api/v2/mix/order/cancel-all-orders"
-    assert called["params"] == {
+    assert called["params"] is None
+    assert called["body"] == {
         "productType": "USDT-FUTURES",
         "symbol": "BTCUSDT",
         "marginCoin": "USDT",
     }
-    assert called["body"] is None
 
 
 def test_get_open_orders_paper_trade(monkeypatch):
