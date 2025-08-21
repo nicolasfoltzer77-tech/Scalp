@@ -298,7 +298,11 @@ def main(argv: Optional[List[str]] = None) -> None:
 
         try:
             k = client.get_kline(symbol, interval=interval)
-            if not (k and k.get("success") and "data" in k and "close" in k["data"]):
+            ok = False
+            if k:
+                code = k.get("code")
+                ok = (k.get("success") is True) or (isinstance(code, str) and code == "00000")
+            if not (ok and "data" in k and "close" in k["data"]):
                 logging.warning("Réponse klines inattendue: %s", k)
                 time.sleep(cfg["LOOP_SLEEP_SECS"])
                 continue
