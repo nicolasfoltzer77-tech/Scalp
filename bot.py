@@ -652,7 +652,8 @@ def main(argv: Optional[List[str]] = None) -> None:
                 )
                 log_event("order_long", resp)
                 logging.info(
-                    "→ LONG vol=%s @~%.2f (SL~%.2f / TP~%.2f) [%s]",
+                    "→ LONG %s vol=%s @~%.2f (SL~%.2f / TP~%.2f) [%s]",
+                    symbol,
                     vol_open,
                     price,
                     sl_long,
@@ -718,7 +719,8 @@ def main(argv: Optional[List[str]] = None) -> None:
                 )
                 log_event("order_short", resp)
                 logging.info(
-                    "→ SHORT vol=%s @~%.2f (SL~%.2f / TP~%.2f) [%s]",
+                    "→ SHORT %s vol=%s @~%.2f (SL~%.2f / TP~%.2f) [%s]",
+                    symbol,
                     vol_open,
                     price,
                     sl_short,
