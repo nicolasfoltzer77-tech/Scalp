@@ -189,6 +189,23 @@ def test_get_assets_zero_available(monkeypatch):
     assert usdt["equity"] == 0.0
 
 
+def test_get_assets_available_balance(monkeypatch):
+    """Support alternative ``availableBalance`` field name."""
+    client = BitgetFuturesClient("key", "secret", "https://test")
+
+    def fake_private(self, method, path, params=None, body=None):
+        return {
+            "code": "00000",
+            "data": [{"marginCoin": "USDT", "availableBalance": "3.5"}],
+        }
+
+    monkeypatch.setattr(BitgetFuturesClient, "_private_request", fake_private)
+
+    assets = client.get_assets()
+    usdt = assets.get("data", [])[0]
+    assert usdt["equity"] == 3.5
+
+
 def test_get_ticker_normalization(monkeypatch):
     client = BitgetFuturesClient("key", "secret", "https://test")
 
