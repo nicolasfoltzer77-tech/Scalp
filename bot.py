@@ -178,7 +178,11 @@ def main(argv: Optional[List[str]] = None) -> None:
     ema_slow_n = cfg["EMA_SLOW"]
     fee_rate = cfg.get("FEE_RATE", 0.0)
 
-    contract_detail = client.get_contract_detail(symbol)
+    try:
+        contract_detail = client.get_contract_detail(symbol)
+    except requests.HTTPError as exc:  # pragma: no cover - network issues
+        logging.error("Erreur r\u00e9cup\u00e9ration contract detail: %s", exc)
+        contract_detail = {"success": False, "code": 404}
     log_event("contract_detail", contract_detail)
 
     assets = client.get_assets()
@@ -625,4 +629,7 @@ def main(argv: Optional[List[str]] = None) -> None:
 
 
 if __name__ == "__main__":  # pragma: no cover - manual run
-    main()
+    try:
+        main()
+    except requests.HTTPError as exc:  # pragma: no cover - network issues
+        logging.error("Erreur HTTP principale: %s", exc)

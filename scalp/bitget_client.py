@@ -81,6 +81,9 @@ class BitgetFuturesClient:
         if symbol:
             params["symbol"] = symbol
         r = self.requests.get(url, params=params, timeout=15)
+        if r.status_code == 404:  # pragma: no cover - depends on network
+            logging.error("Contract detail introuvable pour %s", symbol)
+            return {"success": False, "code": 404, "data": None}
         r.raise_for_status()
         return r.json()
 
