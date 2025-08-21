@@ -1,5 +1,6 @@
 import pytest
 from bot import ema, cross, compute_position_size, CONFIG
+from scalp.trade_utils import extract_available_balance
 
 
 def test_ema_basic():
@@ -33,3 +34,31 @@ def test_compute_position_size():
 def test_compute_position_size_missing_symbol():
     with pytest.raises(ValueError):
         compute_position_size({"data": []}, 100.0, 1.0, 0.01, 5)
+
+
+def test_extract_available_balance_fallback():
+    assets = {
+        "data": [
+            {
+                "currency": "USDT",
+                "available": 0,
+                "cashBalance": "150.5",
+                "equity": "200",
+            }
+        ]
+    }
+    assert extract_available_balance(assets) == 150.5
+
+
+def test_extract_available_balance_equity():
+    assets = {
+        "data": [
+            {
+                "currency": "USDT",
+                "available": 0,
+                "availableBalance": 0,
+                "equity": "42",
+            }
+        ]
+    }
+    assert extract_available_balance(assets) == 42.0

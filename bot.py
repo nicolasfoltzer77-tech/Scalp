@@ -28,6 +28,7 @@ from scalp.trade_utils import (
     trailing_stop,
     should_scale_in,
     timeout_exit,
+    extract_available_balance,
 )
 from scalp import pairs as _pairs
 from scalp.backtest import backtest_trades  # noqa: F401
@@ -282,36 +283,7 @@ def main(argv: Optional[List[str]] = None) -> None:
             logging.error("Erreur récupération assets: %s", exc)
             return 0.0
 
-        for row in assets.get("data", []):
-            if row.get("currency") == "USDT":
-                # champs possibles suivant les versions de l'API
-                for key in (
-                    "available",
-                    "availableBalance",
-                    "availableMargin",
-                    "cashBalance",
-                ):
-                    val = row.get(key)
-                    if val is None:
-                        continue
-                    try:
-                        eq = float(val)
-                    except (TypeError, ValueError):
-                        continue
-                    return eq if eq > 0 else 0.0
-
-                for key in ("equity", "usdtEquity"):
-                    val = row.get(key)
-                    if val is None:
-                        continue
-                    try:
-                        eq = float(val)
-                    except (TypeError, ValueError):
-                        continue
-                    if eq > 0:
-                        return eq
-                break
-        return 0.0
+        return extract_available_balance(assets)
 
     equity_usdt = _fetch_equity()
     if equity_usdt <= 0:
