@@ -19,6 +19,7 @@ class BitgetFuturesClient:
         secret_key: str,
         base_url: str,
         *,
+        product_type: str = "umcbl",
         recv_window: int = 30,
         paper_trade: bool = True,
         requests_module: Any = requests,
@@ -28,6 +29,7 @@ class BitgetFuturesClient:
         self.ak = access_key
         self.sk = secret_key
         self.base = base_url.rstrip("/")
+        self.product_type = product_type.upper()
         self.recv_window = recv_window
         self.paper_trade = paper_trade
         self.requests = requests_module
@@ -72,6 +74,32 @@ class BitgetFuturesClient:
             headers["ACCESS-PASSPHRASE"] = self.passphrase
         return headers
 
+    def _format_symbol(self, symbol: str) -> str:
+        """Return ``symbol`` formatted for Bitget API.
+
+        Accepts legacy styles such as ``BTC_USDT`` and converts them to
+        ``BTCUSDT_UMCBL`` (when ``product_type`` is ``UMCBL``). Symbols already in
+        Bitget's format are returned unchanged.
+        """
+
+        if not symbol:
+            return symbol
+
+        # Already contains the product type suffix
+        if symbol.upper().endswith(f"_{self.product_type}"):
+            return symbol
+
+        if "_" in symbol:
+            left, right = symbol.split("_", 1)
+            # Old style base_quote
+            if len(right) <= 4:  # quote like USDT/USDC/USD
+                return f"{left}{right}_{self.product_type}"
+            # Otherwise assume it's already formatted
+            return symbol
+
+        # Symbol without separator (e.g., BTCUSDT)
+        return f"{symbol}_{self.product_type}"
+
     # ------------------------------------------------------------------
     # Public endpoints
     # ------------------------------------------------------------------
@@ -79,7 +107,7 @@ class BitgetFuturesClient:
         url = f"{self.base}/api/v2/mix/market/contract-detail"
         params: Dict[str, Any] = {}
         if symbol:
-            params["symbol"] = symbol
+            params["symbol"] = self._format_symbol(symbol)
         r = self.requests.get(url, params=params, timeout=15)
         if r.status_code == 404:  # pragma: no cover - depends on network
             logging.error("Contract detail introuvable pour %s", symbol)
@@ -98,7 +126,10 @@ class BitgetFuturesClient:
         # encoded in the path. Using ``/candles/{symbol}`` results in a 404
         # response from Bitget. See: https://api.bitget.com/api/v2/mix/market/candles
         url = f"{self.base}/api/v2/mix/market/candles"
-        params: Dict[str, Any] = {"symbol": symbol, "granularity": interval}
+        params: Dict[str, Any] = {
+            "symbol": self._format_symbol(symbol),
+            "granularity": interval,
+        }
         if start is not None:
             params["startTime"] = int(start)
         if end is not None:
@@ -108,10 +139,12 @@ class BitgetFuturesClient:
         return r.json()
 
     def get_ticker(self, symbol: Optional[str] = None) -> Dict[str, Any]:
-        url = f"{self.base}/api/v2/mix/market/ticker"
-        params: Dict[str, Any] = {}
         if symbol:
-            params["symbol"] = symbol
+            url = f"{self.base}/api/v2/mix/market/ticker"
+            params = {"symbol": self._format_symbol(symbol)}
+        else:
+            url = f"{self.base}/api/v2/mix/market/tickers"
+            params = {"productType": self.product_type}
         r = self.requests.get(url, params=params, timeout=15)
         r.raise_for_status()
         return r.json()
@@ -201,20 +234,28 @@ class BitgetFuturesClient:
         return self._private_request(
             "GET",
             "/api/v2/mix/order/current",
-            params={"symbol": symbol} if symbol else None,
+            params={"symbol": self._format_symbol(symbol)} if symbol else None,
         )
 
     # Account configuration -------------------------------------------------
-    def set_position_mode_one_way(self, symbol: str, product_type: str) -> Dict[str, Any]:
-        body = {"productType": product_type, "symbol": symbol, "posMode": "one_way_mode"}
+    def set_position_mode_one_way(self, symbol: str, product_type: Optional[str] = None) -> Dict[str, Any]:
+        body = {
+            "productType": (product_type or self.product_type),
+            "symbol": self._format_symbol(symbol),
+            "posMode": "one_way_mode",
+        }
         return self._private_request("POST", "/api/v2/mix/account/set-position-mode", body=body)
 
     def set_leverage(
-        self, symbol: str, product_type: str, margin_coin: str, leverage: int
+        self,
+        symbol: str,
+        product_type: Optional[str] = None,
+        margin_coin: str = "USDT",
+        leverage: int = 1,
     ) -> Dict[str, Any]:
         body = {
-            "symbol": symbol,
-            "productType": product_type,
+            "symbol": self._format_symbol(symbol),
+            "productType": (product_type or self.product_type),
             "marginCoin": margin_coin,
             "leverage": int(leverage),
         }
@@ -227,8 +268,8 @@ class BitgetFuturesClient:
         symbol: str,
         side: str,
         size: float,
-        product_type: str,
-        margin_coin: str,
+        product_type: Optional[str] = None,
+        margin_coin: str = "USDT",
         *,
         time_in_force: str = "normal",
     ) -> Dict[str, Any]:
@@ -236,8 +277,8 @@ class BitgetFuturesClient:
         if side not in {"buy", "sell"}:
             raise ValueError("side must be 'buy' or 'sell'")
         body = {
-            "symbol": symbol,
-            "productType": product_type,
+            "symbol": self._format_symbol(symbol),
+            "productType": (product_type or self.product_type),
             "marginCoin": margin_coin,
             "marginMode": "crossed",
             "posMode": "one_way_mode",
@@ -295,7 +336,7 @@ class BitgetFuturesClient:
             }
 
         body = {
-            "symbol": symbol,
+            "symbol": self._format_symbol(symbol),
             "size": vol,
             "side": side,
             "orderType": order_type,
@@ -326,7 +367,7 @@ class BitgetFuturesClient:
         )
 
     def cancel_all(self, symbol: Optional[str] = None) -> Dict[str, Any]:
-        body = {"symbol": symbol} if symbol else {}
+        body = {"symbol": self._format_symbol(symbol)} if symbol else {}
         return self._private_request("POST", "/api/v2/mix/order/cancel-all-order", body=body)
 
     def close_position(
@@ -349,7 +390,7 @@ class BitgetFuturesClient:
             specified. If not provided the exchange will infer it.
         """
 
-        body = {"symbol": symbol}
+        body = {"symbol": self._format_symbol(symbol)}
         if size is not None:
             body["size"] = int(size)
         if hold_side:
