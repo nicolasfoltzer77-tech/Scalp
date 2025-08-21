@@ -266,13 +266,30 @@ def timeout_exit(
     progress_min: float = 15.0,
     timeout_min: float = 30.0,
 ) -> bool:
-    """Return ``True`` when a position should be closed for lack of progress."""
+    """Return ``True`` when a position should be closed for lack of progress.
+
+    Parameters
+    ----------
+    entry_time, now:
+        Timestamps in **seconds**.  ``progress_min`` and ``timeout_min`` are
+        expressed in minutes and converted to seconds inside the function so
+        callers can provide human-friendly minute values.
+    """
+
+    # Convert the minute based thresholds to seconds for comparison with the
+    # epoch based ``entry_time``/``now`` values.
+    progress_sec = progress_min * 60.0
+    timeout_sec = timeout_min * 60.0
 
     elapsed = now - entry_time
-    if elapsed >= timeout_min:
+    if elapsed >= timeout_sec:
         return True
-    if elapsed >= progress_min:
-        progress = (current_price - entry_price) if side.lower() == "long" else (entry_price - current_price)
+    if elapsed >= progress_sec:
+        progress = (
+            current_price - entry_price
+            if side.lower() == "long"
+            else entry_price - current_price
+        )
         return progress <= 0
     return False
 

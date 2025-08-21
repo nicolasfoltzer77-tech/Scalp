@@ -85,7 +85,10 @@ def test_trailing_and_timeout():
     assert should_scale_in(100, 105, 100, 10, "long") is True
     assert should_scale_in(100, 95, 100, 10, "short") is True
     # timeout
-    assert timeout_exit(0, 20, 100, 99, "long", progress_min=15, timeout_min=30)
+    # before the progress window no exit should be triggered
+    assert not timeout_exit(0, 10 * 60, 100, 99, "long", progress_min=15, timeout_min=30)
+    # after ``progress_min`` minutes without favourable movement we close
+    assert timeout_exit(0, 20 * 60, 100, 99, "long", progress_min=15, timeout_min=30)
 
 
 def test_generate_signal_macd_filter(monkeypatch):
