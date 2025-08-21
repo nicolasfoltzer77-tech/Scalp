@@ -96,7 +96,7 @@ def test_format_text_open_position():
         "symbol": "BTCUSDT",
         "vol": 1,
         "leverage": 10,
-
+        "amount_usdt": 100,
         "tp_usd": 5,
         "sl_usd": 2,
         "hold": "2h",
@@ -105,7 +105,7 @@ def test_format_text_open_position():
     lines = text.splitlines()
 
     assert lines[0] == "Ouvre long 📈 BTC"
-    assert lines[1] == "Position: 1"
+    assert lines[1] == "Montant: 100 USDT"
     assert lines[2] == "Levier: x10"
     assert "TP: +5 USDT" in lines
     assert "SL: -2 USDT" in lines
@@ -151,6 +151,7 @@ def test_format_position_event_helper():
         "symbol": "BTCUSDT",
         "vol": 1,
         "leverage": 10,
+        "amount_usdt": 100,
         "tp_pct": 5,
         "sl_pct": 2,
     }
