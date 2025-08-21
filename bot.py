@@ -57,6 +57,8 @@ def check_config() -> None:
         val = os.getenv(key)
         if not val or val in {"", "A_METTRE", "B_METTRE"}:
             logging.warning("%s manquante", key)
+        else:
+            logging.info("%s: %s*****", key, val[:5])
 
 
 class BitgetFuturesClient(_BaseBitgetFuturesClient):
