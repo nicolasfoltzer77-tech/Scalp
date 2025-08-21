@@ -349,9 +349,14 @@ def test_place_order_endpoint(monkeypatch):
     assert resp["success"] is True
     assert called["method"] == "POST"
     assert called["path"] == "/api/v2/mix/order/place-order"
-    assert called["body"]["symbol"] == "BTCUSDT"
-    assert called["body"]["marginCoin"] == "USDT"
-    assert called["body"]["marginMode"] == "crossed"
+    body = called["body"]
+    assert body["symbol"] == "BTCUSDT"
+    assert body["marginCoin"] == "USDT"
+    assert body["marginMode"] == "crossed"
+    assert body["side"] == "buy"
+    assert body["posSide"] == "long"
+    assert body["reduceOnly"] is False
+    assert body["posMode"] == "hedge_mode"
 
 
 def test_get_open_orders_paper_trade(monkeypatch):
