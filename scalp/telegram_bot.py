@@ -79,9 +79,9 @@ class TelegramBot:
         return sym[:-4] if sym.endswith("USDT") else sym
 
     def _build_stop_keyboard(self) -> list[list[Dict[str, str]]]:
-        pos = self.client.get_positions()
+        pos = self.client.get_positions() or {}
         buttons: list[list[Dict[str, str]]] = []
-        for p in pos.get("data", []):
+        for p in pos.get("data") or []:
             sym = p.get("symbol")
             if not sym:
                 continue
@@ -96,9 +96,9 @@ class TelegramBot:
 
 
     def _menu_text(self, session_pnl: float) -> str:
-        assets = self.client.get_assets()
+        assets = self.client.get_assets() or {}
         equity = 0.0
-        for row in assets.get("data", []):
+        for row in assets.get("data") or []:
             if row.get("currency") == "USDT":
                 try:
                     equity = float(row.get("equity", 0.0))
@@ -194,9 +194,9 @@ class TelegramBot:
         if not data:
             return None, None
         if data == "balance":
-            assets = self.client.get_assets()
+            assets = self.client.get_assets() or {}
             equity = 0.0
-            for row in assets.get("data", []):
+            for row in assets.get("data") or []:
                 if row.get("currency") == "USDT":
                     try:
                         equity = float(row.get("equity", 0.0))
@@ -206,9 +206,9 @@ class TelegramBot:
 
             return f"Solde: {equity} USDT", self.main_keyboard
         if data == "positions":
-            pos = self.client.get_positions()
+            pos = self.client.get_positions() or {}
             lines = []
-            for p in pos.get("data", []):
+            for p in pos.get("data") or []:
                 symbol = p.get("symbol", "")
                 base = self._base_symbol(symbol)
                 side = p.get("side")
@@ -264,8 +264,8 @@ class TelegramBot:
                 return "Erreur lors du reset total", self.settings_keyboard
 
         if data == "stop":
-            pos = self.client.get_positions()
-            if not pos.get("data"):
+            pos = self.client.get_positions() or {}
+            if not (pos.get("data") or []):
                 return "Aucune crypto sélectionnée", self.settings_keyboard
             return "Choisissez la position à fermer:", self._build_stop_keyboard()
         if data == "stop_all":
