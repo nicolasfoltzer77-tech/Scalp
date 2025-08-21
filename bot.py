@@ -297,6 +297,29 @@ def main(argv: Optional[List[str]] = None) -> None:
             next_update = now + 60
 
         try:
+            if current_pos == 0:
+                pairs = filter_trade_pairs(client, top_n=20)
+                signals = find_trade_positions(
+                    client,
+                    pairs,
+                    ema_fast_n=ema_fast_n,
+                    ema_slow_n=ema_slow_n,
+                )
+                if signals:
+                    next_symbol = signals[0].get("symbol")
+                    if next_symbol and next_symbol != symbol:
+                        symbol = next_symbol
+                        try:
+                            contract_detail = client.get_contract_detail(symbol)
+                        except requests.HTTPError as exc:  # pragma: no cover - network
+                            logging.error(
+                                "Erreur récupération contract detail: %s", exc
+                            )
+                            contract_detail = {"success": False, "code": 404}
+                        log_event("contract_detail", contract_detail)
+                else:
+                    time.sleep(cfg["LOOP_SLEEP_SECS"])
+                    continue
             k = client.get_kline(symbol, interval=interval)
             ok = False
             if k:
