@@ -11,7 +11,7 @@ def scan_pairs(
     volume_min: float = 5_000_000,
     max_spread_bps: float = 5.0,
     min_hourly_vol: float = 0.0,
-    top_n: int = 20,
+    top_n: int = 40,
 ) -> List[Dict[str, Any]]:
     """Return pairs satisfying basic liquidity and volatility filters.
 

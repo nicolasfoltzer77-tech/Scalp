@@ -186,7 +186,7 @@ def find_trade_positions(
     )
 
 
-def send_selected_pairs(client: Any, top_n: int = 20) -> Dict[str, str]:
+def send_selected_pairs(client: Any, top_n: int = 40) -> Dict[str, str]:
     """Send the selected trading pairs and return the payload."""
     payload = _pairs.send_selected_pairs(
         client,
@@ -197,7 +197,7 @@ def send_selected_pairs(client: Any, top_n: int = 20) -> Dict[str, str]:
     return payload
 
 
-def update(client: Any, top_n: int = 20) -> Dict[str, str]:
+def update(client: Any, top_n: int = 40) -> Dict[str, str]:
     """Send a fresh list of pairs to reflect current market conditions."""
     payload = send_selected_pairs(client, top_n=top_n)
     text = _format_text("pair_list", payload)
@@ -405,7 +405,7 @@ def main(argv: Optional[List[str]] = None) -> None:
 
     notify("bot_started")
     try:
-        update(client, top_n=20)
+        update(client, top_n=40)
     except Exception as exc:  # pragma: no cover - network
         logging.error("Erreur sélection paires: %s", exc)
     if tg_bot:
@@ -423,7 +423,7 @@ def main(argv: Optional[List[str]] = None) -> None:
         now = time.time()
         if now >= next_update:
             try:
-                update(client, top_n=20)
+                update(client, top_n=40)
             except Exception as exc:  # pragma: no cover - network
                 logging.error("Erreur update marché: %s", exc)
             next_update = now + 60
@@ -432,7 +432,7 @@ def main(argv: Optional[List[str]] = None) -> None:
             new_eq = _fetch_equity()
             equity_usdt = new_eq
             if current_pos == 0:
-                pairs = filter_trade_pairs(client, top_n=20)
+                pairs = filter_trade_pairs(client, top_n=40)
                 signals = find_trade_positions(
                     client,
                     pairs,
