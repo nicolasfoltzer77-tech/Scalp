@@ -54,7 +54,7 @@ def filter_trade_pairs(
     return eligible[:top_n]
 
 
-def select_top_pairs(client: Any, top_n: int = 10, key: str = "volume") -> List[Dict[str, Any]]:
+def select_top_pairs(client: Any, top_n: int = 40, key: str = "volume") -> List[Dict[str, Any]]:
     """Return ``top_n`` pairs sorted by ``key``."""
     pairs = get_trade_pairs(client)
 
