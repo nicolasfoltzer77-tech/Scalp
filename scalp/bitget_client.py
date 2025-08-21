@@ -427,6 +427,8 @@ class BitgetFuturesClient:
         take_profit: Optional[float] = None,
         reduce_only: Optional[bool] = None,
         position_mode: Optional[int] = None,
+        margin_coin: str = "USDT",
+        margin_mode: str = "crossed",
     ) -> Dict[str, Any]:
         """Submit an order."""
         if self.paper_trade:
@@ -455,10 +457,13 @@ class BitgetFuturesClient:
 
         body = {
             "symbol": self._format_symbol(symbol),
+            "productType": self.product_type,
             "size": vol,
             "side": side,
             "orderType": order_type,
             "openType": open_type,
+            "marginCoin": margin_coin,
+            "marginMode": margin_mode,
         }
         if price is not None:
             body["price"] = float(price)
