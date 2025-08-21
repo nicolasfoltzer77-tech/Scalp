@@ -234,12 +234,16 @@ def main(argv: Optional[List[str]] = None) -> None:
 
     try:
         contract_detail = client.get_contract_detail(symbol)
-    except requests.HTTPError as exc:  # pragma: no cover - network issues
+    except requests.RequestException as exc:  # pragma: no cover - network issues
         logging.error("Erreur r\u00e9cup\u00e9ration contract detail: %s", exc)
         contract_detail = {"success": False, "code": 404}
     log_event("contract_detail", contract_detail)
 
-    assets = client.get_assets()
+    try:
+        assets = client.get_assets()
+    except requests.RequestException as exc:  # pragma: no cover - network issues
+        logging.error("Erreur récupération assets: %s", exc)
+        assets = {"success": False, "data": []}
     log_event("assets", assets)
     equity_usdt = 0.0
     try:
@@ -391,7 +395,7 @@ def main(argv: Optional[List[str]] = None) -> None:
                         symbol = next_symbol
                         try:
                             contract_detail = client.get_contract_detail(symbol)
-                        except requests.HTTPError as exc:  # pragma: no cover - network
+                        except requests.RequestException as exc:  # pragma: no cover - network
                             logging.error(
                                 "Erreur récupération contract detail: %s", exc
                             )
@@ -755,5 +759,5 @@ def main(argv: Optional[List[str]] = None) -> None:
 if __name__ == "__main__":  # pragma: no cover - manual run
     try:
         main()
-    except requests.HTTPError as exc:  # pragma: no cover - network issues
+    except requests.RequestException as exc:  # pragma: no cover - network issues
         logging.error("Erreur HTTP principale: %s", exc)
