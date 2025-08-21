@@ -60,12 +60,71 @@ def check_config() -> None:
 
 
 class BitgetFuturesClient(_BaseBitgetFuturesClient):
-    """Wrapper injecting the ``requests`` module and logger."""
+    """Wrapper injectant ``requests`` + normalisations pour le bot."""
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         kwargs.setdefault("requests_module", requests)
         kwargs.setdefault("log_event", log_event)
         super().__init__(*args, **kwargs)
+
+    # --------- assets (\u00e9quity USDT) via endpoint priv\u00e9 -----------------------
+    def get_assets(self) -> Dict[str, Any]:
+        # Le client de base expose _private_request ; on l'utilise ici.
+        # GET /api/v2/mix/account/accounts?productType=...&marginCoin=USDT
+        params = {"productType": self.product_type, "marginCoin": "USDT"}
+        resp = self._private_request("GET", "/api/v2/mix/account/accounts", params=params)
+        rows = resp.get("data", []) or []
+        if not isinstance(rows, list):
+            rows = [rows]
+        # normalisation pour que bot.py trouve currency/equity
+        norm = []
+        for a in rows:
+            cur = a.get("marginCoin") or a.get("currency") or "USDT"
+            try:
+                eq = float(a.get("equity", a.get("available", 0)) or 0)
+            except Exception:
+                eq = 0.0
+            norm.append({**a, "currency": cur, "equity": eq})
+        return {"code": resp.get("code", "00000"), "data": norm, "success": True}
+
+    # --------- tickers publics + normalisation champs ------------------------
+    def get_ticker(self, symbol: str | None = None) -> Dict[str, Any]:
+        base = self.base.rstrip("/")
+        if symbol:
+            url = f"{base}/api/v2/mix/market/ticker"
+            params = {"symbol": symbol.replace("_", ""), "productType": self.product_type}
+        else:
+            url = f"{base}/api/v2/mix/market/tickers"
+            params = {"productType": self.product_type}
+
+        r = self.requests.get(url, params=params, timeout=10)
+        r.raise_for_status()
+        payload = r.json()
+        rows = payload.get("data", []) or []
+        if not isinstance(rows, list):
+            rows = [rows]
+
+        norm = []
+        for row in rows:
+            d = dict(row)
+            # cl\u00e9s compatibles avec scalp/pairs.py
+            d["symbol"] = d.get("symbol") or d.get("instId")
+            d["lastPrice"] = d.get("lastPr") or d.get("lastPrice")
+            d["bidPrice"] = d.get("bestBidPrice") or d.get("bidPr") or d.get("bidPrice")
+            d["askPrice"] = d.get("bestAskPrice") or d.get("askPr") or d.get("askPrice")
+            vol = (
+                d.get("usdtVolume")
+                or d.get("quoteVolume")
+                or d.get("baseVolume")
+                or d.get("volume")
+                or 0
+            )
+            try:
+                d["volume"] = float(vol)
+            except Exception:
+                d["volume"] = 0.0
+            norm.append(d)
+        return {"success": True, "data": norm}
 
 
 # Re-export pair utilities with ability to monkeypatch ``ema``/``cross`` ---------
