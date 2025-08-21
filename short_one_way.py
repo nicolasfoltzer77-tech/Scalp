@@ -156,13 +156,13 @@ def get_price():
     except Exception as e:
         print("⚠️ tickers err:", e)
 
-    # 3) candles Min1 (close)
+    # 3) candles 1m (close)
     try:
         # ``symbol`` must be provided as a query parameter; placing it in the
         # path triggers a 404 response from Bitget.
         r = requests.get(
             f"{BASE}/api/v2/mix/market/candles",
-            params={"symbol": SYMB, "granularity": "Min1"},
+            params={"symbol": SYMB, "granularity": "1m"},
             timeout=10,
         )
         r.raise_for_status()

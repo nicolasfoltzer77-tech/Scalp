@@ -17,6 +17,20 @@ _PRODUCT_TYPE_ALIASES = {
     "CMCBL": "COIN-FUTURES",
 }
 
+# Granularity aliases from v1 to v2 nomenclature
+_GRANULARITY_ALIASES = {
+    "MIN1": "1m",
+    "MIN3": "3m",
+    "MIN5": "5m",
+    "MIN15": "15m",
+    "MIN30": "30m",
+    "HOUR1": "1H",
+    "HOUR4": "4H",
+    "HOUR12": "12H",
+    "DAY1": "1D",
+    "WEEK1": "1W",
+}
+
 
 class BitgetFuturesClient:
     """Lightweight REST client for Bitget LAPI v2 futures endpoints."""
@@ -129,7 +143,7 @@ class BitgetFuturesClient:
     def get_kline(
         self,
         symbol: str,
-        interval: str = "Min1",
+        interval: str = "1m",
         start: Optional[int] = None,
         end: Optional[int] = None,
     ) -> Dict[str, Any]:
@@ -137,10 +151,11 @@ class BitgetFuturesClient:
         # encoded in the path. Using ``/candles/{symbol}`` results in a 404
         # response from Bitget. See: https://api.bitget.com/api/v2/mix/market/candles
         url = f"{self.base}/api/v2/mix/market/candles"
+        interval_norm = _GRANULARITY_ALIASES.get(interval.replace("_", "").upper(), interval)
         params: Dict[str, Any] = {
             "symbol": self._format_symbol(symbol),
             "productType": self.product_type,
-            "granularity": interval,
+            "granularity": interval_norm,
         }
         if start is not None:
             params["startTime"] = int(start)
@@ -249,7 +264,7 @@ class BitgetFuturesClient:
         params: Dict[str, Any] = {"productType": self.product_type}
         if symbol:
             params["symbol"] = self._format_symbol(symbol)
-        return self._private_request("GET", "/api/v2/mix/order/current", params=params)
+        return self._private_request("GET", "/api/v2/mix/order/orders-pending", params=params)
 
     # Account configuration -------------------------------------------------
     def set_position_mode_one_way(self, symbol: str, product_type: Optional[str] = None) -> Dict[str, Any]:
