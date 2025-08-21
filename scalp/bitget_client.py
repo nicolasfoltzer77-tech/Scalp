@@ -240,10 +240,18 @@ class BitgetFuturesClient:
             headers = self._headers(sig, ts)
             r = self.requests.request(method, url, params=params, headers=headers, timeout=20)
         elif method == "POST":
+            qs = self._urlencode_sorted(params or {})
+            req_path = path + (f"?{qs}" if qs else "")
             body_str = json.dumps(body or {}, separators=(",", ":"), ensure_ascii=False)
-            sig = self._sign(f"{ts}{method}{path}{body_str}")
+            sig = self._sign(f"{ts}{method}{req_path}{body_str}")
             headers = self._headers(sig, ts)
-            r = self.requests.post(url, data=body_str.encode("utf-8"), headers=headers, timeout=20)
+            r = self.requests.post(
+                url,
+                params=params,
+                data=body_str.encode("utf-8"),
+                headers=headers,
+                timeout=20,
+            )
         else:
             raise ValueError("M\u00e9thode non support\u00e9e")
 
@@ -461,15 +469,15 @@ class BitgetFuturesClient:
                 "PAPER_TRADE=True -> annulation simulée de tous les ordres"
             )
             return {"success": True, "code": 0}
-        body = {"productType": self.product_type}
+        params = {"productType": self.product_type}
         if symbol:
-            body["symbol"] = self._format_symbol(symbol)
+            params["symbol"] = self._format_symbol(symbol)
         if margin_coin is None:
             margin_coin = _DEFAULT_MARGIN_COIN.get(self.product_type)
         if margin_coin:
-            body["marginCoin"] = margin_coin
+            params["marginCoin"] = margin_coin
         return self._private_request(
-            "POST", "/api/v2/mix/order/cancel-all-orders", body=body
+            "POST", "/api/v2/mix/order/cancel-all-orders", params=params
         )
 
     def close_position(
