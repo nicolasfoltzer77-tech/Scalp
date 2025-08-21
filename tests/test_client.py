@@ -114,6 +114,22 @@ def test_get_assets_paper_trade():
     assert usdt and usdt["equity"] == 100.0
 
 
+def test_get_assets_margincoin_alias(monkeypatch):
+    client = BitgetFuturesClient("key", "secret", "https://test", paper_trade=False)
+
+    def fake_private(self, method, path, params=None, body=None):
+        assert method == "GET"
+        return {
+            "success": True,
+            "data": [{"marginCoin": "USDT", "equity": "50"}],
+        }
+
+    monkeypatch.setattr(BitgetFuturesClient, "_private_request", fake_private)
+
+    assets = client.get_assets(margin_coin="USDT")
+    assert assets["data"][0]["currency"] == "USDT"
+
+
 def test_http_client_context_manager(monkeypatch):
     import sys
     import importlib
