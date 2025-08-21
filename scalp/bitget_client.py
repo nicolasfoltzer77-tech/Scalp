@@ -313,9 +313,16 @@ class BitgetFuturesClient:
             margin_coin = _DEFAULT_MARGIN_COIN.get(self.product_type)
         if margin_coin:
             params["marginCoin"] = margin_coin
-        return self._private_request(
+        data = self._private_request(
             "GET", "/api/v2/mix/account/accounts", params=params
         )
+        try:
+            for row in data.get("data", []):
+                if "currency" not in row and row.get("marginCoin"):
+                    row["currency"] = row["marginCoin"]
+        except Exception:  # pragma: no cover - best effort
+            pass
+        return data
 
     def get_positions(self, product_type: Optional[str] = None) -> Dict[str, Any]:
         if self.paper_trade:
