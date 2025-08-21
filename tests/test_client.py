@@ -142,6 +142,52 @@ def test_get_assets_equity_fallback(monkeypatch):
     assert usdt["equity"] == 2.0
 
 
+def test_get_assets_prefers_available(monkeypatch):
+    """When both equity and available are returned, available should win."""
+    client = BitgetFuturesClient("key", "secret", "https://test")
+
+    def fake_private(self, method, path, params=None, body=None):
+        return {
+            "code": "00000",
+            "data": [
+                {
+                    "marginCoin": "USDT",
+                    "equity": "5",
+                    "available": "1",
+                }
+            ],
+        }
+
+    monkeypatch.setattr(BitgetFuturesClient, "_private_request", fake_private)
+
+    assets = client.get_assets()
+    usdt = assets.get("data", [])[0]
+    assert usdt["equity"] == 1.0
+
+
+def test_get_assets_zero_available(monkeypatch):
+    """Zero available balance should propagate as zero equity."""
+    client = BitgetFuturesClient("key", "secret", "https://test")
+
+    def fake_private(self, method, path, params=None, body=None):
+        return {
+            "code": "00000",
+            "data": [
+                {
+                    "marginCoin": "USDT",
+                    "available": "0",
+                    "equity": "5",
+                }
+            ],
+        }
+
+    monkeypatch.setattr(BitgetFuturesClient, "_private_request", fake_private)
+
+    assets = client.get_assets()
+    usdt = assets.get("data", [])[0]
+    assert usdt["equity"] == 0.0
+
+
 def test_get_ticker_normalization(monkeypatch):
     client = BitgetFuturesClient("key", "secret", "https://test")
 

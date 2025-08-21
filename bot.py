@@ -86,7 +86,16 @@ class BitgetFuturesClient(_BaseBitgetFuturesClient):
         for a in rows:
             cur = a.get("marginCoin") or a.get("currency") or "USDT"
             try:
-                eq = float(a.get("equity", a.get("available", 0)) or 0)
+                eq = float(
+                    a.get(
+                        "available",
+                        a.get(
+                            "cashBalance",
+                            a.get("equity", a.get("usdtEquity", 0)),
+                        ),
+                    )
+                    or 0
+                )
             except Exception:
                 eq = 0.0
             norm.append({**a, "currency": cur, "equity": eq})
@@ -239,33 +248,52 @@ def main(argv: Optional[List[str]] = None) -> None:
         contract_detail = {"success": False, "code": 404}
     log_event("contract_detail", contract_detail)
 
-    try:
-        assets = client.get_assets()
-    except requests.RequestException as exc:  # pragma: no cover - network issues
-        logging.error("Erreur récupération assets: %s", exc)
-        assets = {"success": False, "data": []}
-    log_event("assets", assets)
-    equity_usdt = 0.0
-    try:
+    def _fetch_equity() -> float:
+        """Retrieve available USDT balance from the exchange.
+
+        Bitget returns several balance metrics; ``available``/``cashBalance``
+        represent free margin and are therefore preferred over total equity.
+        ``0.0`` is returned when no usable balance can be obtained.
+        """
+
+        try:
+            assets = client.get_assets()
+            log_event("assets", assets)
+        except requests.RequestException as exc:  # pragma: no cover - network issues
+            logging.error("Erreur récupération assets: %s", exc)
+            return 0.0
+
         for row in assets.get("data", []):
             if row.get("currency") == "USDT":
-                for key in ("equity", "usdtEquity", "available", "cashBalance"):
+                for key in ("available", "cashBalance"):
                     val = row.get(key)
                     try:
                         if val is not None:
-                            equity_usdt = float(val)
+                            eq = float(val)
+                        else:
+                            continue
                     except (TypeError, ValueError):
-                        equity_usdt = 0.0
-                    if equity_usdt > 0:
-                        break
+                        continue
+                    return eq if eq > 0 else 0.0
+                for key in ("equity", "usdtEquity"):
+                    val = row.get(key)
+                    try:
+                        if val is not None:
+                            eq = float(val)
+                        else:
+                            continue
+                    except (TypeError, ValueError):
+                        continue
+                    if eq > 0:
+                        return eq
                 break
-    except Exception:
-        pass
+        return 0.0
+
+    equity_usdt = _fetch_equity()
     if equity_usdt <= 0:
         logging.warning(
-            "Equity USDT non détectée, fallback symbolique à 100 USDT pour sizing."
+            "Aucun solde USDT disponible; en attente de fonds avant de trader."
         )
-        equity_usdt = 100.0
 
     prev_fast = prev_slow = None
     current_pos = 0
@@ -303,7 +331,8 @@ def main(argv: Optional[List[str]] = None) -> None:
             open_type=CONFIG["OPEN_TYPE"],
             leverage=CONFIG["LEVERAGE"],
         )
-        equity_usdt *= 1 + pnl / 100.0
+        new_eq = _fetch_equity()
+        equity_usdt = new_eq
         risk_mgr.record_trade(pnl)
         logging.info("Nouveau risk_pct: %.4f", risk_mgr.risk_pct)
         kill = risk_mgr.kill_switch
@@ -380,6 +409,8 @@ def main(argv: Optional[List[str]] = None) -> None:
             next_update = now + 60
 
         try:
+            new_eq = _fetch_equity()
+            equity_usdt = new_eq
             if current_pos == 0:
                 pairs = filter_trade_pairs(client, top_n=20)
                 signals = find_trade_positions(

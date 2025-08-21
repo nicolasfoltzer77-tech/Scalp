@@ -348,12 +348,14 @@ class BitgetFuturesClient:
             for row in data.get("data", []):
                 if "currency" not in row and row.get("marginCoin"):
                     row["currency"] = str(row["marginCoin"]).upper()
-                if "equity" not in row:
-                    for key in ("usdtEquity", "available", "cashBalance"):
-                        val = row.get(key)
-                        if val is not None:
-                            row["equity"] = val
-                            break
+                chosen = None
+                for key in ("available", "cashBalance", "equity", "usdtEquity"):
+                    val = row.get(key)
+                    if val is not None:
+                        chosen = val
+                        break
+                if chosen is not None:
+                    row["equity"] = chosen
                 try:
                     row["equity"] = float(row["equity"])
                 except Exception:
