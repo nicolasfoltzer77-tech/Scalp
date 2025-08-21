@@ -463,13 +463,21 @@ class BitgetFuturesClient:
         # ------------------------------------------------------------------
         # Parameter mapping
         # ------------------------------------------------------------------
-        side_map = {1: "open_long", 2: "close_short", 3: "open_short", 4: "close_long"}
+        side_map = {
+            1: ("buy", "long", False),
+            2: ("buy", "short", True),
+            3: ("sell", "short", False),
+            4: ("sell", "long", True),
+        }
         if isinstance(side, int):
-            side_str = side_map.get(side)
-            if not side_str:
+            mapped = side_map.get(side)
+            if not mapped:
                 raise ValueError(f"Invalid side value: {side}")
+            side_str, pos_side, reduce_side = mapped
         else:
             side_str = str(side)
+            pos_side = None
+            reduce_side = None
 
         order_map = {1: "market", 2: "limit", 3: "post_only", 4: "fok", 5: "limit"}
         if isinstance(order_type, int):
@@ -493,6 +501,8 @@ class BitgetFuturesClient:
             "size": vol,
             "timeInForceValue": time_in_force,
         }
+        if pos_side is not None:
+            body["posSide"] = pos_side
         if margin_coin:
             body["marginCoin"] = margin_coin
         if price is not None:
@@ -511,8 +521,12 @@ class BitgetFuturesClient:
             body["takeProfitPrice"] = float(take_profit)
         if reduce_only is not None:
             body["reduceOnly"] = bool(reduce_only)
+        elif reduce_side is not None:
+            body["reduceOnly"] = reduce_side
         if position_mode is not None:
             body["posMode"] = "one_way_mode" if int(position_mode) == 1 else "hedge_mode"
+        elif pos_side is not None:
+            body["posMode"] = "hedge_mode"
 
         return self._private_request("POST", "/api/v2/mix/order/place-order", body=body)
 
