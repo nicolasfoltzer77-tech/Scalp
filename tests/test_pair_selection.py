@@ -81,7 +81,7 @@ def test_find_trade_positions(monkeypatch):
                 "BBB": {"data": {"close": [3, 2, 1]}},
             }
 
-        def get_kline(self, symbol, interval="Min1"):
+        def get_kline(self, symbol, interval="1m"):
             return self.data[symbol]
 
     pairs = [

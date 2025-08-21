@@ -8,7 +8,7 @@ Ce fichier résume les modules et fonctions essentiels afin de recréer le bot d
 - `_noop_event(*args, **kwargs)` : fonction vide pour le logging d'événements.
 - `check_config()` : vérifie la présence des clés API Bitget et journalise un avertissement si elles manquent.
 - `BitgetSpotClient` : sous-classe du client spot Bitget qui injecte `requests` et la fonction `log_event`.
-- `find_trade_positions(client, pairs, interval="Min1", ema_fast_n=None, ema_slow_n=None)` : applique la stratégie EMA sur une liste de paires et renvoie les signaux.
+- `find_trade_positions(client, pairs, interval="1m", ema_fast_n=None, ema_slow_n=None)` : applique la stratégie EMA sur une liste de paires et renvoie les signaux.
 - `send_selected_pairs(client, top_n=20, tg_bot=None)` : sélectionne et notifie les paires les plus actives.
 - `update(client, top_n=20, tg_bot=None)` : rafraîchit la liste des paires et renvoie la charge utile envoyée.
 - `main(argv=None)` : initialise la configuration, le client, le `RiskManager`, le bot Telegram et exécute la boucle de trading.
@@ -74,7 +74,7 @@ Ce fichier résume les modules et fonctions essentiels afin de recréer le bot d
 
 ### bitget_client.py
 - `BitgetSpotClient(access_key, secret_key, base_url, recv_window=30, paper_trade=True, requests_module=requests, log_event=None)` : client REST léger pour le marché spot.
-  - `get_symbol_info(symbol=None)`, `get_kline(symbol, interval="Min1", start=None, end=None)`, `get_ticker(symbol=None)`.
+  - `get_symbol_info(symbol=None)`, `get_kline(symbol, interval="1m", start=None, end=None)`, `get_ticker(symbol=None)`.
   - `_private_request(method, path, params=None, body=None)` : signe et exécute les requêtes privées.
   - `get_account()`, `get_open_orders(symbol=None)`.
   - `place_order(symbol, side, quantity, order_type, price=None, reduce_only=False, stop_loss=None, take_profit=None)`.
@@ -84,7 +84,7 @@ Ce fichier résume les modules et fonctions essentiels afin de recréer le bot d
 - `get_trade_pairs(client)` : récupère toutes les paires via `get_ticker`.
 - `filter_trade_pairs(client, volume_min=5_000_000, max_spread_bps=5, top_n=20)` : filtre par volume/spread.
 - `select_top_pairs(client, top_n=10, key="volume")` : trie par volume ou autre clé.
-- `find_trade_positions(client, pairs, interval="Min1", ema_fast_n=None, ema_slow_n=None, ema_func=ema, cross_func=cross)` : signaux EMA croisement.
+- `find_trade_positions(client, pairs, interval="1m", ema_fast_n=None, ema_slow_n=None, ema_func=ema, cross_func=cross)` : signaux EMA croisement.
 - `send_selected_pairs(client, top_n=20, select_fn=select_top_pairs, notify_fn=notify)` : déduplique USD/USDT/USDC et notifie la liste.
 - `heat_score(volatility, volume, news=False)` : score combinant volatilite et volume.
 - `select_top_heat_pairs(pairs, top_n=3)` : sélection des paires les plus "chaudes".

@@ -13,7 +13,7 @@ CONFIG = {
     "SYMBOL": DEFAULT_SYMBOL,
     "PRODUCT_TYPE": os.getenv("BITGET_PRODUCT_TYPE", "USDT-FUTURES"),
     "MARGIN_COIN": os.getenv("BITGET_MARGIN_COIN", "USDT"),
-    "INTERVAL": os.getenv("INTERVAL", "Min1"),
+    "INTERVAL": os.getenv("INTERVAL", "1m"),
     "EMA_FAST": int(os.getenv("EMA_FAST", "9")),
     "EMA_SLOW": int(os.getenv("EMA_SLOW", "21")),
     "MACD_FAST": int(os.getenv("MACD_FAST", "12")),
