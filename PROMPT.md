@@ -77,7 +77,7 @@ Ce fichier résume les modules et fonctions essentiels afin de recréer le bot d
   - `get_symbol_info(symbol=None)`, `get_kline(symbol, interval="1m", start=None, end=None)`, `get_ticker(symbol=None)`.
   - `_private_request(method, path, params=None, body=None)` : signe et exécute les requêtes privées.
   - `get_account()`, `get_open_orders(symbol=None)`.
-  - `place_order(symbol, side, quantity, order_type, price=None, reduce_only=False, stop_loss=None, take_profit=None)`.
+  - `place_order(symbol, side, quantity, order_type, price=None, stop_loss=None, take_profit=None)`.
   - `cancel_order(symbol, order_id)`, `cancel_all(symbol)`.
 
 ### pairs.py
