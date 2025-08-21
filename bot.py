@@ -140,6 +140,7 @@ def main(argv: Optional[List[str]] = None) -> None:
         base_url=cfg["BASE_URL"],
         recv_window=cfg["RECV_WINDOW"],
         paper_trade=cfg["PAPER_TRADE"],
+        passphrase=cfg.get("BITGET_PASSPHRASE"),
     )
     risk_mgr = RiskManager(
         max_daily_loss_pct=cfg["MAX_DAILY_LOSS_PCT"],
@@ -157,10 +158,10 @@ def main(argv: Optional[List[str]] = None) -> None:
     except Exception as exc:  # pragma: no cover - best effort
         logging.error("Erreur annulation ordres ouverts: %s", exc)
     try:
-        positions = client.get_positions()
+        positions = client.get_positions(product_type=cfg["PRODUCT_TYPE"])
         if positions.get("data"):
             logging.info("Fermeture des positions ouvertes au démarrage")
-            client.close_all_positions()
+            client.close_all_positions(product_type=cfg["PRODUCT_TYPE"])
     except Exception as exc:  # pragma: no cover - best effort
         logging.error("Erreur fermeture positions existantes: %s", exc)
 
@@ -410,7 +411,7 @@ def main(argv: Optional[List[str]] = None) -> None:
                     distance_mult=cfg["SCALE_IN_ATR_MULT"],
                 )
             ):
-                positions = client.get_positions().get("data", [])
+                positions = client.get_positions(product_type=cfg["PRODUCT_TYPE"]).get("data", [])
                 if risk_mgr.can_open(len(positions)):
                     vol_add = compute_position_size(
                         contract_detail,
@@ -445,7 +446,7 @@ def main(argv: Optional[List[str]] = None) -> None:
                     distance_mult=cfg["SCALE_IN_ATR_MULT"],
                 )
             ):
-                positions = client.get_positions().get("data", [])
+                positions = client.get_positions(product_type=cfg["PRODUCT_TYPE"]).get("data", [])
                 if risk_mgr.can_open(len(positions)):
                     vol_add = compute_position_size(
                         contract_detail,
@@ -485,7 +486,7 @@ def main(argv: Optional[List[str]] = None) -> None:
                     if close_position(-1, price, vol_close):
                         break
 
-                positions = client.get_positions().get("data", [])
+                positions = client.get_positions(product_type=cfg["PRODUCT_TYPE"]).get("data", [])
                 if not risk_mgr.can_open(len(positions)):
                     logging.info("RiskManager: limites atteintes, on attend.")
                     time.sleep(cfg["LOOP_SLEEP_SECS"])
@@ -551,7 +552,7 @@ def main(argv: Optional[List[str]] = None) -> None:
                     if close_position(1, price, vol_close):
                         break
 
-                positions = client.get_positions().get("data", [])
+                positions = client.get_positions(product_type=cfg["PRODUCT_TYPE"]).get("data", [])
                 if not risk_mgr.can_open(len(positions)):
                     logging.info("RiskManager: limites atteintes, on attend.")
                     time.sleep(cfg["LOOP_SLEEP_SECS"])
