@@ -198,8 +198,21 @@ def send_selected_pairs(client: Any, top_n: int = 40) -> Dict[str, str]:
 
 
 def update(client: Any, top_n: int = 40) -> Dict[str, str]:
-    """Send a fresh list of pairs to reflect current market conditions."""
-    payload = send_selected_pairs(client, top_n=top_n)
+    """Send a fresh list of pairs to reflect current market conditions.
+
+    ``send_selected_pairs`` performs network requests and may raise an
+    exception when the exchange is unreachable.  Previously such an error
+    would bubble up to the caller and could stop the bot.  The function now
+    guards the call so that a failure simply results in an empty payload while
+    logging the error, allowing the rest of the bot to continue running.
+    """
+
+    try:
+        payload = send_selected_pairs(client, top_n=top_n)
+    except Exception as exc:  # pragma: no cover - best effort
+        logging.error("Erreur sélection paires: %s", exc)
+        payload = {}
+
     text = _format_text("pair_list", payload)
     logging.info(text)
     return payload
