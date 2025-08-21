@@ -83,7 +83,7 @@ Ce fichier résume les modules et fonctions essentiels afin de recréer le bot d
 ### pairs.py
 - `get_trade_pairs(client)` : récupère toutes les paires via `get_ticker`.
 - `filter_trade_pairs(client, volume_min=5_000_000, max_spread_bps=5, top_n=40)` : filtre par volume/spread.
-- `select_top_pairs(client, top_n=10, key="volume")` : trie par volume ou autre clé.
+- `select_top_pairs(client, top_n=40, key="volume")` : trie par volume ou autre clé.
 - `find_trade_positions(client, pairs, interval="1m", ema_fast_n=None, ema_slow_n=None, ema_func=ema, cross_func=cross)` : signaux EMA croisement.
 - `send_selected_pairs(client, top_n=40, select_fn=select_top_pairs, notify_fn=notify)` : déduplique USD/USDT/USDC et notifie la liste.
 - `heat_score(volatility, volume, news=False)` : score combinant volatilite et volume.

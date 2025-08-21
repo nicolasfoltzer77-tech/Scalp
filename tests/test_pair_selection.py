@@ -32,6 +32,18 @@ def test_select_top_pairs():
     assert [p["symbol"] for p in top] == ["B", "C"]
 
 
+def test_select_top_pairs_default_count():
+    class Client:
+        def get_ticker(self, symbol=None):
+            data = []
+            for i in range(100):
+                data.append({"symbol": str(i), "volume": str(i)})
+            return {"success": True, "data": data}
+
+    top = bot.select_top_pairs(Client())
+    assert len(top) == 40
+
+
 def test_filter_trade_pairs():
     class Client:
         def get_ticker(self, symbol=None):
