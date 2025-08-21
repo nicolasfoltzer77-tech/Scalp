@@ -118,7 +118,7 @@ def analyse_risque(
     symbol = symbol or CONFIG.get("SYMBOL")
     side = side.lower()
 
-    max_positions_map = {1: 1, 2: 2, 3: 3}
+    max_positions_map = {1: 1, 2: 3, 3: 5}
     leverage_map = {1: max(1, base_leverage // 2), 2: base_leverage, 3: base_leverage * 2}
 
     max_pos = max_positions_map.get(risk_level, max_positions_map[2])
