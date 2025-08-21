@@ -9,7 +9,12 @@ from typing import Any, Dict, Optional, List
 
 import requests
 
-from scalp.logging_utils import get_jsonl_logger, TradeLogger
+from scalp.logging_utils import (
+    get_jsonl_logger,
+    TradeLogger,
+    log_position,
+    log_operation_memo,
+)
 from scalp.metrics import calc_pnl_pct, calc_atr
 from scalp.notifier import notify, _format_text
 from scalp import __version__, RiskManager
@@ -323,6 +328,25 @@ def main(argv: Optional[List[str]] = None) -> None:
                 "score": None,
                 "reasons": None,
                 "pnl": pnl,
+            }
+        )
+        log_position(
+            {
+                "timestamp": int(time.time()),
+                "pair": symbol,
+                "direction": "long" if side > 0 else "short",
+                "entry": entry_price,
+                "exit": price,
+                "pnl_pct": pnl,
+                "fee_rate": fee_rate,
+                "notes": None,
+            }
+        )
+        log_operation_memo(
+            {
+                "timestamp": int(time.time()),
+                "pair": symbol,
+                "details": f"Closed with pnl {pnl}%",
             }
         )
         current_pos = 0
