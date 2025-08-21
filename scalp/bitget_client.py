@@ -230,7 +230,6 @@ class BitgetFuturesClient:
         body: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         method = method.upper()
-        url = f"{self.base}{path}"
         ts = self._ms()
 
         if method in ("GET", "DELETE"):
@@ -238,16 +237,17 @@ class BitgetFuturesClient:
             req_path = path + (f"?{qs}" if qs else "")
             sig = self._sign(f"{ts}{method}{req_path}")
             headers = self._headers(sig, ts)
-            r = self.requests.request(method, url, params=params, headers=headers, timeout=20)
+            url = f"{self.base}{req_path}"
+            r = self.requests.request(method, url, headers=headers, timeout=20)
         elif method == "POST":
             qs = self._urlencode_sorted(params or {})
             req_path = path + (f"?{qs}" if qs else "")
             body_str = json.dumps(body or {}, separators=(",", ":"), ensure_ascii=False)
             sig = self._sign(f"{ts}{method}{req_path}{body_str}")
             headers = self._headers(sig, ts)
+            url = f"{self.base}{req_path}"
             r = self.requests.post(
                 url,
-                params=params,
                 data=body_str.encode("utf-8"),
                 headers=headers,
                 timeout=20,
