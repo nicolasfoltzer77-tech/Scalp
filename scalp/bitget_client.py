@@ -129,7 +129,14 @@ class BitgetFuturesClient:
     # Public endpoints
     # ------------------------------------------------------------------
     def get_contract_detail(self, symbol: Optional[str] = None) -> Dict[str, Any]:
-        url = f"{self.base}/api/v2/mix/market/contract-detail"
+        """Return futures contract information.
+
+        The previous implementation queried ``/contract-detail`` which does not
+        exist on Bitget's v2 API and resulted in a 404 error.  The correct
+        endpoint is ``/contracts`` with the symbol supplied as a query
+        parameter."""
+
+        url = f"{self.base}/api/v2/mix/market/contracts"
         params: Dict[str, Any] = {"productType": self.product_type}
         if symbol:
             params["symbol"] = self._format_symbol(symbol)
@@ -163,7 +170,29 @@ class BitgetFuturesClient:
             params["endTime"] = int(end)
         r = self.requests.get(url, params=params, timeout=15)
         r.raise_for_status()
-        return r.json()
+        data = r.json()
+
+        rows = data.get("data") if isinstance(data, dict) else None
+        if isinstance(rows, list) and rows and isinstance(rows[0], list):
+            cols = {"ts": [], "open": [], "high": [], "low": [], "close": [], "volume": [], "quoteVolume": []}
+            for row in rows:
+                if len(row) < 7:
+                    continue
+                try:
+                    ts, op, hi, lo, cl, vol, qv = row[:7]
+                    cols["ts"].append(int(ts))
+                    cols["open"].append(float(op))
+                    cols["high"].append(float(hi))
+                    cols["low"].append(float(lo))
+                    cols["close"].append(float(cl))
+                    cols["volume"].append(float(vol))
+                    cols["quoteVolume"].append(float(qv))
+                except (TypeError, ValueError):
+                    continue
+            data["data"] = cols
+        elif isinstance(rows, list):
+            data["data"] = {"ts": [], "open": [], "high": [], "low": [], "close": [], "volume": [], "quoteVolume": []}
+        return data
 
     def get_ticker(self, symbol: Optional[str] = None) -> Dict[str, Any]:
         if symbol:
@@ -399,7 +428,7 @@ class BitgetFuturesClient:
         body = {"productType": self.product_type}
         if symbol:
             body["symbol"] = self._format_symbol(symbol)
-        return self._private_request("POST", "/api/v2/mix/order/cancel-all-order", body=body)
+        return self._private_request("POST", "/api/v2/mix/order/cancel-all-orders", body=body)
 
     def close_position(
         self,
