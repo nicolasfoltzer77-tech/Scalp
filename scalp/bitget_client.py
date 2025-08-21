@@ -275,9 +275,32 @@ class BitgetFuturesClient:
         body = {"symbol": symbol} if symbol else {}
         return self._private_request("POST", "/api/v2/mix/order/cancel-all-order", body=body)
 
-    def close_position(self, symbol: str) -> Dict[str, Any]:
-        """Close an open position for ``symbol``."""
+    def close_position(
+        self,
+        symbol: str,
+        size: Optional[int] = None,
+        hold_side: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Close an open position for ``symbol``.
+
+        Parameters
+        ----------
+        symbol:
+            Trading symbol to close.
+        size:
+            Optional number of contracts to close. If omitted the entire
+            position is closed.
+        hold_side:
+            Optional side (``"long"``/``"short"``) to close when ``size`` is
+            specified. If not provided the exchange will infer it.
+        """
+
         body = {"symbol": symbol}
+        if size is not None:
+            body["size"] = int(size)
+        if hold_side:
+            body["holdSide"] = hold_side
+
         return self._private_request(
             "POST", "/api/v2/mix/position/close-position", body=body
         )
