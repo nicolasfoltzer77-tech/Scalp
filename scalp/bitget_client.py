@@ -77,35 +77,27 @@ class BitgetFuturesClient:
     def _format_symbol(self, symbol: str) -> str:
         """Return ``symbol`` formatted for Bitget API.
 
-        Accepts legacy styles such as ``BTC_USDT`` and converts them to
-        ``BTCUSDT_UMCBL`` (when ``product_type`` is ``UMCBL``). Symbols already in
-        Bitget's format are returned unchanged.
+        The v2 endpoints expect the trading pair without any product type
+        suffix (``BTCUSDT``). Older configurations may provide symbols like
+        ``BTC_USDT`` or ``BTCUSDT_UMCBL``; these are normalised by removing the
+        separators and any trailing product type string.
         """
 
         if not symbol:
             return symbol
 
-        # Already contains the product type suffix
-        if symbol.upper().endswith(f"_{self.product_type}"):
-            return symbol
-
-        if "_" in symbol:
-            left, right = symbol.split("_", 1)
-            # Old style base_quote
-            if len(right) <= 4:  # quote like USDT/USDC/USD
-                return f"{left}{right}_{self.product_type}"
-            # Otherwise assume it's already formatted
-            return symbol
-
-        # Symbol without separator (e.g., BTCUSDT)
-        return f"{symbol}_{self.product_type}"
+        sym = symbol.replace("_", "").upper()
+        # Strip product type suffix if present (e.g. BTCUSDTUMCBL)
+        if sym.endswith(self.product_type):
+            sym = sym[: -len(self.product_type)]
+        return sym
 
     # ------------------------------------------------------------------
     # Public endpoints
     # ------------------------------------------------------------------
     def get_contract_detail(self, symbol: Optional[str] = None) -> Dict[str, Any]:
         url = f"{self.base}/api/v2/mix/market/contract-detail"
-        params: Dict[str, Any] = {}
+        params: Dict[str, Any] = {"productType": self.product_type}
         if symbol:
             params["symbol"] = self._format_symbol(symbol)
         r = self.requests.get(url, params=params, timeout=15)
@@ -128,6 +120,7 @@ class BitgetFuturesClient:
         url = f"{self.base}/api/v2/mix/market/candles"
         params: Dict[str, Any] = {
             "symbol": self._format_symbol(symbol),
+            "productType": self.product_type,
             "granularity": interval,
         }
         if start is not None:
@@ -141,7 +134,10 @@ class BitgetFuturesClient:
     def get_ticker(self, symbol: Optional[str] = None) -> Dict[str, Any]:
         if symbol:
             url = f"{self.base}/api/v2/mix/market/ticker"
-            params = {"symbol": self._format_symbol(symbol)}
+            params = {
+                "symbol": self._format_symbol(symbol),
+                "productType": self.product_type,
+            }
         else:
             url = f"{self.base}/api/v2/mix/market/tickers"
             params = {"productType": self.product_type}
@@ -231,11 +227,10 @@ class BitgetFuturesClient:
         return data
 
     def get_open_orders(self, symbol: Optional[str] = None) -> Dict[str, Any]:
-        return self._private_request(
-            "GET",
-            "/api/v2/mix/order/current",
-            params={"symbol": self._format_symbol(symbol)} if symbol else None,
-        )
+        params: Dict[str, Any] = {"productType": self.product_type}
+        if symbol:
+            params["symbol"] = self._format_symbol(symbol)
+        return self._private_request("GET", "/api/v2/mix/order/current", params=params)
 
     # Account configuration -------------------------------------------------
     def set_position_mode_one_way(self, symbol: str, product_type: Optional[str] = None) -> Dict[str, Any]:
@@ -367,7 +362,9 @@ class BitgetFuturesClient:
         )
 
     def cancel_all(self, symbol: Optional[str] = None) -> Dict[str, Any]:
-        body = {"symbol": self._format_symbol(symbol)} if symbol else {}
+        body = {"productType": self.product_type}
+        if symbol:
+            body["symbol"] = self._format_symbol(symbol)
         return self._private_request("POST", "/api/v2/mix/order/cancel-all-order", body=body)
 
     def close_position(
@@ -396,6 +393,7 @@ class BitgetFuturesClient:
         if hold_side:
             body["holdSide"] = hold_side
 
+        body["productType"] = self.product_type
         return self._private_request(
             "POST", "/api/v2/mix/position/close-position", body=body
         )
