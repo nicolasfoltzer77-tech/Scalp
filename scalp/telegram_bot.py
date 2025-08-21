@@ -121,6 +121,8 @@ class TelegramBot:
         return (
             f"Solde: {equity:.2f} USDT\n"
             f"PnL session: {session_pnl:.2f} USDT\n"
+            f"Positions max: {self.risk_mgr.max_positions}\n"
+            f"Risque actuel: {self.risk_mgr.risk_pct * 100:.2f}%\n"
             "Choisissez une option:"
         )
 
