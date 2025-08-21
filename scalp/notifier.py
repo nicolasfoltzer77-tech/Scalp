@@ -126,11 +126,12 @@ def _format_text(event: str, payload: Dict[str, Any] | None = None) -> str:
 
 
 def notify(event: str, payload: Dict[str, Any] | None = None) -> None:
-    """Send an event payload to a configured HTTP endpoint.
+    """Send an event payload to configured endpoints.
 
-    Notifications are delivered via a generic webhook defined by
-    ``NOTIFY_URL``. Network errors are logged but otherwise ignored so they do
-    not interrupt the bot's execution.
+    Notifications are delivered via a generic webhook defined by ``NOTIFY_URL``
+    and/or directly to Telegram when ``TELEGRAM_BOT_TOKEN`` and
+    ``TELEGRAM_CHAT_ID`` are provided. Network errors are logged but otherwise
+    ignored so they do not interrupt the bot's execution.
     """
 
     data = {"event": event}
@@ -144,3 +145,15 @@ def notify(event: str, payload: Dict[str, Any] | None = None) -> None:
             requests.post(url, json=data, timeout=5)
         except Exception as exc:  # pragma: no cover - best effort only
             logging.error("Notification error for %s: %s", event, exc)
+
+    # Telegram notification
+    token = os.getenv("TELEGRAM_BOT_TOKEN")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+    if token and chat_id:
+        text = _format_text(event, payload or {})
+        t_url = f"https://api.telegram.org/bot{token}/sendMessage"
+        t_payload = {"chat_id": chat_id, "text": text}
+        try:  # pragma: no cover - network
+            requests.post(t_url, json=t_payload, timeout=5)
+        except Exception as exc:  # pragma: no cover - best effort only
+            logging.error("Telegram notification error for %s: %s", event, exc)
