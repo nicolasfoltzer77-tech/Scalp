@@ -10,6 +10,14 @@ from typing import Any, Dict, List, Optional
 import requests
 
 
+# Mapping of deprecated v1 product type identifiers to the new v2 names
+_PRODUCT_TYPE_ALIASES = {
+    "UMCBL": "USDT-FUTURES",
+    "DMCBL": "USDC-FUTURES",
+    "CMCBL": "COIN-FUTURES",
+}
+
+
 class BitgetFuturesClient:
     """Lightweight REST client for Bitget LAPI v2 futures endpoints."""
 
@@ -19,7 +27,7 @@ class BitgetFuturesClient:
         secret_key: str,
         base_url: str,
         *,
-        product_type: str = "umcbl",
+        product_type: str = "USDT-FUTURES",
         recv_window: int = 30,
         paper_trade: bool = True,
         requests_module: Any = requests,
@@ -29,7 +37,8 @@ class BitgetFuturesClient:
         self.ak = access_key
         self.sk = secret_key
         self.base = base_url.rstrip("/")
-        self.product_type = product_type.upper()
+        pt = product_type.upper()
+        self.product_type = _PRODUCT_TYPE_ALIASES.get(pt, pt)
         self.recv_window = recv_window
         self.paper_trade = paper_trade
         self.requests = requests_module
@@ -80,7 +89,7 @@ class BitgetFuturesClient:
         The v2 endpoints expect the trading pair without any product type
         suffix (``BTCUSDT``). Older configurations may provide symbols like
         ``BTC_USDT`` or ``BTCUSDT_UMCBL``; these are normalised by removing the
-        separators and any trailing product type string.
+        separators and any trailing product type string (legacy or v2).
         """
 
         if not symbol:
@@ -90,7 +99,17 @@ class BitgetFuturesClient:
         # Strip product type suffix if present (e.g. BTCUSDTUMCBL)
         if sym.endswith(self.product_type):
             sym = sym[: -len(self.product_type)]
+        else:
+            for old in _PRODUCT_TYPE_ALIASES.keys():
+                if sym.endswith(old):
+                    sym = sym[: -len(old)]
+                    break
         return sym
+
+    def _product_type(self, pt: Optional[str] = None) -> str:
+        """Normalise ``pt`` to a valid v2 product type identifier."""
+        key = (pt or self.product_type or "").upper()
+        return _PRODUCT_TYPE_ALIASES.get(key, key)
 
     # ------------------------------------------------------------------
     # Public endpoints
@@ -205,11 +224,11 @@ class BitgetFuturesClient:
             }
         return self._private_request("GET", "/api/v2/mix/account/accounts")
 
-    def get_positions(self, product_type: str = "umcbl") -> Dict[str, Any]:
+    def get_positions(self, product_type: Optional[str] = None) -> Dict[str, Any]:
         data = self._private_request(
             "GET",
             "/api/v2/mix/position/all-position",
-            params={"productType": product_type},
+            params={"productType": self._product_type(product_type)},
         )
         try:
             positions = data.get("data", [])
@@ -235,7 +254,7 @@ class BitgetFuturesClient:
     # Account configuration -------------------------------------------------
     def set_position_mode_one_way(self, symbol: str, product_type: Optional[str] = None) -> Dict[str, Any]:
         body = {
-            "productType": (product_type or self.product_type),
+            "productType": self._product_type(product_type),
             "symbol": self._format_symbol(symbol),
             "posMode": "one_way_mode",
         }
@@ -250,7 +269,7 @@ class BitgetFuturesClient:
     ) -> Dict[str, Any]:
         body = {
             "symbol": self._format_symbol(symbol),
-            "productType": (product_type or self.product_type),
+            "productType": self._product_type(product_type),
             "marginCoin": margin_coin,
             "leverage": int(leverage),
         }
@@ -273,7 +292,7 @@ class BitgetFuturesClient:
             raise ValueError("side must be 'buy' or 'sell'")
         body = {
             "symbol": self._format_symbol(symbol),
-            "productType": (product_type or self.product_type),
+            "productType": self._product_type(product_type),
             "marginCoin": margin_coin,
             "marginMode": "crossed",
             "posMode": "one_way_mode",
@@ -398,7 +417,7 @@ class BitgetFuturesClient:
             "POST", "/api/v2/mix/position/close-position", body=body
         )
 
-    def close_all_positions(self, product_type: str = "umcbl") -> Dict[str, Any]:
+    def close_all_positions(self, product_type: Optional[str] = None) -> Dict[str, Any]:
         """Close all open positions."""
         results = []
         try:

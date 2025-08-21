@@ -11,7 +11,7 @@ Environment variables:
     BITGET_API_SECRET / BITGET_SECRET_KEY
     BITGET_API_PASSPHRASE
     BITGET_BASE_URL (default https://api.bitget.com)
-    BITGET_PRODUCT_TYPE (default ``umcbl``)
+    BITGET_PRODUCT_TYPE (default ``USDT-FUTURES``)
     BITGET_MARGIN_COIN (default ``USDT``)
     BITGET_SYMBOL (e.g. ``BTCUSDT``)
     BITGET_TEST_NOTIONAL_USDT (default ``5``)
@@ -42,7 +42,7 @@ base = os.getenv("BITGET_BASE_URL", "https://api.bitget.com")
 ak = os.getenv("BITGET_API_KEY") or os.getenv("BITGET_ACCESS_KEY")
 sk = os.getenv("BITGET_API_SECRET") or os.getenv("BITGET_SECRET_KEY")
 ph = os.getenv("BITGET_API_PASSPHRASE") or os.getenv("BITGET_PASSPHRASE")
-product_type = os.getenv("BITGET_PRODUCT_TYPE", "umcbl")
+product_type = os.getenv("BITGET_PRODUCT_TYPE", "USDT-FUTURES").upper()
 margin_coin = os.getenv("BITGET_MARGIN_COIN", "USDT")
 symbol = (os.getenv("BITGET_SYMBOL", "BTCUSDT") or "BTCUSDT").replace("_", "").upper()
 notional = float(os.getenv("BITGET_TEST_NOTIONAL_USDT", "5"))
