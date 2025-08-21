@@ -51,3 +51,25 @@ def test_compute_position_size_invalid_price():
         symbol="BTC_USDT",
     )
     assert vol == 0
+
+
+def test_compute_position_size_respects_equity():
+    contract_detail = {
+        "data": [
+            {
+                "symbol": "BTC_USDT",
+                "contractSize": 1,
+                "volUnit": 1,
+                "minVol": 1,
+            }
+        ]
+    }
+    vol = compute_position_size(
+        contract_detail,
+        equity_usdt=5,
+        price=100,
+        risk_pct=0.01,
+        leverage=10,
+        symbol="BTC_USDT",
+    )
+    assert vol == 0

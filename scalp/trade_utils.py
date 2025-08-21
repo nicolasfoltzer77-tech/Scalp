@@ -43,9 +43,23 @@ def compute_position_size(
     notional = equity_usdt * float(risk_pct) * float(leverage)
     if notional <= 0.0:
         return 0
+
     vol = notional / (price * contract_size)
     vol = int(math.floor(vol / vol_unit) * vol_unit)
-    return max(min_vol, vol)
+    vol = max(min_vol, vol)
+
+    margin = price * contract_size * vol / leverage
+    if margin > equity_usdt:
+        vol = int(
+            math.floor(
+                equity_usdt * leverage / (price * contract_size) / vol_unit
+            )
+            * vol_unit
+        )
+        if vol < min_vol:
+            return 0
+
+    return vol
 
 
 def analyse_risque(
