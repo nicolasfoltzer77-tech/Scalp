@@ -273,7 +273,7 @@ def main(argv: Optional[List[str]] = None) -> None:
 
     notify("bot_started")
     try:
-        send_selected_pairs(client, top_n=20, tg_bot=tg_bot)
+        update(client, top_n=20, tg_bot=tg_bot)
     except Exception as exc:  # pragma: no cover - network
         logging.error("Erreur sélection paires: %s", exc)
     if tg_bot:
