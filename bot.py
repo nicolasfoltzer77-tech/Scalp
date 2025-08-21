@@ -420,11 +420,22 @@ def main(argv: Optional[List[str]] = None) -> None:
             )
 
             tick = client.get_ticker(symbol)
-            if not (tick and tick.get("code") == "00000" and tick.get("data")):
+            tdata = tick.get("data") if tick else None
+            code = tick.get("code") if tick else None
+            success = tick.get("success") if tick else None
+            if (
+                tick is None
+                or (code is not None and code != "00000")
+                or (success is not None and not success)
+                or tdata is None
+            ):
                 logging.warning("Ticker vide: %s", tick)
                 time.sleep(cfg["LOOP_SLEEP_SECS"])
                 continue
-            tdata = tick["data"]
+            if hasattr(tdata, "items") and not isinstance(tdata, dict):
+                tdata = dict(tdata)
+            elif isinstance(tdata, list):
+                tdata = [dict(r) if hasattr(r, "items") and not isinstance(r, dict) else r for r in tdata]
             if isinstance(tdata, list):
                 price = None
                 for row in tdata:
