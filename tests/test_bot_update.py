@@ -11,5 +11,5 @@ def test_update_displays_pairs(monkeypatch, caplog):
     with caplog.at_level(logging.INFO):
         payload = bot.update("cli", top_n=5)
     assert payload["green"] == "BTC"
-    assert "BTC" in caplog.text and "ETH" in caplog.text and "XRP" in caplog.text
+    assert "Listing ok" in caplog.text
 

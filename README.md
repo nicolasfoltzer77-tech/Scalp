@@ -63,7 +63,7 @@ python bot.py
 
 Le terminal reste silencieux au démarrage sauf en cas d'absence de variables critiques (`BITGET_ACCESS_KEY`, `BITGET_SECRET_KEY`). Les journaux sont écrits dans `logs/` et affichés sur la console. Le bot tourne jusqu'à `Ctrl+C`. Les ouvertures et fermetures de positions sont consignées dans `bot_events.jsonl`.
 
-Lors du démarrage, deux notifications Telegram sont émises : la première affiche « Bot démarré » avec un logo, la seconde « Listing : » suivi des 40 paires sélectionnées classées par couleur (🟢 < 1 min, 🟠 < 10 min, 🔴 > 10 min).
+Lors du démarrage, deux notifications Telegram sont émises : la première affiche « Bot démarré » avec un logo, la seconde « Listing ok » sans détailler les paires sélectionnées.
 
 Ensuite, un rappel du marché est envoyé chaque minute et l'interface Telegram propose un bouton « Fermer Bot » pour arrêter proprement l'exécution.
 
