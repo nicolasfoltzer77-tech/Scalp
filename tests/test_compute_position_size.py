@@ -95,3 +95,26 @@ def test_compute_position_size_leaves_fee_buffer():
         symbol="BTC_USDT",
     )
     assert vol == 0
+
+
+def test_compute_position_size_under_min_notional_returns_zero():
+    contract_detail = {
+        "data": [
+            {
+                "symbol": "PI_USDT",
+                "contractSize": 1,
+                "volUnit": 1,
+                "minVol": 1,
+                "minTradeUSDT": 5,
+            }
+        ]
+    }
+    vol = compute_position_size(
+        contract_detail,
+        equity_usdt=100,
+        price=0.5,
+        risk_pct=0.0001,
+        leverage=20,
+        symbol="PI_USDT",
+    )
+    assert vol == 0
