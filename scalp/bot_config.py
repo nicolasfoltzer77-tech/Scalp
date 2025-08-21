@@ -35,6 +35,16 @@ CONFIG = {
     "LOOP_SLEEP_SECS": int(os.getenv("LOOP_SLEEP_SECS", "10")),
     "RECV_WINDOW": int(os.getenv("RECV_WINDOW", "30")),
     "LOG_DIR": os.getenv("LOG_DIR", "./logs"),
+    # --- Sécurité / Sizing -------------------------------------------------
+    "ALLOWED_SYMBOLS": [
+        s.strip().upper()
+        for s in os.getenv("ALLOWED_SYMBOLS", "BTCUSDT,ETHUSDT,BNBUSDT").split(",")
+        if s.strip()
+    ],
+    "NOTIONAL_CAP_USDT": float(os.getenv("NOTIONAL_CAP_USDT", "100.0")),
+    "MARGIN_CAP_RATIO": float(os.getenv("MARGIN_CAP_RATIO", "0.9")),
+    "RISK_PCT_MIN": float(os.getenv("RISK_PCT_MIN", "0.0005")),
+    "RISK_PCT_MAX": float(os.getenv("RISK_PCT_MAX", "0.02")),
     "BASE_URL": os.getenv("BITGET_CONTRACT_BASE_URL", "https://api.bitget.com"),
     "FEE_RATE": float(os.getenv("FEE_RATE", "0.0")),
     "MAX_DAILY_LOSS_PCT": float(os.getenv("MAX_DAILY_LOSS_PCT", "5.0")),
