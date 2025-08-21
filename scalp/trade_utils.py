@@ -7,6 +7,47 @@ from typing import Any, Dict, List, Optional, Tuple
 from scalp.bot_config import CONFIG
 
 
+def extract_available_balance(assets: Dict[str, Any], currency: str = "USDT") -> float:
+    """Return available balance for ``currency`` from Bitget assets payload.
+
+    The exchange may expose multiple fields depending on account mode and API
+    version.  We iterate through the known keys, returning the first positive
+    value encountered.  ``0.0`` is returned when no usable balance can be
+    determined.
+    """
+
+    for row in assets.get("data", []):
+        if row.get("currency") != currency:
+            continue
+        for key in (
+            "available",
+            "availableBalance",
+            "availableMargin",
+            "cashBalance",
+        ):
+            val = row.get(key)
+            if val is None:
+                continue
+            try:
+                eq = float(val)
+            except (TypeError, ValueError):
+                continue
+            if eq > 0:
+                return eq
+        for key in ("equity", "usdtEquity"):
+            val = row.get(key)
+            if val is None:
+                continue
+            try:
+                eq = float(val)
+            except (TypeError, ValueError):
+                continue
+            if eq > 0:
+                return eq
+        break
+    return 0.0
+
+
 def compute_position_size(
     contract_detail: Dict[str, Any],
     equity_usdt: float,
