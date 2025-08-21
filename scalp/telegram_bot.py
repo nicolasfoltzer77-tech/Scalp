@@ -52,12 +52,12 @@ class TelegramBot:
             [{"text": "Positions ouvertes", "callback_data": "positions"}],
             [{"text": "Update Cryptos", "callback_data": "update"}],
             [{"text": "Réglages", "callback_data": "settings"}],
+            [{"text": "Arrêt bot", "callback_data": "shutdown"}],
         ]
         self.settings_keyboard = [
             [{"text": "Stop trade", "callback_data": "stop"}],
             [{"text": "Réglage risk", "callback_data": "risk"}],
             [{"text": "Reset risk", "callback_data": "reset_risk"}],
-            [{"text": "Arrêt bot", "callback_data": "shutdown"}],
             [{"text": "Reset total", "callback_data": "reset_all"}],
             [{"text": "Retour", "callback_data": "back"}],
         ]
@@ -283,7 +283,7 @@ class TelegramBot:
 
         if data == "shutdown":
             self.stop_requested = True
-            return "Arrêt du bot demandé", self.settings_keyboard
+            return "Arrêt du bot demandé", self.main_keyboard
 
         if data == "back":
             return self._menu_text(session_pnl), self.main_keyboard
