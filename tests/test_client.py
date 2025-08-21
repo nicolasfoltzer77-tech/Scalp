@@ -188,6 +188,11 @@ def test_get_kline_query_params(monkeypatch):
     assert called["url"].endswith("/api/v2/mix/market/candles")
     assert called["params"] == {
         "symbol": "BTCUSDT",
-        "productType": "UMCBL",
+        "productType": "USDT-FUTURES",
         "granularity": "Min1",
     }
+
+
+def test_product_type_alias():
+    client = BitgetFuturesClient("key", "secret", "https://test", product_type="umcbl")
+    assert client.product_type == "USDT-FUTURES"
