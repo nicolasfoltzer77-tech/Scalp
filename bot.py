@@ -734,6 +734,11 @@ def main(argv: Optional[List[str]] = None) -> None:
                     stop_loss=sl_long,
                     take_profit=tp_long,
                 )
+                if str(resp.get("code")) != "00000":
+                    log_event("order_long_error", resp)
+                    logging.error("Échec ordre LONG: %s", resp)
+                    time.sleep(cfg["LOOP_SLEEP_SECS"])
+                    continue
                 log_event("order_long", resp)
                 logging.info(
                     "→ LONG %s vol=%s @~%.2f (SL~%.2f / TP~%.2f) [%s]",
@@ -820,6 +825,11 @@ def main(argv: Optional[List[str]] = None) -> None:
                     stop_loss=sl_short,
                     take_profit=tp_short,
                 )
+                if str(resp.get("code")) != "00000":
+                    log_event("order_short_error", resp)
+                    logging.error("Échec ordre SHORT: %s", resp)
+                    time.sleep(cfg["LOOP_SLEEP_SECS"])
+                    continue
                 log_event("order_short", resp)
                 logging.info(
                     "→ SHORT %s vol=%s @~%.2f (SL~%.2f / TP~%.2f) [%s]",
