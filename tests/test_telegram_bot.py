@@ -36,6 +36,7 @@ class DummyRiskMgr:
 
     def __init__(self):
         self.reset_called = False
+        self.max_positions = 1
 
     def reset_day(self):
         self.reset_called = True
@@ -53,7 +54,7 @@ class DummyRequests:
 
 
 def make_bot(config=None, requests_module=None):
-    cfg = {"RISK_LEVEL": 2}
+    cfg = {"RISK_LEVEL": 2, "MAX_POSITIONS": 1}
     if config:
         cfg.update(config)
     if requests_module is None:
@@ -191,6 +192,18 @@ def test_update_button(monkeypatch):
     resp, kb = bot.handle_callback("update", 0.0)
     assert called["called"] is True
     assert "mise à jour" in resp.lower()
+    assert kb == bot.main_keyboard
+
+
+def test_maxpos_menu_and_change():
+    bot = make_bot()
+    resp, kb = bot.handle_callback("maxpos", 0.0)
+    assert "nombre" in resp.lower()
+    assert kb == bot.maxpos_keyboard
+    resp, kb = bot.handle_callback("maxpos_3", 0.0)
+    assert "3" in resp
+    assert bot.config["MAX_POSITIONS"] == 3
+    assert bot.risk_mgr.max_positions == 3
     assert kb == bot.main_keyboard
 
 
