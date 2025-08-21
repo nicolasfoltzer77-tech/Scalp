@@ -69,14 +69,16 @@ print(f"Base={BASE}  PT={PT}  SYMB={SYMB}  MC={MC}  Notional≈{NOTIONAL}USDT")
 def sign_get(ts, path, params):
     qs = "&".join(f"{k}={v}" for k, v in sorted((params or {}).items()))
     pre = f"{ts}GET{path}" + (f"?{qs}" if qs else "")
-    return base64.b64encode(hmac.new(SK.encode(), pre.encode(), hashlib.sha256).digest()).decode()
-
-
-def sign_post(ts, path, body):
-    body_str = json.dumps(body or {}, separators=(",", ":"), sort_keys=True, ensure_ascii=False)
-    pre = f"{ts}POST{path}{body_str}"
     sig = base64.b64encode(hmac.new(SK.encode(), pre.encode(), hashlib.sha256).digest()).decode()
-    return sig, body_str
+    return sig, qs
+
+
+def sign_post(ts, path, body, params=None):
+    qs = "&".join(f"{k}={v}" for k, v in sorted((params or {}).items()))
+    body_str = json.dumps(body or {}, separators=(",", ":"), sort_keys=True, ensure_ascii=False)
+    pre = f"{ts}POST{path}" + (f"?{qs}" if qs else "") + body_str
+    sig = base64.b64encode(hmac.new(SK.encode(), pre.encode(), hashlib.sha256).digest()).decode()
+    return sig, body_str, qs
 
 
 def headers(sig, ts):
@@ -182,8 +184,9 @@ def check_accounts():
     path = "/api/v2/mix/account/accounts"
     ts = int(time.time() * 1000)
     params = {"productType": PT}
-    sig = sign_get(ts, path, params)
-    r = requests.get(BASE + path, params=params, headers=headers(sig, ts), timeout=12)
+    sig, qs = sign_get(ts, path, params)
+    url = f"{BASE}{path}" + (f"?{qs}" if qs else "")
+    r = requests.get(url, headers=headers(sig, ts), timeout=12)
     print("accounts", r.status_code, r.text[:160])
     r.raise_for_status()
     j = r.json()
@@ -195,8 +198,9 @@ def set_position_mode_one_way():
     path = "/api/v2/mix/account/set-position-mode"
     ts = int(time.time() * 1000)
     body = {"productType": PT, "symbol": SYMB, "posMode": "one_way_mode"}
-    sig, b = sign_post(ts, path, body)
-    r = requests.post(BASE + path, headers=headers(sig, ts), data=b.encode(), timeout=12)
+    sig, b, qs = sign_post(ts, path, body)
+    url = f"{BASE}{path}" + (f"?{qs}" if qs else "")
+    r = requests.post(url, headers=headers(sig, ts), data=b.encode(), timeout=12)
     print("set-position-mode(one-way)", r.status_code, r.text[:160])
     r.raise_for_status()
 
@@ -205,8 +209,9 @@ def set_leverage(lv: int = 2):
     path = "/api/v2/mix/account/set-leverage"
     ts = int(time.time() * 1000)
     body = {"symbol": SYMB, "productType": PT, "marginCoin": MC, "leverage": int(lv)}
-    sig, b = sign_post(ts, path, body)
-    r = requests.post(BASE + path, headers=headers(sig, ts), data=b.encode(), timeout=12)
+    sig, b, qs = sign_post(ts, path, body)
+    url = f"{BASE}{path}" + (f"?{qs}" if qs else "")
+    r = requests.post(url, headers=headers(sig, ts), data=b.encode(), timeout=12)
     print("set-leverage", r.status_code, r.text[:160])
     r.raise_for_status()
 
@@ -227,8 +232,9 @@ def place_one_way_sell(size_coin: float):
         "timeInForceValue": "normal",
         "clientOid": str(uuid.uuid4())[:32],
     }
-    sig, b = sign_post(ts, path, body)
-    r = requests.post(BASE + path, headers=headers(sig, ts), data=b.encode(), timeout=15)
+    sig, b, qs = sign_post(ts, path, body)
+    url = f"{BASE}{path}" + (f"?{qs}" if qs else "")
+    r = requests.post(url, headers=headers(sig, ts), data=b.encode(), timeout=15)
     print("place-order(one-way SELL)", r.status_code, r.text[:220])
     r.raise_for_status()
     j = r.json()
