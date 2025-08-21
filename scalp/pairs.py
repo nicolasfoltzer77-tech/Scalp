@@ -117,16 +117,26 @@ def send_selected_pairs(
 
     def split_symbol(sym: str) -> tuple[str, str]:
         if "_" in sym:
-            base, quote = sym.split("_", 1)
-        elif sym.endswith("USDT"):
-            base, quote = sym[:-4], "USDT"
-        elif sym.endswith("USDC"):
-            base, quote = sym[:-4], "USDC"
-        elif sym.endswith("USD"):
-            base, quote = sym[:-3], "USD"
-        else:
-            base, quote = sym, ""
-        return base, quote
+            left, right = sym.split("_", 1)
+            # Legacy style: BTC_USDT
+            if len(right) <= 4:
+                return left, right
+            # Bitget futures style: BTCUSDT_UMCBL
+            main = left
+            if main.endswith("USDT"):
+                return main[:-4], "USDT"
+            if main.endswith("USDC"):
+                return main[:-4], "USDC"
+            if main.endswith("USD"):
+                return main[:-3], "USD"
+            return main, ""
+        if sym.endswith("USDT"):
+            return sym[:-4], "USDT"
+        if sym.endswith("USDC"):
+            return sym[:-4], "USDC"
+        if sym.endswith("USD"):
+            return sym[:-3], "USD"
+        return sym, ""
 
     pairs = select_fn(client, top_n=top_n * 3)
     by_base: Dict[str, Dict[str, Any]] = {}
