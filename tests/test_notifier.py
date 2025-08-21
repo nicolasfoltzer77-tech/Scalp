@@ -136,13 +136,13 @@ def test_format_text_pair_list_and_start():
     text = notifier._format_text(
         "pair_list", {"green": "AAA", "orange": "BBB", "red": "CCC"}
     )
-    assert text == "Listing :\n🟢 AAA\n🟠 BBB\n🔴 CCC"
+    assert text == "Listing ok"
 
 
 def test_format_pair_list_helper():
     payload = {"green": "AAA", "orange": "BBB", "red": "CCC"}
     text = notifier._format_pair_list(payload)
-    assert text == "Listing :\n🟢 AAA\n🟠 BBB\n🔴 CCC"
+    assert text == "Listing ok"
 
 
 def test_format_position_event_helper():

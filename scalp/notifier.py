@@ -93,21 +93,13 @@ def _format_position_event(event: str, payload: Dict[str, Any]) -> str:
 
 
 def _format_pair_list(payload: Dict[str, Any]) -> str:
-    """Format the pair list payload."""
-    green = payload.get("green")
-    orange = payload.get("orange")
-    red = payload.get("red")
-    if green or orange or red:
-        lines = ["Listing :"]
-        if green:
-            lines.append(f"🟢 {green}")
-        if orange:
-            lines.append(f"🟠 {orange}")
-        if red:
-            lines.append(f"🔴 {red}")
-        return "\n".join(lines)
-    pairs = payload.get("pairs", "")
-    return f"Listing : {pairs}"
+    """Format the pair list payload.
+
+    The detailed pair listing is intentionally hidden from terminal output to
+    reduce noise. Only an acknowledgement message is returned.
+    """
+
+    return "Listing ok"
 
 
 def _format_generic(event: str, payload: Dict[str, Any]) -> str:
