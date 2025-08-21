@@ -218,3 +218,87 @@ def test_get_open_orders_endpoint(monkeypatch):
 def test_product_type_alias():
     client = BitgetFuturesClient("key", "secret", "https://test", product_type="umcbl")
     assert client.product_type == "USDT-FUTURES"
+
+
+def test_get_contract_detail_endpoint(monkeypatch):
+    client = BitgetFuturesClient("key", "secret", "https://test")
+
+    called = {}
+
+    def fake_get(url, params=None, timeout=None):
+        called["url"] = url
+        called["params"] = params
+
+        class Resp:
+            status_code = 200
+
+            def raise_for_status(self):
+                pass
+
+            def json(self):
+                return {"data": []}
+
+        return Resp()
+
+    monkeypatch.setattr(bot.requests, "get", fake_get, raising=False)
+
+    client.get_contract_detail("BTCUSDT_UMCBL")
+
+    assert called["url"].endswith("/api/v2/mix/market/contracts")
+    assert called["params"] == {
+        "productType": "USDT-FUTURES",
+        "symbol": "BTCUSDT",
+    }
+
+
+def test_cancel_all_endpoint(monkeypatch):
+    client = BitgetFuturesClient("key", "secret", "https://test")
+
+    called = {}
+
+    def fake_private(self, method, path, params=None, body=None):
+        called["method"] = method
+        called["path"] = path
+        called["body"] = body
+        return {"success": True}
+
+    monkeypatch.setattr(BitgetFuturesClient, "_private_request", fake_private)
+
+    client.cancel_all("BTCUSDT_UMCBL")
+
+    assert called["method"] == "POST"
+    assert called["path"] == "/api/v2/mix/order/cancel-all-orders"
+    assert called["body"] == {
+        "productType": "USDT-FUTURES",
+        "symbol": "BTCUSDT",
+    }
+
+
+def test_get_kline_transforms_data(monkeypatch):
+    client = BitgetFuturesClient("key", "secret", "https://test")
+
+    def fake_get(url, params=None, timeout=None):
+        class Resp:
+            def raise_for_status(self):
+                pass
+
+            def json(self):
+                return {
+                    "data": [
+                        ["1", "2", "3", "1", "2", "10", "20"],
+                        ["2", "3", "4", "2", "3", "11", "21"],
+                    ]
+                }
+
+        return Resp()
+
+    monkeypatch.setattr(bot.requests, "get", fake_get, raising=False)
+
+    data = client.get_kline("BTC_USDT", interval="1m")
+    kdata = data["data"]
+    assert kdata["open"] == [2.0, 3.0]
+    assert kdata["high"] == [3.0, 4.0]
+    assert kdata["low"] == [1.0, 2.0]
+    assert kdata["close"] == [2.0, 3.0]
+    assert kdata["volume"] == [10.0, 11.0]
+    assert kdata["quoteVolume"] == [20.0, 21.0]
