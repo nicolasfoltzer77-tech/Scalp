@@ -206,6 +206,26 @@ def update(client: Any, top_n: int = 20) -> Dict[str, str]:
 
 
 # ---------------------------------------------------------------------------
+# Helpers "safe" locaux (pas d'appel réseau)
+# ---------------------------------------------------------------------------
+def _safe_extract_contract_fields(contract_detail):
+    data = contract_detail.get("data") if isinstance(contract_detail, dict) else None
+    if isinstance(data, list) and data:
+        data = data[0]
+    size_mult = float((data or {}).get("sizeMultiplier", 1.0))
+    min_trade = float((data or {}).get("minTradeNum", 1.0))
+    return size_mult, min_trade
+
+
+def _estimate_margin(contract_detail, price, vol, leverage):
+    size_mult, _ = _safe_extract_contract_fields(contract_detail)
+    notional = float(vol) * size_mult * float(price)
+    lev = max(1.0, float(leverage) or 1.0)
+    margin = notional / lev
+    return notional, margin
+
+
+# ---------------------------------------------------------------------------
 # Main trading loop
 # ---------------------------------------------------------------------------
 
@@ -232,11 +252,15 @@ def main(argv: Optional[List[str]] = None) -> None:
         paper_trade=cfg["PAPER_TRADE"],
         passphrase=cfg.get("BITGET_PASSPHRASE"),
     )
+    base_risk = min(
+        max(cfg["RISK_PCT_EQUITY"], cfg["RISK_PCT_MIN"]),
+        cfg["RISK_PCT_MAX"],
+    )
     risk_mgr = RiskManager(
         max_daily_loss_pct=cfg["MAX_DAILY_LOSS_PCT"],
         max_daily_profit_pct=cfg["MAX_DAILY_PROFIT_PCT"],
         max_positions=cfg["MAX_POSITIONS"],
-        risk_pct=cfg["RISK_PCT_EQUITY"],
+        risk_pct=base_risk,
     )
 
     # Ensure a clean state: close leftover positions
@@ -418,6 +442,15 @@ def main(argv: Optional[List[str]] = None) -> None:
                 if signals:
                     next_symbol = signals[0].get("symbol")
                     if next_symbol and next_symbol != symbol:
+                        # Liste blanche
+                        allowed = set(cfg.get("ALLOWED_SYMBOLS") or [])
+                        if allowed and next_symbol not in allowed:
+                            logging.info(
+                                "Symbole %s non autorisé par ALLOWED_SYMBOLS -> ignoré",
+                                next_symbol,
+                            )
+                            time.sleep(cfg["LOOP_SLEEP_SECS"])
+                            continue
                         symbol = next_symbol
                         try:
                             contract_detail = client.get_contract_detail(symbol)
@@ -427,6 +460,16 @@ def main(argv: Optional[List[str]] = None) -> None:
                             )
                             contract_detail = {"success": False, "code": 404}
                         log_event("contract_detail", contract_detail)
+                        ok_contract = (
+                            contract_detail.get("success") is True
+                            or contract_detail.get("code") == "00000"
+                        )
+                        if not ok_contract:
+                            logging.warning(
+                                "Contrat invalide pour %s -> on le saute", symbol
+                            )
+                            time.sleep(cfg["LOOP_SLEEP_SECS"])
+                            continue
                 else:
                     time.sleep(cfg["LOOP_SLEEP_SECS"])
                     continue
@@ -662,6 +705,24 @@ def main(argv: Optional[List[str]] = None) -> None:
                     logging.info("vol calculé = 0; on attend.")
                     time.sleep(cfg["LOOP_SLEEP_SECS"])
                     continue
+                # --- Safe caps: notional + marge (avant envoi ordre LONG)
+                if cfg.get("NOTIONAL_CAP_USDT", 0) > 0:
+                    size_mult, _min_trade = _safe_extract_contract_fields(contract_detail)
+                    vol_cap = int(cfg["NOTIONAL_CAP_USDT"] / max(1e-12, size_mult * price))
+                    if vol_cap > 0:
+                        vol_open = min(vol_open, vol_cap)
+                # contrôle de marge max (ratio de l'equity)
+                notional, margin = _estimate_margin(contract_detail, price, vol_open, lev)
+                max_margin = float(cfg.get("MARGIN_CAP_RATIO", 1.0)) * equity_usdt
+                if margin > max_margin:
+                    size_mult, _min_trade = _safe_extract_contract_fields(contract_detail)
+                    vol_max_afford = int((max_margin * lev) / max(1e-12, size_mult * price))
+                    vol_open = max(0, min(vol_open, vol_max_afford))
+                    notional, margin = _estimate_margin(contract_detail, price, vol_open, lev)
+                if vol_open <= 0:
+                    logging.info("LONG: volume après plafonds/marge = 0 -> on s'abstient.")
+                    time.sleep(cfg["LOOP_SLEEP_SECS"])
+                    continue
                 resp = client.place_order(
                     symbol,
                     side=1,
@@ -728,6 +789,24 @@ def main(argv: Optional[List[str]] = None) -> None:
                 )
                 if vol_open <= 0:
                     logging.info("vol calculé = 0; on attend.")
+                    time.sleep(cfg["LOOP_SLEEP_SECS"])
+                    continue
+                # --- Safe caps: notional + marge (avant envoi ordre SHORT)
+                if cfg.get("NOTIONAL_CAP_USDT", 0) > 0:
+                    size_mult, _min_trade = _safe_extract_contract_fields(contract_detail)
+                    vol_cap = int(cfg["NOTIONAL_CAP_USDT"] / max(1e-12, size_mult * price))
+                    if vol_cap > 0:
+                        vol_open = min(vol_open, vol_cap)
+                # contrôle de marge max (ratio de l'equity)
+                notional, margin = _estimate_margin(contract_detail, price, vol_open, lev)
+                max_margin = float(cfg.get("MARGIN_CAP_RATIO", 1.0)) * equity_usdt
+                if margin > max_margin:
+                    size_mult, _min_trade = _safe_extract_contract_fields(contract_detail)
+                    vol_max_afford = int((max_margin * lev) / max(1e-12, size_mult * price))
+                    vol_open = max(0, min(vol_open, vol_max_afford))
+                    notional, margin = _estimate_margin(contract_detail, price, vol_open, lev)
+                if vol_open <= 0:
+                    logging.info("SHORT: volume après plafonds/marge = 0 -> on s'abstient.")
                     time.sleep(cfg["LOOP_SLEEP_SECS"])
                     continue
                 resp = client.place_order(
