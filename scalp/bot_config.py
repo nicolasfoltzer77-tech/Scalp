@@ -49,6 +49,6 @@ CONFIG = {
     "FEE_RATE": float(os.getenv("FEE_RATE", "0.0")),
     "MAX_DAILY_LOSS_PCT": float(os.getenv("MAX_DAILY_LOSS_PCT", "5.0")),
     "MAX_DAILY_PROFIT_PCT": float(os.getenv("MAX_DAILY_PROFIT_PCT", "5.0")),
-    "MAX_POSITIONS": int(os.getenv("MAX_POSITIONS", "1")),
+    "MAX_POSITIONS": int(os.getenv("MAX_POSITIONS", "3")),
 }
 

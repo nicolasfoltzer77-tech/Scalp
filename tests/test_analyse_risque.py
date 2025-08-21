@@ -34,9 +34,12 @@ def test_analyse_risque_limits_and_leverage():
     assert lev == 5
     assert vol == 0  # already one long position
 
-    # Risk level 2: base leverage, limit 2 positions
-    open_pos = [{"symbol": "BTC_USDT", "side": "long"},
-                {"symbol": "BTC_USDT", "side": "long"}]
+    # Risk level 2: base leverage, limit 3 positions
+    open_pos = [
+        {"symbol": "BTC_USDT", "side": "long"},
+        {"symbol": "BTC_USDT", "side": "long"},
+        {"symbol": "BTC_USDT", "side": "long"},
+    ]
     vol, lev = analyse_risque(contract_detail, open_pos, 1000, 50000, 0.01, 10,
                                symbol="BTC_USDT", side="long", risk_level=2)
     assert lev == 10
