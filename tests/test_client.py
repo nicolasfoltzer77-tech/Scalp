@@ -165,6 +165,7 @@ def test_get_assets_prefers_available(monkeypatch):
     assert usdt["equity"] == 1.0
 
 
+
 def test_get_assets_zero_available(monkeypatch):
     """Zero available balance should propagate as zero equity."""
     client = BitgetFuturesClient("key", "secret", "https://test")

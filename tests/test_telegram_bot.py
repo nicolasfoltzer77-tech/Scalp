@@ -37,6 +37,7 @@ class DummyRiskMgr:
     def __init__(self):
         self.reset_called = False
         self.max_positions = 1
+        self.risk_pct = 0.01
 
     def reset_day(self):
         self.reset_called = True
@@ -168,6 +169,8 @@ def test_start_sends_menu():
     assert req.posts
     text = req.posts[0][1]["text"]
     assert "Solde" in text and "PnL session" in text
+    assert "Positions max" in text
+    assert "Risque actuel" in text
 
 
 def test_settings_menu_and_reset_risk():
