@@ -54,9 +54,14 @@ def _format_position_event(event: str, payload: Dict[str, Any]) -> str:
     head = " ".join(p for p in [action, side, symbol, icons] if p)
 
     lines = [head]
-    vol = payload.get("vol")
-    if vol is not None:
-        lines.append(f"Position: {vol}")
+    if event == "position_opened":
+        amt = payload.get("amount_usdt")
+        if amt is not None:
+            lines.append(f"Montant: {amt} USDT")
+    else:
+        vol = payload.get("vol")
+        if vol is not None:
+            lines.append(f"Position: {vol}")
     lev = payload.get("leverage")
     if lev is not None:
         lines.append(f"Levier: x{lev}")
