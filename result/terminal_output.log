@@ -1,0 +1,6 @@
+Lancement du bot.py dans /scalp...
+2025-08-21 09:59:23.293 INFO Annulation des ordres ouverts au démarrage
+2025-08-21 09:59:28.555 ERROR Erreur HTTP/JSON POST /api/v2/mix/order/cancel-all-order > 404 Client Error: Not Found for url: https://api.bitget.com/api/v2/mix/order/cancel-all-order
+2025-08-21 09:59:29.647 ERROR Contract detail introuvable pour BTCUSDT
+2025-08-21 09:59:31.364 WARNING Réponse klines inattendue:
+{'code': '00000', 'msg': 'success', 'requestTime': 1755770371275, 'data': [['1755764400000', '113715.6', '113730.7', '113637.6', '113672.1', '72.1', '113627.9', '27.2958', '113628', '3103098.35908'], ['1755764460000', '11360', '113672.2', '113628', '113664.3', '113626.6', '13.8674', '1575871.87188'], ['175576452000', '113664.3', '14.5366', '1652044.64244'], ['1755764580000', '113664.3', '113751.1', '113726.5', '17546665.42462'], ['1755764640000', '113664.3', '154.293', '113726.5', '300907.40506'], '1755764700000', '...
