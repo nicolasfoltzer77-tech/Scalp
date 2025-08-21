@@ -95,9 +95,11 @@ def find_trade_positions(
         eslow = ema_func(closes, ema_slow_n)
         signal = cross_func(efull[-1], eslow[-1], efull[-2], eslow[-2])
         if signal == 1:
-            results.append({"symbol": symbol, "signal": "long", "price": float(info.get("lastPrice", 0.0))})
+            price_str = info.get("lastPr") or info.get("lastPrice") or 0.0
+            results.append({"symbol": symbol, "signal": "long", "price": float(price_str)})
         elif signal == -1:
-            results.append({"symbol": symbol, "signal": "short", "price": float(info.get("lastPrice", 0.0))})
+            price_str = info.get("lastPr") or info.get("lastPrice") or 0.0
+            results.append({"symbol": symbol, "signal": "short", "price": float(price_str)})
     return results
 
 

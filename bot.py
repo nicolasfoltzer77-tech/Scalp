@@ -155,7 +155,7 @@ def main(argv: Optional[List[str]] = None) -> None:
         open_orders = client.get_open_orders(cfg["SYMBOL"])
         if open_orders.get("data"):
             logging.info("Annulation des ordres ouverts au démarrage")
-            client.cancel_all(cfg["SYMBOL"])
+            client.cancel_all(cfg["SYMBOL"], margin_coin=cfg["MARGIN_COIN"])
     except Exception as exc:  # pragma: no cover - best effort
         logging.error("Erreur annulation ordres ouverts: %s", exc)
     try:
@@ -330,7 +330,7 @@ def main(argv: Optional[List[str]] = None) -> None:
             )
 
             tick = client.get_ticker(symbol)
-            if not (tick and tick.get("success") and tick.get("data")):
+            if not (tick and tick.get("code") == "00000" and tick.get("data")):
                 logging.warning("Ticker vide: %s", tick)
                 time.sleep(cfg["LOOP_SLEEP_SECS"])
                 continue
@@ -339,14 +339,17 @@ def main(argv: Optional[List[str]] = None) -> None:
                 price = None
                 for row in tdata:
                     if row.get("symbol") == symbol:
-                        price = float(row.get("lastPrice"))
+                        price_str = row.get("lastPr") or row.get("lastPrice")
+                        if price_str is not None:
+                            price = float(price_str)
                         break
                 if price is None:
                     logging.warning("Prix introuvable pour %s", symbol)
                     time.sleep(cfg["LOOP_SLEEP_SECS"])
                     continue
             else:
-                price = float(tdata.get("lastPrice"))
+                price_str = tdata.get("lastPr") or tdata.get("lastPrice")
+                price = float(price_str)
 
             vol_close = compute_position_size(
                 contract_detail,

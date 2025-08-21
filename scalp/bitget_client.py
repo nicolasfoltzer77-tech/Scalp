@@ -424,11 +424,19 @@ class BitgetFuturesClient:
             "POST", "/api/v2/mix/order/cancel-order", body={"orderIds": order_ids}
         )
 
-    def cancel_all(self, symbol: Optional[str] = None) -> Dict[str, Any]:
+    def cancel_all(
+        self,
+        symbol: Optional[str] = None,
+        margin_coin: Optional[str] = None,
+    ) -> Dict[str, Any]:
         body = {"productType": self.product_type}
         if symbol:
             body["symbol"] = self._format_symbol(symbol)
-        return self._private_request("POST", "/api/v2/mix/order/cancel-all-orders", body=body)
+        if margin_coin:
+            body["marginCoin"] = margin_coin
+        return self._private_request(
+            "POST", "/api/v2/mix/order/cancel-all-orders", body=body
+        )
 
     def close_position(
         self,

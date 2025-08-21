@@ -264,13 +264,14 @@ def test_cancel_all_endpoint(monkeypatch):
 
     monkeypatch.setattr(BitgetFuturesClient, "_private_request", fake_private)
 
-    client.cancel_all("BTCUSDT_UMCBL")
+    client.cancel_all("BTCUSDT_UMCBL", margin_coin="USDT")
 
     assert called["method"] == "POST"
     assert called["path"] == "/api/v2/mix/order/cancel-all-orders"
     assert called["body"] == {
         "productType": "USDT-FUTURES",
         "symbol": "BTCUSDT",
+        "marginCoin": "USDT",
     }
 
 
