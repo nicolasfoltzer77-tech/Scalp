@@ -95,7 +95,7 @@ def test_handle_positions_zero_pnl():
 
     bot.client.get_positions = zero_positions
     resp, _ = bot.handle_callback("positions", 0.0)
-    assert "PnL: 0.0 USDT" in resp
+    assert "PnL: 0.00 USDT" in resp
 
 
 
@@ -103,7 +103,7 @@ def test_handle_pnl():
     bot = make_bot()
     resp, _ = bot.handle_callback("pnl", 5.0)
 
-    assert "5.0" in resp
+    assert "5.00" in resp
 
 
 def test_handle_risk_change():

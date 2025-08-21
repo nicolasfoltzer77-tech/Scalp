@@ -106,8 +106,8 @@ class TelegramBot:
                     equity = 0.0
                 break
         return (
-            f"Solde: {equity} USDT\n"
-            f"PnL session: {session_pnl} USDT\n"
+            f"Solde: {equity:.2f} USDT\n"
+            f"PnL session: {session_pnl:.2f} USDT\n"
             "Choisissez une option:"
         )
 
@@ -203,7 +203,7 @@ class TelegramBot:
                         equity = 0.0
                     break
 
-            return f"Solde: {equity} USDT", self.main_keyboard
+            return f"Solde: {equity:.2f} USDT", self.main_keyboard
         if data == "positions":
             pos = self.client.get_positions() or {}
             lines = []
@@ -218,14 +218,14 @@ class TelegramBot:
                 pnl_pct = p.get("pnl_pct")
                 line = f"{base} {side} {vol}"
                 if pnl is not None and pnl_pct is not None:
-                    line += f"\nPnL: {pnl} USDT ({pnl_pct}%)"
+                    line += f"\nPnL: {pnl:.2f} USDT ({pnl_pct:.2f}%)"
                 lines.append(line)
             if not lines:
 
                 return "Aucune position ouverte", self.main_keyboard
             return "Positions:\n" + "\n".join(lines), self.main_keyboard
         if data == "pnl":
-            return f"PnL session: {session_pnl} USDT", self.main_keyboard
+            return f"PnL session: {session_pnl:.2f} USDT", self.main_keyboard
         if data == "risk":
             return "Choisissez le niveau de risque:", self.risk_keyboard
         if data == "settings":
