@@ -85,20 +85,39 @@ class BitgetFuturesClient(_BaseBitgetFuturesClient):
         norm = []
         for a in rows:
             cur = a.get("marginCoin") or a.get("currency") or "USDT"
-            try:
-                eq = float(
-                    a.get(
-                        "available",
-                        a.get(
-                            "cashBalance",
-                            a.get("equity", a.get("usdtEquity", 0)),
-                        ),
-                    )
-                    or 0
-                )
-            except Exception:
-                eq = 0.0
-            norm.append({**a, "currency": cur, "equity": eq})
+
+            # Bitget peut retourner plusieurs clés différentes pour la marge
+            # disponible.  On tente en priorité ``available`` mais on supporte
+            # aussi ``availableBalance`` et ``availableMargin``.  Si aucune de
+            # ces clés n'est présente on se replie sur ``cashBalance`` puis sur
+            # les métriques d'équité totale.
+            available = None
+            for key in ("available", "availableBalance", "availableMargin", "cashBalance"):
+                val = a.get(key)
+                if val is None:
+                    continue
+                try:
+                    available = float(val) or 0.0
+                except Exception:  # pragma: no cover - cas rare
+                    available = 0.0
+                break
+
+            if available is None:
+                for key in ("equity", "usdtEquity"):
+                    val = a.get(key)
+                    if val is None:
+                        continue
+                    try:
+                        available = float(val) or 0.0
+                    except Exception:  # pragma: no cover - cas rare
+                        available = 0.0
+                    break
+
+            if available is None:
+                available = 0.0
+
+            norm.append({**a, "currency": cur, "equity": available, "available": available})
+
         return {"code": resp.get("code", "00000"), "data": norm, "success": True}
 
     # --------- tickers publics + normalisation champs ------------------------
@@ -265,23 +284,28 @@ def main(argv: Optional[List[str]] = None) -> None:
 
         for row in assets.get("data", []):
             if row.get("currency") == "USDT":
-                for key in ("available", "cashBalance"):
+                # champs possibles suivant les versions de l'API
+                for key in (
+                    "available",
+                    "availableBalance",
+                    "availableMargin",
+                    "cashBalance",
+                ):
                     val = row.get(key)
+                    if val is None:
+                        continue
                     try:
-                        if val is not None:
-                            eq = float(val)
-                        else:
-                            continue
+                        eq = float(val)
                     except (TypeError, ValueError):
                         continue
                     return eq if eq > 0 else 0.0
+
                 for key in ("equity", "usdtEquity"):
                     val = row.get(key)
+                    if val is None:
+                        continue
                     try:
-                        if val is not None:
-                            eq = float(val)
-                        else:
-                            continue
+                        eq = float(val)
                     except (TypeError, ValueError):
                         continue
                     if eq > 0:
