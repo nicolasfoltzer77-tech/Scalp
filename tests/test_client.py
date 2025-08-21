@@ -106,28 +106,66 @@ def test_private_request_http_error(monkeypatch):
     assert "teapot" in resp["error"]
 
 
-def test_get_assets_paper_trade():
-    client = BitgetFuturesClient("key", "secret", "https://test", paper_trade=True)
-    assets = client.get_assets()
-    assert assets["success"] is True
-    usdt = next((row for row in assets.get("data", []) if row.get("currency") == "USDT"), None)
-    assert usdt and usdt["equity"] == 100.0
+def test_get_assets_normalization(monkeypatch):
+    client = BitgetFuturesClient("key", "secret", "https://test")
 
-
-def test_get_assets_margincoin_alias(monkeypatch):
-    client = BitgetFuturesClient("key", "secret", "https://test", paper_trade=False)
+    called = {}
 
     def fake_private(self, method, path, params=None, body=None):
-        assert method == "GET"
-        return {
-            "success": True,
-            "data": [{"marginCoin": "USDT", "equity": "50"}],
-        }
+        called["method"] = method
+        called["path"] = path
+        called["params"] = params
+        return {"code": "00000", "data": [{"marginCoin": "usdt", "equity": "1"}]}
 
     monkeypatch.setattr(BitgetFuturesClient, "_private_request", fake_private)
 
-    assets = client.get_assets(margin_coin="USDT")
-    assert assets["data"][0]["currency"] == "USDT"
+    assets = client.get_assets()
+
+    assert assets["success"] is True
+    usdt = assets.get("data", [])[0]
+    assert usdt["currency"].upper() == "USDT"
+    assert usdt["equity"] == 1.0
+    assert called["params"] == {"productType": "USDT-FUTURES", "marginCoin": "USDT"}
+
+
+def test_get_ticker_normalization(monkeypatch):
+    client = BitgetFuturesClient("key", "secret", "https://test")
+
+    called = {}
+
+    def fake_get(url, params=None, timeout=None):
+        called["url"] = url
+        called["params"] = params
+
+        class Resp:
+            def raise_for_status(self):
+                pass
+
+            def json(self):
+                return {
+                    "data": {
+                        "instId": "BTCUSDT",
+                        "lastPr": "1",
+                        "bestBidPrice": "0.9",
+                        "bestAskPrice": "1.1",
+                        "usdtVolume": "100",
+                    }
+                }
+
+        return Resp()
+
+    monkeypatch.setattr(bot.requests, "get", fake_get, raising=False)
+
+    ticker = client.get_ticker("BTC_USDT")
+
+    assert ticker["success"] is True
+    data = ticker["data"][0]
+    assert data["symbol"] == "BTCUSDT"
+    assert data["lastPrice"] == "1"
+    assert data["bidPrice"] == "0.9"
+    assert data["askPrice"] == "1.1"
+    assert data["volume"] == 100.0
+    assert called["params"] == {"symbol": "BTCUSDT", "productType": "USDT-FUTURES"}
 
 
 def test_http_client_context_manager(monkeypatch):
