@@ -371,8 +371,36 @@ def test_place_order_endpoint(monkeypatch):
     assert body["marginMode"] == "crossed"
     assert body["side"] == "buy"
     assert body["posSide"] == "long"
-    assert body["reduceOnly"] is False
+    assert "reduceOnly" not in body
     assert body["posMode"] == "hedge_mode"
+
+
+@pytest.mark.parametrize(
+    "code, side_str, pos_side",
+    [
+        (4, "sell", "long"),
+        (2, "buy", "short"),
+    ],
+)
+def test_place_order_close_positions(monkeypatch, code, side_str, pos_side):
+    client = BitgetFuturesClient("key", "secret", "https://test", paper_trade=False)
+
+    monkeypatch.setattr(BitgetFuturesClient, "_get_contract_precision", lambda self, symbol: (0, 0))
+
+    called = {}
+
+    def fake_private(self, method, path, params=None, body=None):
+        called["body"] = body
+        return {"success": True}
+
+    monkeypatch.setattr(BitgetFuturesClient, "_private_request", fake_private)
+
+    client.place_order("BTCUSDT_UMCBL", side=code, vol=1, order_type=1)
+
+    body = called["body"]
+    assert body["side"] == side_str
+    assert body["posSide"] == pos_side
+    assert "reduceOnly" not in body
 
 
 def test_place_order_precision(monkeypatch):
