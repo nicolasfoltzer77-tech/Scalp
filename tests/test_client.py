@@ -331,6 +331,27 @@ def test_cancel_all_endpoint(monkeypatch):
     }
 
 
+def test_place_order_endpoint(monkeypatch):
+    client = BitgetFuturesClient("key", "secret", "https://test", paper_trade=False)
+
+    called = {}
+
+    def fake_private(self, method, path, params=None, body=None):
+        called["method"] = method
+        called["path"] = path
+        called["body"] = body
+        return {"success": True}
+
+    monkeypatch.setattr(BitgetFuturesClient, "_private_request", fake_private)
+
+    resp = client.place_order("BTCUSDT_UMCBL", side=1, vol=1, order_type=1)
+
+    assert resp["success"] is True
+    assert called["method"] == "POST"
+    assert called["path"] == "/api/v2/mix/order/place-order"
+    assert called["body"]["symbol"] == "BTCUSDT"
+
+
 def test_get_open_orders_paper_trade(monkeypatch):
     client = BitgetFuturesClient("key", "secret", "https://test", paper_trade=True)
 
