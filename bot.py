@@ -210,14 +210,7 @@ def main(argv: Optional[List[str]] = None) -> None:
         risk_pct=cfg["RISK_PCT_EQUITY"],
     )
 
-    # Ensure a clean state: cancel lingering orders and close leftover positions
-    try:
-        open_orders = client.get_open_orders(cfg["SYMBOL"])
-        if open_orders.get("data"):
-            logging.info("Annulation des ordres ouverts au démarrage")
-            client.cancel_all(cfg["SYMBOL"], margin_coin=cfg["MARGIN_COIN"])
-    except Exception as exc:  # pragma: no cover - best effort
-        logging.error("Erreur annulation ordres ouverts: %s", exc)
+    # Ensure a clean state: close leftover positions
     try:
         positions = client.get_positions(product_type=cfg["PRODUCT_TYPE"])
         if positions.get("data"):
