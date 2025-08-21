@@ -255,28 +255,39 @@ class BitgetFuturesClient:
         else:
             raise ValueError("M\u00e9thode non support\u00e9e")
 
+        resp_text = getattr(r, "text", "")
         try:
-            r.raise_for_status()
             data = r.json()
-        except Exception as e:  # pragma: no cover - network errors
-            # Try to surface the response body to aid troubleshooting
-            resp_text = getattr(r, "text", "")
-            logging.error(
-                "Erreur HTTP/JSON %s %s -> %s %s", method, path, str(e), resp_text
-            )
-            try:
-                data = r.json()
-                # Ensure a consistent failure structure
+        except Exception:
+            data = {
+                "success": False,
+                "error": resp_text,
+                "status_code": getattr(r, "status_code", None),
+            }
+
+        status = getattr(r, "status_code", 0)
+        if status >= 400:
+            code = str(data.get("code")) if isinstance(data, dict) else ""
+            if code == "22001":
+                logging.info("Aucun ordre à annuler (%s %s)", method, path)
+            else:
+                try:
+                    r.raise_for_status()
+                except Exception as e:
+                    if not resp_text:
+                        resp_text = getattr(r, "text", "") or str(e)
+                logging.error(
+                    "Erreur HTTP/JSON %s %s -> %s %s",
+                    method,
+                    path,
+                    status,
+                    resp_text,
+                )
                 if isinstance(data, dict):
                     data.setdefault("success", False)
-                    data.setdefault("status_code", getattr(r, "status_code", None))
-                    data.setdefault("error", resp_text or str(e))
-            except Exception:
-                data = {
-                    "success": False,
-                    "error": resp_text or str(e),
-                    "status_code": getattr(r, "status_code", None),
-                }
+                    data.setdefault("status_code", status)
+                    data.setdefault("error", resp_text)
+
         self.log_event(
             "http_private",
             {"method": method, "path": path, "params": params, "body": body, "response": data},
