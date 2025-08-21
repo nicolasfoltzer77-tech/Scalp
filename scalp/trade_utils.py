@@ -88,33 +88,36 @@ def compute_position_size(
     contract_size = float(contract.get("contractSize", 0.0001))
     vol_unit = int(contract.get("volUnit", 1))
     min_vol = int(contract.get("minVol", 1))
+    min_usdt = float(contract.get("minTradeUSDT", 5))
 
     if price <= 0 or contract_size <= 0 or vol_unit <= 0 or min_vol <= 0:
         return 0
 
-    notional = equity_usdt * float(risk_pct) * float(leverage)
-    if notional <= 0.0:
+    notional_target = equity_usdt * float(risk_pct) * float(leverage)
+    if notional_target <= 0.0:
         return 0
 
-    vol = notional / (price * contract_size)
+    denom = price * contract_size
+    if denom <= 0:
+        return 0
+
+    vol = notional_target / denom
     vol = int(math.floor(vol / vol_unit) * vol_unit)
     vol = max(min_vol, vol)
+    notional = vol * denom
+    if notional < min_usdt:
+        return 0
 
-    # Cap the volume by what the equity can actually afford.  We intentionally
-    # leave one ``vol_unit`` as a safety buffer to account for taker fees or
-    # rounding differences on the exchange which previously resulted in
-    # sporadic ``order amount exceeds balance`` errors.
-    max_affordable = int(
-        math.floor((equity_usdt * leverage) / (price * contract_size) / vol_unit)
-        * vol_unit
-    )
-    if max_affordable <= 0:
+    fee_rate = max(CONFIG.get("FEE_RATE", 0.0), 0.001)
+    max_notional = equity_usdt / (1 / float(leverage) + fee_rate)
+    max_vol = int(math.floor(max_notional / denom / vol_unit) * vol_unit)
+    if max_vol < min_vol:
         return 0
-    max_affordable = max_affordable - vol_unit
-    if max_affordable < min_vol:
-        return 0
-    if vol > max_affordable:
-        vol = max_affordable
+    if vol > max_vol:
+        vol = max_vol
+        notional = vol * denom
+        if notional < min_usdt:
+            return 0
 
     return vol
 
