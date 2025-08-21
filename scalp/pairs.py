@@ -141,10 +141,14 @@ def send_selected_pairs(
         return sym, ""
 
     pairs = select_fn(client, top_n=top_n * 3)
+    allowed = {s.split("_")[0].upper() for s in CONFIG.get("ALLOWED_SYMBOLS", [])}
     by_base: Dict[str, Dict[str, Any]] = {}
     for info in pairs:
         sym = info.get("symbol")
         if not sym:
+            continue
+        norm_sym = sym.split("_")[0].upper()
+        if allowed and norm_sym not in allowed:
             continue
         base, quote = split_symbol(sym)
         existing = by_base.get(base)
