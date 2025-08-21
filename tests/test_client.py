@@ -55,8 +55,9 @@ def test_private_request_post_signature(monkeypatch):
 
     called = {}
 
-    def fake_post(url, data=None, headers=None, timeout=None):
+    def fake_post(url, params=None, data=None, headers=None, timeout=None):
         called["url"] = url
+        called["params"] = params
         called["data"] = data
         called["headers"] = headers
 
@@ -82,6 +83,7 @@ def test_private_request_post_signature(monkeypatch):
     assert called["headers"]["ACCESS-KEY"] == "key"
     assert called["headers"]["ACCESS-TIMESTAMP"] == "1000"
     assert called["headers"]["ACCESS-RECV-WINDOW"] == "30"
+    assert called["params"] is None
     assert called["data"].decode("utf-8") == body
 
 
@@ -259,6 +261,7 @@ def test_cancel_all_endpoint(monkeypatch):
     def fake_private(self, method, path, params=None, body=None):
         called["method"] = method
         called["path"] = path
+        called["params"] = params
         called["body"] = body
         return {"success": True}
 
@@ -268,11 +271,12 @@ def test_cancel_all_endpoint(monkeypatch):
 
     assert called["method"] == "POST"
     assert called["path"] == "/api/v2/mix/order/cancel-all-orders"
-    assert called["body"] == {
+    assert called["params"] == {
         "productType": "USDT-FUTURES",
         "symbol": "BTCUSDT",
         "marginCoin": "USDT",
     }
+    assert called["body"] is None
 
 
 def test_get_open_orders_paper_trade(monkeypatch):
