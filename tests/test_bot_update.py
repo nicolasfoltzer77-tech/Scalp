@@ -3,7 +3,7 @@ import bot
 
 
 def test_update_displays_pairs(monkeypatch, caplog):
-    def fake_send(client, top_n=20):
+    def fake_send(client, top_n=40):
         assert (client, top_n) == ("cli", 5)
         return {"green": "BTC", "orange": "ETH", "red": "XRP"}
 

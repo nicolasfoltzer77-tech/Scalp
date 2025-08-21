@@ -12,7 +12,7 @@ def test_send_selected_pairs(monkeypatch):
     monkeypatch.setattr(
         bot,
         "filter_trade_pairs",
-        lambda client, top_n=60: [
+        lambda client, top_n=120: [
             {"symbol": "WIFUSDT", "volume": 10},
             {"symbol": "WIFUSDT", "volume": 9},
             {"symbol": "BTCUSD", "volume": 8},

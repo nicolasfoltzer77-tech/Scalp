@@ -9,8 +9,8 @@ Ce fichier résume les modules et fonctions essentiels afin de recréer le bot d
 - `check_config()` : vérifie la présence des clés API Bitget et journalise un avertissement si elles manquent.
 - `BitgetSpotClient` : sous-classe du client spot Bitget qui injecte `requests` et la fonction `log_event`.
 - `find_trade_positions(client, pairs, interval="1m", ema_fast_n=None, ema_slow_n=None)` : applique la stratégie EMA sur une liste de paires et renvoie les signaux.
-- `send_selected_pairs(client, top_n=20, tg_bot=None)` : sélectionne et notifie les paires les plus actives.
-- `update(client, top_n=20, tg_bot=None)` : rafraîchit la liste des paires et renvoie la charge utile envoyée.
+- `send_selected_pairs(client, top_n=40, tg_bot=None)` : sélectionne et notifie les paires les plus actives.
+- `update(client, top_n=40, tg_bot=None)` : rafraîchit la liste des paires et renvoie la charge utile envoyée.
 - `main(argv=None)` : initialise la configuration, le client, le `RiskManager`, le bot Telegram et exécute la boucle de trading.
 
 ### cli.py
@@ -82,10 +82,10 @@ Ce fichier résume les modules et fonctions essentiels afin de recréer le bot d
 
 ### pairs.py
 - `get_trade_pairs(client)` : récupère toutes les paires via `get_ticker`.
-- `filter_trade_pairs(client, volume_min=5_000_000, max_spread_bps=5, top_n=20)` : filtre par volume/spread.
+- `filter_trade_pairs(client, volume_min=5_000_000, max_spread_bps=5, top_n=40)` : filtre par volume/spread.
 - `select_top_pairs(client, top_n=10, key="volume")` : trie par volume ou autre clé.
 - `find_trade_positions(client, pairs, interval="1m", ema_fast_n=None, ema_slow_n=None, ema_func=ema, cross_func=cross)` : signaux EMA croisement.
-- `send_selected_pairs(client, top_n=20, select_fn=select_top_pairs, notify_fn=notify)` : déduplique USD/USDT/USDC et notifie la liste.
+- `send_selected_pairs(client, top_n=40, select_fn=select_top_pairs, notify_fn=notify)` : déduplique USD/USDT/USDC et notifie la liste.
 - `heat_score(volatility, volume, news=False)` : score combinant volatilite et volume.
 - `select_top_heat_pairs(pairs, top_n=3)` : sélection des paires les plus "chaudes".
 - `decorrelate_pairs(pairs, corr, threshold=0.8, top_n=3)` : choisit des paires peu corrélées.

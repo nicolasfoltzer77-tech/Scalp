@@ -22,7 +22,7 @@ def filter_trade_pairs(
     *,
     volume_min: float = 5_000_000,
     max_spread_bps: float = 5.0,
-    top_n: int = 20,
+    top_n: int = 40,
 ) -> List[Dict[str, Any]]:
     """Filter pairs by volume and spread."""
     pairs = get_trade_pairs(client)
@@ -105,7 +105,7 @@ def find_trade_positions(
 
 def send_selected_pairs(
     client: Any,
-    top_n: int = 20,
+    top_n: int = 40,
     *,
     select_fn: Callable[[Any, int], List[Dict[str, Any]]] = select_top_pairs,
     notify_fn: Callable[[str, Optional[Dict[str, Any]]], None] = notify,
