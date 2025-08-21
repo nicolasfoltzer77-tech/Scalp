@@ -259,12 +259,24 @@ class BitgetFuturesClient:
             r.raise_for_status()
             data = r.json()
         except Exception as e:  # pragma: no cover - network errors
-            logging.error("Erreur HTTP/JSON %s %s -> %s", method, path, str(e))
-            data = {
-                "success": False,
-                "error": str(e),
-                "status_code": getattr(r, "status_code", None),
-            }
+            # Try to surface the response body to aid troubleshooting
+            resp_text = getattr(r, "text", "")
+            logging.error(
+                "Erreur HTTP/JSON %s %s -> %s %s", method, path, str(e), resp_text
+            )
+            try:
+                data = r.json()
+                # Ensure a consistent failure structure
+                if isinstance(data, dict):
+                    data.setdefault("success", False)
+                    data.setdefault("status_code", getattr(r, "status_code", None))
+                    data.setdefault("error", resp_text or str(e))
+            except Exception:
+                data = {
+                    "success": False,
+                    "error": resp_text or str(e),
+                    "status_code": getattr(r, "status_code", None),
+                }
         self.log_event(
             "http_private",
             {"method": method, "path": path, "params": params, "body": body, "response": data},
