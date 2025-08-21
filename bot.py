@@ -336,6 +336,22 @@ def main(argv: Optional[List[str]] = None) -> None:
     take_profit = None
     session_pnl = 0.0
     last_entry_price = None
+    open_positions: set[str] = set()
+
+    def log_bitget_positions() -> None:
+        try:
+            resp = client.get_positions(product_type=cfg["PRODUCT_TYPE"])
+            symbols = {p.get("symbol") for p in resp.get("data", [])}
+            log_event("bitget_positions", {"positions": list(symbols)})
+            missing = open_positions - symbols
+            extra = symbols - open_positions
+            if missing or extra:
+                log_event(
+                    "open_positions_mismatch",
+                    {"bot_only": list(missing), "exchange_only": list(extra)},
+                )
+        except Exception as exc:  # pragma: no cover - network
+            logging.warning("Impossible de récupérer les positions Bitget: %s", exc)
 
     def close_position(side: int, price: float, vol: int) -> bool:
         nonlocal current_pos, entry_price, entry_time, session_pnl, equity_usdt, stop_long, stop_short, take_profit
@@ -413,6 +429,16 @@ def main(argv: Optional[List[str]] = None) -> None:
         stop_long = stop_short = None
         take_profit = None
         last_entry_price = None
+        if symbol in open_positions:
+            open_positions.remove(symbol)
+            log_event("open_positions", {"positions": list(open_positions)})
+        else:
+            logging.warning("Fermeture d'une position non suivie: %s", symbol)
+            log_event(
+                "open_positions",
+                {"positions": list(open_positions), "missing": symbol},
+            )
+        log_bitget_positions()
         time.sleep(0.3)
         return kill
 
@@ -783,6 +809,9 @@ def main(argv: Optional[List[str]] = None) -> None:
                 stop_short = None
                 take_profit = tp_long
                 last_entry_price = entry_price
+                open_positions.add(symbol)
+                log_event("open_positions", {"positions": list(open_positions)})
+                log_bitget_positions()
 
             elif x == -1 and current_pos >= 0:
                 if current_pos > 0 and entry_price is not None:
@@ -874,6 +903,9 @@ def main(argv: Optional[List[str]] = None) -> None:
                 stop_long = None
                 take_profit = tp_short
                 last_entry_price = entry_price
+                open_positions.add(symbol)
+                log_event("open_positions", {"positions": list(open_positions)})
+                log_bitget_positions()
 
             time.sleep(cfg["LOOP_SLEEP_SECS"])
 
