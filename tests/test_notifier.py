@@ -1,7 +1,7 @@
 import scalp.notifier as notifier
 
 
-def test_notify_skips_without_url(monkeypatch):
+def test_notify_skips_without_targets(monkeypatch):
     called = False
 
     def fake_post(url, json=None, timeout=5):  # pragma: no cover - fallback
@@ -16,7 +16,7 @@ def test_notify_skips_without_url(monkeypatch):
     assert called is False
 
 
-def test_notify_posts(monkeypatch):
+def test_notify_posts_http(monkeypatch):
     payload = {}
 
     def fake_post(url, json=None, timeout=5):
@@ -34,12 +34,13 @@ def test_notify_posts(monkeypatch):
     assert payload["json"]["bar"] == 2
 
 
-def test_notify_ignores_telegram(monkeypatch):
-    called = False
+def test_notify_posts_telegram(monkeypatch):
+    payload = {}
 
     def fake_post(url, json=None, timeout=5):
-        nonlocal called
-        called = True
+        payload["url"] = url
+        payload["json"] = json
+        payload["timeout"] = timeout
 
     monkeypatch.delenv("NOTIFY_URL", raising=False)
     monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "abc")
@@ -48,10 +49,12 @@ def test_notify_ignores_telegram(monkeypatch):
 
     notifier.notify("evt", {"bar": 2})
 
-    assert called is False
+    assert payload["url"] == "https://api.telegram.org/botabc/sendMessage"
+    assert payload["json"]["chat_id"] == "123"
+    assert "evt" in payload["json"]["text"]
 
 
-def test_notify_posts_only_http(monkeypatch):
+def test_notify_posts_both(monkeypatch):
     calls = []
 
     def fake_post(url, json=None, timeout=5):
@@ -64,8 +67,10 @@ def test_notify_posts_only_http(monkeypatch):
 
     notifier.notify("evt", {"bar": 2})
 
-    assert len(calls) == 1
-    assert calls[0]["url"] == "http://example.com"
+    assert len(calls) == 2
+    urls = {c["url"] for c in calls}
+    assert "http://example.com" in urls
+    assert "https://api.telegram.org/botabc/sendMessage" in urls
 
 
 def test_format_text_open_position():
