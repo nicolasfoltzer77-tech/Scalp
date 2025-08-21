@@ -158,9 +158,11 @@ def get_price():
 
     # 3) candles Min1 (close)
     try:
+        # ``symbol`` must be provided as a query parameter; placing it in the
+        # path triggers a 404 response from Bitget.
         r = requests.get(
-            f"{BASE}/api/v2/mix/market/candles/{SYMB}",
-            params={"granularity": "Min1"},
+            f"{BASE}/api/v2/mix/market/candles",
+            params={"symbol": SYMB, "granularity": "Min1"},
             timeout=10,
         )
         r.raise_for_status()
