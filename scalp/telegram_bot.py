@@ -57,6 +57,7 @@ class TelegramBot:
         self.settings_keyboard = [
             [{"text": "Stop trade", "callback_data": "stop"}],
             [{"text": "Réglage risk", "callback_data": "risk"}],
+            [{"text": "Nb positions", "callback_data": "maxpos"}],
             [{"text": "Reset risk", "callback_data": "reset_risk"}],
             [{"text": "Reset total", "callback_data": "reset_all"}],
             [{"text": "Retour", "callback_data": "back"}],
@@ -66,6 +67,18 @@ class TelegramBot:
                 {"text": "🟢", "callback_data": "risk_green"},
                 {"text": "🟠", "callback_data": "risk_orange"},
                 {"text": "🔴", "callback_data": "risk_red"},
+            ],
+            [{"text": "Retour", "callback_data": "back"}],
+        ]
+        self.maxpos_keyboard = [
+            [
+                {"text": "1", "callback_data": "maxpos_1"},
+                {"text": "2", "callback_data": "maxpos_2"},
+                {"text": "3", "callback_data": "maxpos_3"},
+            ],
+            [
+                {"text": "4", "callback_data": "maxpos_4"},
+                {"text": "5", "callback_data": "maxpos_5"},
             ],
             [{"text": "Retour", "callback_data": "back"}],
         ]
@@ -230,6 +243,8 @@ class TelegramBot:
             return "Choisissez le niveau de risque:", self.risk_keyboard
         if data == "settings":
             return "Réglages:", self.settings_keyboard
+        if data == "maxpos":
+            return "Choisissez le nombre de positions:", self.maxpos_keyboard
         if data == "reset_risk":
             try:
                 self.risk_mgr.reset_day()
@@ -253,6 +268,17 @@ class TelegramBot:
                 self.config["RISK_LEVEL"] = lvl
                 return f"Niveau de risque réglé sur {lvl}", self.main_keyboard
             return "Niveau de risque inchangé", self.main_keyboard
+
+        if data.startswith("maxpos_"):
+            try:
+                lvl = int(data.split("_", 1)[1])
+            except Exception:
+                lvl = None
+            if lvl:
+                self.config["MAX_POSITIONS"] = lvl
+                self.risk_mgr.max_positions = lvl
+                return f"Nombre de positions réglé sur {lvl}", self.main_keyboard
+            return "Nombre de positions inchangé", self.main_keyboard
 
         if data == "reset_all":
             try:
