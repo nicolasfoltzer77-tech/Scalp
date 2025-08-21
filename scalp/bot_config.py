@@ -38,7 +38,7 @@ CONFIG = {
     # --- Sécurité / Sizing -------------------------------------------------
     "ALLOWED_SYMBOLS": [
         s.strip().upper()
-        for s in os.getenv("ALLOWED_SYMBOLS", "BTCUSDT,ETHUSDT,BNBUSDT").split(",")
+        for s in os.getenv("ALLOWED_SYMBOLS", "").split(",")
         if s.strip()
     ],
     "NOTIONAL_CAP_USDT": float(os.getenv("NOTIONAL_CAP_USDT", "100.0")),

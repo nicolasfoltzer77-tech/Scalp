@@ -34,6 +34,33 @@ def test_send_selected_pairs(monkeypatch):
     assert payload == sent["payload"]
 
 
+def test_send_selected_pairs_no_whitelist(monkeypatch):
+    sent = {}
+
+    def fake_notify(event, payload=None):
+        sent["payload"] = payload
+
+    monkeypatch.setattr(bot, "notify", fake_notify)
+    monkeypatch.setattr(
+        bot,
+        "filter_trade_pairs",
+        lambda client, top_n=120: [
+            {"symbol": "AAAUSDT", "volume": 10},
+            {"symbol": "BBBUSD", "volume": 9},
+            {"symbol": "CCCUSDC", "volume": 8},
+            {"symbol": "DDDUSDT", "volume": 7},
+        ],
+    )
+    monkeypatch.setitem(bot.CONFIG, "ALLOWED_SYMBOLS", [])
+
+    payload = bot.send_selected_pairs(object(), top_n=4)
+
+    assert payload == sent["payload"]
+    assert payload["green"] == "AAA"
+    assert payload["orange"] == "BBB"
+    assert payload["red"] == "CCC, DDD"
+
+
 def test_filter_trade_pairs_all_pairs(monkeypatch):
     class DummyClient:
         def get_ticker(self):
