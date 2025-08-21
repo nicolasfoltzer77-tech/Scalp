@@ -18,10 +18,9 @@ def test_private_request_get_signature(monkeypatch):
 
     called = {}
 
-    def fake_request(method, url, params=None, headers=None, timeout=None):
+    def fake_request(method, url, headers=None, timeout=None):
         called["method"] = method
         called["url"] = url
-        called["params"] = params
         called["headers"] = headers
 
         class Resp:
@@ -46,7 +45,7 @@ def test_private_request_get_signature(monkeypatch):
     assert called["headers"]["ACCESS-KEY"] == "key"
     assert called["headers"]["ACCESS-TIMESTAMP"] == "1000"
     assert called["headers"]["ACCESS-RECV-WINDOW"] == "30"
-    assert called["params"] == {"b": "2", "a": "1"}
+    assert called["url"] == "https://test/api/test?a=1&b=2"
 
 
 def test_private_request_post_signature(monkeypatch):
@@ -55,9 +54,8 @@ def test_private_request_post_signature(monkeypatch):
 
     called = {}
 
-    def fake_post(url, params=None, data=None, headers=None, timeout=None):
+    def fake_post(url, data=None, headers=None, timeout=None):
         called["url"] = url
-        called["params"] = params
         called["data"] = data
         called["headers"] = headers
 
@@ -83,8 +81,8 @@ def test_private_request_post_signature(monkeypatch):
     assert called["headers"]["ACCESS-KEY"] == "key"
     assert called["headers"]["ACCESS-TIMESTAMP"] == "1000"
     assert called["headers"]["ACCESS-RECV-WINDOW"] == "30"
-    assert called["params"] is None
     assert called["data"].decode("utf-8") == body
+    assert called["url"] == "https://test/api/test"
 
 
 def test_private_request_http_error(monkeypatch):
