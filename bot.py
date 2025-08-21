@@ -265,7 +265,17 @@ def main(argv: Optional[List[str]] = None) -> None:
 
         for row in assets.get("data", []):
             if row.get("currency") == "USDT":
-                for key in ("available", "cashBalance", "equity", "usdtEquity"):
+                for key in ("available", "cashBalance"):
+                    val = row.get(key)
+                    try:
+                        if val is not None:
+                            eq = float(val)
+                        else:
+                            continue
+                    except (TypeError, ValueError):
+                        continue
+                    return eq if eq > 0 else 0.0
+                for key in ("equity", "usdtEquity"):
                     val = row.get(key)
                     try:
                         if val is not None:
@@ -282,9 +292,8 @@ def main(argv: Optional[List[str]] = None) -> None:
     equity_usdt = _fetch_equity()
     if equity_usdt <= 0:
         logging.warning(
-            "Equity USDT non détectée, fallback symbolique à 100 USDT pour sizing."
+            "Aucun solde USDT disponible; en attente de fonds avant de trader."
         )
-        equity_usdt = 100.0
 
     prev_fast = prev_slow = None
     current_pos = 0
@@ -323,8 +332,7 @@ def main(argv: Optional[List[str]] = None) -> None:
             leverage=CONFIG["LEVERAGE"],
         )
         new_eq = _fetch_equity()
-        if new_eq > 0:
-            equity_usdt = new_eq
+        equity_usdt = new_eq
         risk_mgr.record_trade(pnl)
         logging.info("Nouveau risk_pct: %.4f", risk_mgr.risk_pct)
         kill = risk_mgr.kill_switch
@@ -402,8 +410,7 @@ def main(argv: Optional[List[str]] = None) -> None:
 
         try:
             new_eq = _fetch_equity()
-            if new_eq > 0:
-                equity_usdt = new_eq
+            equity_usdt = new_eq
             if current_pos == 0:
                 pairs = filter_trade_pairs(client, top_n=20)
                 signals = find_trade_positions(
