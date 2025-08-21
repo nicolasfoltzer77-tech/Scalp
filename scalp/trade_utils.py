@@ -89,16 +89,21 @@ def compute_position_size(
     vol = int(math.floor(vol / vol_unit) * vol_unit)
     vol = max(min_vol, vol)
 
-    margin = price * contract_size * vol / leverage
-    if margin > equity_usdt:
-        vol = int(
-            math.floor(
-                equity_usdt * leverage / (price * contract_size) / vol_unit
-            )
-            * vol_unit
-        )
-        if vol < min_vol:
-            return 0
+    # Cap the volume by what the equity can actually afford.  We intentionally
+    # leave one ``vol_unit`` as a safety buffer to account for taker fees or
+    # rounding differences on the exchange which previously resulted in
+    # sporadic ``order amount exceeds balance`` errors.
+    max_affordable = int(
+        math.floor((equity_usdt * leverage) / (price * contract_size) / vol_unit)
+        * vol_unit
+    )
+    if max_affordable <= 0:
+        return 0
+    max_affordable = max_affordable - vol_unit
+    if max_affordable < min_vol:
+        return 0
+    if vol > max_affordable:
+        vol = max_affordable
 
     return vol
 
