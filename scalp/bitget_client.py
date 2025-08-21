@@ -269,6 +269,8 @@ class BitgetFuturesClient:
         return self._private_request("GET", "/api/v2/mix/account/accounts")
 
     def get_positions(self, product_type: Optional[str] = None) -> Dict[str, Any]:
+        if self.paper_trade:
+            return {"success": True, "code": 0, "data": []}
         data = self._private_request(
             "GET",
             "/api/v2/mix/position/all-position",
@@ -290,6 +292,8 @@ class BitgetFuturesClient:
         return data
 
     def get_open_orders(self, symbol: Optional[str] = None) -> Dict[str, Any]:
+        if self.paper_trade:
+            return {"success": True, "code": 0, "data": []}
         params: Dict[str, Any] = {"productType": self.product_type}
         if symbol:
             params["symbol"] = self._format_symbol(symbol)
@@ -420,6 +424,11 @@ class BitgetFuturesClient:
         return self._private_request("POST", "/api/v2/mix/order/place", body=body)
 
     def cancel_order(self, order_ids: List[int]) -> Dict[str, Any]:
+        if self.paper_trade:
+            logging.info(
+                "PAPER_TRADE=True -> annulation simulée: order_ids=%s", order_ids
+            )
+            return {"success": True, "code": 0}
         return self._private_request(
             "POST", "/api/v2/mix/order/cancel-order", body={"orderIds": order_ids}
         )
@@ -429,6 +438,11 @@ class BitgetFuturesClient:
         symbol: Optional[str] = None,
         margin_coin: Optional[str] = None,
     ) -> Dict[str, Any]:
+        if self.paper_trade:
+            logging.info(
+                "PAPER_TRADE=True -> annulation simulée de tous les ordres"
+            )
+            return {"success": True, "code": 0}
         body = {"productType": self.product_type}
         if symbol:
             body["symbol"] = self._format_symbol(symbol)
@@ -457,6 +471,12 @@ class BitgetFuturesClient:
             Optional side (``"long"``/``"short"``) to close when ``size`` is
             specified. If not provided the exchange will infer it.
         """
+
+        if self.paper_trade:
+            logging.info(
+                "PAPER_TRADE=True -> fermeture simulée de la position %s", symbol
+            )
+            return {"success": True, "code": 0}
 
         body = {"symbol": self._format_symbol(symbol)}
         if size is not None:

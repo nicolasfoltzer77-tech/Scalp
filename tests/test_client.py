@@ -194,7 +194,7 @@ def test_get_kline_query_params(monkeypatch):
 
 
 def test_get_open_orders_endpoint(monkeypatch):
-    client = BitgetFuturesClient("key", "secret", "https://test")
+    client = BitgetFuturesClient("key", "secret", "https://test", paper_trade=False)
 
     called = {}
 
@@ -252,7 +252,7 @@ def test_get_contract_detail_endpoint(monkeypatch):
 
 
 def test_cancel_all_endpoint(monkeypatch):
-    client = BitgetFuturesClient("key", "secret", "https://test")
+    client = BitgetFuturesClient("key", "secret", "https://test", paper_trade=False)
 
     called = {}
 
@@ -273,6 +273,41 @@ def test_cancel_all_endpoint(monkeypatch):
         "symbol": "BTCUSDT",
         "marginCoin": "USDT",
     }
+
+
+def test_get_open_orders_paper_trade(monkeypatch):
+    client = BitgetFuturesClient("key", "secret", "https://test", paper_trade=True)
+
+    called = {"count": 0}
+
+    def fake_private(*a, **k):
+        called["count"] += 1
+        return {"success": True}
+
+    monkeypatch.setattr(BitgetFuturesClient, "_private_request", fake_private)
+
+    resp = client.get_open_orders("BTCUSDT_UMCBL")
+
+    assert resp["success"] is True
+    assert resp["data"] == []
+    assert called["count"] == 0
+
+
+def test_cancel_all_paper_trade(monkeypatch):
+    client = BitgetFuturesClient("key", "secret", "https://test", paper_trade=True)
+
+    called = {"count": 0}
+
+    def fake_private(*a, **k):
+        called["count"] += 1
+        return {"success": True}
+
+    monkeypatch.setattr(BitgetFuturesClient, "_private_request", fake_private)
+
+    resp = client.cancel_all("BTCUSDT_UMCBL", margin_coin="USDT")
+
+    assert resp["success"] is True
+    assert called["count"] == 0
 
 
 def test_get_kline_transforms_data(monkeypatch):
