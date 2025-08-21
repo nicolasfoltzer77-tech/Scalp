@@ -138,6 +138,7 @@ def main(argv: Optional[List[str]] = None) -> None:
         access_key=cfg["BITGET_ACCESS_KEY"],
         secret_key=cfg["BITGET_SECRET_KEY"],
         base_url=cfg["BASE_URL"],
+        product_type=cfg["PRODUCT_TYPE"],
         recv_window=cfg["RECV_WINDOW"],
         paper_trade=cfg["PAPER_TRADE"],
         passphrase=cfg.get("BITGET_PASSPHRASE"),

@@ -186,4 +186,4 @@ def test_get_kline_query_params(monkeypatch):
     client.get_kline("BTC_USDT", interval="Min1")
 
     assert called["url"].endswith("/api/v2/mix/market/candles")
-    assert called["params"] == {"symbol": "BTC_USDT", "granularity": "Min1"}
+    assert called["params"] == {"symbol": "BTCUSDT_UMCBL", "granularity": "Min1"}
