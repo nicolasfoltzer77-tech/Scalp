@@ -103,6 +103,46 @@ def compute_position_size(
     return vol
 
 
+def effective_leverage(
+    entry_price: float,
+    liquidation_price: float,
+    position_margin: float,
+    position_size: float,
+) -> float:
+    """Return the effective leverage of a futures position.
+
+    ``effective_leverage`` is defined as the ratio between the position's
+    notional value and the collateral backing it.  The collateral is primarily
+    taken from ``position_margin`` but, when unavailable, it can be inferred
+    from the distance to the liquidation price.
+
+    The function is resilient to missing or non‑positive inputs and falls back
+    to ``0.0`` whenever leverage cannot be determined.
+    """
+
+    try:
+        entry = float(entry_price)
+        liq = float(liquidation_price)
+        margin = float(position_margin)
+        size = float(position_size)
+    except (TypeError, ValueError):
+        return 0.0
+
+    if entry <= 0 or size == 0:
+        return 0.0
+
+    notional = abs(size) * entry
+
+    if margin <= 0:
+        price_diff = abs(entry - liq)
+        margin = price_diff * abs(size)
+
+    if margin <= 0:
+        return 0.0
+
+    return notional / margin
+
+
 def analyse_risque(
     contract_detail: Dict[str, Any],
     open_positions: List[Dict[str, Any]],
