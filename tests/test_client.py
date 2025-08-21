@@ -128,6 +128,20 @@ def test_get_assets_normalization(monkeypatch):
     assert called["params"] == {"productType": "USDT-FUTURES", "marginCoin": "USDT"}
 
 
+def test_get_assets_equity_fallback(monkeypatch):
+    client = BitgetFuturesClient("key", "secret", "https://test")
+
+    def fake_private(self, method, path, params=None, body=None):
+        return {"code": "00000", "data": [{"marginCoin": "USDT", "available": "2"}]}
+
+    monkeypatch.setattr(BitgetFuturesClient, "_private_request", fake_private)
+
+    assets = client.get_assets()
+    usdt = assets.get("data", [])[0]
+    assert usdt["currency"] == "USDT"
+    assert usdt["equity"] == 2.0
+
+
 def test_get_ticker_normalization(monkeypatch):
     client = BitgetFuturesClient("key", "secret", "https://test")
 
@@ -336,6 +350,8 @@ def test_place_order_endpoint(monkeypatch):
 
     called = {}
 
+    monkeypatch.setattr(BitgetFuturesClient, "_get_contract_precision", lambda self, symbol: (0, 0))
+
     def fake_private(self, method, path, params=None, body=None):
         called["method"] = method
         called["path"] = path
@@ -358,6 +374,26 @@ def test_place_order_endpoint(monkeypatch):
     assert body["reduceOnly"] is False
     assert body["posMode"] == "hedge_mode"
 
+
+def test_place_order_precision(monkeypatch):
+    client = BitgetFuturesClient("key", "secret", "https://test", paper_trade=False)
+
+    monkeypatch.setattr(BitgetFuturesClient, "_get_contract_precision", lambda self, symbol: (2, 3))
+
+    called = {}
+
+    def fake_private(self, method, path, params=None, body=None):
+        called["body"] = body
+        return {"success": True}
+
+    monkeypatch.setattr(BitgetFuturesClient, "_private_request", fake_private)
+
+    client.place_order(
+        "BTCUSDT_UMCBL", side=1, vol=1.23456, order_type=1, price=1234.5678
+    )
+
+    assert called["body"]["price"] == 1234.57
+    assert called["body"]["size"] == 1.235
 
 def test_get_open_orders_paper_trade(monkeypatch):
     client = BitgetFuturesClient("key", "secret", "https://test", paper_trade=True)
