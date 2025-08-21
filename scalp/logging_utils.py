@@ -8,7 +8,8 @@ import json
 import os
 import sqlite3
 import time
-from typing import Any, Dict
+from pathlib import Path
+from typing import Any, Dict, List
 
 
 def get_jsonl_logger(path: str, max_bytes: int = 0, backup_count: int = 0):
@@ -128,3 +129,38 @@ class TradeLogger:
             ),
         )
         self.conn.commit()
+
+
+BASE_DIR = Path(__file__).resolve().parents[2]
+
+
+def _append_csv(path: Path, fields: List[str], row: Dict[str, Any]) -> None:
+    """Append a row to ``path`` creating the file with ``fields`` if needed."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    file_exists = path.exists()
+    with path.open("a", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=fields)
+        if not file_exists:
+            writer.writeheader()
+        writer.writerow({k: row.get(k) for k in fields})
+
+
+def log_position(data: Dict[str, Any]) -> None:
+    """Log a closed position to ``../positions.csv``."""
+    fields = [
+        "timestamp",
+        "pair",
+        "direction",
+        "entry",
+        "exit",
+        "pnl_pct",
+        "fee_rate",
+        "notes",
+    ]
+    _append_csv(BASE_DIR / "positions.csv", fields, data)
+
+
+def log_operation_memo(data: Dict[str, Any]) -> None:
+    """Log operation details to ``../operations_memo.csv``."""
+    fields = ["timestamp", "pair", "details"]
+    _append_csv(BASE_DIR / "operations_memo.csv", fields, data)
