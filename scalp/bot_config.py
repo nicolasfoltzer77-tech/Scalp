@@ -1,7 +1,7 @@
 import os
 
 
-DEFAULT_SYMBOL = os.getenv("SYMBOL") or "BTCUSDT_UMCBL"
+DEFAULT_SYMBOL = os.getenv("SYMBOL") or "BTCUSDT"
 
 CONFIG = {
     "BITGET_ACCESS_KEY": os.getenv("BITGET_API_KEY")

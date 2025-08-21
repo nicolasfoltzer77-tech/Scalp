@@ -23,7 +23,7 @@ Le bot lit sa configuration via des variables d'environnement :
 
 - `BITGET_ACCESS_KEY`, `BITGET_SECRET_KEY` : clés API Bitget (laisser les valeurs par défaut pour rester en mode papier).
 - `PAPER_TRADE` (`true`/`false`) : par défaut `true`, n'envoie aucun ordre réel.
-- `SYMBOL` : symbole du contrat futures (par défaut, `BTCUSDT_UMCBL`).
+- `SYMBOL` : symbole du contrat futures (par défaut, `BTCUSDT`).
 - `INTERVAL` : intervalle des chandeliers, ex. `Min1`, `Min5`.
 - `EMA_FAST`, `EMA_SLOW` : périodes des EMA utilisées par la stratégie.
 - `MACD_FAST`, `MACD_SLOW`, `MACD_SIGNAL` : paramètres du filtre de tendance MACD.
