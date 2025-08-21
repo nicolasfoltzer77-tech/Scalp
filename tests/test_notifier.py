@@ -34,11 +34,12 @@ def test_notify_posts(monkeypatch):
     assert payload["json"]["bar"] == 2
 
 
-def test_notify_posts_telegram(monkeypatch):
-    calls = []
+def test_notify_ignores_telegram(monkeypatch):
+    called = False
 
     def fake_post(url, json=None, timeout=5):
-        calls.append({"url": url, "json": json, "timeout": timeout})
+        nonlocal called
+        called = True
 
     monkeypatch.delenv("NOTIFY_URL", raising=False)
     monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "abc")
@@ -47,15 +48,10 @@ def test_notify_posts_telegram(monkeypatch):
 
     notifier.notify("evt", {"bar": 2})
 
-    assert len(calls) == 1
-    assert calls[0]["url"] == "https://api.telegram.org/botabc/sendMessage"
-    assert calls[0]["json"]["chat_id"] == "123"
-    assert calls[0]["json"]["text"].startswith("evt")
-    assert "bar" in calls[0]["json"]["text"]
+    assert called is False
 
 
-
-def test_notify_posts_both(monkeypatch):
+def test_notify_posts_only_http(monkeypatch):
     calls = []
 
     def fake_post(url, json=None, timeout=5):
@@ -68,9 +64,8 @@ def test_notify_posts_both(monkeypatch):
 
     notifier.notify("evt", {"bar": 2})
 
-    assert len(calls) == 2
+    assert len(calls) == 1
     assert calls[0]["url"] == "http://example.com"
-    assert calls[1]["url"] == "https://api.telegram.org/botabc/sendMessage"
 
 
 def test_format_text_open_position():

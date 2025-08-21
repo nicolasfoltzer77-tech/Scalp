@@ -116,8 +116,7 @@ class TelegramBot:
 
     def update_pairs(self) -> None:
         from bot import update as _update  # lazy import to avoid cycle
-
-        _update(self.client, top_n=20, tg_bot=self)
+        _update(self.client, top_n=20)
 
     # ------------------------------------------------------------------
     def _api_url(self, method: str) -> str:
