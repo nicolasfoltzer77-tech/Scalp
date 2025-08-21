@@ -192,7 +192,15 @@ def main(argv: Optional[List[str]] = None) -> None:
     try:
         for row in assets.get("data", []):
             if row.get("currency") == "USDT":
-                equity_usdt = float(row.get("equity", 0.0))
+                for key in ("equity", "usdtEquity", "available", "cashBalance"):
+                    val = row.get(key)
+                    try:
+                        if val is not None:
+                            equity_usdt = float(val)
+                    except (TypeError, ValueError):
+                        equity_usdt = 0.0
+                    if equity_usdt > 0:
+                        break
                 break
     except Exception:
         pass
