@@ -73,6 +73,23 @@ def test_notify_posts_both(monkeypatch):
     assert "https://api.telegram.org/botabc/sendMessage" in urls
 
 
+def test_notify_skips_telegram_for_pair_list(monkeypatch):
+    calls = []
+
+    def fake_post(url, json=None, timeout=5):
+        calls.append(url)
+
+    monkeypatch.setenv("NOTIFY_URL", "http://example.com")
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "abc")
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "123")
+    monkeypatch.setattr(notifier.requests, "post", fake_post)
+
+    notifier.notify("pair_list", {"pairs": "BTC"})
+
+    # Only the generic webhook should be called, not Telegram
+    assert calls == ["http://example.com"]
+
+
 def test_format_text_open_position():
     payload = {
         "side": "long",
