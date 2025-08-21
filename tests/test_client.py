@@ -350,6 +350,8 @@ def test_place_order_endpoint(monkeypatch):
     assert called["method"] == "POST"
     assert called["path"] == "/api/v2/mix/order/place-order"
     assert called["body"]["symbol"] == "BTCUSDT"
+    assert called["body"]["marginCoin"] == "USDT"
+    assert called["body"]["marginMode"] == "crossed"
 
 
 def test_get_open_orders_paper_trade(monkeypatch):
