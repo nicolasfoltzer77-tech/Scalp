@@ -93,38 +93,58 @@ class Orchestrator:
         On suppose que le client de base expose get_kline(symbol, granularity) -> dict avec "data".
         Adapte si nécessaire à ton client.
         """
-        import time  # local import pour éviter dépendance implicite en haut de fichier
-        # Fallback générique: on reconstitue une bougie synthétique à partir du ticker si pas d'API kline.
+        import time  # import local
+        # 1) Essai via get_kline (retour dict OU list)
         try:
-            data = self.exchange.get_kline(symbol, interval="1m")  # adapter si signature différente
-            # data peut être un dict {"data": [...]} **ou** directement une list
+            data = self.exchange.get_kline(symbol, interval="1m")
+        except AttributeError:
+            data = None
+        except Exception:
+            data = None
+
+        rows: List = []
+        if data is not None:
             if isinstance(data, dict):
                 rows = data.get("data") or data.get("result") or []
+            elif isinstance(data, list):
+                rows = data
+
+        # 2) Normalisation stricte: si dict -> lire clés; si liste -> lire indices
+        out: List[Dict] = []
+        for r in rows[-limit:]:
+            if isinstance(r, dict):
+                t = int(r.get("ts") or r.get("time") or r.get("timestamp") or 0)
+                o = float(r.get("open", 0.0))
+                h = float(r.get("high", o))
+                l = float(r.get("low", o))
+                c = float(r.get("close", o))
+                v = float(r.get("volume", r.get("vol", 0.0)))
             else:
-                rows = data or []
-            out = []
-            for r in rows[-limit:]:
-                # Adapter les clés selon Bitget (ts, open, high, low, close, volume)
-                o = float(r.get("open", r[1] if isinstance(r, (list, tuple)) else 0))
-                h = float(r.get("high", r[2] if isinstance(r, (list, tuple)) else 0))
-                l = float(r.get("low",  r[3] if isinstance(r, (list, tuple)) else 0))
-                c = float(r.get("close",r[4] if isinstance(r, (list, tuple)) else 0))
-                v = float(r.get("volume", r[5] if isinstance(r, (list, tuple)) else 0))
-                t = int(r.get("ts", r[0] if isinstance(r, (list, tuple)) else 0))
-                out.append({"ts": t, "open": o, "high": h, "low": l, "close": c, "volume": v})
-            if out:
-                return out
-        except Exception:
-            pass
-        # Fallback synthétique
+                # liste/tuple: [ts, open, high, low, close, volume] attendu
+                t = int(r[0]) if len(r) > 0 else 0
+                o = float(r[1]) if len(r) > 1 else 0.0
+                h = float(r[2]) if len(r) > 2 else o
+                l = float(r[3]) if len(r) > 3 else o
+                c = float(r[4]) if len(r) > 4 else o
+                v = float(r[5]) if len(r) > 5 else 0.0
+            out.append({"ts": t, "open": o, "high": h, "low": l, "close": c, "volume": v})
+        if out:
+            return out
+
+        # 3) Fallback synthétique via ticker (jamais d'appel à .get sur une list)
         tkr = self.exchange.get_ticker(symbol)
-        items = (tkr.get("data") if isinstance(tkr, dict) else tkr) or []
+        items = []
+        if isinstance(tkr, dict):
+            items = tkr.get("data") or tkr.get("result") or []
+        elif isinstance(tkr, list):
+            items = tkr
         if not items:
             return []
-        last = items[0]
-        p = float(last.get("lastPrice", last.get("close", 0)))
+        last = items[0] if isinstance(items, list) else items
+        p = float(last.get("lastPrice", last.get("close", last.get("markPrice", 0))))
         ts = int(time.time() * 1000)
-        return [{"ts": ts, "open": p, "high": p, "low": p, "close": p, "volume": float(last.get("volume", 0))}]
+        vol = float(last.get("volume", last.get("usdtVolume", last.get("quoteVolume", 0))))
+        return [{"ts": ts, "open": p, "high": p, "low": p, "close": p, "volume": vol}]
 
     async def _task_trade_loop(self, symbol: str):
         ctx = self.ctx[symbol]
