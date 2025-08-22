@@ -330,6 +330,7 @@ def main(argv: Optional[List[str]] = None) -> None:
 
     prev_fast = prev_slow = None
     current_pos = 0
+    current_vol = 0
     entry_price = None
     entry_time = None
     stop_long = stop_short = None
@@ -355,7 +356,7 @@ def main(argv: Optional[List[str]] = None) -> None:
             logging.warning("Impossible de récupérer les positions Bitget: %s", exc)
 
     def close_position(side: int, price: float, vol: int) -> bool:
-        nonlocal current_pos, entry_price, entry_time, session_pnl, equity_usdt, stop_long, stop_short, take_profit
+        nonlocal current_pos, current_vol, entry_price, entry_time, session_pnl, equity_usdt, stop_long, stop_short, take_profit
         pnl = round(calc_pnl_pct(entry_price, price, side, fee_rate), 2)
         payload = {
             "side": "long" if side > 0 else "short",
@@ -425,6 +426,7 @@ def main(argv: Optional[List[str]] = None) -> None:
             }
         )
         current_pos = 0
+        current_vol = 0
         entry_price = None
         entry_time = None
         stop_long = stop_short = None
@@ -580,18 +582,7 @@ def main(argv: Optional[List[str]] = None) -> None:
                 price_str = tdata.get("lastPr") or tdata.get("lastPrice")
                 price = float(price_str)
 
-            vol_close = compute_position_size(
-                contract_detail,
-                equity_usdt,
-                price,
-                risk_mgr.risk_pct,
-                cfg["LEVERAGE"],
-                symbol,
-            )
-            if vol_close <= 0:
-                logging.info("vol calculé = 0; on attend.")
-                time.sleep(cfg["LOOP_SLEEP_SECS"])
-                continue
+            vol_close = current_vol
             sl_long = price * (1.0 - cfg["STOP_LOSS_PCT"])
             tp_long = price * (1.0 + cfg["TAKE_PROFIT_PCT"])
             sl_short = price * (1.0 + cfg["STOP_LOSS_PCT"])
@@ -674,6 +665,7 @@ def main(argv: Optional[List[str]] = None) -> None:
                         )
                         log_event("scale_in_long", resp)
                         last_entry_price = price
+                        current_vol += vol_add
             elif (
                 current_pos < 0
                 and entry_price is not None
@@ -709,6 +701,7 @@ def main(argv: Optional[List[str]] = None) -> None:
                         )
                         log_event("scale_in_short", resp)
                         last_entry_price = price
+                        current_vol += vol_add
 
             log_event(
                 "signal",
@@ -806,6 +799,7 @@ def main(argv: Optional[List[str]] = None) -> None:
                 log_event("position_opened", open_payload)
                 notify("position_opened", open_payload)
                 current_pos = +1
+                current_vol = vol_open
                 entry_price = price
                 entry_time = now_ts
                 stop_long = sl_long
@@ -901,6 +895,7 @@ def main(argv: Optional[List[str]] = None) -> None:
                 log_event("position_opened", open_payload)
                 notify("position_opened", open_payload)
                 current_pos = -1
+                current_vol = vol_open
                 entry_price = price
                 entry_time = now_ts
                 stop_short = sl_short
