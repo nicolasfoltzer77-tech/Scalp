@@ -32,33 +32,83 @@ class BitgetFuturesClient(_Base):
             available = _to_float(a.get("available", a.get("availableBalance", a.get("availableUSDT", 0))))
             norm.append({"currency": currency, "equity": equity, "available": available, **a})
         return {"success": True, "data": norm}
+        
++    def get_ticker(self, symbol: Optional[str] = None) -> Dict[str, Any]:
++        """
++        Normalise vers liste d'objets:
++         {symbol,lastPrice,bidPrice,askPrice,volume}
++        Tolère:
++         - top-level dict (data/result/tickers) ou list
++         - items dict OU liste (indices)
++        """
++        # ---- Récup brut
++        raw: Any
++        try:
++            raw = super().get_ticker(symbol) if symbol else super().get_tickers()
++        except Exception as e:
++            return {"success": False, "error": repr(e), "data": []}
++
++        # ---- Extraire items top-level
++        items: List[Any] = []
++        if isinstance(raw, dict):
++            d = raw.get("data")
++            if symbol and isinstance(d, dict):
++                items = [d]                    # get_ticker renvoie un dict pour 1 symbole
++            else:
++                items = d or raw.get("result") or raw.get("tickers") or []
++        elif isinstance(raw, (list, tuple)):
++            items = list(raw)
++        else:
++            items = []
++
++        # ---- Normaliser chaque item
++        norm: List[Dict[str, Any]] = []
++        for t in items:
++            if isinstance(t, dict):
++                s = (t.get("symbol") or t.get("instId") or t.get("instrumentId") or "").replace("_", "")
++                last_ = t.get("lastPrice", t.get("last", t.get("close", t.get("markPrice", 0))))
++                bid_ = t.get("bidPrice", t.get("bestBidPrice", t.get("bestBid", t.get("buyOne", last_))))
++                ask_ = t.get("askPrice", t.get("bestAskPrice", t.get("bestAsk", t.get("sellOne", last_))))
++                vol_usdt = t.get("usdtVolume", t.get("quoteVolume", t.get("turnover24h", None)))
++                vol_base = t.get("baseVolume", t.get("volume", t.get("size24h", 0)))
++                volume = _to_float(vol_usdt if vol_usdt is not None else vol_base)
++                norm.append({
++                    "symbol": s,
++                    "lastPrice": _to_float(last_),
++                    "bidPrice": _to_float(bid_),
++                    "askPrice": _to_float(ask_),
++                    "volume": volume
++                })
++            else:
++                # item sous forme de liste/tuple — heuristiques
++                seq = list(t)
++                # On essaie de détecter un champ "close" plausible
++                if len(seq) >= 5:
++                    first_is_ts = isinstance(seq[0], (int, float)) and seq[0] > 10**10
++                    if first_is_ts:
++                        # [ts, o, h, l, c, v, ...]
++                        close = _to_float(seq[4])
++                        vol = _to_float(seq[5] if len(seq) > 5 else 0.0)
++                    else:
++                        # [o, h, l, c, v, ts]
++                        close = _to_float(seq[3])
++                        vol = _to_float(seq[4] if len(seq) > 4 else 0.0)
++                else:
++                    close = _to_float(seq[-1] if seq else 0.0)
++                    vol = 0.0
++                # symbole inconnu dans ce format -> on reprend 'symbol' passé
++                s = (symbol or "").replace("_", "")
++                norm.append({
++                    "symbol": s,
++                    "lastPrice": close,
++                    "bidPrice": close,
++                    "askPrice": close,
++                    "volume": vol
++                })
++
++        return {"success": True, "data": norm}
 
-    def get_ticker(self, symbol: Optional[str] = None) -> Dict[str, Any]:
-        if symbol:
-            raw = super().get_ticker(symbol)
-            items = [raw.get("data") or raw]
-        else:
-            raw = super().get_tickers()
-            items = raw.get("data") or raw.get("result") or raw.get("tickers") or []
-        norm: List[Dict[str, Any]] = []
-        for t in items:
-            s = t.get("symbol") or t.get("instId") or t.get("instrumentId") or ""
-            s = s.replace("_", "")
-            last_ = t.get("lastPrice") or t.get("last", t.get("close", t.get("markPrice", 0)))
-            bid_ = t.get("bidPrice") or t.get("bestBidPrice") or t.get("bestBid", t.get("buyOne", 0))
-            ask_ = t.get("askPrice") or t.get("bestAskPrice") or t.get("bestAsk", t.get("sellOne", 0))
-            vol_usdt = t.get("usdtVolume") or t.get("quoteVolume") or t.get("turnover24h")
-            vol_base = t.get("baseVolume") or t.get("volume") or t.get("size24h")
-            volume = _to_float(vol_usdt if vol_usdt is not None else vol_base)
-            norm.append({
-                "symbol": s,
-                "lastPrice": _to_float(last_),
-                "bidPrice": _to_float(bid_),
-                "askPrice": _to_float(ask_),
-                "volume": volume,
-                **t,
-            })
-        return {"success": True, "data": norm}
+        
     # --- Normalisations position/ordres/fills ---
     def get_open_positions(self, symbol: Optional[str] = None):
         raw = super().get_positions() if hasattr(super(), "get_positions") else {}
