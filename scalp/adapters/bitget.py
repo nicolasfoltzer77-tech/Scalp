@@ -1,6 +1,7 @@
 # scalp/adapters/bitget.py
 from __future__ import annotations
 from typing import Any, Dict, List, Optional
+import inspect
 import requests
 
 # Client de base Bitget (déjà présent dans le repo)
@@ -16,61 +17,86 @@ def _to_float(x, default: float = 0.0) -> float:
 
 class BitgetFuturesClient(_Base):
     """
-    Adaptateur Bitget centralisant les normalisations:
-      - get_assets() -> {"success": True, "data":[{currency,equity,available,...}]}
-      - get_ticker(symbol|None) -> {"success": True, "data":[{symbol,lastPrice,bidPrice,askPrice,volume}]}
-      - get_open_positions(symbol|None) -> positions ouvertes normalisées
-      - get_fills(symbol, order_id|None) -> fills normalisés
+    Adaptateur Bitget centralisant:
+      - Initialisation TOLÉRANTE (détecte les noms d’arguments attendus par le client de base)
+      - get_assets()
+      - get_ticker(symbol|None)
+      - get_open_positions()
+      - get_fills()
 
-    Tolérant aux schémas d'API et aux variations d'arguments __init__ du client de base.
+    Objectif: éviter les TypeError "unexpected keyword argument 'api_key' / 'apiKey'".
     """
 
+    # ----------- INIT DYNAMIQUE (anti-KeywordError) -----------
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """
-        Rend l'init tolérant aux noms d’arguments:
-        accepte indifféremment api_key/apiKey, api_secret/apiSecret/secret, passphrase/password.
-        Injecte requests_module si nécessaire.
+        Accepte indifféremment:
+        - api_key / apiKey / access_key / accessKey / key
+        - api_secret / apiSecret / secret / secret_key / secretKey
+        - passphrase / password / api_passphrase / apiPassphrase
+        et ne transmet que les noms réellement supportés par _Base.__init__.
         """
-        kwargs = dict(kwargs)  # copie modifiable
-        kwargs.setdefault("requests_module", requests)
-
-        # --- Normalisation des clés entrantes ---
-        # on accepte aussi 'secret' (venant du prompt bot.py)
-        incoming_key = kwargs.pop("api_key", None) or kwargs.pop("key", None) or kwargs.pop("API_KEY", None)
-        incoming_secret = (
-            kwargs.pop("api_secret", None)
-            or kwargs.pop("secret", None)
-            or kwargs.pop("API_SECRET", None)
+        user_kwargs = dict(kwargs)  # copie
+        # Récup valeurs (quels que soient les noms reçus)
+        incoming_key = (
+            user_kwargs.pop("api_key", None)
+            or user_kwargs.pop("apiKey", None)
+            or user_kwargs.pop("access_key", None)
+            or user_kwargs.pop("accessKey", None)
+            or user_kwargs.pop("key", None)
+            or user_kwargs.pop("API_KEY", None)
         )
-        incoming_pass = kwargs.pop("passphrase", None) or kwargs.pop("api_passphrase", None) or kwargs.pop("password", None)
+        incoming_secret = (
+            user_kwargs.pop("api_secret", None)
+            or user_kwargs.pop("apiSecret", None)
+            or user_kwargs.pop("secret_key", None)
+            or user_kwargs.pop("secretKey", None)
+            or user_kwargs.pop("secret", None)
+            or user_kwargs.pop("API_SECRET", None)
+        )
+        incoming_pass = (
+            user_kwargs.pop("passphrase", None)
+            or user_kwargs.pop("password", None)
+            or user_kwargs.pop("api_passphrase", None)
+            or user_kwargs.pop("apiPassphrase", None)
+        )
 
-        # On ne sait pas si le client de base attend apiKey/apiSecret ou api_key/api_secret.
-        # On va tenter d'abord en camelCase, puis en snake_case si TypeError.
-        camel_kwargs = dict(kwargs)
-        if incoming_key is not None and "apiKey" not in camel_kwargs and "api_key" not in camel_kwargs:
-            camel_kwargs["apiKey"] = incoming_key
-        if incoming_secret is not None and "apiSecret" not in camel_kwargs and "api_secret" not in camel_kwargs:
-            camel_kwargs["apiSecret"] = incoming_secret
-        if incoming_pass is not None and "passphrase" not in camel_kwargs:
-            camel_kwargs["passphrase"] = incoming_pass
+        # Inspection des paramètres du client de base
+        sig = inspect.signature(_Base.__init__)
+        param_names = set(sig.parameters.keys())  # ex: {'self','access_key','secret_key','passphrase',...}
 
-        try:
-            super().__init__(*args, **camel_kwargs)
-            return
-        except TypeError:
-            # 2e essai: snake_case
-            snake_kwargs = dict(kwargs)
-            if incoming_key is not None and "api_key" not in snake_kwargs and "apiKey" not in snake_kwargs:
-                snake_kwargs["api_key"] = incoming_key
-            if incoming_secret is not None and "api_secret" not in snake_kwargs and "apiSecret" not in snake_kwargs:
-                snake_kwargs["api_secret"] = incoming_secret
-            if incoming_pass is not None and "passphrase" not in snake_kwargs and "password" not in snake_kwargs:
-                snake_kwargs["passphrase"] = incoming_pass
-            super().__init__(*args, **snake_kwargs)
+        def pick_name(candidates: List[str]) -> Optional[str]:
+            for c in candidates:
+                if c in param_names:
+                    return c
+            return None
 
-    # -----------------------------------------------------
-    #                    COMPTES / ASSETS
-    # -----------------------------------------------------
+        # Déterminer les vrais noms attendus
+        key_name = pick_name(["api_key", "apiKey", "access_key", "accessKey", "key"])
+        sec_name = pick_name(["api_secret", "apiSecret", "secret_key", "secretKey", "secret"])
+        pas_name = pick_name(["passphrase", "password", "api_passphrase", "apiPassphrase"])
+        req_mod_name = "requests_module" if "requests_module" in param_names else None
+
+        base_kwargs: Dict[str, Any] = {}
+
+        if key_name and incoming_key is not None:
+            base_kwargs[key_name] = incoming_key
+        if sec_name and incoming_secret is not None:
+            base_kwargs[sec_name] = incoming_secret
+        if pas_name and incoming_pass is not None:
+            base_kwargs[pas_name] = incoming_pass
+        if req_mod_name:
+            base_kwargs[req_mod_name] = requests
+
+        # Ne transmettre au client de base que les kwargs qu’il supporte
+        for k, v in list(user_kwargs.items()):
+            if k in param_names:
+                base_kwargs[k] = v  # passer au client de base
+
+        # Appel unique, sans essayer des variantes hasardeuses
+        super().__init__(*args, **base_kwargs)
+
+    # --------------------- COMPTES / ASSETS ---------------------
     def get_assets(self) -> Dict[str, Any]:
         raw = super().get_assets()
         data = raw.get("data") or raw.get("result") or raw.get("assets") or []
@@ -82,16 +108,11 @@ class BitgetFuturesClient(_Base):
             norm.append({"currency": currency, "equity": equity, "available": available, **a})
         return {"success": True, "data": norm}
 
-    # -----------------------------------------------------
-    #                        TICKER(S)
-    # -----------------------------------------------------
+    # ------------------------ TICKER(S) -------------------------
     def get_ticker(self, symbol: Optional[str] = None) -> Dict[str, Any]:
         """
-        Normalise vers liste d'objets:
-          {symbol,lastPrice,bidPrice,askPrice,volume}
-        Tolère:
-          - top-level dict (data/result/tickers) ou list
-          - items dict OU liste (indices)
+        Normalise vers liste d'objets: {symbol,lastPrice,bidPrice,askPrice,volume}
+        Tolère top-level dict/list et items dict/list.
         """
         try:
             raw: Any = super().get_ticker(symbol) if symbol else super().get_tickers()
@@ -102,7 +123,7 @@ class BitgetFuturesClient(_Base):
         if isinstance(raw, dict):
             d = raw.get("data")
             if symbol and isinstance(d, dict):
-                items = [d]  # un seul symbole -> dict unique
+                items = [d]
             else:
                 items = d or raw.get("result") or raw.get("tickers") or []
         elif isinstance(raw, (list, tuple)):
@@ -118,43 +139,23 @@ class BitgetFuturesClient(_Base):
                 vol_usdt = t.get("usdtVolume", t.get("quoteVolume", t.get("turnover24h", None)))
                 vol_base = t.get("baseVolume", t.get("volume", t.get("size24h", 0)))
                 volume = _to_float(vol_usdt if vol_usdt is not None else vol_base)
-                norm.append({
-                    "symbol": s,
-                    "lastPrice": _to_float(last_),
-                    "bidPrice": _to_float(bid_),
-                    "askPrice": _to_float(ask_),
-                    "volume": volume
-                })
+                norm.append({"symbol": s, "lastPrice": _to_float(last_), "bidPrice": _to_float(bid_), "askPrice": _to_float(ask_), "volume": volume})
             else:
-                # item sous forme de liste/tuple — heuristiques
                 seq = list(t)
                 if len(seq) >= 5:
-                    first_is_ts = isinstance(seq[0], (int, float)) and seq[0] > 10**10
-                    if first_is_ts:
-                        # [ts, o, h, l, c, v, ...]
-                        close = _to_float(seq[4])
-                        vol = _to_float(seq[5] if len(seq) > 5 else 0.0)
+                    first_ts = isinstance(seq[0], (int, float)) and seq[0] > 10**10
+                    if first_ts:
+                        close, vol = _to_float(seq[4]), _to_float(seq[5] if len(seq) > 5 else 0.0)
                     else:
-                        # [o, h, l, c, v, ts]
-                        close = _to_float(seq[3])
-                        vol = _to_float(seq[4] if len(seq) > 4 else 0.0)
+                        close, vol = _to_float(seq[3]), _to_float(seq[4] if len(seq) > 4 else 0.0)
                 else:
-                    close = _to_float(seq[-1] if seq else 0.0)
-                    vol = 0.0
+                    close, vol = _to_float(seq[-1] if seq else 0.0), 0.0
                 s = (symbol or "").replace("_", "")
-                norm.append({
-                    "symbol": s,
-                    "lastPrice": close,
-                    "bidPrice": close,
-                    "askPrice": close,
-                    "volume": vol
-                })
+                norm.append({"symbol": s, "lastPrice": close, "bidPrice": close, "askPrice": close, "volume": vol})
 
         return {"success": True, "data": norm}
 
-    # -----------------------------------------------------
-    #               POSITIONS / ORDRES / FILLS
-    # -----------------------------------------------------
+    # --------------- POSITIONS / ORDRES / FILLS -----------------
     def get_open_positions(self, symbol: Optional[str] = None) -> Dict[str, Any]:
         raw: Dict[str, Any] = super().get_positions() if hasattr(super(), "get_positions") else {}
         items = raw.get("data") or raw.get("result") or raw.get("positions") or []
@@ -177,9 +178,8 @@ class BitgetFuturesClient(_Base):
             s = (f.get("symbol") or f.get("instId") or "").replace("_", "")
             if s != symbol:
                 continue
-            if order_id:
-                if str(f.get("orderId") or f.get("ordId") or "") != str(order_id):
-                    continue
+            if order_id and str(f.get("orderId") or f.get("ordId") or "") != str(order_id):
+                continue
             out.append({
                 "orderId": str(f.get("orderId") or f.get("ordId") or ""),
                 "tradeId": str(f.get("tradeId") or f.get("fillId") or f.get("execId") or ""),
