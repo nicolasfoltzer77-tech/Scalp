@@ -1,10 +1,11 @@
 # scalp/adapters/bitget.py
 from __future__ import annotations
 from typing import Any, Dict, List, Optional
+import os
 import inspect
 import requests
 
-# Client de base Bitget (déjà présent dans le repo)
+# Client Bitget "bas niveau" (déjà présent dans le repo)
 from scalp.bitget_client import BitgetFuturesClient as _Base
 
 
@@ -15,29 +16,36 @@ def _to_float(x, default: float = 0.0) -> float:
         return default
 
 
+def _select_base_url() -> str:
+    """Choisit l'URL de base Bitget (env > paper trade > prod)."""
+    env = os.environ.get("BITGET_BASE_URL")
+    if env:
+        return env
+    paper = (os.environ.get("PAPER_TRADE", "true").lower() in ("1", "true", "yes", "on"))
+    return "https://api-testnet.bitget.com" if paper else "https://api.bitget.com"
+
+
 class BitgetFuturesClient(_Base):
     """
-    Adaptateur Bitget centralisant:
-      - Initialisation TOLÉRANTE (détecte les noms d’arguments attendus par le client de base)
-      - get_assets()
-      - get_ticker(symbol|None)
-      - get_open_positions()
-      - get_fills()
-
-    Objectif: éviter les TypeError "unexpected keyword argument 'api_key' / 'apiKey'".
+    Adaptateur Bitget avec:
+      - __init__ DYNAMIQUE (détecte les noms d’arguments du client de base et
+        passe base_url en positionnel si nécessaire)
+      - Normalisations robustes: assets, ticker(s), positions, fills.
     """
 
-    # ----------- INIT DYNAMIQUE (anti-KeywordError) -----------
+    # ------------- INIT dynamique anti-KeywordError -------------
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """
         Accepte indifféremment:
-        - api_key / apiKey / access_key / accessKey / key
-        - api_secret / apiSecret / secret / secret_key / secretKey
-        - passphrase / password / api_passphrase / apiPassphrase
-        et ne transmet que les noms réellement supportés par _Base.__init__.
+          api_key / apiKey / access_key / accessKey / key
+          api_secret / apiSecret / secret / secret_key / secretKey
+          passphrase / password / api_passphrase / apiPassphrase
+          base_url / baseUrl / host / endpoint (ou rien: auto)
+        et ne transmet au client de base que les paramètres qu’il supporte.
         """
-        user_kwargs = dict(kwargs)  # copie
-        # Récup valeurs (quels que soient les noms reçus)
+        user_kwargs = dict(kwargs)  # copie pour consommation locale
+
+        # --- collecter valeurs entrantes sous tous les alias
         incoming_key = (
             user_kwargs.pop("api_key", None)
             or user_kwargs.pop("apiKey", None)
@@ -60,10 +68,18 @@ class BitgetFuturesClient(_Base):
             or user_kwargs.pop("api_passphrase", None)
             or user_kwargs.pop("apiPassphrase", None)
         )
+        incoming_base = (
+            user_kwargs.pop("base_url", None)
+            or user_kwargs.pop("baseUrl", None)
+            or user_kwargs.pop("host", None)
+            or user_kwargs.pop("endpoint", None)
+            or _select_base_url()
+        )
 
-        # Inspection des paramètres du client de base
+        # --- introspection de la signature du client de base
         sig = inspect.signature(_Base.__init__)
-        param_names = set(sig.parameters.keys())  # ex: {'self','access_key','secret_key','passphrase',...}
+        params = sig.parameters
+        param_names = set(params.keys())
 
         def pick_name(candidates: List[str]) -> Optional[str]:
             for c in candidates:
@@ -71,30 +87,48 @@ class BitgetFuturesClient(_Base):
                     return c
             return None
 
-        # Déterminer les vrais noms attendus
+        # noms réellement supportés par le client de base
+        base_name = pick_name(["base_url", "baseUrl", "host", "endpoint"])
         key_name = pick_name(["api_key", "apiKey", "access_key", "accessKey", "key"])
         sec_name = pick_name(["api_secret", "apiSecret", "secret_key", "secretKey", "secret"])
         pas_name = pick_name(["passphrase", "password", "api_passphrase", "apiPassphrase"])
         req_mod_name = "requests_module" if "requests_module" in param_names else None
 
+        # paramètres positionnels OBLIGATOIRES (sans valeur par défaut)
+        required_positional = [
+            p.name for p in params.values()
+            if p.kind in (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD)
+            and p.default is inspect._empty and p.name != "self"
+        ]
+
+        args_list: List[Any] = []
         base_kwargs: Dict[str, Any] = {}
 
+        # base_url: si requis en positionnel, le placer en premier
+        if "base_url" in required_positional and base_name in ("base_url", None):
+            args_list.append(incoming_base)
+        elif base_name:
+            base_kwargs[base_name] = incoming_base
+
+        # clés API
         if key_name and incoming_key is not None:
             base_kwargs[key_name] = incoming_key
         if sec_name and incoming_secret is not None:
             base_kwargs[sec_name] = incoming_secret
         if pas_name and incoming_pass is not None:
             base_kwargs[pas_name] = incoming_pass
+
+        # requests module si supporté
         if req_mod_name:
             base_kwargs[req_mod_name] = requests
 
-        # Ne transmettre au client de base que les kwargs qu’il supporte
+        # transmettre aussi tout kw explicite que le client de base connaît
         for k, v in list(user_kwargs.items()):
             if k in param_names:
-                base_kwargs[k] = v  # passer au client de base
+                base_kwargs[k] = v
 
-        # Appel unique, sans essayer des variantes hasardeuses
-        super().__init__(*args, **base_kwargs)
+        # Appel unique, propre
+        super().__init__(*args_list, **base_kwargs)
 
     # --------------------- COMPTES / ASSETS ---------------------
     def get_assets(self) -> Dict[str, Any]:
@@ -139,17 +173,23 @@ class BitgetFuturesClient(_Base):
                 vol_usdt = t.get("usdtVolume", t.get("quoteVolume", t.get("turnover24h", None)))
                 vol_base = t.get("baseVolume", t.get("volume", t.get("size24h", 0)))
                 volume = _to_float(vol_usdt if vol_usdt is not None else vol_base)
-                norm.append({"symbol": s, "lastPrice": _to_float(last_), "bidPrice": _to_float(bid_), "askPrice": _to_float(ask_), "volume": volume})
+                norm.append({
+                    "symbol": s,
+                    "lastPrice": _to_float(last_),
+                    "bidPrice": _to_float(bid_),
+                    "askPrice": _to_float(ask_),
+                    "volume": volume
+                })
             else:
                 seq = list(t)
                 if len(seq) >= 5:
                     first_ts = isinstance(seq[0], (int, float)) and seq[0] > 10**10
                     if first_ts:
-                        close, vol = _to_float(seq[4]), _to_float(seq[5] if len(seq) > 5 else 0.0)
+                        close = _to_float(seq[4]); vol = _to_float(seq[5] if len(seq) > 5 else 0.0)
                     else:
-                        close, vol = _to_float(seq[3]), _to_float(seq[4] if len(seq) > 4 else 0.0)
+                        close = _to_float(seq[3]); vol = _to_float(seq[4] if len(seq) > 4 else 0.0)
                 else:
-                    close, vol = _to_float(seq[-1] if seq else 0.0), 0.0
+                    close = _to_float(seq[-1] if seq else 0.0); vol = 0.0
                 s = (symbol or "").replace("_", "")
                 norm.append({"symbol": s, "lastPrice": close, "bidPrice": close, "askPrice": close, "volume": vol})
 
