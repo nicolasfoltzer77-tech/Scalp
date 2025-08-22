@@ -8,6 +8,7 @@ from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 from scalp.adapters.bitget import BitgetFuturesClient
 from scalp.services.order_service import OrderService, OrderRequest
 from scalp.strategy import generate_signal, Signal
+from live.telegram_async import TelegramAsync
 
 
 @dataclass
@@ -32,6 +33,11 @@ class Orchestrator:
         self._running = False
         self._tasks: List[asyncio.Task] = []
         self._heartbeat_ts = 0.0
+        self._paused = False
+        self._tg = TelegramAsync(
+            token=getattr(config, "TELEGRAM_BOT_TOKEN", None),
+            chat_id=getattr(config, "TELEGRAM_CHAT_ID", None)
+        )
 
     # ---------- UTILITAIRES ----------
     async def _sleep(self, secs: float) -> None:
@@ -51,6 +57,17 @@ class Orchestrator:
                 print(f"[orchestrator] {label} failed: {e!r}, retry in {delay:.1f}s")
                 await self._sleep(delay)
                 delay = min(backoff_max, delay * 1.7)
+
+    def _status_text(self) -> str:
+        alive = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(self._heartbeat_ts)) if self._heartbeat_ts else "n/a"
+        syms = ",".join(self.symbols) or "-"
+        return (
+            f"Scalp bot\n"
+            f"running: {self._running}\n"
+            f"paused: {self._paused}\n"
+            f"heartbeat: {alive}\n"
+            f"symbols: {syms}"
+        )
 
     # ---------- TACHES ----------
     async def _task_heartbeat(self):
@@ -105,6 +122,9 @@ class Orchestrator:
         # Pré-chargement fenêtre
         ctx.ohlcv = await self._safe(self._fetch_ohlcv_once(symbol, limit=200), label=f"fetch_ohlcv_boot:{symbol}")
         while self._running:
+            if self._paused:
+                await self._sleep(1.0)
+                continue
             # 1) rafraîchir dernière bougie
             new_rows = await self._safe(self._fetch_ohlcv_once(symbol, limit=2), label=f"fetch_ohlcv_tail:{symbol}")
             if new_rows:
@@ -138,17 +158,60 @@ class Orchestrator:
                         ctx.position_open = True
                         ctx.last_signal_ts = time.time()
                         print(f"[order] {symbol} accepted")
+                        if self._tg.enabled():
+                            await self._tg.send_message(f"Order accepted: {symbol} {req.side} @ {req.price}")
                     else:
                         print(f"[order] {symbol} rejected: {res.reason}")
+                        if self._tg.enabled():
+                            await self._tg.send_message(f"Order rejected: {symbol} reason={res.reason}")
                 except Exception as e:
                     print(f"[trade-loop:{symbol}] order error: {e!r}")
             # 4) tempo
             await self._sleep(1.0)
 
     async def _task_telegram(self):
-        # Placeholder: déplacer ici la logique Telegram existante si nécessaire
+        if not self._tg.enabled():
+            while self._running:
+                await self._sleep(2.0)
+            return
+        await self._tg.send_message(self._status_text())
         while self._running:
-            await self._sleep(1.0)
+            try:
+                updates = await self._tg.poll_commands(timeout_s=20)
+                for u in updates:
+                    text = u["text"].strip()
+                    low = text.lower()
+                    if low.startswith("/status"):
+                        await self._tg.send_message(self._status_text())
+                    elif low.startswith("/pause"):
+                        self._paused = True
+                        await self._tg.send_message("Paused ✅ (no new entries)")
+                    elif low.startswith("/resume"):
+                        self._paused = False
+                        await self._tg.send_message("Resumed ▶️")
+                    elif low.startswith("/symbols"):
+                        parts = text.split(None, 1)
+                        if len(parts) == 2:
+                            new_syms = [s.strip().replace("_", "") for s in parts[1].split(",") if s.strip()]
+                            if new_syms:
+                                self.symbols = new_syms
+                                for s in new_syms:
+                                    if s not in self.ctx:
+                                        self.ctx[s] = SymbolContext(s, [])
+                                await self._tg.send_message(f"Symbols updated: {','.join(self.symbols)}")
+                            else:
+                                await self._tg.send_message("Usage: /symbols BTCUSDT,ETHUSDT")
+                        else:
+                            await self._tg.send_message("Usage: /symbols BTCUSDT,ETHUSDT")
+                    elif low.startswith("/close"):
+                        await self._tg.send_message("Closing…")
+                        await self.stop(reason="telegram:/close")
+                    else:
+                        await self._tg.send_message("Commands: /status, /pause, /resume, /symbols SYM1,SYM2, /close")
+            except asyncio.CancelledError:
+                break
+            except Exception:
+                await self._sleep(2.0)
 
     # ---------- BOOT/RUN ----------
     async def run(self):
@@ -167,6 +230,8 @@ class Orchestrator:
             asyncio.create_task(self._task_telegram(), name="telegram"),
         ] + [asyncio.create_task(self._task_trade_loop(s), name=f"trade:{s}") for s in self.symbols]
         print("[orchestrator] running")
+        if self._tg.enabled():
+            await self._tg.send_message("Orchestrator started ✅")
         try:
             await asyncio.gather(*self._tasks)
         except asyncio.CancelledError:
@@ -182,6 +247,8 @@ class Orchestrator:
         for t in self._tasks:
             t.cancel()
         await asyncio.sleep(0)  # yield to cancellations
+        if self._tg.enabled():
+            await self._tg.send_message(f"Orchestrator stopping: {reason}")
 
 
 # Helper de lancement depuis bot.py
