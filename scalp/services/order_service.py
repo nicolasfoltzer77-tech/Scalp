@@ -25,6 +25,10 @@ class OrderResult:
     accepted: bool
     reason: str = ""
     payload: Dict[str, Any] = None
+    order_id: Optional[str] = None
+    status: Optional[str] = None
+    avg_price: Optional[float] = None
+    filled_qty: Optional[float] = None
 
 
 class Exchange(Protocol):
@@ -80,4 +84,17 @@ class OrderService:
             stop_loss=req.sl,
             take_profit=req.tp,
         )
-        return OrderResult(True, "", out)
+        oid = None
+        status = None
+        avg = None
+        filled = None
+        try:
+            data = out.get("data") if isinstance(out, dict) else out
+            if isinstance(data, dict):
+                oid = str(data.get("orderId") or data.get("ordId") or data.get("id") or data.get("clientOid") or "")
+                status = (data.get("status") or data.get("state") or "new").lower()
+                avg = float(data.get("avgPrice", data.get("avgPx", 0)) or 0)
+                filled = float(data.get("filledQty", data.get("fillSz", 0)) or 0)
+        except Exception:
+            pass
+        return OrderResult(True, "", out, oid, status, avg, filled)
