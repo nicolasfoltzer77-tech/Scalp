@@ -111,6 +111,45 @@ def extract_available_balance(assets: Dict[str, Any], currency: str = "USDT") ->
     return 0.0
 
 
+def compute_execution_metrics(
+    fills: List[Dict[str, Any]], *, contract_size: float = 1.0
+) -> Tuple[float, float, float]:
+    """Aggregate Bitget fills into execution metrics.
+
+    Parameters
+    ----------
+    fills:
+        Sequence of fill dictionaries containing price and quantity.  The
+        helper accepts the common Bitget keys ``fillPrice``/``price`` and
+        ``fillQty``/``size``/``vol`` for the executed quantity.  Unknown or
+        malformed entries are ignored.
+    contract_size:
+        Multiplier to convert contract volume into notional value.
+
+    Returns
+    -------
+    tuple
+        ``(exec_qty, exec_notional, avg_exec_price)`` where quantities are in
+        contract units and notional is expressed in quote currency.
+    """
+
+    exec_qty = 0.0
+    exec_notional = 0.0
+    for f in fills:
+        price = f.get("fillPrice") or f.get("price")
+        qty = f.get("fillQty") or f.get("size") or f.get("vol") or f.get("qty")
+        try:
+            price_f = float(price)
+            qty_f = float(qty)
+        except (TypeError, ValueError):
+            continue
+        exec_qty += qty_f
+        exec_notional += price_f * qty_f * contract_size
+
+    avg_price = exec_notional / (exec_qty * contract_size) if exec_qty else 0.0
+    return exec_qty, exec_notional, avg_price
+
+
 def compute_position_size(
     contract_detail: Dict[str, Any],
     equity_usdt: float,
