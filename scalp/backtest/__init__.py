@@ -10,16 +10,31 @@ from .walkforward import walk_forward
 __all__ = ["backtest_trades", "walk_forward_windows", "walk_forward"]
 
 
+def _apply_slippage(price: float, side: int, bps: float, *, is_entry: bool) -> float:
+    """Return price adjusted for slippage in basis points.
+
+    ``side`` is ``1`` for long entries and ``-1`` for shorts.  ``is_entry``
+    indicates whether the adjustment is for the entry or the exit leg.
+    """
+
+    slip = bps / 10000.0
+    if side == 1:
+        return price * (1 + slip) if is_entry else price * (1 - slip)
+    return price * (1 - slip) if is_entry else price * (1 + slip)
+
+
 def backtest_trades(
     trades: List[Dict[str, Any]],
     *,
     fee_rate: Optional[float] = None,
+    slippage_bps: float = 0.0,
     logger: Any | None = None,
 ) -> float:
     """Compute cumulative PnL for a series of trades.
 
+    ``slippage_bps`` simulates execution slippage for both entry and exit.
     If ``logger`` is provided it must expose a ``log(dict)`` method and each
-    trade will be recorded with the computed PnL.
+    trade will be recorded with the computed PnL using the executed prices.
     """
     fee_rate = fee_rate if fee_rate is not None else CONFIG.get("FEE_RATE", 0.0)
 
@@ -31,14 +46,16 @@ def backtest_trades(
         side = tr.get("side", 1)
         if None in (symbol, entry, exit_):
             continue
-        pnl_trade = calc_pnl_pct(entry, exit_, side, fee_rate)
+        entry_exec = _apply_slippage(float(entry), side, slippage_bps, is_entry=True)
+        exit_exec = _apply_slippage(float(exit_), -side, slippage_bps, is_entry=False)
+        pnl_trade = calc_pnl_pct(entry_exec, exit_exec, side, fee_rate)
         if logger is not None:
             logger.log(
                 {
                     "pair": symbol,
                     "tf": tr.get("tf"),
                     "dir": "long" if side > 0 else "short",
-                    "entry": entry,
+                    "entry": entry_exec,
                     "sl": tr.get("sl"),
                     "tp": tr.get("tp"),
                     "score": tr.get("score"),
