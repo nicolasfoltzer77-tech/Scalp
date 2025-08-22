@@ -8,6 +8,28 @@ from typing import Any, Dict, List, Optional, Tuple
 from scalp.bot_config import CONFIG
 
 
+def extract_contract_size(contract_detail: Dict[str, Any], symbol: Optional[str] = None) -> float:
+    """Return the contract size for ``symbol`` from Bitget contract detail.
+
+    Bitget's API sometimes exposes the contract unit as ``contractSize`` or
+    ``sizeMultiplier`` depending on the endpoint or product type.  This helper
+    normalises the two so the rest of the code base has a single source of
+    truth for volume to notional conversions.
+    """
+
+    symbol = symbol or CONFIG.get("SYMBOL")
+    data = contract_detail.get("data") if isinstance(contract_detail, dict) else None
+    if isinstance(data, list):
+        contract = next((c for c in data if c and c.get("symbol") == symbol), data[0] if data else {})
+    else:
+        contract = data or {}
+    size = contract.get("contractSize") or contract.get("sizeMultiplier") or 1.0
+    try:
+        return float(size)
+    except (TypeError, ValueError):
+        return 1.0
+
+
 def extract_available_balance(assets: Dict[str, Any], currency: str = "USDT") -> float:
     """Return available balance for ``currency`` from Bitget assets payload.
 
@@ -87,7 +109,7 @@ def compute_position_size(
     if contract is None:
         raise ValueError("Contract detail introuvable pour le symbole")
 
-    contract_size = float(contract.get("contractSize", 0.0001))
+    contract_size = extract_contract_size(contract_detail, symbol)
     vol_unit = int(contract.get("volUnit", 1))
     min_vol = int(contract.get("minVol", 1))
     min_usdt = float(contract.get("minTradeUSDT", 5))
@@ -133,6 +155,21 @@ def compute_position_size(
                 return 0
 
     return vol
+
+
+def compute_pnl_usdt(
+    contract_detail: Dict[str, Any],
+    entry_price: float,
+    exit_price: float,
+    vol: float,
+    side: int,
+    symbol: Optional[str] = None,
+) -> float:
+    """Return PnL in USDT using contract size for ``vol`` contracts."""
+
+    size = extract_contract_size(contract_detail, symbol)
+    diff = (exit_price - entry_price) * (1 if side > 0 else -1)
+    return diff * size * vol
 
 def effective_leverage(
     entry_price: float,
