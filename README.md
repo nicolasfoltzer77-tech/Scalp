@@ -121,6 +121,10 @@ python cli.py bump-version
 ```
 
 
+## Changelog
+
+- Ajout d'un contrôle de marge disponible avant chaque ordre afin d'éviter l'erreur Bitget « The order amount exceeds the balance » (code 40762).
+
 ## Avertissement
 
 © 2025 — Usage à vos risques. Ceci n'est pas un conseil financier.
