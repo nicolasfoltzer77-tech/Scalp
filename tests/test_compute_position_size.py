@@ -4,7 +4,8 @@ import types
 import pytest
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-sys.modules['requests'] = types.ModuleType('requests')
+sys.modules["requests"] = types.ModuleType("requests")
+import bot  # noqa: E402
 from bot import compute_position_size  # noqa: E402
 
 
@@ -118,3 +119,40 @@ def test_compute_position_size_under_min_notional_returns_zero():
         symbol="PI_USDT",
     )
     assert vol == 0
+
+
+def test_compute_position_size_cap_by_available():
+    contract_detail = {
+        "data": [
+            {
+                "symbol": "BTC_USDT",
+                "contractSize": 1,
+                "volUnit": 2,
+                "minVol": 2,
+                "minTradeUSDT": 5,
+            }
+        ]
+    }
+    vol = compute_position_size(
+        contract_detail,
+        equity_usdt=100,
+        price=10,
+        risk_pct=0.5,
+        leverage=10,
+        symbol="BTC_USDT",
+        available_usdt=0.5,
+    )
+    assert vol == 0
+    vol = compute_position_size(
+        contract_detail,
+        equity_usdt=100,
+        price=10,
+        risk_pct=0.5,
+        leverage=10,
+        symbol="BTC_USDT",
+        available_usdt=10,
+    )
+    assert vol == 8
+    fee_rate = max(bot.CONFIG.get("FEE_RATE", 0.0), 0.001)
+    required = (10 * 1 * vol / 10 + fee_rate * 10 * 1 * vol) * 1.03
+    assert required <= 10
