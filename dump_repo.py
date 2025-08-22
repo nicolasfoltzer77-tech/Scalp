@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 from pathlib import Path
 
 IGNORE_EXTENSIONS = {'.log', '.pyc'}
@@ -38,11 +39,13 @@ def _iter_files(root: Path):
             yield path
 
 
-def create_dump_file(output_path: str = 'repo_dump.txt', root: str = '.') -> None:
+def create_dump_file(output_path: str = 'dump.txt', root: str = '.') -> None:
     """Create a text dump of the repository tree and file contents."""
     root_path = Path(root).resolve()
     output_path = root_path / output_path
+    now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     with output_path.open('w', encoding='utf-8') as dump:
+        dump.write(f"Dump created: {now}\n")
         dump.write('Repository tree:\n')
         dump.write(_build_tree(root_path, output_path))
         dump.write('\n\n')
@@ -50,7 +53,8 @@ def create_dump_file(output_path: str = 'repo_dump.txt', root: str = '.') -> Non
             rel_path = file_path.relative_to(root_path)
             if file_path == output_path:
                 continue
-            dump.write(f"## {rel_path}\n")
+            mod_time = datetime.fromtimestamp(file_path.stat().st_mtime).strftime('%Y-%m-%d %H:%M:%S')
+            dump.write(f"## {rel_path} (last modified: {mod_time})\n")
             try:
                 with file_path.open('r', encoding='utf-8') as f:
                     dump.write(f.read())
