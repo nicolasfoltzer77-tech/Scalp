@@ -46,10 +46,15 @@ class Orchestrator:
         except asyncio.CancelledError:
             pass
 
-    async def _safe(self, coro, *, label: str, backoff: float = 1.0, backoff_max: float = 30.0):
+    async def _safe(self, coro_factory, *, label: str, backoff: float = 1.0, backoff_max: float = 30.0):
+        """
+        Exécute de façon sûre **une fabrique de coroutine**.
+        But: éviter « cannot reuse already awaited coroutine » en créant une nouvelle coroutine à chaque appel.
+        """
         delay = backoff
         while self._running:
             try:
+                coro = coro_factory()
                 return await coro
             except asyncio.CancelledError:
                 raise
@@ -88,10 +93,15 @@ class Orchestrator:
         On suppose que le client de base expose get_kline(symbol, granularity) -> dict avec "data".
         Adapte si nécessaire à ton client.
         """
+        import time  # local import pour éviter dépendance implicite en haut de fichier
         # Fallback générique: on reconstitue une bougie synthétique à partir du ticker si pas d'API kline.
         try:
             data = self.exchange.get_kline(symbol, interval="1m")  # adapter si signature différente
-            rows = data.get("data") or data.get("result") or []
+            # data peut être un dict {"data": [...]} **ou** directement une list
+            if isinstance(data, dict):
+                rows = data.get("data") or data.get("result") or []
+            else:
+                rows = data or []
             out = []
             for r in rows[-limit:]:
                 # Adapter les clés selon Bitget (ts, open, high, low, close, volume)
@@ -108,7 +118,7 @@ class Orchestrator:
             pass
         # Fallback synthétique
         tkr = self.exchange.get_ticker(symbol)
-        items = tkr.get("data") or []
+        items = (tkr.get("data") if isinstance(tkr, dict) else tkr) or []
         if not items:
             return []
         last = items[0]
@@ -120,13 +130,15 @@ class Orchestrator:
         ctx = self.ctx[symbol]
         print(f"[trade-loop] start {symbol}")
         # Pré-chargement fenêtre
-        ctx.ohlcv = await self._safe(self._fetch_ohlcv_once(symbol, limit=200), label=f"fetch_ohlcv_boot:{symbol}")
+        ctx.ohlcv = await self._safe(lambda: self._fetch_ohlcv_once(symbol, limit=200),
+                                     label=f"fetch_ohlcv_boot:{symbol}")
         while self._running:
             if self._paused:
                 await self._sleep(1.0)
                 continue
             # 1) rafraîchir dernière bougie
-            new_rows = await self._safe(self._fetch_ohlcv_once(symbol, limit=2), label=f"fetch_ohlcv_tail:{symbol}")
+            new_rows = await self._safe(lambda: self._fetch_ohlcv_once(symbol, limit=2),
+                                        label=f"fetch_ohlcv_tail:{symbol}")
             if new_rows:
                 # maintenir une fenêtre glissante
                 ctx.ohlcv = (ctx.ohlcv + new_rows)[-400:]
