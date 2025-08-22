@@ -66,3 +66,4 @@ class MarketData:
     def get_ticker(self, symbol: str):
         """Délègue à l'exchange le ticker non normalisé."""
         return self.exchange.get_ticker(symbol)
+                       

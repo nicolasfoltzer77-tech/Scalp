@@ -1,3 +1,6 @@
 requests
 python-dotenv
 pydantic==1.10.15 ; python_version < "3.11"
+
+# pydantic v1 déjà pin si environnement ancien
+# rien à ajouter ici pour market_data (pas de nouvelle dépendance)
