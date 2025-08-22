@@ -1,29 +1,48 @@
+# live/orchestrator.py
 from __future__ import annotations
+
 import asyncio
 import signal
 import time
 from dataclasses import dataclass
-from typing import Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Sequence
 
+# --- Dépendances internes (tolérance si modules optionnels manquent) ---
 from scalp.adapters.bitget import BitgetFuturesClient
-from scalp.adapters.market_data import MarketData
+try:
+    from live.telegram_async import TelegramAsync  # déjà ajouté précédemment
+except Exception:  # pas bloquant
+    TelegramAsync = None  # type: ignore
+
+try:
+    # Adaptateur OHLCV/ticker normalisé (si présent)
+    from scalp.adapters.market_data import MarketData
+except Exception:
+    MarketData = None  # type: ignore
+
 from scalp.services.order_service import OrderService, OrderRequest
 from scalp.strategy import generate_signal, Signal
-from live.telegram_async import TelegramAsync
-from scalp.positions.state import PositionState, PositionStatus, PositionSide, Fill
 
 
+# -------------------- Types simples --------------------
 @dataclass
 class SymbolContext:
     symbol: str
-    ohlcv: List[Dict]
+    ohlcv: List[Dict[str, float]]  # liste de dicts normalisés
     position_open: bool = False
     last_signal_ts: float = 0.0
 
 
+# =======================================================
+#                 ORCHESTRATEUR ASYNC
+# =======================================================
 class Orchestrator:
     """
-    Orchestrateur asyncio: gère plusieurs tâches concurrentes.
+    Orchestrateur asyncio minimal, robuste aux variations de format des données OHLCV.
+    - Heartbeat
+    - Rafraîchissement watchlist (placeholder)
+    - Trade loop par symbole
+    - (Optionnel) Telegram si TELEGRAM_* fournis
     """
 
     def __init__(self, exchange: BitgetFuturesClient, order_service: OrderService, config, symbols: Sequence[str]):
@@ -35,58 +54,20 @@ class Orchestrator:
         self._running = False
         self._tasks: List[asyncio.Task] = []
         self._heartbeat_ts = 0.0
-        # util de normalisation utilisé partout
-        self._row_keys = ("ts", "open", "high", "low", "close", "volume")
-        # état positions par symbole
-        self.pos: Dict[str, PositionState] = {s: PositionState(s, PositionSide.LONG) for s in self.symbols}
         self._paused = False
-        self._tg = TelegramAsync(
-            token=getattr(config, "TELEGRAM_BOT_TOKEN", None),
-            chat_id=getattr(config, "TELEGRAM_CHAT_ID", None)
-        )
 
-    # ---------- normalisation OHLCV ----------
-    def _normalize_rows(self, rows):
-        """
-        Garantit une liste de dicts {"ts","open","high","low","close","volume"}.
-        Accepte: list[dict] OU list[list/tuple].
-        """
-        out = []
-        if not rows:
-            return out
-        for r in rows:
-            if isinstance(r, dict):
-                d = {
-                    "ts": int(r.get("ts") or r.get("time") or r.get("timestamp") or 0),
-                    "open": float(r.get("open", 0.0)),
-                    "high": float(r.get("high", r.get("open", 0.0))),
-                    "low": float(r.get("low", r.get("open", 0.0))),
-                    "close": float(r.get("close", r.get("open", 0.0))),
-                    "volume": float(r.get("volume", r.get("vol", 0.0))),
-                }
-            else:
-                rr = list(r)
-                # tolérance longueurs partielles
-                ts = int(rr[0]) if len(rr) > 0 and isinstance(rr[0], (int, float)) and rr[0] > 10**10 else 0
-                if ts > 0:
-                    o = float(rr[1]) if len(rr) > 1 else 0.0
-                    h = float(rr[2]) if len(rr) > 2 else o
-                    l = float(rr[3]) if len(rr) > 3 else o
-                    c = float(rr[4]) if len(rr) > 4 else o
-                    v = float(rr[5]) if len(rr) > 5 else 0.0
-                else:
-                    # format [o,h,l,c,v,(ts)]
-                    o = float(rr[0]) if len(rr) > 0 else 0.0
-                    h = float(rr[1]) if len(rr) > 1 else o
-                    l = float(rr[2]) if len(rr) > 2 else o
-                    c = float(rr[3]) if len(rr) > 3 else o
-                    v = float(rr[4]) if len(rr) > 4 else 0.0
-                    ts = int(rr[5]) if len(rr) > 5 else 0
-                d = {"ts": ts, "open": o, "high": h, "low": l, "close": c, "volume": v}
-            out.append(d)
-        return out
+        # Telegram (facultatif)
+        if TelegramAsync is not None:
+            token = getattr(config, "TELEGRAM_BOT_TOKEN", None)
+            chat = getattr(config, "TELEGRAM_CHAT_ID", None)
+            self._tg = TelegramAsync(token=token, chat_id=chat)
+        else:
+            self._tg = None
 
-    # ---------- UTILITAIRES ----------
+        # MarketData (normalisation OHLCV)
+        self._md = MarketData(self.exchange) if MarketData is not None else None
+
+    # ----------------- Utilitaires communs -----------------
     async def _sleep(self, secs: float) -> None:
         try:
             await asyncio.sleep(secs)
@@ -95,14 +76,13 @@ class Orchestrator:
 
     async def _safe(self, coro_factory, *, label: str, backoff: float = 1.0, backoff_max: float = 30.0):
         """
-        Exécute de façon sûre **une fabrique de coroutine**.
-        But: éviter « cannot reuse already awaited coroutine » en créant une nouvelle coroutine à chaque appel.
+        Exécute une fabrique de coroutine avec retry exponentiel.
+        Evite 'cannot reuse already awaited coroutine' (toujours créer un nouveau coroutine).
         """
         delay = backoff
         while self._running:
             try:
-                coro = coro_factory()
-                return await coro
+                return await coro_factory()
             except asyncio.CancelledError:
                 raise
             except Exception as e:
@@ -110,18 +90,139 @@ class Orchestrator:
                 await self._sleep(delay)
                 delay = min(backoff_max, delay * 1.7)
 
-    def _status_text(self) -> str:
-        alive = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(self._heartbeat_ts)) if self._heartbeat_ts else "n/a"
-        syms = ",".join(self.symbols) or "-"
-        return (
-            f"Scalp bot\n"
-            f"running: {self._running}\n"
-            f"paused: {self._paused}\n"
-            f"heartbeat: {alive}\n"
-            f"symbols: {syms}"
-        )
+    # ----------------- Normalisation OHLCV -----------------
+    def _normalize_rows(self, rows: Any) -> List[Dict[str, float]]:
+        """
+        Garantit une liste de dicts: {'ts','open','high','low','close','volume'}
+        Accepte list[dict] OU list[list/tuple] OU None.
+        """
+        out: List[Dict[str, float]] = []
+        if not rows:
+            return out
 
-    # ---------- TACHES ----------
+        for r in rows:
+            if isinstance(r, dict):
+                ts = int(r.get("ts") or r.get("time") or r.get("timestamp") or 0)
+                o = float(r.get("open", 0.0))
+                h = float(r.get("high", o))
+                l = float(r.get("low", o))
+                c = float(r.get("close", o))
+                v = float(r.get("volume", r.get("vol", 0.0)))
+            else:
+                rr = list(r)
+                # Formats courants: [ts,o,h,l,c,v] ou [o,h,l,c,v,ts]
+                if len(rr) >= 6 and isinstance(rr[0], (int, float)) and rr[0] > 10**10:
+                    ts, o, h, l, c = int(rr[0]), float(rr[1]), float(rr[2]), float(rr[3]), float(rr[4])
+                    v = float(rr[5])
+                else:
+                    o = float(rr[0]) if len(rr) > 0 else 0.0
+                    h = float(rr[1]) if len(rr) > 1 else o
+                    l = float(rr[2]) if len(rr) > 2 else o
+                    c = float(rr[3]) if len(rr) > 3 else o
+                    v = float(rr[4]) if len(rr) > 4 else 0.0
+                    ts = int(rr[5]) if len(rr) > 5 else 0
+            out.append({"ts": ts, "open": o, "high": h, "low": l, "close": c, "volume": v})
+        return out
+
+    def _coerce_for_strategy(self, rows_any: Any):
+        """
+        Prépare 3 représentations pour satisfaire generate_signal selon sa signature:
+        1) list[dict]  : notre format normalisé
+        2) list[list]  : [[ts,o,h,l,c,v], ...]
+        3) dict colonnes: {'open':[...], 'high':[...], 'low':[...], 'close':[...], 'volume':[...]}
+        """
+        rd = self._normalize_rows(rows_any or [])
+        rl = [[r["ts"], r["open"], r["high"], r["low"], r["close"], r["volume"]] for r in rd]
+        cols = {"ts": [], "open": [], "high": [], "low": [], "close": [], "volume": []}
+        for r in rd:
+            cols["ts"].append(r["ts"])
+            cols["open"].append(r["open"])
+            cols["high"].append(r["high"])
+            cols["low"].append(r["low"])
+            cols["close"].append(r["close"])
+            cols["volume"].append(r["volume"])
+        return rd, rl, cols
+
+    # ------------- Lecture OHLCV normalisée -------------
+    async def _fetch_ohlcv_once(self, symbol: str, limit: int = 100) -> List[Dict[str, float]]:
+        """
+        Lecture via MarketData si dispo; sinon, tentative via exchange.get_kline puis fallback ticker.
+        Toujours retourne List[Dict].
+        """
+        # 1) Adaptateur MarketData (préféré)
+        if self._md is not None:
+            try:
+                d = await self._safe(
+                    lambda: asyncio.to_thread(self._md.get_ohlcv, symbol, "1m", limit),
+                    label=f"md.get_ohlcv:{symbol}",
+                )
+                if isinstance(d, dict) and d.get("success") and d.get("data"):
+                    return self._normalize_rows(d["data"])
+            except Exception:
+                pass
+
+        # 2) Exchange direct (formats arbitraires)
+        rows: List[Any] = []
+        try:
+            data = await self._safe(lambda: asyncio.to_thread(self.exchange.get_kline, symbol, interval="1m"),
+                                    label=f"get_kline:{symbol}")
+        except Exception:
+            data = None
+
+        if isinstance(data, dict):
+            rows = (
+                data.get("data") or data.get("result") or data.get("records")
+                or data.get("list") or data.get("items") or data.get("candles") or []
+            )
+            # déballage si encore un dict imbriqué
+            guard = 0
+            while isinstance(rows, dict) and guard < 3:
+                rows = (
+                    rows.get("data") or rows.get("result") or rows.get("records")
+                    or rows.get("list") or rows.get("items") or rows.get("candles") or rows.get("klines") or rows.get("bars") or []
+                )
+                guard += 1
+        elif isinstance(data, (list, tuple)):
+            rows = list(data)
+
+        out = self._normalize_rows(rows)[-limit:]
+        if out:
+            return out
+
+        # 3) Fallback strict via ticker → bougie synthétique
+        try:
+            tkr = await self._safe(lambda: asyncio.to_thread(self.exchange.get_ticker, symbol),
+                                   label=f"get_ticker:{symbol}")
+            items: List[Any] = []
+            if isinstance(tkr, dict):
+                items = tkr.get("data") or tkr.get("result") or tkr.get("tickers") or []
+            elif isinstance(tkr, (list, tuple)):
+                items = list(tkr)
+            if items:
+                last = items[0]
+                if isinstance(last, dict):
+                    p = float(last.get("lastPrice", last.get("close", last.get("markPrice", 0.0))))
+                    vol = float(last.get("volume", last.get("usdtVolume", last.get("quoteVolume", 0.0))))
+                else:
+                    seq = list(last)
+                    # heuristique indices
+                    if len(seq) >= 5:
+                        first_is_ts = isinstance(seq[0], (int, float)) and seq[0] > 10**10
+                        if first_is_ts:
+                            p = float(seq[4])
+                            vol = float(seq[5]) if len(seq) > 5 else 0.0
+                        else:
+                            p = float(seq[3]) if len(seq) > 3 else float(seq[-2])
+                            vol = float(seq[4]) if len(seq) > 4 else float(seq[-1])
+                    else:
+                        p, vol = float(seq[-1]) if seq else 0.0, 0.0
+                ts = int(time.time() * 1000)
+                return [{"ts": ts, "open": p, "high": p, "low": p, "close": p, "volume": vol}]
+        except Exception:
+            pass
+        return []
+
+    # ----------------- Tâches principales -----------------
     async def _task_heartbeat(self):
         while self._running:
             self._heartbeat_ts = time.time()
@@ -129,52 +230,117 @@ class Orchestrator:
             await self._sleep(15)
 
     async def _task_refresh_watchlist(self):
-        # Placeholder: à relier à ta logique de sélection dynamique de paires
+        # Placeholder: implémente ici le filtrage de paires si nécessaire
         while self._running:
-            # Ici on pourrait filtrer par volume via exchange.get_ticker()
             await self._sleep(60)
 
-    async def _fetch_ohlcv_once(self, symbol: str, limit: int = 100) -> List[Dict]:
-        """
-        Récupère une petite fenêtre OHLCV via l’adaptateur MarketData (normalisé).
-        """
-        md = MarketData(self.exchange)
-        data = md.get_ohlcv(symbol, interval="1m", limit=limit)
-        return data.get("data", []) if isinstance(data, dict) else []
+    def _status_text(self) -> str:
+        alive = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(self._heartbeat_ts)) if self._heartbeat_ts else "n/a"
+        syms = ",".join(self.symbols) or "-"
+        return (f"Scalp bot\nrunning: {self._running}\npaused: {self._paused}\n"
+                f"heartbeat: {alive}\nsymbols: {syms}")
+
+    async def _task_telegram(self):
+        if not self._tg or not self._tg.enabled():
+            while self._running:
+                await self._sleep(2.0)
+            return
+        await self._tg.send_message("Orchestrator started ✅")
+        await self._tg.send_message(self._status_text())
+        while self._running:
+            try:
+                updates = await self._tg.poll_commands(timeout_s=20)
+                for u in updates:
+                    text = (u.get("text") or "").strip()
+                    low = text.lower()
+                    if low.startswith("/status"):
+                        await self._tg.send_message(self._status_text())
+                    elif low.startswith("/pause"):
+                        self._paused = True
+                        await self._tg.send_message("Paused ✅ (no new entries)")
+                    elif low.startswith("/resume"):
+                        self._paused = False
+                        await self._tg.send_message("Resumed ▶️")
+                    elif low.startswith("/symbols"):
+                        parts = text.split(None, 1)
+                        if len(parts) == 2:
+                            syms = [s.strip().replace("_", "") for s in parts[1].split(",") if s.strip()]
+                            if syms:
+                                self.symbols = syms
+                                for s in syms:
+                                    if s not in self.ctx:
+                                        self.ctx[s] = SymbolContext(s, [])
+                                await self._tg.send_message(f"Symbols updated: {','.join(self.symbols)}")
+                            else:
+                                await self._tg.send_message("Usage: /symbols BTCUSDT,ETHUSDT")
+                        else:
+                            await self._tg.send_message("Usage: /symbols BTCUSDT,ETHUSDT")
+                    elif low.startswith("/close"):
+                        await self._tg.send_message("Closing…")
+                        await self.stop(reason="telegram:/close")
+                    else:
+                        await self._tg.send_message("Commands: /status, /pause, /resume, /symbols SYM1,SYM2, /close")
+            except asyncio.CancelledError:
+                break
+            except Exception:
+                await self._sleep(2.0)
 
     async def _task_trade_loop(self, symbol: str):
         ctx = self.ctx[symbol]
         print(f"[trade-loop] start {symbol}")
-        # Pré-chargement fenêtre
+
+        # Boot: fenêtre initiale
         boot_rows = await self._safe(lambda: self._fetch_ohlcv_once(symbol, limit=200),
                                      label=f"fetch_ohlcv_boot:{symbol}")
         ctx.ohlcv = self._normalize_rows(boot_rows or [])
+        if ctx.ohlcv:
+            # log de contrôle une seule fois
+            print(f"[debug:{symbol}] ohlcv sample -> dict={list(ctx.ohlcv[0].keys())}")
+
         while self._running:
             if self._paused:
                 await self._sleep(1.0)
                 continue
-            # 1) rafraîchir dernière bougie
+
+            # Rafraîchi
             new_rows = await self._safe(lambda: self._fetch_ohlcv_once(symbol, limit=2),
                                         label=f"fetch_ohlcv_tail:{symbol}")
             if new_rows:
-                # maintenir une fenêtre glissante
-                ctx.ohlcv = (ctx.ohlcv + self._normalize_rows(new_rows))[-400:]
-            # 2) générer signal
+                ctx.ohlcv = (self._normalize_rows(ctx.ohlcv) + self._normalize_rows(new_rows))[-400:]
+
+            # Générer signal (fallback 3 formats)
+            sig: Optional[Signal] = None
             try:
-                # on envoie toujours une liste de dicts normalisés
-                sig: Optional[Signal] = generate_signal(ohlcv=ctx.ohlcv, config=self.config)
+                rd, rl, cols = self._coerce_for_strategy(ctx.ohlcv)
+                try:
+                    sig = generate_signal(ohlcv=rd, config=self.config)
+                except Exception as e1:
+                    try:
+                        sig = generate_signal(ohlcv=rl, config=self.config)
+                    except Exception as e2:
+                        try:
+                            sig = generate_signal(ohlcv=cols, config=self.config)
+                        except Exception as e3:
+                            head_t = type(ctx.ohlcv).__name__
+                            first_t = type(ctx.ohlcv[0]).__name__ if ctx.ohlcv else "empty"
+                            print(f"[trade-loop:{symbol}] generate_signal error: {e3!r} (fallback after {e1!r} / {e2!r}) rows={head_t}/{first_t}")
+                            sig = None
             except Exception as e:
-                print(f"[trade-loop:{symbol}] generate_signal error: {e!r}")
+                print(f"[trade-loop:{symbol}] normalize error: {e!r}")
                 sig = None
-            # 3) exécuter
+
+            # Exécuter si signal et pas de position ouverte
             if sig and not ctx.position_open:
                 try:
-                    assets = self.exchange.get_assets()
+                    assets = await self._safe(lambda: asyncio.to_thread(self.exchange.get_assets),
+                                              label="get_assets")
                     equity_usdt = 0.0
-                    for a in (assets.get("data") or []):
-                        if a.get("currency") == "USDT":
-                            equity_usdt = float(a.get("equity", 0))
-                            break
+                    if isinstance(assets, dict):
+                        for a in (assets.get("data") or []):
+                            if a.get("currency") == "USDT":
+                                equity_usdt = float(a.get("equity", 0))
+                                break
+
                     req = OrderRequest(
                         symbol=sig.symbol or symbol,
                         side="long" if sig.side > 0 else "short",
@@ -187,190 +353,19 @@ class Orchestrator:
                     if res.accepted:
                         ctx.position_open = True
                         ctx.last_signal_ts = time.time()
-                        # alimente FSM
-                        side_enum = PositionSide.LONG if req.side == "long" else PositionSide.SHORT
-                        st = self.pos.get(symbol) or PositionState(symbol, side_enum)
-                        st.side = side_enum
-                        st.status = PositionStatus.PENDING_ENTRY
-                        st.entry_order_id = res.order_id or st.entry_order_id
-                        st.req_qty = st.req_qty or (res.filled_qty or 0.0) or 0.0
-                        st.sl = req.sl
-                        st.tp = req.tp
-                        self.pos[symbol] = st
                         print(f"[order] {symbol} accepted")
-                        if self._tg.enabled():
+                        if self._tg and self._tg.enabled():
                             await self._tg.send_message(f"Order accepted: {symbol} {req.side} @ {req.price}")
                     else:
                         print(f"[order] {symbol} rejected: {res.reason}")
-                        if self._tg.enabled():
+                        if self._tg and self._tg.enabled():
                             await self._tg.send_message(f"Order rejected: {symbol} reason={res.reason}")
                 except Exception as e:
                     print(f"[trade-loop:{symbol}] order error: {e!r}")
-            # 4) tempo
+
             await self._sleep(1.0)
 
-    async def _task_sync_positions(self):
-        print("[sync] start")
-        while self._running:
-            try:
-                for symbol, st in list(self.pos.items()):
-                    # PENDING_ENTRY -> consommer fills
-                    if st.status == PositionStatus.PENDING_ENTRY and st.entry_order_id:
-                        data = self.exchange.get_fills(symbol, order_id=st.entry_order_id)
-                        for f in (data.get("data") or []):
-                            fill = Fill(
-                                order_id=str(f.get("orderId") or f.get("ordId") or ""),
-                                trade_id=str(f.get("tradeId") or f.get("fillId") or f.get("execId") or ""),
-                                price=float(f.get("price", f.get("fillPx", 0))),
-                                qty=float(f.get("qty", f.get("fillSz", 0))),
-                                fee=float(f.get("fee", f.get("fillFee", 0))),
-                                ts=int(f.get("ts", f.get("time", 0))),
-                            )
-                            st.apply_fill_entry(fill)
-                        # si toujours pas OPEN, vérifier positions visibles côté exchange
-                        if st.status != PositionStatus.OPEN:
-                            opens = self.exchange.get_open_positions(symbol).get("data", [])
-                            for p in opens:
-                                if p.get("symbol") == symbol and ((p.get("side") == "long") == (st.side == PositionSide.LONG)):
-                                    st.status = PositionStatus.OPEN
-                                    st.filled_qty = float(p.get("qty", st.filled_qty))
-                                    st.avg_entry_price = float(p.get("avgEntryPrice", st.avg_entry_price))
-                                    break
-                        self.pos[symbol] = st
-                    # OPEN -> vérifier si qty retombe à 0 (fermeture externe ou SL/TP)
-                    elif st.status == PositionStatus.OPEN:
-                        opens = self.exchange.get_open_positions(symbol).get("data", [])
-                        qty_open = 0.0
-                        for p in opens:
-                            if p.get("symbol") == symbol and ((p.get("side") == "long") == (st.side == PositionSide.LONG)):
-                                qty_open = float(p.get("qty", 0.0))
-                                break
-                        if qty_open <= 1e-12:
-                            # regarder fills récents (sortie)
-                            fills = self.exchange.get_fills(symbol).get("data", [])
-                            for f in fills:
-                                ts = int(f.get("ts", 0))
-                                if st.opened_ts and ts >= st.opened_ts:
-                                    fill = Fill(
-                                        order_id=str(f.get("orderId") or ""),
-                                        trade_id=str(f.get("tradeId") or f.get("fillId") or ""),
-                                        price=float(f.get("price", 0)),
-                                        qty=float(f.get("qty", 0)),
-                                        fee=float(f.get("fee", 0)),
-                                        ts=ts,
-                                    )
-                                    st.apply_fill_exit(fill)
-                            if st.status != PositionStatus.CLOSED:
-                                st.status = PositionStatus.CLOSED
-                                st.closed_ts = int(time.time()*1000)
-                            self.pos[symbol] = st
-                    # PENDING_EXIT -> consommer fills de sortie
-                    elif st.status == PositionStatus.PENDING_EXIT and st.exit_order_id:
-                        data = self.exchange.get_fills(symbol, order_id=st.exit_order_id)
-                        for f in (data.get("data") or []):
-                            fill = Fill(
-                                order_id=str(f.get("orderId") or ""),
-                                trade_id=str(f.get("tradeId") or f.get("fillId") or ""),
-                                price=float(f.get("price", 0)),
-                                qty=float(f.get("qty", 0)),
-                                fee=float(f.get("fee", 0)),
-                                ts=int(f.get("ts", 0)),
-                            )
-                            st.apply_fill_exit(fill)
-                        self.pos[symbol] = st
-            except Exception as e:
-                print(f"[sync] error: {e!r}")
-            await self._sleep(2.0)
-
-    # ---------- Helpers ops ----------
-    def _equity_usdt(self) -> float:
-        try:
-            assets = self.exchange.get_assets()
-            for a in (assets.get("data") or []):
-                if a.get("currency") == "USDT":
-                    return float(a.get("equity", 0))
-        except Exception:
-            pass
-        return 0.0
-
-    async def _flat_symbol(self, symbol: str):
-        st = self.pos.get(symbol)
-        if not st or st.status not in (PositionStatus.OPEN, PositionStatus.PENDING_ENTRY):
-            return False, "no open position"
-        side = "SELL" if st.side == PositionSide.LONG else "BUY"
-        try:
-            out = self.exchange.place_order(symbol=symbol, side=side, quantity=max(st.filled_qty, st.req_qty) or 0.0, order_type="market")
-            st.exit_order_id = str((out.get("data") or {}).get("orderId", "")) if isinstance(out, dict) else st.exit_order_id
-            st.status = PositionStatus.PENDING_EXIT
-            self.pos[symbol] = st
-            return True, "exit submitted"
-        except Exception as e:
-            return False, repr(e)
-
-    async def _task_telegram(self):
-        if not self._tg.enabled():
-            while self._running:
-                await self._sleep(2.0)
-            return
-        await self._tg.send_message(self._status_text())
-        while self._running:
-            try:
-                updates = await self._tg.poll_commands(timeout_s=20)
-                for u in updates:
-                    text = u["text"].strip()
-                    low = text.lower()
-                    if low.startswith("/status"):
-                        await self._tg.send_message(self._status_text())
-                    elif low.startswith("/equity"):
-                        await self._tg.send_message(f"Equity USDT: {self._equity_usdt():.2f}")
-                    elif low.startswith("/pause"):
-                        self._paused = True
-                        await self._tg.send_message("Paused ✅ (no new entries)")
-                    elif low.startswith("/resume"):
-                        self._paused = False
-                        await self._tg.send_message("Resumed ▶️")
-                    elif low.startswith("/flat_all"):
-                        oks = []
-                        for s in list(self.pos.keys()):
-                            ok, _ = await self._flat_symbol(s)
-                            oks.append(f"{s}:{'ok' if ok else 'err'}")
-                        await self._tg.send_message(" ".join(oks) or "none")
-                    elif low.startswith("/flat"):
-                        parts = text.split()
-                        if len(parts) >= 2:
-                            sym = parts[1].replace("_", "").upper()
-                            ok, msg = await self._flat_symbol(sym)
-                            await self._tg.send_message(f"{sym}: {msg}")
-                        else:
-                            await self._tg.send_message("Usage: /flat SYMBOL")
-                    elif low.startswith("/symbols"):
-                        parts = text.split(None, 1)
-                        if len(parts) == 2:
-                            new_syms = [s.strip().replace("_", "") for s in parts[1].split(",") if s.strip()]
-                            if new_syms:
-                                self.symbols = new_syms
-                                for s in new_syms:
-                                    if s not in self.ctx:
-                                        self.ctx[s] = SymbolContext(s, [])
-                                    if s not in self.pos:
-                                        self.pos[s] = PositionState(s, PositionSide.LONG)
-                                await self._tg.send_message(f"Symbols updated: {','.join(self.symbols)}")
-                            else:
-                                await self._tg.send_message("Usage: /symbols BTCUSDT,ETHUSDT")
-                        else:
-                            await self._tg.send_message("Usage: /symbols BTCUSDT,ETHUSDT")
-                    elif low.startswith("/close"):
-                        await self._tg.send_message("Closing…")
-                        await self.stop(reason="telegram:/close")
-                    else:
-                        await self._tg.send_message(
-                            "Commands: /status, /equity, /pause, /resume, /flat SYMBOL, /flat_all, /symbols SYM1,SYM2, /close")
-            except asyncio.CancelledError:
-                break
-            except Exception:
-                await self._sleep(2.0)
-
-    # ---------- BOOT/RUN ----------
+    # ----------------- Cycle de vie -----------------
     async def run(self):
         if self._running:
             return
@@ -384,12 +379,13 @@ class Orchestrator:
         self._tasks = [
             asyncio.create_task(self._task_heartbeat(), name="heartbeat"),
             asyncio.create_task(self._task_refresh_watchlist(), name="watchlist"),
-            asyncio.create_task(self._task_telegram(), name="telegram"),
-            asyncio.create_task(self._task_sync_positions(), name="sync"),
-        ] + [asyncio.create_task(self._task_trade_loop(s), name=f"trade:{s}") for s in self.symbols]
+            asyncio.create_task(self._task_trade_loop(s), name=f"trade:{s}") for s in self.symbols
+        ]
+        # Telegram si dispo
+        if self._tg and self._tg.enabled():
+            self._tasks.append(asyncio.create_task(self._task_telegram(), name="telegram"))
+
         print("[orchestrator] running")
-        if self._tg.enabled():
-            await self._tg.send_message("Orchestrator started ✅")
         try:
             await asyncio.gather(*self._tasks)
         except asyncio.CancelledError:
@@ -403,10 +399,11 @@ class Orchestrator:
         print(f"[orchestrator] stopping: {reason}")
         self._running = False
         for t in self._tasks:
-            t.cancel()
+            try:
+                t.cancel()
+            except Exception:
+                pass
         await asyncio.sleep(0)  # yield to cancellations
-        if self._tg.enabled():
-            await self._tg.send_message(f"Orchestrator stopping: {reason}")
 
 
 # Helper de lancement depuis bot.py
