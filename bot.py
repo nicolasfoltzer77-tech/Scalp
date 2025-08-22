@@ -29,6 +29,9 @@ from scalp.trade_utils import (
     should_scale_in,
     timeout_exit,
     extract_available_balance,
+    get_contract_size,
+    notional,
+    required_margin,
 )
 from scalp import pairs as _pairs
 from scalp.backtest import backtest_trades  # noqa: F401
@@ -231,12 +234,8 @@ def _safe_extract_contract_fields(contract_detail, symbol: str | None = None):
             contract = data[0] if data else {}
     elif isinstance(data, dict):
         contract = data
-    size = contract.get("contractSize") or contract.get("sizeMultiplier") or 1.0
+    size_mult = get_contract_size(contract_detail, symbol)
     min_trade = contract.get("minTradeUSDT") or contract.get("minTradeNum") or 1.0
-    try:
-        size_mult = float(size)
-    except (TypeError, ValueError):
-        size_mult = 1.0
     try:
         min_trade_val = float(min_trade)
     except (TypeError, ValueError):
@@ -245,11 +244,12 @@ def _safe_extract_contract_fields(contract_detail, symbol: str | None = None):
 
 
 def _estimate_margin(contract_detail, price, vol, leverage):
-    size_mult, _ = _safe_extract_contract_fields(contract_detail)
-    notional = float(vol) * size_mult * float(price)
+    size_mult = get_contract_size(contract_detail)
+    notional_val = notional(price, vol, size_mult)
     lev = max(1.0, float(leverage) or 1.0)
-    margin = notional / lev
-    return notional, margin
+    fee_rate = max(CONFIG.get("FEE_RATE", 0.0), 0.001)
+    margin = required_margin(notional_val, lev, fee_rate, buffer=0.0)
+    return notional_val, margin
 
 
 def map_score_to_sig_level(score: float) -> int:
@@ -404,24 +404,32 @@ def attempt_entry(
         take_profit=sig.tp1,
     )
     log_event("order", resp)
+    if str(resp.get("code")) != "00000":
+        log_event("order_error", resp)
+        return params
+    cs = get_contract_size(contract_detail, sig.symbol)
+    N = notional(sig.price, params["vol"], cs)
+    fee_rate = CONFIG.get("FEE_RATE", 0.001)
+    req_margin = required_margin(N, params["leverage_eff"], fee_rate)
     open_payload = {
-        "side": sig.side,
+        "event": "position_opened",
         "symbol": sig.symbol,
+        "side": sig.side,
         "price": sig.price,
         "vol": params["vol"],
-        "vol_before": params.get("vol_before"),
+        "contract_size": cs,
+        "notional_usdt": round(N, 2),
         "leverage": params["leverage_eff"],
+        "required_margin_usdt": round(req_margin, 2),
+        "available_usdt": round(available_usdt, 2),
+        "risk_level_user": user_risk_level,
+        "signal_level": params["sig_level"],
         "risk_color": params["risk_color"],
-        "sig_level": params["sig_level"],
-        "score": params["score"],
         "risk_pct_eff": params["risk_pct_eff"],
-        "leverage_eff": params["leverage_eff"],
-        "notional": params["notional"],
-        "required_margin": params["required_margin"],
-        "available": available_usdt,
-        "user_level": user_risk_level,
-        "amount_usdt": params["notional"],
+        "fee_rate": fee_rate,
     }
+    log_event("position_opened", open_payload)
+    logging.info(_format_text("position_opened", open_payload))
     notify("position_opened", open_payload)
     return params
 
@@ -492,6 +500,7 @@ def main(argv: Optional[List[str]] = None) -> None:
         logging.error("Erreur r\u00e9cup\u00e9ration contract detail: %s", exc)
         contract_detail = {"success": False, "code": 404}
     log_event("contract_detail", contract_detail)
+    contract_size = get_contract_size(contract_detail, symbol)
 
     def _fetch_equity() -> float:
         """Retrieve available USDT balance from the exchange.
@@ -525,6 +534,8 @@ def main(argv: Optional[List[str]] = None) -> None:
     take_profit = None
     session_pnl = 0.0
     last_entry_price = None
+    entry_leverage = None
+    last_risk_color = ""
     open_positions: set[str] = set()
 
     def log_bitget_positions() -> None:
@@ -544,22 +555,35 @@ def main(argv: Optional[List[str]] = None) -> None:
             logging.warning("Impossible de récupérer les positions Bitget: %s", exc)
 
     def close_position(side: int, price: float, vol: int) -> bool:
-        nonlocal current_pos, current_vol, entry_price, entry_time, session_pnl, equity_usdt, stop_long, stop_short, take_profit
-        pnl = round(calc_pnl_pct(entry_price, price, side, fee_rate), 2)
-        size_mult, _ = _safe_extract_contract_fields(contract_detail, symbol)
-        diff = price - entry_price
-        pnl_usd = round((diff if side > 0 else -diff) * size_mult * vol, 2)
+        nonlocal current_pos, current_vol, entry_price, entry_time, session_pnl, equity_usdt, stop_long, stop_short, take_profit, entry_leverage, last_risk_color
+        cs = contract_size
+        N_entry = notional(entry_price, vol, cs)
+        N_exit = notional(price, vol, cs)
+        gross = (price - entry_price) * vol * cs * (1 if side > 0 else -1)
+        fees = fee_rate * (N_entry + N_exit)
+        pnl_usdt = round(gross - fees, 6)
+        margin = N_entry / max(entry_leverage or 1, 1)
+        pnl_pct = round(100 * pnl_usdt / margin if margin else 0.0, 4)
         payload = {
-            "side": "long" if side > 0 else "short",
+            "event": "position_closed",
             "symbol": symbol,
-            "entry": entry_price,
-            "exit": price,
-            "pnl_usd": pnl_usd,
-            "pnl_pct": pnl,
-            "fee_pct": fee_rate * 2 * 100,
+            "side": "long" if side > 0 else "short",
+            "entry_price": entry_price,
+            "exit_price": price,
+            "vol": vol,
+            "contract_size": cs,
+            "notional_entry_usdt": round(N_entry, 2),
+            "notional_exit_usdt": round(N_exit, 2),
+            "fees_usdt": round(fees, 6),
+            "pnl_usdt": pnl_usdt,
+            "pnl_pct_on_margin": pnl_pct,
+            "leverage": entry_leverage,
+            "risk_color": last_risk_color,
+            "fee_rate": fee_rate,
         }
         log_event("position_closed", payload)
-        session_pnl += pnl
+        logging.info(_format_text("position_closed", payload))
+        session_pnl += pnl_usdt
         payload["session_pnl"] = session_pnl
         notify("position_closed", payload)
         client.place_order(
@@ -573,7 +597,7 @@ def main(argv: Optional[List[str]] = None) -> None:
         )
         new_eq = _fetch_equity()
         equity_usdt = new_eq
-        risk_mgr.record_trade(pnl)
+        risk_mgr.record_trade(pnl_pct)
         logging.info("Nouveau risk_pct: %.4f", risk_mgr.risk_pct)
         kill = risk_mgr.kill_switch
         if kill:
@@ -592,7 +616,7 @@ def main(argv: Optional[List[str]] = None) -> None:
                 "tp": take_profit,
                 "score": None,
                 "reasons": None,
-                "pnl": pnl,
+                "pnl": pnl_pct,
             }
         )
         log_position(
@@ -602,7 +626,7 @@ def main(argv: Optional[List[str]] = None) -> None:
                 "direction": "long" if side > 0 else "short",
                 "entry": entry_price,
                 "exit": price,
-                "pnl_pct": pnl,
+                "pnl_pct": pnl_pct,
                 "fee_rate": fee_rate,
                 "notes": None,
             }
@@ -611,7 +635,7 @@ def main(argv: Optional[List[str]] = None) -> None:
             {
                 "timestamp": int(time.time()),
                 "pair": symbol,
-                "details": f"Closed with pnl {pnl}%",
+                "details": f"Closed with pnl {pnl_pct}%",
             }
         )
         current_pos = 0
@@ -1066,19 +1090,28 @@ def main(argv: Optional[List[str]] = None) -> None:
                     tp_long,
                     "paper" if CONFIG["PAPER_TRADE"] else "live",
                 )
+                N = notional(price, vol_open, contract_size)
+                req = required_margin(N, lev, fee_rate)
+                risk_color = RISK_COLOR.get(cfg.get("RISK_LEVEL", 1), "")
                 open_payload = {
-                    "side": "long",
+                    "event": "position_opened",
                     "symbol": symbol,
+                    "side": "long",
                     "price": price,
                     "vol": vol_open,
-                    "leverage": CONFIG["LEVERAGE"],
-                    "amount_usdt": round(price * size_mult * vol_open, 2),
-                    "sl_usd": round((price - sl_long) * size_mult * vol_open, 2),
-                    "tp_usd": round((tp_long - price) * size_mult * vol_open, 2),
+                    "contract_size": contract_size,
+                    "notional_usdt": round(N, 2),
+                    "leverage": lev,
+                    "required_margin_usdt": round(req, 2),
+                    "available_usdt": round(available, 2),
+                    "risk_level_user": cfg.get("RISK_LEVEL", 1),
+                    "signal_level": cfg.get("RISK_LEVEL", 1),
+                    "risk_color": risk_color,
+                    "risk_pct_eff": risk_mgr.risk_pct,
                     "fee_rate": fee_rate,
-                    "session_pnl": session_pnl,
                 }
                 log_event("position_opened", open_payload)
+                logging.info(_format_text("position_opened", open_payload))
                 notify("position_opened", open_payload)
                 current_pos = +1
                 current_vol = vol_open
@@ -1088,6 +1121,8 @@ def main(argv: Optional[List[str]] = None) -> None:
                 stop_short = None
                 take_profit = tp_long
                 last_entry_price = entry_price
+                entry_leverage = lev
+                last_risk_color = risk_color
                 open_positions.add(symbol)
                 logging.info("Positions ouvertes: %s", sorted(open_positions))
                 log_event("open_positions", {"positions": list(open_positions)})
@@ -1185,19 +1220,28 @@ def main(argv: Optional[List[str]] = None) -> None:
                     tp_short,
                     "paper" if CONFIG["PAPER_TRADE"] else "live",
                 )
+                N = notional(price, vol_open, contract_size)
+                req = required_margin(N, lev, fee_rate)
+                risk_color = RISK_COLOR.get(cfg.get("RISK_LEVEL", 1), "")
                 open_payload = {
-                    "side": "short",
+                    "event": "position_opened",
                     "symbol": symbol,
+                    "side": "short",
                     "price": price,
                     "vol": vol_open,
-                    "leverage": CONFIG["LEVERAGE"],
-                    "amount_usdt": round(price * size_mult * vol_open, 2),
-                    "sl_usd": round((sl_short - price) * size_mult * vol_open, 2),
-                    "tp_usd": round((price - tp_short) * size_mult * vol_open, 2),
+                    "contract_size": contract_size,
+                    "notional_usdt": round(N, 2),
+                    "leverage": lev,
+                    "required_margin_usdt": round(req, 2),
+                    "available_usdt": round(available, 2),
+                    "risk_level_user": cfg.get("RISK_LEVEL", 1),
+                    "signal_level": cfg.get("RISK_LEVEL", 1),
+                    "risk_color": risk_color,
+                    "risk_pct_eff": risk_mgr.risk_pct,
                     "fee_rate": fee_rate,
-                    "session_pnl": session_pnl,
                 }
                 log_event("position_opened", open_payload)
+                logging.info(_format_text("position_opened", open_payload))
                 notify("position_opened", open_payload)
                 current_pos = -1
                 current_vol = vol_open
@@ -1207,6 +1251,8 @@ def main(argv: Optional[List[str]] = None) -> None:
                 stop_long = None
                 take_profit = tp_short
                 last_entry_price = entry_price
+                entry_leverage = lev
+                last_risk_color = risk_color
                 open_positions.add(symbol)
                 logging.info("Positions ouvertes: %s", sorted(open_positions))
                 log_event("open_positions", {"positions": list(open_positions)})

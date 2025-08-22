@@ -58,7 +58,10 @@ def test_attempt_entry_respects_caps(monkeypatch):
         user_risk_level=1,
     )
     assert client.last_order is not None
-    assert "risk_color" in captured["position_opened"]
+    opened = captured["position_opened"]
+    assert "risk_color" in opened
+    assert "required_margin_usdt" in opened
+    assert "notional_usdt" in opened
 
 
 def test_attempt_entry_insufficient_margin(monkeypatch):
