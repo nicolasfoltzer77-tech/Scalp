@@ -11,6 +11,8 @@ class AppConfig(BaseModel):
     MIN_TRADE_USDT: float = Field(5.0, ge=0.0)
     LEVERAGE: float = Field(1.0, ge=1.0, le=125.0)
     PAPER_TRADE: bool = Field(True)
+    TELEGRAM_BOT_TOKEN: str | None = None
+    TELEGRAM_CHAT_ID: str | None = None
 
 
 def load_or_exit() -> AppConfig:
@@ -23,6 +25,8 @@ def load_or_exit() -> AppConfig:
             MIN_TRADE_USDT=float(os.environ.get("MIN_TRADE_USDT", "5")),
             LEVERAGE=float(os.environ.get("LEVERAGE", "1")),
             PAPER_TRADE=os.environ.get("PAPER_TRADE", "true").lower() in ("1","true","yes"),
+            TELEGRAM_BOT_TOKEN=os.environ.get("TELEGRAM_BOT_TOKEN"),
+            TELEGRAM_CHAT_ID=os.environ.get("TELEGRAM_CHAT_ID"),
         )
     except ValidationError as e:
         print("[CONFIG] Invalid configuration:", e, file=sys.stderr)

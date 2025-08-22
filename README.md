@@ -50,6 +50,8 @@ Exemple :
 export BITGET_ACCESS_KEY="votre_cle"
 export BITGET_SECRET_KEY="votre_secret"
 export PAPER_TRADE=true
+export TELEGRAM_BOT_TOKEN="123456:ABCDEF..."
+export TELEGRAM_CHAT_ID="123456789"
 python bot.py
 ```
 
