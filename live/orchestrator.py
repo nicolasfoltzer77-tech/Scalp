@@ -162,19 +162,33 @@ class Orchestrator:
         if out:
             return out
 
-        # 3) Fallback synthétique via ticker (jamais d'appel à .get sur une list)
+        # 3) Fallback synthétique via ticker (robuste dict OU liste de listes)
         tkr = self.exchange.get_ticker(symbol)
         items = []
         if isinstance(tkr, dict):
-            items = tkr.get("data") or tkr.get("result") or []
-        elif isinstance(tkr, list):
-            items = tkr
+            items = tkr.get("data") or tkr.get("result") or tkr.get("tickers") or []
+        elif isinstance(tkr, (list, tuple)):
+            items = list(tkr)
         if not items:
             return []
-        last = items[0] if isinstance(items, list) else items
-        p = float(last.get("lastPrice", last.get("close", last.get("markPrice", 0))))
+        last = items[0]
+        if isinstance(last, dict):
+            p = float(last.get("lastPrice", last.get("close", last.get("markPrice", 0))))
+            vol = float(last.get("volume", last.get("usdtVolume", last.get("quoteVolume", 0))))
+        else:
+            seq = list(last)
+            if len(seq) >= 5:
+                first_is_ts = isinstance(seq[0], (int, float)) and seq[0] > 10**10
+                if first_is_ts:
+                    p = float(seq[4])
+                    vol = float(seq[5]) if len(seq) > 5 else 0.0
+                else:
+                    p = float(seq[3]) if len(seq) > 3 else float(seq[-2])
+                    vol = float(seq[4]) if len(seq) > 4 else float(seq[-1])
+            else:
+                p = float(seq[-1]) if seq else 0.0
+                vol = 0.0
         ts = int(time.time() * 1000)
-        vol = float(last.get("volume", last.get("usdtVolume", last.get("quoteVolume", 0))))
         return [{"ts": ts, "open": p, "high": p, "low": p, "close": p, "volume": vol}]
 
     async def _task_trade_loop(self, symbol: str):
