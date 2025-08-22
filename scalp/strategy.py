@@ -139,6 +139,9 @@ class Signal:
     tp1: float
     tp2: float
     qty: float
+    score: Optional[float] = None
+    quality: Optional[float] = None
+    reasons: Optional[List[str]] = None
 
 
 def generate_signal(
@@ -247,46 +250,98 @@ def generate_signal(
 
     def _size(dist: float) -> float:
         return calc_position_size(equity, risk_pct, dist) * size_mult
+    weights = {
+        "ema": 15.0,
+        "macd": 15.0,
+        "vwap": 15.0,
+        "rsi": 15.0,
+        "obv": 10.0,
+        "swing": 10.0,
+        "atr": 20.0,
+    }
 
+    atr_score = min(atr_pct / atr_reduce_pct, 1.0) * weights["atr"]
+
+    long_score = atr_score
+    long_reasons: List[str] = []
+    if price > v:
+        long_score += weights["vwap"]
+        long_reasons.append("vwap")
+    if ema20[-1] > ema50[-1]:
+        long_score += weights["ema"]
+        long_reasons.append("ema")
+    if rsi_prev <= 40 < rsi_curr:
+        long_score += weights["rsi"]
+        long_reasons.append("rsi")
+    if macd_val > macd_sig:
+        long_score += weights["macd"]
+        long_reasons.append("macd")
+    if obv_rising or vol_rising:
+        long_score += weights["obv"]
+        long_reasons.append("obv")
+    if price > swing_high:
+        long_score += weights["swing"]
+        long_reasons.append("swing")
+
+    short_score = atr_score
+    short_reasons: List[str] = []
+    if price < v:
+        short_score += weights["vwap"]
+        short_reasons.append("vwap")
+    if ema20[-1] < ema50[-1]:
+        short_score += weights["ema"]
+        short_reasons.append("ema")
+    if rsi_prev >= 60 > rsi_curr:
+        short_score += weights["rsi"]
+        short_reasons.append("rsi")
+    if macd_val < macd_sig:
+        short_score += weights["macd"]
+        short_reasons.append("macd")
+    if obv_series[-1] < obv_series[-2] or vol_rising:
+        short_score += weights["obv"]
+        short_reasons.append("obv")
+    if price < swing_low:
+        short_score += weights["swing"]
+        short_reasons.append("swing")
+
+    side: Optional[str] = None
+    score: float = 0.0
+    reasons: List[str] = []
     if (
-        price > v
-        and ema20[-1] > ema50[-1]
-        and rsi_prev <= 40 < rsi_curr
+        long_score >= short_score
+        and long_score > 0
         and macd_val > macd_sig
-        and (obv_rising or vol_rising)
-        and (rsi_15 is None or rsi_15 > 50)
-        and price > swing_high
-        and price > ema_trend[-1]
         and obi_ok_long
         and tick_ok_long
         and trend_dir >= 0
+        and price > ema_trend[-1]
     ):
+        side = "long"
+        score = long_score
+        reasons = long_reasons
         sl = price - sl_dist
         tp1 = price + tp1_dist
         tp2 = price + tp2_dist
-        qty = _size(sl_dist)
-        return Signal(symbol, "long", price, sl, tp1, tp2, qty)
-
-    if (
-        price < v
-        and ema20[-1] < ema50[-1]
-        and rsi_prev >= 60 > rsi_curr
+    elif (
+        short_score > long_score
+        and short_score > 0
         and macd_val < macd_sig
-        and (obv_series[-1] < obv_series[-2] or vol_rising)
-        and (rsi_15 is None or rsi_15 < 50)
-        and price < swing_low
-        and price < ema_trend[-1]
         and obi_ok_short
         and tick_ok_short
         and trend_dir <= 0
+        and price < ema_trend[-1]
     ):
+        side = "short"
+        score = short_score
+        reasons = short_reasons
         sl = price + sl_dist
         tp1 = price - tp1_dist
         tp2 = price - tp2_dist
-        qty = _size(sl_dist)
-        return Signal(symbol, "short", price, sl, tp1, tp2, qty)
+    else:
+        return None
 
-    return None
+    qty = _size(sl_dist)
+    return Signal(symbol, side, price, sl, tp1, tp2, qty, score, score, reasons)
 
 # ---------------------------------------------------------------------------
 # Backtesting utilities

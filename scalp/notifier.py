@@ -80,6 +80,15 @@ def _format_position_event(event: str, payload: Dict[str, Any]) -> str:
         hold = payload.get("hold") or payload.get("expected_duration")
         if hold is not None:
             lines.append(f"Durée prévue: {hold}")
+        rc = payload.get("risk_color")
+        if rc:
+            lvl = payload.get("sig_level")
+            score = payload.get("score")
+            lines.append(f"Risque: {rc} L{lvl} score {score}")
+        rp = payload.get("risk_pct_eff")
+        lev_eff = payload.get("leverage_eff")
+        if rp is not None and lev_eff is not None:
+            lines.append(f"Risk%: {rp:.4f} Levier eff.: x{lev_eff}")
     else:  # position_closed
         pnl_usd = payload.get("pnl_usd")
         if pnl_usd is not None and pnl_pct is not None:
