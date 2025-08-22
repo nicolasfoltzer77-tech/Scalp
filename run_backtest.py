@@ -4,7 +4,7 @@ from scalp.backtest.engine import BacktestEngine
 
 def main():
     print("[*] Lancement du backtest...")
-
+    
     # ⚡ Tu pourras changer ces paramètres
     pairs = ["BTCUSDT", "ETHUSDT"]  # pour commencer simple
     start_date = "2024-01-01"
