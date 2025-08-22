@@ -14,6 +14,12 @@ def _to_float(x, default=0.0) -> float:
 class BitgetFuturesClient(_Base):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         kwargs.setdefault("requests_module", requests)
+        # Map friendly aliases to the base client's parameter names
+        if "api_key" in kwargs and "access_key" not in kwargs:
+            kwargs["access_key"] = kwargs.pop("api_key")
+        if "secret" in kwargs and "secret_key" not in kwargs:
+            kwargs["secret_key"] = kwargs.pop("secret")
+        kwargs.setdefault("base_url", "https://api.bitget.com")
         super().__init__(*args, **kwargs)
 
     def get_assets(self) -> Dict[str, Any]:
