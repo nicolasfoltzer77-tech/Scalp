@@ -379,7 +379,10 @@ class Orchestrator:
         self._tasks = [
             asyncio.create_task(self._task_heartbeat(), name="heartbeat"),
             asyncio.create_task(self._task_refresh_watchlist(), name="watchlist"),
-            asyncio.create_task(self._task_trade_loop(s), name=f"trade:{s}") for s in self.symbols
+            *(
+                asyncio.create_task(self._task_trade_loop(s), name=f"trade:{s}")
+                for s in self.symbols
+            )
         ]
         # Telegram si dispo
         if self._tg and self._tg.enabled():
