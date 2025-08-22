@@ -89,6 +89,14 @@ def _format_position_event(event: str, payload: Dict[str, Any]) -> str:
         lev_eff = payload.get("leverage_eff")
         if rp is not None and lev_eff is not None:
             lines.append(f"Risk%: {rp:.4f} Levier eff.: x{lev_eff}")
+        req = payload.get("required_margin")
+        avail = payload.get("available")
+        if req is not None and avail is not None:
+            lines.append(f"Marge: {req:.2f}/{avail}")
+        vb = payload.get("vol_before")
+        vf = payload.get("vol")
+        if vb is not None and vf is not None and vb != vf:
+            lines.append(f"Vol: {vb}->{vf}")
     else:  # position_closed
         pnl_usd = payload.get("pnl_usd")
         if pnl_usd is not None and pnl_pct is not None:
