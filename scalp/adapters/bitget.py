@@ -59,3 +59,70 @@ class BitgetFuturesClient(_Base):
                 **t,
             })
         return {"success": True, "data": norm}
+    # --- Normalisations position/ordres/fills ---
+    def get_open_positions(self, symbol: Optional[str] = None):
+        """
+        Retourne {"success": True, "data":[{symbol, side, qty, avgEntryPrice, leverage, unrealizedPnl, tsOpen, sl, tp}]}
+        side: "long"|"short", qty en base
+        """
+        raw = super().get_positions() if hasattr(super(), "get_positions") else {}
+        items = raw.get("data") or raw.get("result") or raw.get("positions") or []
+        out = []
+        for p in items:
+            s = (p.get("symbol") or p.get("instId") or "").replace("_","")
+            if symbol and s != symbol:
+                continue
+            side = p.get("holdSide") or p.get("side") or p.get("posSide") or ""
+            qty = float(p.get("total", p.get("holdAmount", p.get("size", 0))))
+            avg = float(p.get("avgOpenPrice", p.get("avgPrice", p.get("entryPrice", 0))))
+            lev = float(p.get("leverage", 1))
+            upnl = float(p.get("unrealizedPnl", p.get("upl", 0)))
+            ts = int(p.get("uTime", p.get("ts", p.get("ctime", 0))))
+            sl = p.get("stopLossPrice") or None
+            tp = p.get("takeProfitPrice") or None
+            out.append({"symbol": s, "side": side.lower(), "qty": qty, "avgEntryPrice": avg, "leverage": lev, "unrealizedPnl": upnl, "tsOpen": ts, "sl": float(sl) if sl else None, "tp": float(tp) if tp else None})
+        return {"success": True, "data": out}
+
+    def get_recent_orders(self, symbol: str, limit: int = 50):
+        raw = super().get_orders_history(symbol=symbol) if hasattr(super(), "get_orders_history") else {}
+        items = raw.get("data") or raw.get("result") or []
+        out = []
+        for o in items[:limit]:
+            oid = str(o.get("orderId") or o.get("id") or o.get("ordId") or "")
+            s = (o.get("symbol") or o.get("instId") or "").replace("_","")
+            if s != symbol:
+                continue
+            side = (o.get("side") or o.get("posSide") or "").lower()
+            status = (o.get("status") or o.get("state") or "").lower()
+            price = float(o.get("price", o.get("px", o.get("avgPrice", 0))))
+            qty = float(o.get("size", o.get("qty", o.get("accFillSz", 0))))
+            filled = float(o.get("filledQty", o.get("fillSz", 0)))
+            avg = float(o.get("avgPrice", o.get("avgPx", 0)))
+            ts = int(o.get("cTime", o.get("uTime", o.get("ts", 0))))
+            out.append({"orderId": oid, "symbol": s, "side": side, "status": status, "price": price, "qty": qty, "filled": filled, "avgPrice": avg, "ts": ts})
+        return {"success": True, "data": out}
+
+    def get_fills(self, symbol: str, order_id: Optional[str] = None, limit: int = 100):
+        raw = super().get_fills(symbol=symbol) if hasattr(super(), "get_fills") else {}
+        items = raw.get("data") or raw.get("result") or []
+        out = []
+        for f in items[:limit]:
+            s = (f.get("symbol") or f.get("instId") or "").replace("_","")
+            if s != symbol:
+                continue
+            if order_id:
+                oid = str(f.get("orderId") or f.get("ordId") or "")
+                if oid != order_id:
+                    continue
+            tid = str(f.get("tradeId") or f.get("fillId") or f.get("execId") or "")
+            price = float(f.get("price", f.get("fillPx", 0)))
+            qty = float(f.get("size", f.get("fillSz", 0)))
+            fee = float(f.get("fee", f.get("fillFee", 0)))
+            ts = int(f.get("ts", f.get("time", f.get("t", 0))))
+            out.append({"orderId": str(f.get("orderId") or f.get("ordId") or ""), "tradeId": tid, "price": price, "qty": qty, "fee": fee, "ts": ts})
+        return {"success": True, "data": out}
+
+    def cancel_order(self, symbol: str, order_id: str):
+        raw = super().cancel_order(symbol=symbol, orderId=order_id) if hasattr(super(), "cancel_order") else {}
+        ok = raw.get("success", True)
+        return {"success": ok, "data": {"orderId": order_id}}

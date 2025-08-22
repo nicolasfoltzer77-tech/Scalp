@@ -9,6 +9,7 @@ from scalp.adapters.bitget import BitgetFuturesClient
 from scalp.services.order_service import OrderService, OrderRequest
 from scalp.strategy import generate_signal, Signal
 from live.telegram_async import TelegramAsync
+from scalp.positions.state import PositionState, PositionStatus, PositionSide, Fill
 
 
 @dataclass
@@ -30,6 +31,10 @@ class Orchestrator:
         self.config = config
         self.symbols = list(symbols)
         self.ctx: Dict[str, SymbolContext] = {s: SymbolContext(s, []) for s in self.symbols}
+        self.pos: Dict[str, PositionState] = {}
+        # initialiser état par symbole
+        for s in self.symbols:
+            self.pos[s] = PositionState(symbol=s, side=PositionSide.LONG)  # side réel fixé à l’entrée
         self._running = False
         self._tasks: List[asyncio.Task] = []
         self._heartbeat_ts = 0.0
@@ -167,8 +172,18 @@ class Orchestrator:
                     )
                     res = self.order_service.prepare_and_place(equity_usdt, req)
                     if res.accepted:
-                        ctx.position_open = True
+                        ctx.position_open = True  # legacy (peut rester pour logs)
                         ctx.last_signal_ts = time.time()
+                        side_enum = PositionSide.LONG if req.side == "long" else PositionSide.SHORT
+                        st = self.pos.get(symbol) or PositionState(symbol=symbol, side=side_enum)
+                        st.side = side_enum
+                        st.status = PositionStatus.PENDING_ENTRY
+                        st.entry_order_id = res.order_id
+                        st.req_qty = st.req_qty or 0.0
+                        st.req_qty = max(st.req_qty, 0.0) + (res.filled_qty or 0.0) if (res.filled_qty or 0.0) > 0 else st.req_qty or 0.0
+                        st.sl = float(getattr(req, "sl", 0)) or None
+                        st.tp = float(getattr(req, "tp", 0)) or None
+                        self.pos[symbol] = st
                         print(f"[order] {symbol} accepted")
                         if self._tg.enabled():
                             await self._tg.send_message(f"Order accepted: {symbol} {req.side} @ {req.price}")
@@ -180,6 +195,75 @@ class Orchestrator:
                     print(f"[trade-loop:{symbol}] order error: {e!r}")
             # 4) tempo
             await self._sleep(1.0)
+
+    async def _task_sync_positions(self):
+        print("[sync] start")
+        while self._running:
+            try:
+                for symbol, st in list(self.pos.items()):
+                    # 1) si PENDING_ENTRY -> consulter fills de l’order d’entrée
+                    if st.status == PositionStatus.PENDING_ENTRY and st.entry_order_id:
+                        fills = self.exchange.get_fills(symbol, order_id=st.entry_order_id).get("data", [])
+                        for f in fills:
+                            fill = Fill(order_id=f["orderId"], trade_id=f["tradeId"], price=float(f["price"]), qty=float(f["qty"]), fee=float(f.get("fee",0)), ts=int(f.get("ts",0)))
+                            st.apply_fill_entry(fill)
+                        # si toujours pas OPEN, vérifier statut ordre
+                        if st.status == PositionStatus.PENDING_ENTRY:
+                            orders = self.exchange.get_recent_orders(symbol).get("data", [])
+                            for o in orders:
+                                if o["orderId"] == st.entry_order_id:
+                                    st.last_sync_ts = int(time.time()*1000)
+                                    if o.get("status") in ("canceled","cancelled","rejected","expired"):
+                                        # ordre tombé -> retour à IDLE
+                                        st.status = PositionStatus.IDLE
+                                        st.entry_order_id = None
+                                    break
+                    # 2) si OPEN -> vérifier si une position existe côté exchange
+                    elif st.status == PositionStatus.OPEN:
+                        # lire positions ouvertes
+                        opens = self.exchange.get_open_positions(symbol).get("data", [])
+                        open_qty = 0.0
+                        avg = st.avg_entry_price
+                        for p in opens:
+                            if p["symbol"] == symbol and ((p["side"]=="long") == (st.side==PositionSide.LONG)):
+                                open_qty = float(p["qty"])
+                                avg = float(p.get("avgEntryPrice", avg))
+                                break
+                        st.avg_entry_price = avg or st.avg_entry_price
+                        if open_qty <= 1e-12:
+                            # position plus visible: soit fermée soit en fermeture
+                            # vérifier fills de l’order de sortie si on en a un
+                            if st.exit_order_id:
+                                fills = self.exchange.get_fills(symbol, order_id=st.exit_order_id).get("data", [])
+                                for f in fills:
+                                    fill = Fill(order_id=f["orderId"], trade_id=f["tradeId"], price=float(f["price"]), qty=float(f["qty"]), fee=float(f.get("fee",0)), ts=int(f.get("ts",0)))
+                                    st.apply_fill_exit(fill)
+                            # si toujours pas CLOSED, tenter une lecture des fills récents (sans order_id)
+                            if st.status != PositionStatus.CLOSED:
+                                fills = self.exchange.get_fills(symbol).get("data", [])
+                                # garder uniquement ceux après opened_ts
+                                for f in fills:
+                                    if st.opened_ts and int(f.get("ts",0)) >= st.opened_ts:
+                                        # heuristique: sens inverse pour fermeture
+                                        qty = float(f["qty"])
+                                        side_exec = "buy" if qty < 0 else "sell"  # placeholder si l’API a le signe
+                                # Si aucune info, marquer CLOSED de façon conservatrice (à défaut)
+                                st.status = PositionStatus.CLOSED
+                                st.closed_ts = int(time.time()*1000)
+                        else:
+                            # mettre en cohérence la qty locale avec l’exchange
+                            st.filled_qty = open_qty
+                    # 3) si PENDING_EXIT -> consommer fills de l’order de sortie
+                    elif st.status == PositionStatus.PENDING_EXIT and st.exit_order_id:
+                        fills = self.exchange.get_fills(symbol, order_id=st.exit_order_id).get("data", [])
+                        for f in fills:
+                            fill = Fill(order_id=f["orderId"], trade_id=f["tradeId"], price=float(f["price"]), qty=float(f["qty"]), fee=float(f.get("fee",0)), ts=int(f.get("ts",0)))
+                            st.apply_fill_exit(fill)
+                    st.last_sync_ts = int(time.time()*1000)
+                    self.pos[symbol] = st
+            except Exception as e:
+                print(f"[sync] error: {e!r}")
+            await self._sleep(2.0)
 
     async def _task_telegram(self):
         if not self._tg.enabled():
@@ -240,6 +324,7 @@ class Orchestrator:
             asyncio.create_task(self._task_heartbeat(), name="heartbeat"),
             asyncio.create_task(self._task_refresh_watchlist(), name="watchlist"),
             asyncio.create_task(self._task_telegram(), name="telegram"),
+            asyncio.create_task(self._task_sync_positions(), name="sync"),
         ] + [asyncio.create_task(self._task_trade_loop(s), name=f"trade:{s}") for s in self.symbols]
         print("[orchestrator] running")
         if self._tg.enabled():
