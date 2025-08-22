@@ -342,6 +342,7 @@ def main(argv: Optional[List[str]] = None) -> None:
         try:
             resp = client.get_positions(product_type=cfg["PRODUCT_TYPE"])
             symbols = {p.get("symbol") for p in resp.get("data", [])}
+            logging.info("Positions Bitget: %s", sorted(symbols))
             log_event("bitget_positions", {"positions": list(symbols)})
             missing = open_positions - symbols
             extra = symbols - open_positions
@@ -431,9 +432,11 @@ def main(argv: Optional[List[str]] = None) -> None:
         last_entry_price = None
         if symbol in open_positions:
             open_positions.remove(symbol)
+            logging.info("Positions ouvertes: %s", sorted(open_positions))
             log_event("open_positions", {"positions": list(open_positions)})
         else:
             logging.warning("Fermeture d'une position non suivie: %s", symbol)
+            logging.info("Positions ouvertes: %s", sorted(open_positions))
             log_event(
                 "open_positions",
                 {"positions": list(open_positions), "missing": symbol},
@@ -810,6 +813,7 @@ def main(argv: Optional[List[str]] = None) -> None:
                 take_profit = tp_long
                 last_entry_price = entry_price
                 open_positions.add(symbol)
+                logging.info("Positions ouvertes: %s", sorted(open_positions))
                 log_event("open_positions", {"positions": list(open_positions)})
                 log_bitget_positions()
 
@@ -904,6 +908,7 @@ def main(argv: Optional[List[str]] = None) -> None:
                 take_profit = tp_short
                 last_entry_price = entry_price
                 open_positions.add(symbol)
+                logging.info("Positions ouvertes: %s", sorted(open_positions))
                 log_event("open_positions", {"positions": list(open_positions)})
                 log_bitget_positions()
 
