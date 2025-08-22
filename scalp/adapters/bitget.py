@@ -33,10 +33,10 @@ class BitgetFuturesClient(_Base):
             norm.append({"currency": currency, "equity": equity, "available": available, **a})
         return {"success": True, "data": norm}
         
-+    def get_ticker(self, symbol: Optional[str] = None) -> Dict[str, Any]:
-+        """
-+        Normalise vers liste d'objets:
-+         {symbol,lastPrice,bidPrice,askPrice,volume}
+     def get_ticker(self, symbol: Optional[str] = None) -> Dict[str, Any]:
+         """
+         Normalise vers liste d'objets:
+         {symbol,lastPrice,bidPrice,askPrice,volume}
 +        Tolère:
 +         - top-level dict (data/result/tickers) ou list
 +         - items dict OU liste (indices)
