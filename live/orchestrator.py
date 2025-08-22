@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
 from scalp.adapters.bitget import BitgetFuturesClient
+from scalp.adapters.market_data import MarketData
 from scalp.services.order_service import OrderService, OrderRequest
 from scalp.strategy import generate_signal, Signal
 from live.telegram_async import TelegramAsync
@@ -94,102 +95,11 @@ class Orchestrator:
 
     async def _fetch_ohlcv_once(self, symbol: str, limit: int = 100) -> List[Dict]:
         """
-        Récupère une petite fenêtre OHLCV via l'endpoint kline REST existant du client de base.
-        On suppose que le client de base expose get_kline(symbol, granularity) -> dict avec "data".
-        Adapte si nécessaire à ton client.
+        Récupère une petite fenêtre OHLCV via l’adaptateur MarketData (normalisé).
         """
-        import time  # import local
-        # 1) Essai via get_kline (retour dict OU list)
-        try:
-            data = self.exchange.get_kline(symbol, interval="1m")
-        except AttributeError:
-            data = None
-        except Exception:
-            data = None
-
-        rows: List = []
-        if data is not None:
-            if isinstance(data, dict):
-                # extraire une liste depuis différents schémas possibles
-                rows = (
-                    data.get("data")
-                    or data.get("result")
-                    or data.get("records")
-                    or data.get("list")
-                    or data.get("items")
-                    or data.get("candles")
-                    or []
-                )
-                # certains exchanges encapsulent encore un sous-dict ("data":{"candles":[...]})
-                depth_guard = 0
-                while isinstance(rows, dict) and depth_guard < 3:
-                    rows = (
-                        rows.get("data")
-                        or rows.get("result")
-                        or rows.get("records")
-                        or rows.get("list")
-                        or rows.get("items")
-                        or rows.get("candles")
-                        or rows.get("klines")
-                        or rows.get("bars")
-                        or []
-                    )
-                    depth_guard += 1
-            elif isinstance(data, (list, tuple)):
-                rows = list(data)
-
-        # 2) Normalisation stricte: si dict -> lire clés; si liste -> lire indices
-        out: List[Dict] = []
-        # s'assurer qu'on a bien une séquence avant slicing
-        seq = list(rows) if isinstance(rows, (list, tuple)) else []
-        for r in seq[-limit:]:
-            if isinstance(r, dict):
-                t = int(r.get("ts") or r.get("time") or r.get("timestamp") or 0)
-                o = float(r.get("open", 0.0))
-                h = float(r.get("high", o))
-                l = float(r.get("low", o))
-                c = float(r.get("close", o))
-                v = float(r.get("volume", r.get("vol", 0.0)))
-            else:
-                # liste/tuple: [ts, open, high, low, close, volume] attendu
-                t = int(r[0]) if len(r) > 0 else 0
-                o = float(r[1]) if len(r) > 1 else 0.0
-                h = float(r[2]) if len(r) > 2 else o
-                l = float(r[3]) if len(r) > 3 else o
-                c = float(r[4]) if len(r) > 4 else o
-                v = float(r[5]) if len(r) > 5 else 0.0
-            out.append({"ts": t, "open": o, "high": h, "low": l, "close": c, "volume": v})
-        if out:
-            return out
-
-        # 3) Fallback synthétique via ticker (robuste dict OU liste de listes)
-        tkr = self.exchange.get_ticker(symbol)
-        items = []
-        if isinstance(tkr, dict):
-            items = tkr.get("data") or tkr.get("result") or tkr.get("tickers") or []
-        elif isinstance(tkr, (list, tuple)):
-            items = list(tkr)
-        if not items:
-            return []
-        last = items[0]
-        if isinstance(last, dict):
-            p = float(last.get("lastPrice", last.get("close", last.get("markPrice", 0))))
-            vol = float(last.get("volume", last.get("usdtVolume", last.get("quoteVolume", 0))))
-        else:
-            seq = list(last)
-            if len(seq) >= 5:
-                first_is_ts = isinstance(seq[0], (int, float)) and seq[0] > 10**10
-                if first_is_ts:
-                    p = float(seq[4])
-                    vol = float(seq[5]) if len(seq) > 5 else 0.0
-                else:
-                    p = float(seq[3]) if len(seq) > 3 else float(seq[-2])
-                    vol = float(seq[4]) if len(seq) > 4 else float(seq[-1])
-            else:
-                p = float(seq[-1]) if seq else 0.0
-                vol = 0.0
-        ts = int(time.time() * 1000)
-        return [{"ts": ts, "open": p, "high": p, "low": p, "close": p, "volume": vol}]
+        md = MarketData(self.exchange)
+        data = md.get_ohlcv(symbol, interval="1m", limit=limit)
+        return data.get("data", []) if isinstance(data, dict) else []
 
     async def _task_trade_loop(self, symbol: str):
         ctx = self.ctx[symbol]
