@@ -1,11 +1,10 @@
 # scalp/adapters/bitget.py
 from __future__ import annotations
 from typing import Any, Dict, List, Optional
-import os
-import inspect
+import inspect, os
 import requests
 
-# Client Bitget "bas niveau" (déjà présent dans le repo)
+# Client bas-niveau fourni par le repo
 from scalp.bitget_client import BitgetFuturesClient as _Base
 
 
@@ -17,35 +16,33 @@ def _to_float(x, default: float = 0.0) -> float:
 
 
 def _select_base_url() -> str:
-    """Choisit l'URL de base Bitget (env > paper trade > prod)."""
     env = os.environ.get("BITGET_BASE_URL")
     if env:
         return env
-    paper = (os.environ.get("PAPER_TRADE", "true").lower() in ("1", "true", "yes", "on"))
+    paper = os.environ.get("PAPER_TRADE", "true").lower() in ("1", "true", "yes", "on")
     return "https://api-testnet.bitget.com" if paper else "https://api.bitget.com"
 
 
 class BitgetFuturesClient(_Base):
     """
-    Adaptateur Bitget avec:
-      - __init__ DYNAMIQUE (détecte les noms d’arguments du client de base et
-        passe base_url en positionnel si nécessaire)
-      - Normalisations robustes: assets, ticker(s), positions, fills.
+    Adaptateur Bitget:
+      - __init__ dynamique (passe seulement les kwargs que le client accepte)
+      - Normalisations robustes: assets, ticker(s), positions, fills
     """
 
-    # ------------- INIT dynamique anti-KeywordError -------------
+    # --------------------- INIT dynamique ---------------------
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """
         Accepte indifféremment:
-          api_key / apiKey / access_key / accessKey / key
-          api_secret / apiSecret / secret / secret_key / secretKey
-          passphrase / password / api_passphrase / apiPassphrase
-          base_url / baseUrl / host / endpoint (ou rien: auto)
-        et ne transmet au client de base que les paramètres qu’il supporte.
+          api_key/apiKey/access_key/accessKey/key
+          api_secret/apiSecret/secret/secret_key/secretKey
+          passphrase/password/api_passphrase/apiPassphrase
+          base_url/baseUrl/host/endpoint (ou auto)
+        On n'envoie au client de base que les noms présents dans sa signature.
         """
-        user_kwargs = dict(kwargs)  # copie pour consommation locale
+        user_kwargs = dict(kwargs)
 
-        # --- collecter valeurs entrantes sous tous les alias
+        # Collecte des valeurs possibles (tous alias)
         incoming_key = (
             user_kwargs.pop("api_key", None)
             or user_kwargs.pop("apiKey", None)
@@ -76,59 +73,44 @@ class BitgetFuturesClient(_Base):
             or _select_base_url()
         )
 
-        # --- introspection de la signature du client de base
+        # Signature réelle du client bas-niveau
         sig = inspect.signature(_Base.__init__)
-        params = sig.parameters
-        param_names = set(params.keys())
+        param_names = set(sig.parameters.keys())  # ex: {'self','access_key','secret_key','passphrase','base_url',...}
 
-        def pick_name(candidates: List[str]) -> Optional[str]:
-            for c in candidates:
+        def pick_name(cands: List[str]) -> Optional[str]:
+            for c in cands:
                 if c in param_names:
                     return c
             return None
 
-        # noms réellement supportés par le client de base
-        base_name = pick_name(["base_url", "baseUrl", "host", "endpoint"])
+        # Noms réellement supportés
         key_name = pick_name(["api_key", "apiKey", "access_key", "accessKey", "key"])
         sec_name = pick_name(["api_secret", "apiSecret", "secret_key", "secretKey", "secret"])
         pas_name = pick_name(["passphrase", "password", "api_passphrase", "apiPassphrase"])
+        base_name = pick_name(["base_url", "baseUrl", "host", "endpoint"])
         req_mod_name = "requests_module" if "requests_module" in param_names else None
 
-        # paramètres positionnels OBLIGATOIRES (sans valeur par défaut)
-        required_positional = [
-            p.name for p in params.values()
-            if p.kind in (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD)
-            and p.default is inspect._empty and p.name != "self"
-        ]
-
-        args_list: List[Any] = []
+        # Construire kwargs à transmettre (une seule fois par nom)
         base_kwargs: Dict[str, Any] = {}
-
-        # base_url: si requis en positionnel, le placer en premier
-        if "base_url" in required_positional and base_name in ("base_url", None):
-            args_list.append(incoming_base)
-        elif base_name:
-            base_kwargs[base_name] = incoming_base
-
-        # clés API
         if key_name and incoming_key is not None:
             base_kwargs[key_name] = incoming_key
         if sec_name and incoming_secret is not None:
             base_kwargs[sec_name] = incoming_secret
         if pas_name and incoming_pass is not None:
             base_kwargs[pas_name] = incoming_pass
-
-        # requests module si supporté
+        if base_name:
+            base_kwargs[base_name] = incoming_base
         if req_mod_name:
             base_kwargs[req_mod_name] = requests
 
-        # transmettre aussi tout kw explicite que le client de base connaît
+        # Ne transmettre aucun doublon : si user_kwargs contient un nom supporté
+        # qui n'a pas été défini ci-dessus, on le relaie.
         for k, v in list(user_kwargs.items()):
-            if k in param_names:
+            if k in param_names and k not in base_kwargs:
                 base_kwargs[k] = v
 
-        # Appel unique, propre
-        super().__init__(*args_list, **base_kwargs)
+        # Appel propre, 100% mots-clés (évite “missing positional arg” et “multiple values”)
+        super().__init__(**base_kwargs)
 
     # --------------------- COMPTES / ASSETS ---------------------
     def get_assets(self) -> Dict[str, Any]:
