@@ -5,7 +5,7 @@ import argparse
 import logging
 import os
 import time
-from typing import Any, Dict, Optional, List
+from typing import Any, Dict, Optional, List, Tuple
 
 import requests
 
@@ -21,7 +21,7 @@ from scalp import __version__, RiskManager
 from scalp.telegram_bot import init_telegram_bot
 
 from scalp.bot_config import CONFIG
-from scalp.strategy import ema, cross
+from scalp.strategy import ema, cross, generate_signal, Signal
 from scalp.trade_utils import (
     compute_position_size,
     analyse_risque,
@@ -236,6 +236,167 @@ def _estimate_margin(contract_detail, price, vol, leverage):
     lev = max(1.0, float(leverage) or 1.0)
     margin = notional / lev
     return notional, margin
+
+
+def map_score_to_sig_level(score: float) -> int:
+    if score < 35:
+        return 1
+    if score < 70:
+        return 2
+    return 3
+
+
+RISK_MULTIPLIER = {
+    1: {1: 0.6, 2: 0.8, 3: 1.0},
+    2: {1: 0.8, 2: 1.0, 3: 1.25},
+    3: {1: 1.0, 2: 1.25, 3: 1.5},
+}
+
+LEVERAGE_MULTIPLIER = {1: 0.5, 2: 0.75, 3: 1.0}
+
+NOTIONAL_CAP = {
+    1: {1: 0.15, 2: 0.25, 3: 0.35},
+    2: {1: 0.25, 2: 0.40, 3: 0.55},
+    3: {1: 0.35, 2: 0.55, 3: 0.75},
+}
+
+RISK_COLOR = {1: "\U0001F7E2", 2: "\U0001F7E1", 3: "\U0001F534"}
+
+
+def compute_risk_params(sig_level: int, user_level: int, base_risk_pct: float, base_leverage: int) -> Tuple[float, int, float]:
+    risk_mult = RISK_MULTIPLIER.get(sig_level, {}).get(user_level, 1.0)
+    lev_mult = LEVERAGE_MULTIPLIER.get(sig_level, 1.0)
+    risk_pct_eff = base_risk_pct * risk_mult
+    leverage_eff = max(1, int(base_leverage * lev_mult))
+    cap_ratio = NOTIONAL_CAP.get(user_level, {}).get(sig_level, 1.0)
+    return risk_pct_eff, leverage_eff, cap_ratio
+
+
+def prepare_order(
+    sig: Signal,
+    contract_detail: Dict[str, Any],
+    equity_usdt: float,
+    available_usdt: float,
+    base_leverage: int,
+    risk_mgr: Any,
+    user_risk_level: int,
+) -> Dict[str, Any]:
+    score = float(sig.score or 0.0)
+    sig_level = map_score_to_sig_level(score)
+    risk_pct_eff, leverage_eff, cap_ratio = compute_risk_params(
+        sig_level, user_risk_level, risk_mgr.risk_pct, base_leverage
+    )
+
+    vol = compute_position_size(
+        contract_detail,
+        equity_usdt=equity_usdt,
+        price=sig.price,
+        risk_pct=risk_pct_eff,
+        leverage=leverage_eff,
+        symbol=sig.symbol,
+        available_usdt=available_usdt,
+    )
+
+    data = contract_detail.get("data") or []
+    if isinstance(data, list):
+        contract = next((c for c in data if c.get("symbol") == sig.symbol), data[0] if data else {})
+    else:
+        contract = data
+    contract_size = float(contract.get("contractSize", 0.0001))
+    vol_unit = int(contract.get("volUnit", 1))
+    min_vol = int(contract.get("minVol", 1))
+    min_usdt = float(contract.get("minTradeUSDT", 5))
+    denom = sig.price * contract_size
+    notional = vol * denom
+
+    cap_notional = cap_ratio * available_usdt
+    if cap_notional > 0 and notional > cap_notional:
+        vol = int((cap_notional / denom) // vol_unit * vol_unit)
+        notional = vol * denom
+
+    fee_rate = max(CONFIG.get("FEE_RATE", 0.0), 0.001)
+    required_margin = (notional / leverage_eff + fee_rate * notional) * 1.03
+    if required_margin > available_usdt:
+        max_notional = available_usdt / ((1 / leverage_eff + fee_rate) * 1.03)
+        vol_cap = int((max_notional / denom) // vol_unit * vol_unit)
+        vol = min(vol, vol_cap)
+        notional = vol * denom
+        required_margin = (notional / leverage_eff + fee_rate * notional) * 1.03
+
+    if vol < min_vol or notional < min_usdt:
+        vol = 0
+        notional = 0.0
+        required_margin = 0.0
+
+    return {
+        "vol": int(vol),
+        "leverage_eff": int(leverage_eff),
+        "risk_pct_eff": risk_pct_eff,
+        "sig_level": sig_level,
+        "score": score,
+        "risk_color": RISK_COLOR.get(sig_level, ""),
+        "notional": notional,
+        "required_margin": required_margin,
+        "cap_ratio": cap_ratio,
+    }
+
+
+def attempt_entry(
+    client: Any,
+    contract_detail: Dict[str, Any],
+    sig: Signal,
+    equity_usdt: float,
+    available_usdt: float,
+    cfg: Dict[str, Any],
+    risk_mgr: Any,
+    user_risk_level: int,
+) -> Dict[str, Any]:
+    params = prepare_order(
+        sig,
+        contract_detail,
+        equity_usdt,
+        available_usdt,
+        cfg["LEVERAGE"],
+        risk_mgr,
+        user_risk_level,
+    )
+    payload = {
+        "symbol": sig.symbol,
+        "side": sig.side,
+        "price": sig.price,
+        **params,
+        "available": available_usdt,
+    }
+    notify("order_attempt", payload)
+    if params["vol"] <= 0:
+        return params
+    side_int = 1 if sig.side == "long" else 3
+    resp = client.place_order(
+        sig.symbol,
+        side=side_int,
+        vol=params["vol"],
+        order_type=5,
+        price=sig.price,
+        open_type=CONFIG["OPEN_TYPE"],
+        leverage=params["leverage_eff"],
+        stop_loss=sig.sl,
+        take_profit=sig.tp1,
+    )
+    log_event("order", resp)
+    open_payload = {
+        "side": sig.side,
+        "symbol": sig.symbol,
+        "price": sig.price,
+        "vol": params["vol"],
+        "leverage": params["leverage_eff"],
+        "risk_color": params["risk_color"],
+        "sig_level": params["sig_level"],
+        "score": params["score"],
+        "risk_pct_eff": params["risk_pct_eff"],
+        "leverage_eff": params["leverage_eff"],
+    }
+    notify("position_opened", open_payload)
+    return params
 
 
 # ---------------------------------------------------------------------------
