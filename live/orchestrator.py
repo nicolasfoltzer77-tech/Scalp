@@ -76,8 +76,8 @@ class Orchestrator:
 
         # Telegram (facultatif)
         if TelegramAsync is not None:
-            token = getattr(config, "TELEGRAM_BOT_TOKEN", None)
-            chat = getattr(config, "TELEGRAM_CHAT_ID", None)
+            token = getattr(self.config, "TELEGRAM_BOT_TOKEN", None)
+            chat = getattr(self.config, "TELEGRAM_CHAT_ID", None)
             self._tg = TelegramAsync(token=token, chat_id=chat)
         else:
             self._tg = None
@@ -122,7 +122,7 @@ class Orchestrator:
         try:
             fpath = os.path.join(self._log_dir, fname)
             with open(fpath, "a", newline="", encoding="utf-8") as f:
-                csv.DictWriter(f, fieldnames=list(row.keys()))..writerow(row)
+                csv.DictWriter(f, fieldnames=list(row.keys())).writerow(row)  # <-- fix: un seul point
         except Exception:
             pass
 
