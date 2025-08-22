@@ -61,26 +61,17 @@ class BitgetFuturesClient(_Base):
         return {"success": True, "data": norm}
     # --- Normalisations position/ordres/fills ---
     def get_open_positions(self, symbol: Optional[str] = None):
-        """
-        Retourne {"success": True, "data":[{symbol, side, qty, avgEntryPrice, leverage, unrealizedPnl, tsOpen, sl, tp}]}
-        side: "long"|"short", qty en base
-        """
         raw = super().get_positions() if hasattr(super(), "get_positions") else {}
         items = raw.get("data") or raw.get("result") or raw.get("positions") or []
         out = []
         for p in items:
-            s = (p.get("symbol") or p.get("instId") or "").replace("_","")
+            s = (p.get("symbol") or p.get("instId") or "").replace("_", "")
             if symbol and s != symbol:
                 continue
-            side = p.get("holdSide") or p.get("side") or p.get("posSide") or ""
-            qty = float(p.get("total", p.get("holdAmount", p.get("size", 0))))
-            avg = float(p.get("avgOpenPrice", p.get("avgPrice", p.get("entryPrice", 0))))
-            lev = float(p.get("leverage", 1))
-            upnl = float(p.get("unrealizedPnl", p.get("upl", 0)))
-            ts = int(p.get("uTime", p.get("ts", p.get("ctime", 0))))
-            sl = p.get("stopLossPrice") or None
-            tp = p.get("takeProfitPrice") or None
-            out.append({"symbol": s, "side": side.lower(), "qty": qty, "avgEntryPrice": avg, "leverage": lev, "unrealizedPnl": upnl, "tsOpen": ts, "sl": float(sl) if sl else None, "tp": float(tp) if tp else None})
+            side = (p.get("holdSide") or p.get("posSide") or p.get("side") or "").lower()
+            qty = _to_float(p.get("size", p.get("holdAmount", p.get("total", 0))))
+            avg = _to_float(p.get("avgOpenPrice", p.get("avgPrice", p.get("entryPrice", 0))))
+            out.append({"symbol": s, "side": side, "qty": qty, "avgEntryPrice": avg})
         return {"success": True, "data": out}
 
     def get_recent_orders(self, symbol: str, limit: int = 50):
@@ -107,19 +98,20 @@ class BitgetFuturesClient(_Base):
         items = raw.get("data") or raw.get("result") or []
         out = []
         for f in items[:limit]:
-            s = (f.get("symbol") or f.get("instId") or "").replace("_","")
+            s = (f.get("symbol") or f.get("instId") or "").replace("_", "")
             if s != symbol:
                 continue
             if order_id:
-                oid = str(f.get("orderId") or f.get("ordId") or "")
-                if oid != order_id:
+                if str(f.get("orderId") or f.get("ordId") or "") != str(order_id):
                     continue
-            tid = str(f.get("tradeId") or f.get("fillId") or f.get("execId") or "")
-            price = float(f.get("price", f.get("fillPx", 0)))
-            qty = float(f.get("size", f.get("fillSz", 0)))
-            fee = float(f.get("fee", f.get("fillFee", 0)))
-            ts = int(f.get("ts", f.get("time", f.get("t", 0))))
-            out.append({"orderId": str(f.get("orderId") or f.get("ordId") or ""), "tradeId": tid, "price": price, "qty": qty, "fee": fee, "ts": ts})
+            out.append({
+                "orderId": str(f.get("orderId") or f.get("ordId") or ""),
+                "tradeId": str(f.get("tradeId") or f.get("fillId") or f.get("execId") or ""),
+                "price": _to_float(f.get("price", f.get("fillPx", 0))),
+                "qty": _to_float(f.get("size", f.get("fillSz", 0))),
+                "fee": _to_float(f.get("fee", f.get("fillFee", 0))),
+                "ts": int(f.get("ts", f.get("time", 0))),
+            })
         return {"success": True, "data": out}
 
     def cancel_order(self, symbol: str, order_id: str):
