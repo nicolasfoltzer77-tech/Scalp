@@ -806,15 +806,46 @@ def main(argv: Optional[List[str]] = None) -> None:
             ):
                 positions = client.get_positions(product_type=cfg["PRODUCT_TYPE"]).get("data", [])
                 if risk_mgr.can_open(len(positions)):
-                    vol_add = compute_position_size(
+                    available = _fetch_equity()
+                    equity_usdt = available
+                    vol_pre = compute_position_size(
                         contract_detail,
-                        equity_usdt,
+                        available,
                         price,
                         risk_mgr.risk_pct,
                         cfg["LEVERAGE"],
                         symbol,
+                        available_usdt=available,
                     )
-                    if vol_add > 0:
+                    vol_add = vol_pre
+                    if cfg.get("NOTIONAL_CAP_USDT", 0) > 0:
+                        size_mult, _m = _safe_extract_contract_fields(contract_detail)
+                        vol_cap = int(cfg["NOTIONAL_CAP_USDT"] / max(1e-12, size_mult * price))
+                        if vol_cap > 0:
+                            vol_add = min(vol_add, vol_cap)
+                    notional, margin = _estimate_margin(contract_detail, price, vol_add, cfg["LEVERAGE"])
+                    max_margin = float(cfg.get("MARGIN_CAP_RATIO", 1.0)) * available
+                    if margin > max_margin:
+                        size_mult, _m = _safe_extract_contract_fields(contract_detail)
+                        vol_max_afford = int((max_margin * cfg["LEVERAGE"]) / max(1e-12, size_mult * price))
+                        vol_add = max(0, min(vol_add, vol_max_afford))
+                        notional, margin = _estimate_margin(contract_detail, price, vol_add, cfg["LEVERAGE"])
+                    size_mult, _m = _safe_extract_contract_fields(contract_detail)
+                    taker = max(CONFIG.get("FEE_RATE", 0.0), 0.001)
+                    required = (price * size_mult * vol_add / cfg["LEVERAGE"] + taker * price * size_mult * vol_add) * 1.03
+                    logging.info(
+                        "order_check: available=%s, required=%s, vol_pre=%s, vol_final=%s, price=%s, lev=%s, side=%s",
+                        available,
+                        required,
+                        vol_pre,
+                        vol_add,
+                        price,
+                        cfg["LEVERAGE"],
+                        "long",
+                    )
+                    if vol_add <= 0:
+                        logging.info("volume reduced due to margin cap")
+                    else:
                         resp = client.place_order(
                             symbol,
                             side=1,
@@ -842,15 +873,46 @@ def main(argv: Optional[List[str]] = None) -> None:
             ):
                 positions = client.get_positions(product_type=cfg["PRODUCT_TYPE"]).get("data", [])
                 if risk_mgr.can_open(len(positions)):
-                    vol_add = compute_position_size(
+                    available = _fetch_equity()
+                    equity_usdt = available
+                    vol_pre = compute_position_size(
                         contract_detail,
-                        equity_usdt,
+                        available,
                         price,
                         risk_mgr.risk_pct,
                         cfg["LEVERAGE"],
                         symbol,
+                        available_usdt=available,
                     )
-                    if vol_add > 0:
+                    vol_add = vol_pre
+                    if cfg.get("NOTIONAL_CAP_USDT", 0) > 0:
+                        size_mult, _m = _safe_extract_contract_fields(contract_detail)
+                        vol_cap = int(cfg["NOTIONAL_CAP_USDT"] / max(1e-12, size_mult * price))
+                        if vol_cap > 0:
+                            vol_add = min(vol_add, vol_cap)
+                    notional, margin = _estimate_margin(contract_detail, price, vol_add, cfg["LEVERAGE"])
+                    max_margin = float(cfg.get("MARGIN_CAP_RATIO", 1.0)) * available
+                    if margin > max_margin:
+                        size_mult, _m = _safe_extract_contract_fields(contract_detail)
+                        vol_max_afford = int((max_margin * cfg["LEVERAGE"]) / max(1e-12, size_mult * price))
+                        vol_add = max(0, min(vol_add, vol_max_afford))
+                        notional, margin = _estimate_margin(contract_detail, price, vol_add, cfg["LEVERAGE"])
+                    size_mult, _m = _safe_extract_contract_fields(contract_detail)
+                    taker = max(CONFIG.get("FEE_RATE", 0.0), 0.001)
+                    required = (price * size_mult * vol_add / cfg["LEVERAGE"] + taker * price * size_mult * vol_add) * 1.03
+                    logging.info(
+                        "order_check: available=%s, required=%s, vol_pre=%s, vol_final=%s, price=%s, lev=%s, side=%s",
+                        available,
+                        required,
+                        vol_pre,
+                        vol_add,
+                        price,
+                        cfg["LEVERAGE"],
+                        "short",
+                    )
+                    if vol_add <= 0:
+                        logging.info("volume reduced due to margin cap")
+                    else:
                         resp = client.place_order(
                             symbol,
                             side=3,
@@ -901,22 +963,45 @@ def main(argv: Optional[List[str]] = None) -> None:
                     logging.info("vol calculé = 0; on attend.")
                     time.sleep(cfg["LOOP_SLEEP_SECS"])
                     continue
-                # --- Safe caps: notional + marge (avant envoi ordre LONG)
+                available = _fetch_equity()
+                equity_usdt = available
+                vol_pre = compute_position_size(
+                    contract_detail,
+                    available,
+                    price,
+                    risk_mgr.risk_pct,
+                    lev,
+                    symbol,
+                    available_usdt=available,
+                )
+                vol_open = min(vol_open, vol_pre)
                 if cfg.get("NOTIONAL_CAP_USDT", 0) > 0:
                     size_mult, _min_trade = _safe_extract_contract_fields(contract_detail)
                     vol_cap = int(cfg["NOTIONAL_CAP_USDT"] / max(1e-12, size_mult * price))
                     if vol_cap > 0:
                         vol_open = min(vol_open, vol_cap)
-                # contrôle de marge max (ratio de l'equity)
                 notional, margin = _estimate_margin(contract_detail, price, vol_open, lev)
-                max_margin = float(cfg.get("MARGIN_CAP_RATIO", 1.0)) * equity_usdt
+                max_margin = float(cfg.get("MARGIN_CAP_RATIO", 1.0)) * available
                 if margin > max_margin:
                     size_mult, _min_trade = _safe_extract_contract_fields(contract_detail)
                     vol_max_afford = int((max_margin * lev) / max(1e-12, size_mult * price))
                     vol_open = max(0, min(vol_open, vol_max_afford))
                     notional, margin = _estimate_margin(contract_detail, price, vol_open, lev)
+                size_mult, _m = _safe_extract_contract_fields(contract_detail)
+                taker = max(CONFIG.get("FEE_RATE", 0.0), 0.001)
+                required = (price * size_mult * vol_open / lev + taker * price * size_mult * vol_open) * 1.03
+                logging.info(
+                    "order_check: available=%s, required=%s, vol_pre=%s, vol_final=%s, price=%s, lev=%s, side=%s",
+                    available,
+                    required,
+                    vol_pre,
+                    vol_open,
+                    price,
+                    lev,
+                    "long",
+                )
                 if vol_open <= 0:
-                    logging.info("LONG: volume après plafonds/marge = 0 -> on s'abstient.")
+                    logging.info("volume reduced due to margin cap")
                     time.sleep(cfg["LOOP_SLEEP_SECS"])
                     continue
                 resp = client.place_order(
@@ -997,22 +1082,45 @@ def main(argv: Optional[List[str]] = None) -> None:
                     logging.info("vol calculé = 0; on attend.")
                     time.sleep(cfg["LOOP_SLEEP_SECS"])
                     continue
-                # --- Safe caps: notional + marge (avant envoi ordre SHORT)
+                available = _fetch_equity()
+                equity_usdt = available
+                vol_pre = compute_position_size(
+                    contract_detail,
+                    available,
+                    price,
+                    risk_mgr.risk_pct,
+                    lev,
+                    symbol,
+                    available_usdt=available,
+                )
+                vol_open = min(vol_open, vol_pre)
                 if cfg.get("NOTIONAL_CAP_USDT", 0) > 0:
                     size_mult, _min_trade = _safe_extract_contract_fields(contract_detail)
                     vol_cap = int(cfg["NOTIONAL_CAP_USDT"] / max(1e-12, size_mult * price))
                     if vol_cap > 0:
                         vol_open = min(vol_open, vol_cap)
-                # contrôle de marge max (ratio de l'equity)
                 notional, margin = _estimate_margin(contract_detail, price, vol_open, lev)
-                max_margin = float(cfg.get("MARGIN_CAP_RATIO", 1.0)) * equity_usdt
+                max_margin = float(cfg.get("MARGIN_CAP_RATIO", 1.0)) * available
                 if margin > max_margin:
                     size_mult, _min_trade = _safe_extract_contract_fields(contract_detail)
                     vol_max_afford = int((max_margin * lev) / max(1e-12, size_mult * price))
                     vol_open = max(0, min(vol_open, vol_max_afford))
                     notional, margin = _estimate_margin(contract_detail, price, vol_open, lev)
+                size_mult, _m = _safe_extract_contract_fields(contract_detail)
+                taker = max(CONFIG.get("FEE_RATE", 0.0), 0.001)
+                required = (price * size_mult * vol_open / lev + taker * price * size_mult * vol_open) * 1.03
+                logging.info(
+                    "order_check: available=%s, required=%s, vol_pre=%s, vol_final=%s, price=%s, lev=%s, side=%s",
+                    available,
+                    required,
+                    vol_pre,
+                    vol_open,
+                    price,
+                    lev,
+                    "short",
+                )
                 if vol_open <= 0:
-                    logging.info("SHORT: volume après plafonds/marge = 0 -> on s'abstient.")
+                    logging.info("volume reduced due to margin cap")
                     time.sleep(cfg["LOOP_SLEEP_SECS"])
                     continue
                 resp = client.place_order(
