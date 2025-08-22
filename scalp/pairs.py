@@ -1,7 +1,7 @@
 """Utilities to select trading pairs and detect signals."""
 from __future__ import annotations
-
 from typing import Any, Dict, List, Optional, Callable
+from scalp.strategy import Signal
 
 from scalp.bot_config import CONFIG
 from scalp.strategy import ema as default_ema, cross as default_cross
@@ -68,7 +68,7 @@ def select_top_pairs(client: Any, top_n: int = 40, key: str = "volume") -> List[
     return pairs[:top_n]
 
 
-def find_trade_positions(
+def _ancienne_impl(
     client: Any,
     pairs: List[Dict[str, Any]],
     *,
@@ -78,7 +78,7 @@ def find_trade_positions(
     ema_func=default_ema,
     cross_func=default_cross,
 ) -> List[Dict[str, Any]]:
-    """Apply EMA crossover strategy on ``pairs`` and return signals."""
+    """Original implementation returning dicts."""
     ema_fast_n = ema_fast_n or CONFIG.get("EMA_FAST", 9)
     ema_slow_n = ema_slow_n or CONFIG.get("EMA_SLOW", 21)
     results: List[Dict[str, Any]] = []
@@ -101,6 +101,43 @@ def find_trade_positions(
             price_str = info.get("lastPr") or info.get("lastPrice") or 0.0
             results.append({"symbol": symbol, "signal": "short", "price": float(price_str)})
     return results
+
+
+def _to_signal(d: dict) -> Signal:
+    side = 1 if d.get("signal") in ("long", "buy", 1, True) else -1
+    return Signal(
+        symbol=d.get("symbol"),
+        side=side,
+        entry=float(d.get("price", d.get("entry", 0))),
+        sl=float(d.get("sl", 0)),
+        tp1=float(d.get("tp1", 0)) or None,
+        tp2=float(d.get("tp2", 0)) or None,
+        score=d.get("score"),
+        quality=d.get("quality"),
+        reasons=d.get("reasons", []),
+    )
+
+
+def find_trade_positions(
+    client: Any,
+    pairs: List[Dict[str, Any]],
+    *,
+    interval: str = "1m",
+    ema_fast_n: Optional[int] = None,
+    ema_slow_n: Optional[int] = None,
+    ema_func=default_ema,
+    cross_func=default_cross,
+) -> List[Signal]:
+    raw = _ancienne_impl(
+        client,
+        pairs,
+        interval=interval,
+        ema_fast_n=ema_fast_n,
+        ema_slow_n=ema_slow_n,
+        ema_func=ema_func,
+        cross_func=cross_func,
+    )
+    return [_to_signal(x) for x in raw]
 
 
 def send_selected_pairs(
