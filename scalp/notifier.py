@@ -40,72 +40,63 @@ def _pair_name(symbol: str) -> str:
 
 def _format_position_event(event: str, payload: Dict[str, Any]) -> str:
     """Format a position open/close payload."""
-    action = "Ouvre" if event == "position_opened" else "Ferme"
+
     side = payload.get("side")
-    if side:
-        side = f"{side} {'📈' if side == 'long' else '📉'}"
     symbol = payload.get("symbol")
     if symbol:
         symbol = _pair_name(symbol)
-    pnl_pct = payload.get("pnl_pct")
-    icons = ""
-    if event == "position_closed" and pnl_pct is not None:
-        icons = "✅🎯" if pnl_pct > 0 else "❌🛑"
-    head = " ".join(p for p in [action, side, symbol, icons] if p)
 
+    if event == "position_opened":
+        rc = payload.get("risk_color", "")
+        head = f"{rc} Ouvre {side} {symbol}".strip()
+        lines = [head]
+        lines.append(
+            f"Notional: {payload.get('notional_usdt')} USDT   Levier: x{payload.get('leverage')}"
+        )
+        lines.append(
+            "Marge estimée: {} USDT (dispo: {} USDT)".format(
+                payload.get("required_margin_usdt"), payload.get("available_usdt")
+            )
+        )
+        lines.append(
+            "Risque: lvl {}/{} (risk_pct={:.4f}%)".format(
+                payload.get("signal_level"),
+                payload.get("risk_level_user"),
+                float(payload.get("risk_pct_eff", 0.0)) * 100,
+            )
+        )
+        lines.append(
+            "Prix: {}   Vol: {} (cs={})".format(
+                payload.get("price"),
+                payload.get("vol"),
+                payload.get("contract_size"),
+            )
+        )
+        return "\n".join(lines)
+
+    # position_closed
+    rc = payload.get("risk_color", "")
+    head = f"Ferme {side} {symbol} {rc}".strip()
     lines = [head]
-    if event == "position_opened":
-        amt = payload.get("amount_usdt")
-        if amt is not None:
-            lines.append(f"Montant: {amt} USDT")
-    else:
-        vol = payload.get("vol")
-        if vol is not None:
-            lines.append(f"Position: {vol}")
-    lev = payload.get("leverage")
-    if lev is not None:
-        lines.append(f"Levier: x{lev}")
-    if event == "position_opened":
-        tp_usd = payload.get("tp_usd")
-        sl_usd = payload.get("sl_usd")
-        if tp_usd is not None and sl_usd is not None:
-            lines.append(f"TP: +{tp_usd} USDT")
-            lines.append(f"SL: -{sl_usd} USDT")
-        else:
-            tp = payload.get("tp_pct")
-            sl = payload.get("sl_pct")
-            if tp is not None and sl is not None:
-                lines.append(f"TP: +{tp:.2f}%")
-                lines.append(f"SL: -{sl:.2f}%")
-        hold = payload.get("hold") or payload.get("expected_duration")
-        if hold is not None:
-            lines.append(f"Durée prévue: {hold}")
-        rc = payload.get("risk_color")
-        if rc:
-            lvl = payload.get("sig_level")
-            score = payload.get("score")
-            lines.append(f"Risque: {rc} L{lvl} score {score}")
-        rp = payload.get("risk_pct_eff")
-        lev_eff = payload.get("leverage_eff")
-        if rp is not None and lev_eff is not None:
-            lines.append(f"Risk%: {rp:.4f} Levier eff.: x{lev_eff}")
-        req = payload.get("required_margin")
-        avail = payload.get("available")
-        if req is not None and avail is not None:
-            lines.append(f"Marge: {req:.2f}/{avail}")
-        vb = payload.get("vol_before")
-        vf = payload.get("vol")
-        if vb is not None and vf is not None and vb != vf:
-            lines.append(f"Vol: {vb}->{vf}")
-    else:  # position_closed
-        pnl_usd = payload.get("pnl_usd")
-        if pnl_usd is not None and pnl_pct is not None:
-            lines.append(f"PnL: {pnl_usd} USDT ({pnl_pct:.2f}%)")
-        elif pnl_pct is not None:
-            lines.append(f"PnL: {pnl_pct:.2f}%")
-        dur = payload.get("duration")
-        if dur is not None:
-            lines.append(f"Durée: {dur}")
+    pnl_usdt = payload.get("pnl_usdt")
+    fees = payload.get("fees_usdt")
+    if pnl_usdt is not None and fees is not None:
+        lines.append(f"PnL net: {pnl_usdt:+.2f} USDT (frais: {fees:.2f})")
+    pct = payload.get("pnl_pct_on_margin")
+    if pct is not None:
+        lines.append(f"% sur marge: {pct:.2f}%")
+    lines.append(
+        "Entrée: {}  Sortie: {}".format(
+            payload.get("entry_price"), payload.get("exit_price")
+        )
+    )
+    lines.append(
+        "Vol: {}  Notional: in {} → out {} USDT".format(
+            payload.get("vol"),
+            payload.get("notional_entry_usdt"),
+            payload.get("notional_exit_usdt"),
+        )
+    )
     return "\n".join(lines)
 
 

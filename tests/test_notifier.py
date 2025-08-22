@@ -92,43 +92,55 @@ def test_notify_skips_telegram_for_pair_list(monkeypatch):
 
 def test_format_text_open_position():
     payload = {
-        "side": "long",
         "symbol": "BTCUSDT",
-        "vol": 1,
-        "leverage": 10,
-        "amount_usdt": 100,
-        "tp_usd": 5,
-        "sl_usd": 2,
-        "hold": "2h",
+        "side": "short",
+        "price": 18350,
+        "vol": 37,
+        "contract_size": 1,
+        "notional_usdt": 120.5,
+        "leverage": 5,
+        "required_margin_usdt": 25.3,
+        "available_usdt": 134,
+        "risk_level_user": 3,
+        "signal_level": 2,
+        "risk_color": "🟡",
+        "risk_pct_eff": 0.01,
+        "fee_rate": 0.001,
     }
     text = notifier._format_text("position_opened", payload)
     lines = text.splitlines()
 
-    assert lines[0] == "Ouvre long 📈 BTC"
-    assert lines[1] == "Montant: 100 USDT"
-    assert lines[2] == "Levier: x10"
-    assert "TP: +5 USDT" in lines
-    assert "SL: -2 USDT" in lines
-    assert any("Durée prévue: 2h" in line for line in lines)
+    assert lines[0] == "🟡 Ouvre short BTC"
+    assert lines[1] == "Notional: 120.5 USDT   Levier: x5"
+    assert lines[2] == "Marge estimée: 25.3 USDT (dispo: 134 USDT)"
+    assert lines[3] == "Risque: lvl 2/3 (risk_pct=1.0000%)"
+    assert lines[4] == "Prix: 18350   Vol: 37 (cs=1)"
 
 
 def test_format_text_closed_position():
     payload = {
+        "symbol": "BTCUSDT",
         "side": "short",
-        "symbol": "ETHUSDT",
-        "vol": 2,
+        "entry_price": 18350,
+        "exit_price": 18328,
+        "vol": 37,
+        "contract_size": 1,
+        "notional_entry_usdt": 120.5,
+        "notional_exit_usdt": 120.3,
+        "fees_usdt": 0.03,
+        "pnl_usdt": 0.84,
+        "pnl_pct_on_margin": 3.25,
         "leverage": 5,
-        "pnl_usd": 12,
-        "pnl_pct": 3,
-        "duration": "1h",
+        "risk_color": "🟡",
+        "fee_rate": 0.001,
     }
     text = notifier._format_text("position_closed", payload)
     lines = text.splitlines()
-    assert lines[0] == "Ferme short 📉 ETH ✅🎯"
-    assert lines[1] == "Position: 2"
-    assert lines[2] == "Levier: x5"
-    assert any("PnL: 12 USDT (3.00%)" in line for line in lines)
-    assert any("Durée: 1h" in line for line in lines)
+    assert lines[0] == "Ferme short BTC 🟡"
+    assert lines[1] == "PnL net: +0.84 USDT (frais: 0.03)"
+    assert lines[2] == "% sur marge: 3.25%"
+    assert lines[3] == "Entrée: 18350  Sortie: 18328"
+    assert lines[4] == "Vol: 37  Notional: in 120.5 → out 120.3 USDT"
 
 
 def test_format_text_pair_list_and_start():
@@ -147,15 +159,22 @@ def test_format_pair_list_helper():
 
 def test_format_position_event_helper():
     payload = {
-        "side": "long",
         "symbol": "BTCUSDT",
-        "vol": 1,
-        "leverage": 10,
-        "amount_usdt": 100,
-        "tp_pct": 5,
-        "sl_pct": 2,
+        "side": "short",
+        "price": 18350,
+        "vol": 37,
+        "contract_size": 1,
+        "notional_usdt": 120.5,
+        "leverage": 5,
+        "required_margin_usdt": 25.3,
+        "available_usdt": 134,
+        "risk_level_user": 3,
+        "signal_level": 2,
+        "risk_color": "🟡",
+        "risk_pct_eff": 0.01,
+        "fee_rate": 0.001,
     }
     text = notifier._format_position_event("position_opened", payload)
-    assert text.splitlines()[0] == "Ouvre long 📈 BTC"
+    assert text.splitlines()[0] == "🟡 Ouvre short BTC"
 
 
