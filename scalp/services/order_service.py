@@ -76,22 +76,16 @@ class OrderService:
             return OrderResult(False, "insufficient_margin")
         side = "BUY" if req.side == "long" else "SELL"
         out = self.exchange.place_order(
-            symbol=req.symbol,
-            side=side,
-            quantity=qty,
-            order_type="limit",
-            price=req.price,
-            stop_loss=req.sl,
-            take_profit=req.tp,
+            symbol=req.symbol, side=side, quantity=qty,
+            order_type="limit", price=req.price,
+            stop_loss=req.sl, take_profit=req.tp
         )
-        oid = None
-        status = None
-        avg = None
-        filled = None
+        # extraire infos utiles
+        oid = None; status = None; avg = None; filled = None
         try:
             data = out.get("data") if isinstance(out, dict) else out
             if isinstance(data, dict):
-                oid = str(data.get("orderId") or data.get("ordId") or data.get("id") or data.get("clientOid") or "")
+                oid = str(data.get("orderId") or data.get("ordId") or data.get("id") or "")
                 status = (data.get("status") or data.get("state") or "new").lower()
                 avg = float(data.get("avgPrice", data.get("avgPx", 0)) or 0)
                 filled = float(data.get("filledQty", data.get("fillSz", 0)) or 0)
