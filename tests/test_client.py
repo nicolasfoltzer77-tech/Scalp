@@ -487,6 +487,86 @@ def test_place_order_precision(monkeypatch):
     assert called["body"]["price"] == 1234.57
     assert called["body"]["size"] == 1.235
 
+
+def test_margin_cap_skips_order(monkeypatch):
+    client = BitgetFuturesClient("key", "secret", "https://test", paper_trade=False)
+    called = {}
+
+    def fake_private(method, path, **kwargs):
+        called["path"] = path
+        return {"code": "00000"}
+
+    monkeypatch.setattr(client, "_private_request", fake_private)
+    contract_detail = {
+        "data": {
+            "symbol": "BTCUSDT_UMCBL",
+            "contractSize": 1,
+            "volUnit": 1,
+            "minVol": 1,
+            "minTradeUSDT": 5,
+        }
+    }
+    price = 100.0
+    available = 0.5
+    vol = bot.compute_position_size(
+        contract_detail,
+        equity_usdt=available,
+        price=price,
+        risk_pct=1.0,
+        leverage=10,
+        symbol="BTCUSDT_UMCBL",
+        available_usdt=available,
+    )
+    if vol > 0:
+        client.place_order(
+            "BTCUSDT_UMCBL", side=1, vol=vol, order_type=1, price=price, leverage=10
+        )
+    assert called == {}
+
+
+def test_margin_cap_reduces_volume(monkeypatch):
+    client = BitgetFuturesClient("key", "secret", "https://test", paper_trade=False)
+    called = {}
+
+    def fake_private(method, path, **kwargs):
+        called["body"] = kwargs.get("body")
+        return {"code": "00000"}
+
+    monkeypatch.setattr(client, "_private_request", fake_private)
+    contract_detail = {
+        "data": {
+            "symbol": "BTCUSDT_UMCBL",
+            "contractSize": 1,
+            "volUnit": 1,
+            "minVol": 1,
+            "minTradeUSDT": 5,
+        }
+    }
+    price = 10.0
+    vol_theoretical = bot.compute_position_size(
+        contract_detail,
+        equity_usdt=100,
+        price=price,
+        risk_pct=1.0,
+        leverage=10,
+        symbol="BTCUSDT_UMCBL",
+    )
+    available = 20.0
+    vol_final = bot.compute_position_size(
+        contract_detail,
+        equity_usdt=available,
+        price=price,
+        risk_pct=1.0,
+        leverage=10,
+        symbol="BTCUSDT_UMCBL",
+        available_usdt=available,
+    )
+    assert vol_final < vol_theoretical
+    client.place_order(
+        "BTCUSDT_UMCBL", side=1, vol=vol_final, order_type=1, price=price, leverage=10
+    )
+    assert called["body"]["size"] == vol_final
+
 def test_get_open_orders_paper_trade(monkeypatch):
     client = BitgetFuturesClient("key", "secret", "https://test", paper_trade=True)
 

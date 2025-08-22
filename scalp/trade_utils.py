@@ -1,6 +1,7 @@
 """Utilities for risk analysis and position sizing."""
 from __future__ import annotations
 
+import logging
 import math
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -132,7 +133,6 @@ def compute_position_size(
                 return 0
 
     return vol
-
 
 def effective_leverage(
     entry_price: float,
