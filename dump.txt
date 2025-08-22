@@ -1,4 +1,4 @@
-Dump created: 2025-08-22 08:14:08
+Dump created: 2025-08-22 11:54:00
 Repository tree:
 Scalp/
     CHANGELOG.md
@@ -16,9 +16,41 @@ Scalp/
     requirements-dev.txt
     requirements.txt
     short_one_way.py
-    signals/
+    live/
         __init__.py
-        generator.py
+        orchestrator.py
+    result/
+    data/
+        __init__.py
+        indicators.py
+    scalp/
+        VERSION
+        __init__.py
+        bitget_client.py
+        bot_config.py
+        client.py
+        logging_utils.py
+        metrics.py
+        notifier.py
+        pairs.py
+        strategy.py
+        telegram_bot.py
+        trade_utils.py
+        version.py
+        ws.py
+        risk/
+            __init__.py
+            manager.py
+        selection/
+            __init__.py
+            momentum.py
+            scanner.py
+        backtest/
+            __init__.py
+            walkforward.py
+    notebooks/
+        spot/
+            bitget_bot.py
     tests/
         conftest.py
         test_analyse_risque.py
@@ -38,8 +70,10 @@ Scalp/
         test_dynamic_allocation.py
         test_effective_leverage.py
         test_env_loading.py
+        test_grid_search.py
         test_heat_score.py
         test_indicators.py
+        test_min_qty_rules.py
         test_notifier.py
         test_notional_and_pnl_units.py
         test_pair_selection.py
@@ -57,45 +91,14 @@ Scalp/
     backtest/
         __init__.py
         engine.py
+        grid_search.py
         optimize.py
         run_multi.py
-    scalp/
-        VERSION
+    signals/
         __init__.py
-        bitget_client.py
-        bot_config.py
-        client.py
-        logging_utils.py
-        metrics.py
-        notifier.py
-        pairs.py
-        strategy.py
-        telegram_bot.py
-        trade_utils.py
-        version.py
-        ws.py
-        risk/
-            __init__.py
-            manager.py
-        backtest/
-            __init__.py
-            walkforward.py
-        selection/
-            __init__.py
-            momentum.py
-            scanner.py
-    notebooks/
-        spot/
-            bitget_bot.py
-    result/
-    live/
-        __init__.py
-        orchestrator.py
-    data/
-        __init__.py
-        indicators.py
+        generator.py
 
-## CHANGELOG.md (last modified: 2025-08-22 08:13:34)
+## CHANGELOG.md (last modified: 2025-08-22 11:53:22)
 # Changelog
 
 ## Unreleased
@@ -110,14 +113,14 @@ Scalp/
   Telegram.
 
 
-## Makefile (last modified: 2025-08-21 21:22:00)
+## Makefile (last modified: 2025-08-22 05:41:07)
 .PHONY: test
 
 test:
 	pytest
 
 
-## PROMPT.md (last modified: 2025-08-21 21:22:00)
+## PROMPT.md (last modified: 2025-08-22 05:41:07)
 # Prompt de re-création du bot Scalp (version spot)
 
 Ce fichier résume les modules et fonctions essentiels afin de recréer le bot de trading **spot** Bitget (paires USDT) à partir de zéro. Chaque fonction liste son rôle principal et les paramètres indispensables. Le fichier `.env` contenant les clés API se trouve dans le dossier parent du bot.
@@ -227,7 +230,7 @@ Ce résumé fournit les éléments nécessaires à la reconstruction du bot et �
 
 
 
-## README.md (last modified: 2025-08-22 08:13:34)
+## README.md (last modified: 2025-08-22 11:53:22)
 # Scalp
 
 Bot de trading pour les futures USDT-M de Bitget. Ce projet est **expérimental** et fourni à des fins éducatives.
@@ -360,7 +363,7 @@ python cli.py bump-version
 © 2025 — Usage à vos risques. Ceci n'est pas un conseil financier.
 
 
-## STRATEGY.md (last modified: 2025-08-21 21:22:00)
+## STRATEGY.md (last modified: 2025-08-22 05:41:07)
 # Stratégie de trading
 
 Ce document décrit la logique de trading utilisée par le bot **Scalp**. Elle vise un scalping court terme sur les futures USDT‑M de Bitget.
@@ -405,7 +408,7 @@ La classe `RiskManager` applique plusieurs garde‑fous :
 Ces règles combinées visent à protéger le capital tout en conservant une exposition opportuniste au marché.
 
 
-## backtest/__init__.py (last modified: 2025-08-21 21:22:00)
+## backtest/__init__.py (last modified: 2025-08-22 05:41:07)
 """Backtesting helpers and optimisation utilities."""
 
 from .optimize import (
@@ -423,7 +426,7 @@ __all__ = [
 ]
 
 
-## backtest/engine.py (last modified: 2025-08-22 08:13:34)
+## backtest/engine.py (last modified: 2025-08-22 11:53:22)
 """Simple backtest engine with dynamic risk and trailing stops.
 
 This module provides two helpers:
@@ -708,7 +711,315 @@ def backtest_symbol(
     return trades, equity_curve
 
 
-## backtest/optimize.py (last modified: 2025-08-21 21:22:00)
+## backtest/grid_search.py (last modified: 2025-08-22 11:53:22)
+"""Grid-search express module to evaluate hyperparameter combinations.
+
+This module builds combinations of strategy and engine parameters, runs the
+existing multi symbol backtester for each combination, collects key metrics and
+selects the best configuration according to:
+
+1. Profit factor (descending)
+2. Maximum drawdown percentage (ascending)
+3. Net PnL in USDT (descending)
+4. Number of trades (ascending)
+
+Results are written under ``result/grid`` by default and a short summary is
+printed to the console.
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass
+import csv
+import json
+import os
+import random
+from itertools import product
+from typing import Any, Callable, Dict, Iterable, List, Sequence
+
+# ---------------------------------------------------------------------------
+# Utilities
+# ---------------------------------------------------------------------------
+
+
+def parse_hours(hours: str) -> List[int]:
+    """Parse hours specification like ``"7-11,13-17"`` into a list of ints.
+
+    Each comma separated element can either be a single hour (``"8"``) or a
+    range ``"7-11"`` which is inclusive.  Returned hours are sorted and unique.
+    """
+
+    if not hours:
+        return []
+    result: List[int] = []
+    for part in hours.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        if "-" in part:
+            start_s, end_s = part.split("-", 1)
+            start, end = int(start_s), int(end_s)
+            result.extend(range(start, end + 1))
+        else:
+            result.append(int(part))
+    return sorted(set(result))
+
+
+# Order of parameters used throughout the module and in CSV output
+PARAM_KEYS = [
+    "timeframe",
+    "score_min",
+    "atr_min_ratio",
+    "rr_min",
+    "risk_pct",
+    "slippage_bps",
+    "fee_rate",
+    "cooldown_secs",
+    "hours",
+]
+
+# Default values used if a parameter is not provided in the grid
+DEFAULTS = {
+    "score_min": 55,
+    "atr_min_ratio": 0.002,
+    "rr_min": 1.2,
+    "risk_pct": 0.01,
+    "slippage_bps": 2,
+    "fee_rate": 0.001,
+    "cooldown_secs": 300,
+    "hours": "7-11,13-17",
+}
+
+
+@dataclass
+class GridResult:
+    params: Dict[str, Any]
+    metrics: Dict[str, float]
+
+
+def _ensure_list(val: Sequence[Any] | Any) -> List[Any]:
+    if isinstance(val, (list, tuple, set)):
+        return list(val)
+    return [val]
+
+
+def build_param_grid(param_lists: Dict[str, Sequence[Any]], grid_max: int) -> List[Dict[str, Any]]:
+    """Return a list of parameter combinations.
+
+    ``param_lists`` maps parameter names to a sequence of values.  Missing keys
+    fall back to ``DEFAULTS``.  The resulting cartesian product is uniformly
+    sampled to ``grid_max`` elements when necessary while trying to maintain a
+    variety of timeframes and ``atr_min_ratio`` values.
+    """
+
+    lists: Dict[str, List[Any]] = {}
+    for key in PARAM_KEYS:
+        if key == "timeframe":
+            # timeframe must be explicitly provided; default empty -> "1m"
+            vals = param_lists.get(key) or ["1m"]
+        else:
+            vals = param_lists.get(key)
+            if not vals:
+                default = DEFAULTS[key]
+                vals = [default]
+        lists[key] = _ensure_list(vals)
+
+    combos: List[Dict[str, Any]] = [
+        dict(zip(PARAM_KEYS, values)) for values in product(*(lists[k] for k in PARAM_KEYS))
+    ]
+
+    # Uniform sampling if exceeding grid_max
+    if len(combos) > grid_max:
+        step = len(combos) / float(grid_max)
+        sampled = []
+        for i in range(grid_max):
+            idx = int(round(i * step))
+            if idx >= len(combos):
+                idx = len(combos) - 1
+            sampled.append(combos[idx])
+        # ensure each timeframe appears at least once
+        wanted_tfs = set(lists["timeframe"])
+        present_tfs = {c["timeframe"] for c in sampled}
+        missing = list(wanted_tfs - present_tfs)
+        if missing:
+            for tf in missing:
+                for c in combos:
+                    if c["timeframe"] == tf and c not in sampled:
+                        sampled.append(c)
+                        break
+            sampled = sampled[:grid_max]
+        combos = sampled
+    return combos
+
+
+# ---------------------------------------------------------------------------
+# Core runner
+# ---------------------------------------------------------------------------
+
+
+def run_grid_search(
+    *,
+    symbols: Sequence[str],
+    exchange: str,
+    base_params: Dict[str, Any],
+    param_lists: Dict[str, Sequence[Any]],
+    grid_max: int = 12,
+    csv_dir: str | None = None,
+    initial_equity: float = 1000.0,
+    leverage: float = 1.0,
+    paper_constraints: bool = True,
+    seed: int | None = None,
+    out_dir: str = "./result/grid",
+    match_exchange_semantics: bool = False,  # placeholder for compatibility
+    run_func: Callable[..., Any] | None = None,
+) -> List[GridResult]:
+    """Execute grid search across parameter combinations.
+
+    ``base_params`` provides default single values for parameters. ``param_lists``
+    contains the grid specifications from CLI (already parsed into sequences).
+    ``run_func`` should have the same signature as :func:`run_backtest_multi`.
+    """
+
+    if seed is not None:
+        random.seed(seed)
+
+    if run_func is None:  # avoid circular import at module load
+        from .run_multi import run_backtest_multi  # late import
+
+        run_func = run_backtest_multi
+
+    # merge lists with defaults
+    full_lists: Dict[str, Sequence[Any]] = {}
+    for k in PARAM_KEYS:
+        if k == "timeframe":
+            full_lists[k] = param_lists.get(k) or [base_params.get("timeframe", "1m")]
+        else:
+            if param_lists.get(k) is not None:
+                full_lists[k] = param_lists[k]
+            else:
+                full_lists[k] = [base_params.get(k, DEFAULTS[k])]
+
+    combos = build_param_grid(full_lists, grid_max)
+
+    results: List[GridResult] = []
+    os.makedirs(out_dir, exist_ok=True)
+
+    for combo in combos:
+        # Build parameters for backtester
+        tf = combo["timeframe"]
+        fee = float(combo["fee_rate"])
+        slip = float(combo["slippage_bps"])
+        risk = float(combo["risk_pct"])
+
+        summary, _trades = run_func(
+            symbols=list(symbols),
+            exchange=exchange,
+            timeframe=tf,
+            csv_dir=csv_dir,
+            fee_rate=fee,
+            slippage_bps=slip,
+            risk_pct=risk,
+            initial_equity=initial_equity,
+            leverage=leverage,
+            paper_constraints=paper_constraints,
+            seed=seed,
+            out_dir=os.path.join(out_dir, "tmp"),
+            plot=False,
+            dry_run=True,
+        )
+        total = next((r for r in summary if r.get("symbol") == "TOTAL"), summary[-1])
+        metrics = {
+            "pnl_usdt": float(total.get("pnl_usdt", 0.0)),
+            "profit_factor": float(total.get("profit_factor", 0.0)),
+            "max_dd_pct": float(total.get("max_drawdown_pct", 0.0)),
+            "winrate_pct": float(total.get("winrate_pct", 0.0)),
+            "trades": float(total.get("trades", 0.0)),
+            "final_equity": initial_equity + float(total.get("pnl_usdt", 0.0)),
+        }
+        results.append(GridResult(params=combo, metrics=metrics))
+
+    # sort results
+    results.sort(
+        key=lambda r: (
+            -r.metrics["profit_factor"],
+            r.metrics["max_dd_pct"],
+            -r.metrics["pnl_usdt"],
+            r.metrics["trades"],
+        )
+    )
+
+    # console output -------------------------------------------------------
+    print(
+        f"Grid-search express ({len(results)} combinaisons testées, top trié par PF↓ puis MaxDD%↑)"
+    )
+    header = (
+        f"{'timeframe':<8} {'PF':>6} {'MaxDD%':>8} {'PnL':>8} {'Trades':>8}"
+    )
+    print(header)
+    for r in results[:10]:
+        m = r.metrics
+        print(
+            f"{r.params['timeframe']:<8} {m['profit_factor']:>6.2f} {m['max_dd_pct']:>8.2f} {m['pnl_usdt']:>8.2f} {int(m['trades']):>8}"
+        )
+
+    # write csv ------------------------------------------------------------
+    csv_cols = PARAM_KEYS + [
+        "pnl_usdt",
+        "profit_factor",
+        "max_dd_pct",
+        "winrate_pct",
+        "trades",
+        "final_equity",
+    ]
+    with open(os.path.join(out_dir, "grid_results.csv"), "w", newline="") as fh:
+        writer = csv.DictWriter(fh, fieldnames=csv_cols)
+        writer.writeheader()
+        for r in results:
+            row = {**r.params, **r.metrics}
+            writer.writerow(row)
+
+    best = results[0]
+    with open(os.path.join(out_dir, "best_config.json"), "w", encoding="utf8") as fh:
+        json.dump({"params": best.params, "metrics": best.metrics}, fh, indent=2)
+
+    # markdown summary -----------------------------------------------------
+    md_path = os.path.join(out_dir, "grid_summary.md")
+    with open(md_path, "w", encoding="utf8") as fh:
+        fh.write(
+            "| timeframe | PF | MaxDD% | PnL | trades |\n|---|---|---|---|---|\n"
+        )
+        for r in results[:10]:
+            m = r.metrics
+            fh.write(
+                f"| {r.params['timeframe']} | {m['profit_factor']:.2f} | {m['max_dd_pct']:.2f} | {m['pnl_usdt']:.2f} | {int(m['trades'])} |\n"
+            )
+
+    # optional scatter plot ------------------------------------------------
+    try:  # pragma: no cover - optional dependency
+        import matplotlib.pyplot as plt
+
+        pf = [r.metrics["profit_factor"] for r in results]
+        dd = [r.metrics["max_dd_pct"] for r in results]
+        trades = [r.metrics["trades"] for r in results]
+        tfs = [r.params["timeframe"] for r in results]
+        colors = {tf: i for i, tf in enumerate(sorted(set(tfs)))}
+        c = [colors[tf] for tf in tfs]
+        plt.figure(figsize=(6, 4))
+        plt.scatter(dd, pf, c=c, s=[max(10, t) for t in trades], alpha=0.7)
+        plt.xlabel("MaxDD%")
+        plt.ylabel("Profit Factor")
+        plt.title("PF vs MaxDD")
+        plt.savefig(os.path.join(out_dir, "pf_vs_dd.png"))
+        plt.close()
+    except Exception:  # pragma: no cover
+        pass
+
+    return results
+
+
+__all__ = ["run_grid_search", "build_param_grid", "parse_hours", "GridResult"]
+
+
+## backtest/optimize.py (last modified: 2025-08-22 05:41:07)
 from __future__ import annotations
 
 """Parameter sweep utilities for strategy optimisation.
@@ -828,7 +1139,7 @@ if __name__ == "__main__":  # pragma: no cover
     main()
 
 
-## backtest/run_multi.py (last modified: 2025-08-22 08:13:34)
+## backtest/run_multi.py (last modified: 2025-08-22 11:53:22)
 """Run multi-symbol backtests from the command line.
 
 Example:
@@ -844,6 +1155,7 @@ from datetime import datetime, timezone
 from typing import Dict, List, Tuple
 
 from .engine import backtest_symbol
+from .grid_search import run_grid_search
 
 
 def _load_csv(symbol: str, timeframe: str, csv_dir: str) -> List[Dict[str, object]]:
@@ -1085,6 +1397,19 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--out-dir", default="./result")
     p.add_argument("--plot", action="store_true")
     p.add_argument("--dry-run", action="store_true")
+    # grid search options
+    p.add_argument("--grid", action="store_true", help="activate grid search")
+    p.add_argument("--grid-max", type=int, default=12)
+    p.add_argument("--grid-tf")
+    p.add_argument("--grid-score-min")
+    p.add_argument("--grid-atr-min")
+    p.add_argument("--grid-rr-min")
+    p.add_argument("--grid-risk-pct")
+    p.add_argument("--grid-slippage-bps")
+    p.add_argument("--grid-fee")
+    p.add_argument("--grid-cooldown")
+    p.add_argument("--grid-hours")
+    p.add_argument("--match-exchange-semantics", action="store_true")
     return p
 
 
@@ -1092,6 +1417,60 @@ def main(args: List[str] | None = None):
     parser = build_arg_parser()
     ns = parser.parse_args(args=args)
     symbols = [s.strip() for s in ns.symbols.split(",") if s.strip()]
+    if ns.grid:
+        # helper to parse comma separated values
+        def _parse(val: str | None, cast):
+            if not val:
+                return None
+            return [cast(v) for v in val.split(",") if v.strip()]
+
+        param_lists: Dict[str, List] = {}
+        if ns.grid_tf:
+            param_lists["timeframe"] = _parse(ns.grid_tf, str)
+        if ns.grid_score_min:
+            param_lists["score_min"] = _parse(ns.grid_score_min, float)
+        if ns.grid_atr_min:
+            param_lists["atr_min_ratio"] = _parse(ns.grid_atr_min, float)
+        if ns.grid_rr_min:
+            param_lists["rr_min"] = _parse(ns.grid_rr_min, float)
+        if ns.grid_risk_pct:
+            param_lists["risk_pct"] = _parse(ns.grid_risk_pct, float)
+        if ns.grid_slippage_bps:
+            param_lists["slippage_bps"] = _parse(ns.grid_slippage_bps, float)
+        if ns.grid_fee:
+            param_lists["fee_rate"] = _parse(ns.grid_fee, float)
+        if ns.grid_cooldown:
+            param_lists["cooldown_secs"] = _parse(ns.grid_cooldown, int)
+        if ns.grid_hours:
+            param_lists["hours"] = _parse(ns.grid_hours, str)
+
+        base_params = {
+            "timeframe": ns.timeframe,
+            "score_min": 55,
+            "atr_min_ratio": 0.002,
+            "rr_min": 1.2,
+            "risk_pct": ns.risk_pct,
+            "slippage_bps": ns.slippage_bps,
+            "fee_rate": ns.fee_rate,
+            "cooldown_secs": 300,
+            "hours": "7-11,13-17",
+        }
+
+        return run_grid_search(
+            symbols=symbols,
+            exchange=ns.exchange,
+            base_params=base_params,
+            param_lists=param_lists,
+            grid_max=ns.grid_max,
+            csv_dir=ns.csv_dir,
+            initial_equity=ns.initial_equity,
+            leverage=ns.leverage,
+            paper_constraints=ns.paper_constraints,
+            seed=ns.seed,
+            out_dir=os.path.join(ns.out_dir, "grid"),
+            match_exchange_semantics=ns.match_exchange_semantics,
+        )
+
     return run_backtest_multi(
         symbols=symbols,
         exchange=ns.exchange,
@@ -1114,7 +1493,7 @@ if __name__ == "__main__":  # pragma: no cover
     main()
 
 
-## bitget_futures_pairs.py (last modified: 2025-08-21 21:22:00)
+## bitget_futures_pairs.py (last modified: 2025-08-22 05:41:07)
 #!/usr/bin/env python3
 """Fetch the list of Bitget futures contracts.
 
@@ -1270,7 +1649,7 @@ if __name__ == "__main__":  # pragma: no cover - CLI execution
     raise SystemExit(main())
 
 
-## bot.py (last modified: 2025-08-22 08:13:34)
+## bot.py (last modified: 2025-08-22 11:53:22)
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """Bitget USDT-M futures trading bot."""
@@ -1303,9 +1682,10 @@ from scalp.trade_utils import (
     timeout_exit,
     extract_available_balance,
     get_contract_size,
-    notional,
-    required_margin,
+    notional as calc_notional,
+    required_margin as calc_required_margin,
 )
+# Do not assign to ``calc_notional`` or ``calc_required_margin``; keep them callable.
 from scalp import pairs as _pairs
 from scalp.backtest import backtest_trades  # noqa: F401
 from scalp.bitget_client import BitgetFuturesClient as _BaseBitgetFuturesClient
@@ -1518,11 +1898,54 @@ def _safe_extract_contract_fields(contract_detail, symbol: str | None = None):
 
 def _estimate_margin(contract_detail, price, vol, leverage):
     size_mult = get_contract_size(contract_detail)
-    notional_val = notional(price, vol, size_mult)
+    notional_val = calc_notional(price, vol, size_mult)
     lev = max(1.0, float(leverage) or 1.0)
     fee_rate = max(CONFIG.get("FEE_RATE", 0.0), 0.001)
-    margin = required_margin(notional_val, lev, fee_rate, buffer=0.0)
+    margin = calc_required_margin(notional_val, lev, fee_rate, buffer=0.0)
     return notional_val, margin
+
+
+def _contract_specs(contract_detail: Dict[str, Any], symbol: str) -> Tuple[float, int, int, float]:
+    data = contract_detail.get("data") or []
+    if not isinstance(data, list):
+        data = [data]
+    contract = next((c for c in data if c and c.get("symbol") == symbol), data[0] if data else {})
+    contract_size = get_contract_size(contract_detail, symbol)
+    vol_unit = int(contract.get("volUnit", 1))
+    min_vol = int(contract.get("minVol", 1))
+    min_usdt = float(contract.get("minTradeUSDT", 5))
+    return contract_size, vol_unit, min_vol, min_usdt
+
+
+def _floor_to_unit(val: float, unit: int) -> int:
+    return int((float(val) // unit) * unit)
+
+
+def _apply_contract_checks(
+    price: float,
+    vol: int,
+    leverage_eff: float,
+    available_usdt: float,
+    contract_detail: Dict[str, Any],
+    symbol: str,
+) -> Tuple[int, float, float]:
+    cs, vol_unit, min_vol, min_usdt = _contract_specs(contract_detail, symbol)
+    denom = price * cs
+    vol = _floor_to_unit(vol, vol_unit)
+    N = calc_notional(price, vol, cs)
+    if vol < min_vol or N < min_usdt:
+        return 0, 0.0, 0.0
+    fee_rate = max(CONFIG.get("FEE_RATE", 0.0), 0.001)
+    required = calc_required_margin(N, leverage_eff, fee_rate, buffer=0.0) * 1.03
+    if required > available_usdt:
+        maxN = available_usdt / ((1 / leverage_eff + fee_rate) * 1.03)
+        vol_cap = _floor_to_unit(maxN / denom, vol_unit)
+        vol = min(vol, vol_cap)
+        N = calc_notional(price, vol, cs)
+        if vol < min_vol or N < min_usdt:
+            return 0, 0.0, 0.0
+        required = calc_required_margin(N, leverage_eff, fee_rate, buffer=0.0) * 1.03
+    return vol, N, required
 
 
 def map_score_to_sig_level(score: float) -> int:
@@ -1580,10 +2003,6 @@ def prepare_order(
         contract = next((c for c in data if c.get("symbol") == sig.symbol), data[0] if data else {})
     else:
         contract = data
-    contract_size = float(contract.get("contractSize") or contract.get("sizeMultiplier") or 0.0001)
-    vol_unit = int(contract.get("volUnit", 1))
-    min_vol = int(contract.get("minVol", 1))
-    min_usdt = float(contract.get("minTradeUSDT", 5))
     max_lev = int(contract.get("maxLever") or contract.get("maxLeverage") or leverage_eff)
     leverage_eff = min(leverage_eff, max_lev)
 
@@ -1598,27 +2017,14 @@ def prepare_order(
     )
     vol_before = vol
 
-    denom = sig.price * contract_size
-    notional = vol * denom
-
-    cap_notional = cap_ratio * available_usdt
-    if cap_notional > 0 and notional > cap_notional:
-        vol = int((cap_notional / denom) // vol_unit * vol_unit)
-        notional = vol * denom
-
-    fee_rate = max(CONFIG.get("FEE_RATE", 0.0), 0.001)
-    required_margin = (notional / leverage_eff + fee_rate * notional) * 1.03
-    if required_margin > available_usdt:
-        max_notional = available_usdt / ((1 / leverage_eff + fee_rate) * 1.03)
-        vol_cap = int((max_notional / denom) // vol_unit * vol_unit)
-        vol = min(vol, vol_cap)
-        notional = vol * denom
-        required_margin = (notional / leverage_eff + fee_rate * notional) * 1.03
-
-    if vol < min_vol or notional < min_usdt:
-        vol = 0
-        notional = 0.0
-        required_margin = 0.0
+    vol, notional_val, margin_req = _apply_contract_checks(
+        sig.price,
+        vol,
+        leverage_eff,
+        available_usdt,
+        contract_detail,
+        sig.symbol,
+    )
 
     return {
         "vol": int(vol),
@@ -1628,8 +2034,8 @@ def prepare_order(
         "sig_level": sig_level,
         "score": score,
         "risk_color": RISK_COLOR.get(sig_level, ""),
-        "notional": notional,
-        "required_margin": required_margin,
+        "notional": notional_val,
+        "required_margin": margin_req,
         "cap_ratio": cap_ratio,
     }
 
@@ -1663,7 +2069,37 @@ def attempt_entry(
     }
     notify("order_attempt", payload)
     if params["vol"] <= 0:
+        logging.info("volume reduced to 0 due to margin/min constraints")
+        notify(
+            "order_blocked",
+            {"symbol": sig.symbol, "reason": "volume reduced to 0 due to margin/min constraints"},
+        )
         return params
+    vol_adj, N, req = _apply_contract_checks(
+        sig.price,
+        params["vol"],
+        params["leverage_eff"],
+        available_usdt,
+        contract_detail,
+        sig.symbol,
+    )
+    if vol_adj <= 0:
+        logging.info("volume reduced to 0 due to margin/min constraints")
+        notify(
+            "order_blocked",
+            {
+                "symbol": sig.symbol,
+                "reason": "volume reduced to 0 due to margin/min constraints",
+            },
+        )
+        params["vol"] = 0
+        params["notional"] = 0.0
+        params["required_margin"] = 0.0
+        return params
+    if vol_adj != params["vol"]:
+        params["vol"] = vol_adj
+        params["notional"] = N
+        params["required_margin"] = req
     side_int = 1 if sig.side == "long" else 3
     resp = client.place_order(
         sig.symbol,
@@ -1681,9 +2117,8 @@ def attempt_entry(
         log_event("order_error", resp)
         return params
     cs = get_contract_size(contract_detail, sig.symbol)
-    N = notional(sig.price, params["vol"], cs)
     fee_rate = CONFIG.get("FEE_RATE", 0.001)
-    req_margin = required_margin(N, params["leverage_eff"], fee_rate)
+    req_margin = req
     open_payload = {
         "event": "position_opened",
         "symbol": sig.symbol,
@@ -1830,8 +2265,8 @@ def main(argv: Optional[List[str]] = None) -> None:
     def close_position(side: int, price: float, vol: int) -> bool:
         nonlocal current_pos, current_vol, entry_price, entry_time, session_pnl, equity_usdt, stop_long, stop_short, take_profit, entry_leverage, last_risk_color
         cs = contract_size
-        N_entry = notional(entry_price, vol, cs)
-        N_exit = notional(price, vol, cs)
+        N_entry = calc_notional(entry_price, vol, cs)
+        N_exit = calc_notional(price, vol, cs)
         gross = (price - entry_price) * vol * cs * (1 if side > 0 else -1)
         fees = fee_rate * (N_entry + N_exit)
         pnl_usdt = round(gross - fees, 6)
@@ -2156,20 +2591,18 @@ def main(argv: Optional[List[str]] = None) -> None:
                         vol_cap = int(cfg["NOTIONAL_CAP_USDT"] / max(1e-12, size_mult * price))
                         if vol_cap > 0:
                             vol_add = min(vol_add, vol_cap)
-                    notional, margin = _estimate_margin(contract_detail, price, vol_add, cfg["LEVERAGE"])
-                    max_margin = float(cfg.get("MARGIN_CAP_RATIO", 1.0)) * available
-                    if margin > max_margin:
-                        size_mult, _m = _safe_extract_contract_fields(contract_detail, symbol)
-                        vol_max_afford = int((max_margin * cfg["LEVERAGE"]) / max(1e-12, size_mult * price))
-                        vol_add = max(0, min(vol_add, vol_max_afford))
-                        notional, margin = _estimate_margin(contract_detail, price, vol_add, cfg["LEVERAGE"])
-                    size_mult, _m = _safe_extract_contract_fields(contract_detail, symbol)
-                    taker = max(CONFIG.get("FEE_RATE", 0.0), 0.001)
-                    required = (price * size_mult * vol_add / cfg["LEVERAGE"] + taker * price * size_mult * vol_add) * 1.03
+                    vol_add, N_check, req_check = _apply_contract_checks(
+                        price,
+                        vol_add,
+                        cfg["LEVERAGE"],
+                        available,
+                        contract_detail,
+                        symbol,
+                    )
                     logging.info(
                         "order_check: available=%s, required=%s, vol_pre=%s, vol_final=%s, price=%s, lev=%s, side=%s",
                         available,
-                        required,
+                        req_check,
                         vol_pre,
                         vol_add,
                         price,
@@ -2223,20 +2656,18 @@ def main(argv: Optional[List[str]] = None) -> None:
                         vol_cap = int(cfg["NOTIONAL_CAP_USDT"] / max(1e-12, size_mult * price))
                         if vol_cap > 0:
                             vol_add = min(vol_add, vol_cap)
-                    notional, margin = _estimate_margin(contract_detail, price, vol_add, cfg["LEVERAGE"])
-                    max_margin = float(cfg.get("MARGIN_CAP_RATIO", 1.0)) * available
-                    if margin > max_margin:
-                        size_mult, _m = _safe_extract_contract_fields(contract_detail, symbol)
-                        vol_max_afford = int((max_margin * cfg["LEVERAGE"]) / max(1e-12, size_mult * price))
-                        vol_add = max(0, min(vol_add, vol_max_afford))
-                        notional, margin = _estimate_margin(contract_detail, price, vol_add, cfg["LEVERAGE"])
-                    size_mult, _m = _safe_extract_contract_fields(contract_detail, symbol)
-                    taker = max(CONFIG.get("FEE_RATE", 0.0), 0.001)
-                    required = (price * size_mult * vol_add / cfg["LEVERAGE"] + taker * price * size_mult * vol_add) * 1.03
+                    vol_add, N_check, req_check = _apply_contract_checks(
+                        price,
+                        vol_add,
+                        cfg["LEVERAGE"],
+                        available,
+                        contract_detail,
+                        symbol,
+                    )
                     logging.info(
                         "order_check: available=%s, required=%s, vol_pre=%s, vol_final=%s, price=%s, lev=%s, side=%s",
                         available,
-                        required,
+                        req_check,
                         vol_pre,
                         vol_add,
                         price,
@@ -2313,20 +2744,18 @@ def main(argv: Optional[List[str]] = None) -> None:
                     vol_cap = int(cfg["NOTIONAL_CAP_USDT"] / max(1e-12, size_mult * price))
                     if vol_cap > 0:
                         vol_open = min(vol_open, vol_cap)
-                notional, margin = _estimate_margin(contract_detail, price, vol_open, lev)
-                max_margin = float(cfg.get("MARGIN_CAP_RATIO", 1.0)) * available
-                if margin > max_margin:
-                    size_mult, _min_trade = _safe_extract_contract_fields(contract_detail, symbol)
-                    vol_max_afford = int((max_margin * lev) / max(1e-12, size_mult * price))
-                    vol_open = max(0, min(vol_open, vol_max_afford))
-                    notional, margin = _estimate_margin(contract_detail, price, vol_open, lev)
-                size_mult, _m = _safe_extract_contract_fields(contract_detail, symbol)
-                taker = max(CONFIG.get("FEE_RATE", 0.0), 0.001)
-                required = (price * size_mult * vol_open / lev + taker * price * size_mult * vol_open) * 1.03
+                vol_open, N_check, req_check = _apply_contract_checks(
+                    price,
+                    vol_open,
+                    lev,
+                    available,
+                    contract_detail,
+                    symbol,
+                )
                 logging.info(
                     "order_check: available=%s, required=%s, vol_pre=%s, vol_final=%s, price=%s, lev=%s, side=%s",
                     available,
-                    required,
+                    req_check,
                     vol_pre,
                     vol_open,
                     price,
@@ -2363,8 +2792,8 @@ def main(argv: Optional[List[str]] = None) -> None:
                     tp_long,
                     "paper" if CONFIG["PAPER_TRADE"] else "live",
                 )
-                N = notional(price, vol_open, contract_size)
-                req = required_margin(N, lev, fee_rate)
+                N = calc_notional(price, vol_open, contract_size)
+                req = calc_required_margin(N, lev, fee_rate)
                 risk_color = RISK_COLOR.get(cfg.get("RISK_LEVEL", 1), "")
                 open_payload = {
                     "event": "position_opened",
@@ -2443,20 +2872,18 @@ def main(argv: Optional[List[str]] = None) -> None:
                     vol_cap = int(cfg["NOTIONAL_CAP_USDT"] / max(1e-12, size_mult * price))
                     if vol_cap > 0:
                         vol_open = min(vol_open, vol_cap)
-                notional, margin = _estimate_margin(contract_detail, price, vol_open, lev)
-                max_margin = float(cfg.get("MARGIN_CAP_RATIO", 1.0)) * available
-                if margin > max_margin:
-                    size_mult, _min_trade = _safe_extract_contract_fields(contract_detail, symbol)
-                    vol_max_afford = int((max_margin * lev) / max(1e-12, size_mult * price))
-                    vol_open = max(0, min(vol_open, vol_max_afford))
-                    notional, margin = _estimate_margin(contract_detail, price, vol_open, lev)
-                size_mult, _m = _safe_extract_contract_fields(contract_detail, symbol)
-                taker = max(CONFIG.get("FEE_RATE", 0.0), 0.001)
-                required = (price * size_mult * vol_open / lev + taker * price * size_mult * vol_open) * 1.03
+                vol_open, N_check, req_check = _apply_contract_checks(
+                    price,
+                    vol_open,
+                    lev,
+                    available,
+                    contract_detail,
+                    symbol,
+                )
                 logging.info(
                     "order_check: available=%s, required=%s, vol_pre=%s, vol_final=%s, price=%s, lev=%s, side=%s",
                     available,
-                    required,
+                    req_check,
                     vol_pre,
                     vol_open,
                     price,
@@ -2493,8 +2920,8 @@ def main(argv: Optional[List[str]] = None) -> None:
                     tp_short,
                     "paper" if CONFIG["PAPER_TRADE"] else "live",
                 )
-                N = notional(price, vol_open, contract_size)
-                req = required_margin(N, lev, fee_rate)
+                N = calc_notional(price, vol_open, contract_size)
+                req = calc_required_margin(N, lev, fee_rate)
                 risk_color = RISK_COLOR.get(cfg.get("RISK_LEVEL", 1), "")
                 open_payload = {
                     "event": "position_opened",
@@ -2549,7 +2976,7 @@ if __name__ == "__main__":  # pragma: no cover - manual run
         logging.error("Erreur HTTP principale: %s", exc)
 
 
-## cli.py (last modified: 2025-08-21 21:22:00)
+## cli.py (last modified: 2025-08-22 05:41:07)
 """Command line utilities for the Scalp project.
 
 This module exposes a small command line interface used throughout the
@@ -2672,7 +3099,7 @@ if __name__ == "__main__":  # pragma: no cover - manual invocation
 
 
 
-## data/__init__.py (last modified: 2025-08-21 21:22:00)
+## data/__init__.py (last modified: 2025-08-22 05:41:07)
 """Indicator computation helpers."""
 
 from .indicators import compute_all
@@ -2680,7 +3107,7 @@ from .indicators import compute_all
 __all__ = ["compute_all"]
 
 
-## data/indicators.py (last modified: 2025-08-21 21:22:00)
+## data/indicators.py (last modified: 2025-08-22 05:41:07)
 import pandas as pd
 
 __all__ = ["compute_all"]
@@ -2771,7 +3198,7 @@ def compute_all(
     return df
 
 
-## dump_repo.py (last modified: 2025-08-22 08:13:34)
+## dump_repo.py (last modified: 2025-08-22 11:53:22)
 import os
 from datetime import datetime
 from pathlib import Path
@@ -2841,7 +3268,7 @@ if __name__ == '__main__':
     create_dump_file()
 
 
-## init.py (last modified: 2025-08-21 21:22:00)
+## init.py (last modified: 2025-08-22 05:41:07)
 #!/usr/bin/env python3
 """Install all project dependencies.
 
@@ -2880,7 +3307,7 @@ if __name__ == "__main__":
     main()
 
 
-## live/__init__.py (last modified: 2025-08-21 21:22:00)
+## live/__init__.py (last modified: 2025-08-22 05:41:07)
 """Live trading helpers."""
 
 from .orchestrator import compute_for_pair_tf, pipeline
@@ -2888,7 +3315,7 @@ from .orchestrator import compute_for_pair_tf, pipeline
 __all__ = ["compute_for_pair_tf", "pipeline"]
 
 
-## live/orchestrator.py (last modified: 2025-08-21 21:22:00)
+## live/orchestrator.py (last modified: 2025-08-22 05:41:07)
 import asyncio
 from typing import Any, Callable, Dict, Iterable, Optional, Tuple
 
@@ -2972,7 +3399,7 @@ async def pipeline(
 __all__ = ["compute_for_pair_tf", "pipeline"]
 
 
-## notebooks/spot/bitget_bot.py (last modified: 2025-08-21 21:22:00)
+## notebooks/spot/bitget_bot.py (last modified: 2025-08-22 05:41:07)
 import os
 import time
 import hmac
@@ -3168,12 +3595,12 @@ if __name__ == "__main__":
     main()
 
 
-## pytest.ini (last modified: 2025-08-21 21:22:00)
+## pytest.ini (last modified: 2025-08-22 05:41:07)
 [pytest]
 addopts = -q
 
 
-## quick_order.py (last modified: 2025-08-21 21:22:00)
+## quick_order.py (last modified: 2025-08-22 05:41:07)
 #!/usr/bin/env python3
 """Submit a simple market order on Bitget futures.
 
@@ -3260,21 +3687,21 @@ resp = client.place_market_order_one_way(
 print(resp)
 
 
-## requirements-dev.txt (last modified: 2025-08-21 21:22:00)
+## requirements-dev.txt (last modified: 2025-08-22 05:41:07)
 pytest
 
 
-## requirements.txt (last modified: 2025-08-21 21:22:00)
+## requirements.txt (last modified: 2025-08-22 05:41:07)
 requests
 python-dotenv
 
 
-## scalp/VERSION (last modified: 2025-08-21 21:22:00)
+## scalp/VERSION (last modified: 2025-08-22 05:41:07)
 0.3.0
 
 
 
-## scalp/__init__.py (last modified: 2025-08-21 21:22:00)
+## scalp/__init__.py (last modified: 2025-08-22 05:41:07)
 """Utilities and helpers for Scalp bot.
 
 When the bot is executed from ``notebook/spot/bitget_bot.py`` it expects secret
@@ -3346,7 +3773,7 @@ __all__ = [
 __version__ = get_version()
 
 
-## scalp/backtest/__init__.py (last modified: 2025-08-21 21:22:00)
+## scalp/backtest/__init__.py (last modified: 2025-08-22 11:53:22)
 """Simple backtesting helpers."""
 from __future__ import annotations
 
@@ -3359,16 +3786,31 @@ from .walkforward import walk_forward
 __all__ = ["backtest_trades", "walk_forward_windows", "walk_forward"]
 
 
+def _apply_slippage(price: float, side: int, bps: float, *, is_entry: bool) -> float:
+    """Return price adjusted for slippage in basis points.
+
+    ``side`` is ``1`` for long entries and ``-1`` for shorts.  ``is_entry``
+    indicates whether the adjustment is for the entry or the exit leg.
+    """
+
+    slip = bps / 10000.0
+    if side == 1:
+        return price * (1 + slip) if is_entry else price * (1 - slip)
+    return price * (1 - slip) if is_entry else price * (1 + slip)
+
+
 def backtest_trades(
     trades: List[Dict[str, Any]],
     *,
     fee_rate: Optional[float] = None,
+    slippage_bps: float = 0.0,
     logger: Any | None = None,
 ) -> float:
     """Compute cumulative PnL for a series of trades.
 
+    ``slippage_bps`` simulates execution slippage for both entry and exit.
     If ``logger`` is provided it must expose a ``log(dict)`` method and each
-    trade will be recorded with the computed PnL.
+    trade will be recorded with the computed PnL using the executed prices.
     """
     fee_rate = fee_rate if fee_rate is not None else CONFIG.get("FEE_RATE", 0.0)
 
@@ -3380,14 +3822,16 @@ def backtest_trades(
         side = tr.get("side", 1)
         if None in (symbol, entry, exit_):
             continue
-        pnl_trade = calc_pnl_pct(entry, exit_, side, fee_rate)
+        entry_exec = _apply_slippage(float(entry), side, slippage_bps, is_entry=True)
+        exit_exec = _apply_slippage(float(exit_), -side, slippage_bps, is_entry=False)
+        pnl_trade = calc_pnl_pct(entry_exec, exit_exec, side, fee_rate)
         if logger is not None:
             logger.log(
                 {
                     "pair": symbol,
                     "tf": tr.get("tf"),
                     "dir": "long" if side > 0 else "short",
-                    "entry": entry,
+                    "entry": entry_exec,
                     "sl": tr.get("sl"),
                     "tp": tr.get("tp"),
                     "score": tr.get("score"),
@@ -3421,7 +3865,7 @@ def walk_forward_windows(series: List[Any], train: int, test: int):
         yield train_slice, test_slice
 
 
-## scalp/backtest/walkforward.py (last modified: 2025-08-21 21:22:00)
+## scalp/backtest/walkforward.py (last modified: 2025-08-22 05:41:07)
 from __future__ import annotations
 
 from itertools import product
@@ -3544,7 +3988,7 @@ def walk_forward(
     }
 
 
-## scalp/bitget_client.py (last modified: 2025-08-21 21:22:00)
+## scalp/bitget_client.py (last modified: 2025-08-22 05:41:07)
 import json
 import logging
 import time
@@ -4204,7 +4648,7 @@ class BitgetFuturesClient:
         return {"success": True, "data": results}
 
 
-## scalp/bot_config.py (last modified: 2025-08-21 21:22:00)
+## scalp/bot_config.py (last modified: 2025-08-22 05:41:07)
 import os
 
 
@@ -4261,7 +4705,7 @@ CONFIG = {
 
 
 
-## scalp/client.py (last modified: 2025-08-21 21:22:00)
+## scalp/client.py (last modified: 2025-08-22 05:41:07)
 import logging
 from typing import Any, Dict, Optional
 
@@ -4363,7 +4807,7 @@ class HttpClient:
             return {"success": False, "error": msg, "text": resp.text}
 
 
-## scalp/logging_utils.py (last modified: 2025-08-21 21:22:00)
+## scalp/logging_utils.py (last modified: 2025-08-22 05:41:07)
 """Logging helpers for the Scalp bot."""
 
 from __future__ import annotations
@@ -4532,7 +4976,7 @@ def log_operation_memo(data: Dict[str, Any]) -> None:
     _append_csv(BASE_DIR / "operations_memo.csv", fields, data)
 
 
-## scalp/metrics.py (last modified: 2025-08-21 21:22:00)
+## scalp/metrics.py (last modified: 2025-08-22 05:41:07)
 """Utility metrics for trading calculations."""
 
 from __future__ import annotations
@@ -4743,7 +5187,7 @@ def backtest_position(
     return pnl >= 0.0
 
 
-## scalp/notifier.py (last modified: 2025-08-22 08:13:34)
+## scalp/notifier.py (last modified: 2025-08-22 11:53:22)
 """Simple notifier for bot events."""
 
 from __future__ import annotations
@@ -4911,7 +5355,7 @@ def notify(event: str, payload: Dict[str, Any] | None = None) -> None:
             logging.error("Telegram notification error for %s: %s", event, exc)
 
 
-## scalp/pairs.py (last modified: 2025-08-21 21:22:00)
+## scalp/pairs.py (last modified: 2025-08-22 05:41:07)
 """Utilities to select trading pairs and detect signals."""
 from __future__ import annotations
 
@@ -5153,7 +5597,7 @@ def decorrelate_pairs(
     return selected
 
 
-## scalp/risk/__init__.py (last modified: 2025-08-21 21:22:00)
+## scalp/risk/__init__.py (last modified: 2025-08-22 05:41:07)
 """Risk management utilities for position sizing."""
 
 from __future__ import annotations
@@ -5248,7 +5692,7 @@ def adjust_risk_pct(
 from .manager import RiskManager  # noqa: E402  (import at end to avoid cycle)
 
 
-## scalp/risk/manager.py (last modified: 2025-08-21 21:22:00)
+## scalp/risk/manager.py (last modified: 2025-08-22 05:41:07)
 """Advanced risk management utilities.
 
 This module provides the :class:`RiskManager` class which tracks trading
@@ -5419,7 +5863,7 @@ class RiskManager:
         return (not self.kill_switch) and current_positions < self.max_positions
 
 
-## scalp/selection/__init__.py (last modified: 2025-08-21 21:22:00)
+## scalp/selection/__init__.py (last modified: 2025-08-22 05:41:07)
 """Pair selection helpers for the Scalp bot.
 
 This package exposes two utilities used during the preparation phase of the
@@ -5441,7 +5885,7 @@ __all__ = ["scan_pairs", "select_active_pairs"]
 
 
 
-## scalp/selection/momentum.py (last modified: 2025-08-21 21:22:00)
+## scalp/selection/momentum.py (last modified: 2025-08-22 05:41:07)
 """Utilities to select pairs exhibiting strong momentum."""
 
 from __future__ import annotations
@@ -5542,7 +5986,7 @@ __all__ = ["select_active_pairs"]
 
 
 
-## scalp/selection/scanner.py (last modified: 2025-08-21 21:22:00)
+## scalp/selection/scanner.py (last modified: 2025-08-22 05:41:07)
 """Utilities for scanning tradable pairs on the exchange."""
 
 from __future__ import annotations
@@ -5626,7 +6070,7 @@ __all__ = ["scan_pairs"]
 
 
 
-## scalp/strategy.py (last modified: 2025-08-22 08:13:34)
+## scalp/strategy.py (last modified: 2025-08-22 11:53:22)
 """Core trading strategy components for scalping EMA/VWAP/RSI/ATR.
 
 This module implements a minimal but functional version of the strategy
@@ -6047,7 +6491,7 @@ def backtest(
     }
 
 
-## scalp/telegram_bot.py (last modified: 2025-08-22 08:13:34)
+## scalp/telegram_bot.py (last modified: 2025-08-22 11:53:22)
 from __future__ import annotations
 
 import logging
@@ -6380,7 +6824,7 @@ def init_telegram_bot(client: Any, config: Dict[str, Any], risk_mgr: Any) -> Opt
     return None
 
 
-## scalp/trade_utils.py (last modified: 2025-08-22 08:13:34)
+## scalp/trade_utils.py (last modified: 2025-08-22 11:53:22)
 """Utilities for risk analysis and position sizing."""
 from __future__ import annotations
 
@@ -6492,6 +6936,45 @@ def extract_available_balance(assets: Dict[str, Any], currency: str = "USDT") ->
                 return eq
         break
     return 0.0
+
+
+def compute_execution_metrics(
+    fills: List[Dict[str, Any]], *, contract_size: float = 1.0
+) -> Tuple[float, float, float]:
+    """Aggregate Bitget fills into execution metrics.
+
+    Parameters
+    ----------
+    fills:
+        Sequence of fill dictionaries containing price and quantity.  The
+        helper accepts the common Bitget keys ``fillPrice``/``price`` and
+        ``fillQty``/``size``/``vol`` for the executed quantity.  Unknown or
+        malformed entries are ignored.
+    contract_size:
+        Multiplier to convert contract volume into notional value.
+
+    Returns
+    -------
+    tuple
+        ``(exec_qty, exec_notional, avg_exec_price)`` where quantities are in
+        contract units and notional is expressed in quote currency.
+    """
+
+    exec_qty = 0.0
+    exec_notional = 0.0
+    for f in fills:
+        price = f.get("fillPrice") or f.get("price")
+        qty = f.get("fillQty") or f.get("size") or f.get("vol") or f.get("qty")
+        try:
+            price_f = float(price)
+            qty_f = float(qty)
+        except (TypeError, ValueError):
+            continue
+        exec_qty += qty_f
+        exec_notional += price_f * qty_f * contract_size
+
+    avg_price = exec_notional / (exec_qty * contract_size) if exec_qty else 0.0
+    return exec_qty, exec_notional, avg_price
 
 
 def compute_position_size(
@@ -6813,7 +7296,7 @@ def marketable_limit_price(
     raise ValueError("side must be 'buy' or 'sell'")
 
 
-## scalp/version.py (last modified: 2025-08-21 21:22:00)
+## scalp/version.py (last modified: 2025-08-22 05:41:07)
 """Utilities for managing the Scalp bot version."""
 
 from __future__ import annotations
@@ -6911,7 +7394,7 @@ if __name__ == "__main__":
     print(bump_version_from_git())
 
 
-## scalp/ws.py (last modified: 2025-08-21 21:22:00)
+## scalp/ws.py (last modified: 2025-08-22 05:41:07)
 """Minimal websocket manager with heartbeat and auto-resubscribe.
 
 This module provides a light-weight framework to maintain a realtime
@@ -6984,7 +7467,7 @@ class WebsocketManager:
         self._heartbeat_task = None
 
 
-## short_one_way.py (last modified: 2025-08-21 21:22:00)
+## short_one_way.py (last modified: 2025-08-22 05:41:07)
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """Example script to open a one-way short on Bitget futures.
@@ -7259,7 +7742,7 @@ if __name__ == "__main__":  # pragma: no cover - script entrypoint
     main()
 
 
-## signals/__init__.py (last modified: 2025-08-21 21:22:00)
+## signals/__init__.py (last modified: 2025-08-22 05:41:07)
 """Signal generation utilities."""
 
 from .generator import generate_signal
@@ -7267,7 +7750,7 @@ from .generator import generate_signal
 __all__ = ["generate_signal"]
 
 
-## signals/generator.py (last modified: 2025-08-21 21:22:00)
+## signals/generator.py (last modified: 2025-08-22 05:41:07)
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
@@ -7435,7 +7918,7 @@ def generate_signal(
     return result
 
 
-## tests/conftest.py (last modified: 2025-08-21 21:22:00)
+## tests/conftest.py (last modified: 2025-08-22 05:41:07)
 """Test configuration and shared fixtures."""
 
 import sys
@@ -7458,7 +7941,7 @@ sys.modules.setdefault(
 
 
 
-## tests/test_analyse_risque.py (last modified: 2025-08-21 21:22:00)
+## tests/test_analyse_risque.py (last modified: 2025-08-22 05:41:07)
 import os
 import sys
 import types
@@ -7514,7 +7997,7 @@ def test_analyse_risque_limits_and_leverage():
     assert vol == 1
 
 
-## tests/test_backtest.py (last modified: 2025-08-21 21:22:00)
+## tests/test_backtest.py (last modified: 2025-08-22 05:41:07)
 import pytest
 
 import bot
@@ -7530,7 +8013,7 @@ def test_backtest_trades():
     assert pnl == pytest.approx(19.6)
 
 
-## tests/test_backtest_multi.py (last modified: 2025-08-22 08:13:34)
+## tests/test_backtest_multi.py (last modified: 2025-08-22 11:53:22)
 import csv
 import random
 from datetime import datetime, timedelta, timezone
@@ -7697,7 +8180,7 @@ def test_seed_reproducible(tmp_path, monkeypatch):
     assert s1 == s2
 
 
-## tests/test_backtest_position.py (last modified: 2025-08-21 21:22:00)
+## tests/test_backtest_position.py (last modified: 2025-08-22 05:41:07)
 import os
 import sys
 import pytest
@@ -7728,7 +8211,7 @@ def test_backtest_position_bad_indices():
         backtest_position(prices, 1, 0, 1)
 
 
-## tests/test_bitget_futures_pairs.py (last modified: 2025-08-21 21:22:00)
+## tests/test_bitget_futures_pairs.py (last modified: 2025-08-22 05:41:07)
 import json
 from pathlib import Path
 from typing import Any, Dict
@@ -7801,11 +8284,10 @@ def test_write_csv(tmp_path: Path):
     assert content[0].startswith("productType,")
 
 
-## tests/test_bot_place_order_caps.py (last modified: 2025-08-22 08:13:34)
+## tests/test_bot_place_order_caps.py (last modified: 2025-08-22 11:53:22)
 import os
 import sys
 import types
-
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 sys.modules['requests'] = types.ModuleType('requests')
 
@@ -7850,22 +8332,23 @@ def test_attempt_entry_respects_caps(monkeypatch):
     client = DummyClient()
     sig = Signal("BTC_USDT", "long", 10000, 9900, 10100, 10200, 1, score=80)
     rm = DummyRisk(0.02)
-    available = 1000
+    equity = 100
+    available = 2.2  # just enough for 1 contract with buffer
     params = attempt_entry(
         client,
         _detail(),
         sig,
-        equity_usdt=available,
+        equity_usdt=equity,
         available_usdt=available,
         cfg={"LEVERAGE": 10},
         risk_mgr=rm,
         user_risk_level=1,
     )
     assert client.last_order is not None
+    assert params["vol"] >= 1
     opened = captured["position_opened"]
-    assert "risk_color" in opened
-    assert "required_margin_usdt" in opened
-    assert "notional_usdt" in opened
+    assert opened["notional_usdt"] >= 5
+    assert opened["vol"] >= 1
 
 
 def test_attempt_entry_insufficient_margin(monkeypatch):
@@ -7878,12 +8361,13 @@ def test_attempt_entry_insufficient_margin(monkeypatch):
     client = DummyClient()
     sig = Signal("BTC_USDT", "long", 10000, 9900, 10100, 10200, 1, score=80)
     rm = DummyRisk(0.02)
-    available = 0.5
+    equity = 100
+    available = 1.0  # below required margin
     params = attempt_entry(
         client,
         _detail(),
         sig,
-        equity_usdt=available,
+        equity_usdt=equity,
         available_usdt=available,
         cfg={"LEVERAGE": 10},
         risk_mgr=rm,
@@ -7891,10 +8375,48 @@ def test_attempt_entry_insufficient_margin(monkeypatch):
     )
     assert client.last_order is None
     assert params["vol"] == 0
-    assert captured["order_attempt"]["risk_color"]
+    assert captured["order_blocked"]["reason"].startswith("volume reduced")
 
 
-## tests/test_bot_update.py (last modified: 2025-08-21 21:22:00)
+def test_attempt_entry_under_min_trade(monkeypatch):
+    captured = {}
+
+    def fake_notify(event, payload):
+        captured[event] = payload
+
+    monkeypatch.setattr("bot.notify", fake_notify)
+    client = DummyClient()
+    sig = Signal("BTC_USDT", "long", 10000, 9900, 10100, 10200, 1, score=80)
+    rm = DummyRisk(0.02)
+    detail = {
+        "data": [
+            {
+                "symbol": "BTC_USDT",
+                "contractSize": 0.001,
+                "volUnit": 1,
+                "minVol": 1,
+                "minTradeUSDT": 50,
+            }
+        ]
+    }
+    equity = 100
+    available = 100
+    params = attempt_entry(
+        client,
+        detail,
+        sig,
+        equity_usdt=equity,
+        available_usdt=available,
+        cfg={"LEVERAGE": 10},
+        risk_mgr=rm,
+        user_risk_level=1,
+    )
+    assert client.last_order is None
+    assert params["vol"] == 0
+    assert captured["order_blocked"]["reason"].startswith("volume reduced")
+
+
+## tests/test_bot_update.py (last modified: 2025-08-22 05:41:07)
 import logging
 import bot
 
@@ -7929,7 +8451,7 @@ def test_update_survives_errors(monkeypatch, caplog):
 
 
 
-## tests/test_break_even_stop.py (last modified: 2025-08-21 21:22:00)
+## tests/test_break_even_stop.py (last modified: 2025-08-22 05:41:07)
 from scalp.trade_utils import break_even_stop
 
 
@@ -7947,7 +8469,7 @@ def test_break_even_stop_short() -> None:
     assert sl == 105
 
 
-## tests/test_calc_pnl_pct.py (last modified: 2025-08-21 21:22:00)
+## tests/test_calc_pnl_pct.py (last modified: 2025-08-22 05:41:07)
 import os
 import sys
 import pytest
@@ -7968,7 +8490,7 @@ def test_calc_pnl_pct_with_fee():
     assert calc_pnl_pct(100.0, 110.0, 1, fee_rate=0.001) == pytest.approx(9.8)
 
 
-## tests/test_check_config.py (last modified: 2025-08-21 21:22:00)
+## tests/test_check_config.py (last modified: 2025-08-22 05:41:07)
 import logging
 from bot import check_config
 
@@ -7994,7 +8516,7 @@ def test_check_config_does_not_log_present_keys(monkeypatch, caplog):
     assert caplog.records == []
 
 
-## tests/test_cli.py (last modified: 2025-08-21 21:22:00)
+## tests/test_cli.py (last modified: 2025-08-22 05:41:07)
 """Tests for the command line interface defined in :mod:`cli`."""
 
 from __future__ import annotations
@@ -8068,7 +8590,7 @@ def test_bump_version_invokes_helper(monkeypatch):
 
 
 
-## tests/test_client.py (last modified: 2025-08-22 08:13:34)
+## tests/test_client.py (last modified: 2025-08-22 11:53:22)
 import json
 import hmac
 import hashlib
@@ -8703,7 +9225,7 @@ def test_get_kline_transforms_data(monkeypatch):
     assert kdata["quoteVolume"] == [20.0, 21.0]
 
 
-## tests/test_compute_position_size.py (last modified: 2025-08-22 08:13:34)
+## tests/test_compute_position_size.py (last modified: 2025-08-22 11:53:22)
 import os
 import sys
 import types
@@ -8864,7 +9386,7 @@ def test_compute_position_size_cap_by_available():
     assert required <= 10
 
 
-## tests/test_compute_position_size_cap.py (last modified: 2025-08-22 08:13:34)
+## tests/test_compute_position_size_cap.py (last modified: 2025-08-22 11:53:22)
 import os
 import sys
 import types
@@ -8938,7 +9460,7 @@ def test_respects_units_and_minimums():
     assert vol % 2 == 0 and vol >= 2
 
 
-## tests/test_dynamic_allocation.py (last modified: 2025-08-21 21:22:00)
+## tests/test_dynamic_allocation.py (last modified: 2025-08-22 05:41:07)
 import math
 from scalp.risk import adjust_risk_pct
 
@@ -8958,7 +9480,7 @@ def test_adjust_risk_pct_bounds():
     )
 
 
-## tests/test_effective_leverage.py (last modified: 2025-08-21 21:22:00)
+## tests/test_effective_leverage.py (last modified: 2025-08-22 05:41:07)
 import pytest
 from scalp.trade_utils import effective_leverage
 
@@ -8998,7 +9520,7 @@ def test_effective_leverage_invalid():
     assert effective_leverage(0, 0, 0, 0) == 0.0
 
 
-## tests/test_env_loading.py (last modified: 2025-08-21 21:22:00)
+## tests/test_env_loading.py (last modified: 2025-08-22 05:41:07)
 """Tests for loading environment variables from ``notebook/.env``."""
 
 from __future__ import annotations
@@ -9036,7 +9558,126 @@ def test_parent_env_loaded(tmp_path, monkeypatch) -> None:
             os.environ["BITGET_ACCESS_KEY"] = old
 
 
-## tests/test_heat_score.py (last modified: 2025-08-21 21:22:00)
+## tests/test_grid_search.py (last modified: 2025-08-22 11:53:22)
+import json
+import random
+
+import pytest
+
+from backtest import grid_search
+
+
+def test_build_grid_sampling():
+    param_lists = {
+        "timeframe": ["1m", "5m", "15m"],
+        "score_min": [50, 55, 60],
+        "atr_min_ratio": [0.0015, 0.002, 0.003],
+    }
+    combos = grid_search.build_param_grid(param_lists, grid_max=6)
+    assert len(combos) == 6
+    tfs = {c["timeframe"] for c in combos}
+    assert {"1m", "5m", "15m"}.issubset(tfs)
+
+
+def test_run_grid_search_with_mock(tmp_path):
+    calls = []
+
+    def fake_run_backtest_multi(**kwargs):
+        tf = kwargs.get("timeframe")
+        risk = kwargs.get("risk_pct")
+        # fabricate metrics based on params
+        pf = {"1m": 1.5, "5m": 3.0}[tf]
+        pf += risk  # tiny variation
+        metrics = {
+            "symbol": "TOTAL",
+            "pnl_usdt": 100 * risk,
+            "profit_factor": pf,
+            "max_drawdown_pct": 5.0 if tf == "1m" else 3.0,
+            "winrate_pct": 50.0,
+            "trades": 40 if tf == "1m" else 30,
+        }
+        calls.append((tf, risk))
+        return [metrics], []
+
+    param_lists = {
+        "timeframe": ["1m", "5m"],
+        "risk_pct": [0.005, 0.01],
+    }
+    base_params = {
+        "timeframe": "1m",
+        "risk_pct": 0.005,
+    }
+    out_dir = tmp_path / "grid"
+    grid_search.run_grid_search(
+        symbols=["BTC/USDT"],
+        exchange="csv",
+        base_params=base_params,
+        param_lists=param_lists,
+        grid_max=4,
+        csv_dir="/dev/null",
+        out_dir=str(out_dir),
+        run_func=fake_run_backtest_multi,
+    )
+    best = json.loads((out_dir / "best_config.json").read_text())
+    # best PF should be timeframe 5m risk 0.01
+    assert best["params"]["timeframe"] == "5m"
+    assert best["params"]["risk_pct"] == 0.01
+    assert len(calls) == 4
+
+
+def test_parse_hours():
+    assert grid_search.parse_hours("7-11,13-17") == [7, 8, 9, 10, 11, 13, 14, 15, 16, 17]
+
+
+def test_deterministic_results(tmp_path):
+    def fake_run_backtest_multi(**kwargs):
+        # metrics vary with global random state
+        pf = random.uniform(1.0, 3.0)
+        metrics = {
+            "symbol": "TOTAL",
+            "pnl_usdt": random.uniform(-10, 10),
+            "profit_factor": pf,
+            "max_drawdown_pct": random.uniform(1, 5),
+            "winrate_pct": 50.0,
+            "trades": random.randint(10, 50),
+        }
+        return [metrics], []
+
+    param_lists = {"timeframe": ["1m", "5m"]}
+    base_params = {"timeframe": "1m"}
+    out_dir = tmp_path / "grid"
+    res1 = grid_search.run_grid_search(
+        symbols=["BTC/USDT"],
+        exchange="csv",
+        base_params=base_params,
+        param_lists=param_lists,
+        grid_max=2,
+        csv_dir="/dev/null",
+        out_dir=str(out_dir),
+        seed=42,
+        run_func=fake_run_backtest_multi,
+    )
+    best1 = json.loads((out_dir / "best_config.json").read_text())
+    # run again
+    out_dir2 = tmp_path / "grid2"
+    res2 = grid_search.run_grid_search(
+        symbols=["BTC/USDT"],
+        exchange="csv",
+        base_params=base_params,
+        param_lists=param_lists,
+        grid_max=2,
+        csv_dir="/dev/null",
+        out_dir=str(out_dir2),
+        seed=42,
+        run_func=fake_run_backtest_multi,
+    )
+    best2 = json.loads((out_dir2 / "best_config.json").read_text())
+    assert best1 == best2
+    # also ensure results object same best params
+    assert res1[0].params == res2[0].params
+
+
+## tests/test_heat_score.py (last modified: 2025-08-22 05:41:07)
 from scalp.pairs import heat_score, select_top_heat_pairs, decorrelate_pairs
 
 
@@ -9060,7 +9701,7 @@ def test_select_and_decorrelate_pairs():
     assert not ("A" in syms and "B" in syms)
 
 
-## tests/test_indicators.py (last modified: 2025-08-21 21:22:00)
+## tests/test_indicators.py (last modified: 2025-08-22 05:41:07)
 
 
 import os
@@ -9132,7 +9773,40 @@ def test_calc_atr_invalid_inputs(highs, lows, closes, period):
 
 
 
-## tests/test_notifier.py (last modified: 2025-08-22 08:13:34)
+## tests/test_min_qty_rules.py (last modified: 2025-08-22 11:53:22)
+import os
+import sys
+import types
+
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+sys.modules['requests'] = types.ModuleType('requests')
+
+from bot import _apply_contract_checks
+
+
+def _detail():
+    return {
+        "data": [
+            {
+                "symbol": "BTC_USDT",
+                "contractSize": 1,
+                "volUnit": 5,
+                "minVol": 10,
+                "minTradeUSDT": 5,
+            }
+        ]
+    }
+
+
+def test_min_qty_floor_and_validation():
+    detail = _detail()
+    vol, N, req = _apply_contract_checks(1, 13, 10, 100, detail, "BTC_USDT")
+    assert vol == 10
+    vol2, N2, req2 = _apply_contract_checks(1, 7, 10, 100, detail, "BTC_USDT")
+    assert vol2 == 0
+
+
+## tests/test_notifier.py (last modified: 2025-08-22 11:53:22)
 import scalp.notifier as notifier
 
 
@@ -9315,15 +9989,15 @@ def test_format_position_event_helper():
 
 
 
-## tests/test_notional_and_pnl_units.py (last modified: 2025-08-22 08:13:34)
+## tests/test_notional_and_pnl_units.py (last modified: 2025-08-22 11:53:22)
 import os, sys, types, pytest
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 sys.modules['requests'] = types.ModuleType('requests')
 
 from scalp.trade_utils import (
     get_contract_size,
-    notional,
-    required_margin,
+    notional as calc_notional,
+    required_margin as calc_required_margin,
     compute_pnl_usdt,
     compute_pnl_with_fees,
 )
@@ -9336,9 +10010,9 @@ def _detail():
 def test_notional_and_pnl_units():
     detail = _detail()
     cs = get_contract_size(detail, "BTC_USDT")
-    N = notional(10000, 2, cs)
+    N = calc_notional(10000, 2, cs)
     assert N == pytest.approx(10000 * 0.001 * 2)
-    margin = required_margin(N, 10, 0.001, buffer=0.0)
+    margin = calc_required_margin(N, 10, 0.001, buffer=0.0)
     assert margin == pytest.approx(N / 10 + 0.001 * N)
     pnl = compute_pnl_usdt(detail, 10000, 10100, 2, 1, symbol="BTC_USDT")
     assert pnl == pytest.approx((10100 - 10000) * 0.001 * 2)
@@ -9346,14 +10020,14 @@ def test_notional_and_pnl_units():
         detail, 10000, 10100, 2, 1, 10, 0.001, symbol="BTC_USDT"
     )
     gross = (10100 - 10000) * cs * 2
-    fees = 0.001 * (notional(10000, 2, cs) + notional(10100, 2, cs))
+    fees = 0.001 * (calc_notional(10000, 2, cs) + calc_notional(10100, 2, cs))
     expected = gross - fees
     expected_pct = expected / (N / 10) * 100
     assert pnl_net == pytest.approx(expected)
     assert pct == pytest.approx(expected_pct)
 
 
-## tests/test_pair_selection.py (last modified: 2025-08-21 21:22:00)
+## tests/test_pair_selection.py (last modified: 2025-08-22 05:41:07)
 import bot
 
 
@@ -9475,7 +10149,7 @@ def test_find_trade_positions(monkeypatch):
     ]
 
 
-## tests/test_pairs.py (last modified: 2025-08-21 21:22:00)
+## tests/test_pairs.py (last modified: 2025-08-22 05:41:07)
 import bot
 
 
@@ -9555,7 +10229,7 @@ def test_filter_trade_pairs_all_pairs(monkeypatch):
 
 
 
-## tests/test_risk_manager.py (last modified: 2025-08-21 21:22:00)
+## tests/test_risk_manager.py (last modified: 2025-08-22 05:41:07)
 from scalp import RiskManager
 
 
@@ -9601,7 +10275,7 @@ def test_risk_pct_scaling() -> None:
     assert rm.risk_pct < 0.01
 
 
-## tests/test_risk_utils.py (last modified: 2025-08-21 21:22:00)
+## tests/test_risk_utils.py (last modified: 2025-08-22 05:41:07)
 import pytest
 
 from scalp.risk import calc_risk_amount, calc_position_size
@@ -9634,7 +10308,7 @@ def test_calc_position_size_invalid_stop(stop_distance):
         calc_position_size(1000, 0.01, stop_distance)
 
 
-## tests/test_signal_risk.py (last modified: 2025-08-22 08:13:34)
+## tests/test_signal_risk.py (last modified: 2025-08-22 11:53:22)
 import types
 import os
 import sys
@@ -9704,7 +10378,7 @@ def test_notional_cap():
     assert params["notional"] <= params["cap_ratio"] * available + 1e-6
 
 
-## tests/test_slippage.py (last modified: 2025-08-21 21:22:00)
+## tests/test_slippage.py (last modified: 2025-08-22 05:41:07)
 from scalp.trade_utils import marketable_limit_price
 
 
@@ -9715,7 +10389,7 @@ def test_marketable_limit_price_buy_sell():
     assert price_sell == 9.9 * (1 - 0.001)
 
 
-## tests/test_strategy_v2.py (last modified: 2025-08-22 08:13:34)
+## tests/test_strategy_v2.py (last modified: 2025-08-22 05:41:07)
 import pytest
 
 from scalp import strategy
@@ -9867,7 +10541,7 @@ def test_generate_signal_trend_ema_filter(monkeypatch):
     assert sig is None
     
 
-## tests/test_telegram_bot.py (last modified: 2025-08-21 21:22:00)
+## tests/test_telegram_bot.py (last modified: 2025-08-22 05:41:07)
 from scalp.telegram_bot import TelegramBot
 
 
@@ -10089,7 +10763,7 @@ def test_stop_no_positions():
 
 
 
-## tests/test_utils.py (last modified: 2025-08-21 21:22:00)
+## tests/test_utils.py (last modified: 2025-08-22 05:41:07)
 import pytest
 from bot import ema, cross, compute_position_size, CONFIG
 from scalp.trade_utils import extract_available_balance
@@ -10168,7 +10842,7 @@ def test_extract_available_balance_zero_available_returns_zero():
     assert extract_available_balance(assets) == 0.0
 
 
-## tests/test_version.py (last modified: 2025-08-21 21:22:00)
+## tests/test_version.py (last modified: 2025-08-22 05:41:07)
 import pytest
 from scalp import version
 
@@ -10207,7 +10881,7 @@ def test_bump_from_message(monkeypatch, tmp_path):
 
 
 
-## tests/test_walk_forward.py (last modified: 2025-08-21 21:22:00)
+## tests/test_walk_forward.py (last modified: 2025-08-22 05:41:07)
 from scalp.backtest import walk_forward_windows
 
 
@@ -10221,7 +10895,7 @@ def test_walk_forward_windows():
     ]
 
 
-## tests/test_ws.py (last modified: 2025-08-21 21:22:00)
+## tests/test_ws.py (last modified: 2025-08-22 05:41:07)
 import asyncio
 
 from scalp.ws import WebsocketManager
