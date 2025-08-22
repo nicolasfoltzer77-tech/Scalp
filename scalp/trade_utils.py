@@ -66,6 +66,7 @@ def compute_position_size(
     risk_pct: float,
     leverage: int,
     symbol: Optional[str] = None,
+    available_usdt: Optional[float] = None,
 ) -> int:
     """Return contract volume to trade for the given risk parameters.
 
@@ -118,6 +119,17 @@ def compute_position_size(
         notional = vol * denom
         if notional < min_usdt:
             return 0
+
+    if available_usdt is not None:
+        cap = available_usdt / (1 / float(leverage) + fee_rate)
+        cap_vol = int(math.floor(cap / denom / vol_unit) * vol_unit)
+        if cap_vol < min_vol:
+            return 0
+        if vol > cap_vol:
+            vol = cap_vol
+            notional = vol * denom
+            if notional < min_usdt:
+                return 0
 
     return vol
 
