@@ -221,13 +221,27 @@ def update(client: Any, top_n: int = 40) -> Dict[str, str]:
 # ---------------------------------------------------------------------------
 # Helpers "safe" locaux (pas d'appel réseau)
 # ---------------------------------------------------------------------------
-def _safe_extract_contract_fields(contract_detail):
+def _safe_extract_contract_fields(contract_detail, symbol: str | None = None):
     data = contract_detail.get("data") if isinstance(contract_detail, dict) else None
-    if isinstance(data, list) and data:
-        data = data[0]
-    size_mult = float((data or {}).get("sizeMultiplier", 1.0))
-    min_trade = float((data or {}).get("minTradeNum", 1.0))
-    return size_mult, min_trade
+    contract: Dict[str, Any] = {}
+    if isinstance(data, list):
+        if symbol:
+            contract = next((c for c in data if c.get("symbol") == symbol), data[0] if data else {})
+        else:
+            contract = data[0] if data else {}
+    elif isinstance(data, dict):
+        contract = data
+    size = contract.get("contractSize") or contract.get("sizeMultiplier") or 1.0
+    min_trade = contract.get("minTradeUSDT") or contract.get("minTradeNum") or 1.0
+    try:
+        size_mult = float(size)
+    except (TypeError, ValueError):
+        size_mult = 1.0
+    try:
+        min_trade_val = float(min_trade)
+    except (TypeError, ValueError):
+        min_trade_val = 1.0
+    return size_mult, min_trade_val
 
 
 def _estimate_margin(contract_detail, price, vol, leverage):
@@ -265,7 +279,8 @@ RISK_COLOR = {1: "\U0001F7E2", 2: "\U0001F7E1", 3: "\U0001F534"}
 
 def compute_risk_params(sig_level: int, user_level: int, base_risk_pct: float, base_leverage: int) -> Tuple[float, int, float]:
     risk_mult = RISK_MULTIPLIER.get(sig_level, {}).get(user_level, 1.0)
-    lev_mult = LEVERAGE_MULTIPLIER.get(sig_level, 1.0)
+    lev_key = min(sig_level, user_level)
+    lev_mult = LEVERAGE_MULTIPLIER.get(lev_key, 1.0)
     risk_pct_eff = base_risk_pct * risk_mult
     leverage_eff = max(1, int(base_leverage * lev_mult))
     cap_ratio = NOTIONAL_CAP.get(user_level, {}).get(sig_level, 1.0)
@@ -287,6 +302,18 @@ def prepare_order(
         sig_level, user_risk_level, risk_mgr.risk_pct, base_leverage
     )
 
+    data = contract_detail.get("data") or []
+    if isinstance(data, list):
+        contract = next((c for c in data if c.get("symbol") == sig.symbol), data[0] if data else {})
+    else:
+        contract = data
+    contract_size = float(contract.get("contractSize") or contract.get("sizeMultiplier") or 0.0001)
+    vol_unit = int(contract.get("volUnit", 1))
+    min_vol = int(contract.get("minVol", 1))
+    min_usdt = float(contract.get("minTradeUSDT", 5))
+    max_lev = int(contract.get("maxLever") or contract.get("maxLeverage") or leverage_eff)
+    leverage_eff = min(leverage_eff, max_lev)
+
     vol = compute_position_size(
         contract_detail,
         equity_usdt=equity_usdt,
@@ -296,16 +323,8 @@ def prepare_order(
         symbol=sig.symbol,
         available_usdt=available_usdt,
     )
+    vol_before = vol
 
-    data = contract_detail.get("data") or []
-    if isinstance(data, list):
-        contract = next((c for c in data if c.get("symbol") == sig.symbol), data[0] if data else {})
-    else:
-        contract = data
-    contract_size = float(contract.get("contractSize", 0.0001))
-    vol_unit = int(contract.get("volUnit", 1))
-    min_vol = int(contract.get("minVol", 1))
-    min_usdt = float(contract.get("minTradeUSDT", 5))
     denom = sig.price * contract_size
     notional = vol * denom
 
@@ -330,6 +349,7 @@ def prepare_order(
 
     return {
         "vol": int(vol),
+        "vol_before": int(vol_before),
         "leverage_eff": int(leverage_eff),
         "risk_pct_eff": risk_pct_eff,
         "sig_level": sig_level,
@@ -364,8 +384,9 @@ def attempt_entry(
         "symbol": sig.symbol,
         "side": sig.side,
         "price": sig.price,
-        **params,
         "available": available_usdt,
+        "user_level": user_risk_level,
+        **params,
     }
     notify("order_attempt", payload)
     if params["vol"] <= 0:
@@ -388,12 +409,18 @@ def attempt_entry(
         "symbol": sig.symbol,
         "price": sig.price,
         "vol": params["vol"],
+        "vol_before": params.get("vol_before"),
         "leverage": params["leverage_eff"],
         "risk_color": params["risk_color"],
         "sig_level": params["sig_level"],
         "score": params["score"],
         "risk_pct_eff": params["risk_pct_eff"],
         "leverage_eff": params["leverage_eff"],
+        "notional": params["notional"],
+        "required_margin": params["required_margin"],
+        "available": available_usdt,
+        "user_level": user_risk_level,
+        "amount_usdt": params["notional"],
     }
     notify("position_opened", open_payload)
     return params
@@ -519,14 +546,15 @@ def main(argv: Optional[List[str]] = None) -> None:
     def close_position(side: int, price: float, vol: int) -> bool:
         nonlocal current_pos, current_vol, entry_price, entry_time, session_pnl, equity_usdt, stop_long, stop_short, take_profit
         pnl = round(calc_pnl_pct(entry_price, price, side, fee_rate), 2)
+        size_mult, _ = _safe_extract_contract_fields(contract_detail, symbol)
+        diff = price - entry_price
+        pnl_usd = round((diff if side > 0 else -diff) * size_mult * vol, 2)
         payload = {
             "side": "long" if side > 0 else "short",
             "symbol": symbol,
             "entry": entry_price,
             "exit": price,
-            "pnl_usd": round((price - entry_price) * vol, 2)
-            if side > 0
-            else round((entry_price - price) * vol, 2),
+            "pnl_usd": pnl_usd,
             "pnl_pct": pnl,
             "fee_pct": fee_rate * 2 * 100,
         }
@@ -733,7 +761,10 @@ def main(argv: Optional[List[str]] = None) -> None:
                     if row.get("symbol") == symbol:
                         price_str = row.get("lastPr") or row.get("lastPrice")
                         if price_str is not None:
-                            price = float(price_str)
+                            try:
+                                price = float(price_str)
+                            except (TypeError, ValueError):
+                                price = None
                         break
                 if price is None:
                     logging.warning("Prix introuvable pour %s", symbol)
@@ -741,7 +772,12 @@ def main(argv: Optional[List[str]] = None) -> None:
                     continue
             else:
                 price_str = tdata.get("lastPr") or tdata.get("lastPrice")
-                price = float(price_str)
+                try:
+                    price = float(price_str)
+                except (TypeError, ValueError):
+                    logging.warning("Prix invalide: %s", price_str)
+                    time.sleep(cfg["LOOP_SLEEP_SECS"])
+                    continue
 
             vol_close = current_vol
             sl_long = price * (1.0 - cfg["STOP_LOSS_PCT"])
@@ -819,18 +855,18 @@ def main(argv: Optional[List[str]] = None) -> None:
                     )
                     vol_add = vol_pre
                     if cfg.get("NOTIONAL_CAP_USDT", 0) > 0:
-                        size_mult, _m = _safe_extract_contract_fields(contract_detail)
+                        size_mult, _m = _safe_extract_contract_fields(contract_detail, symbol)
                         vol_cap = int(cfg["NOTIONAL_CAP_USDT"] / max(1e-12, size_mult * price))
                         if vol_cap > 0:
                             vol_add = min(vol_add, vol_cap)
                     notional, margin = _estimate_margin(contract_detail, price, vol_add, cfg["LEVERAGE"])
                     max_margin = float(cfg.get("MARGIN_CAP_RATIO", 1.0)) * available
                     if margin > max_margin:
-                        size_mult, _m = _safe_extract_contract_fields(contract_detail)
+                        size_mult, _m = _safe_extract_contract_fields(contract_detail, symbol)
                         vol_max_afford = int((max_margin * cfg["LEVERAGE"]) / max(1e-12, size_mult * price))
                         vol_add = max(0, min(vol_add, vol_max_afford))
                         notional, margin = _estimate_margin(contract_detail, price, vol_add, cfg["LEVERAGE"])
-                    size_mult, _m = _safe_extract_contract_fields(contract_detail)
+                    size_mult, _m = _safe_extract_contract_fields(contract_detail, symbol)
                     taker = max(CONFIG.get("FEE_RATE", 0.0), 0.001)
                     required = (price * size_mult * vol_add / cfg["LEVERAGE"] + taker * price * size_mult * vol_add) * 1.03
                     logging.info(
@@ -886,18 +922,18 @@ def main(argv: Optional[List[str]] = None) -> None:
                     )
                     vol_add = vol_pre
                     if cfg.get("NOTIONAL_CAP_USDT", 0) > 0:
-                        size_mult, _m = _safe_extract_contract_fields(contract_detail)
+                        size_mult, _m = _safe_extract_contract_fields(contract_detail, symbol)
                         vol_cap = int(cfg["NOTIONAL_CAP_USDT"] / max(1e-12, size_mult * price))
                         if vol_cap > 0:
                             vol_add = min(vol_add, vol_cap)
                     notional, margin = _estimate_margin(contract_detail, price, vol_add, cfg["LEVERAGE"])
                     max_margin = float(cfg.get("MARGIN_CAP_RATIO", 1.0)) * available
                     if margin > max_margin:
-                        size_mult, _m = _safe_extract_contract_fields(contract_detail)
+                        size_mult, _m = _safe_extract_contract_fields(contract_detail, symbol)
                         vol_max_afford = int((max_margin * cfg["LEVERAGE"]) / max(1e-12, size_mult * price))
                         vol_add = max(0, min(vol_add, vol_max_afford))
                         notional, margin = _estimate_margin(contract_detail, price, vol_add, cfg["LEVERAGE"])
-                    size_mult, _m = _safe_extract_contract_fields(contract_detail)
+                    size_mult, _m = _safe_extract_contract_fields(contract_detail, symbol)
                     taker = max(CONFIG.get("FEE_RATE", 0.0), 0.001)
                     required = (price * size_mult * vol_add / cfg["LEVERAGE"] + taker * price * size_mult * vol_add) * 1.03
                     logging.info(
@@ -976,18 +1012,18 @@ def main(argv: Optional[List[str]] = None) -> None:
                 )
                 vol_open = min(vol_open, vol_pre)
                 if cfg.get("NOTIONAL_CAP_USDT", 0) > 0:
-                    size_mult, _min_trade = _safe_extract_contract_fields(contract_detail)
+                    size_mult, _min_trade = _safe_extract_contract_fields(contract_detail, symbol)
                     vol_cap = int(cfg["NOTIONAL_CAP_USDT"] / max(1e-12, size_mult * price))
                     if vol_cap > 0:
                         vol_open = min(vol_open, vol_cap)
                 notional, margin = _estimate_margin(contract_detail, price, vol_open, lev)
                 max_margin = float(cfg.get("MARGIN_CAP_RATIO", 1.0)) * available
                 if margin > max_margin:
-                    size_mult, _min_trade = _safe_extract_contract_fields(contract_detail)
+                    size_mult, _min_trade = _safe_extract_contract_fields(contract_detail, symbol)
                     vol_max_afford = int((max_margin * lev) / max(1e-12, size_mult * price))
                     vol_open = max(0, min(vol_open, vol_max_afford))
                     notional, margin = _estimate_margin(contract_detail, price, vol_open, lev)
-                size_mult, _m = _safe_extract_contract_fields(contract_detail)
+                size_mult, _m = _safe_extract_contract_fields(contract_detail, symbol)
                 taker = max(CONFIG.get("FEE_RATE", 0.0), 0.001)
                 required = (price * size_mult * vol_open / lev + taker * price * size_mult * vol_open) * 1.03
                 logging.info(
@@ -1036,9 +1072,9 @@ def main(argv: Optional[List[str]] = None) -> None:
                     "price": price,
                     "vol": vol_open,
                     "leverage": CONFIG["LEVERAGE"],
-                    "amount_usdt": round(price * vol_open, 2),
-                    "sl_usd": round((price - sl_long) * vol_open, 2),
-                    "tp_usd": round((tp_long - price) * vol_open, 2),
+                    "amount_usdt": round(price * size_mult * vol_open, 2),
+                    "sl_usd": round((price - sl_long) * size_mult * vol_open, 2),
+                    "tp_usd": round((tp_long - price) * size_mult * vol_open, 2),
                     "fee_rate": fee_rate,
                     "session_pnl": session_pnl,
                 }
@@ -1095,18 +1131,18 @@ def main(argv: Optional[List[str]] = None) -> None:
                 )
                 vol_open = min(vol_open, vol_pre)
                 if cfg.get("NOTIONAL_CAP_USDT", 0) > 0:
-                    size_mult, _min_trade = _safe_extract_contract_fields(contract_detail)
+                    size_mult, _min_trade = _safe_extract_contract_fields(contract_detail, symbol)
                     vol_cap = int(cfg["NOTIONAL_CAP_USDT"] / max(1e-12, size_mult * price))
                     if vol_cap > 0:
                         vol_open = min(vol_open, vol_cap)
                 notional, margin = _estimate_margin(contract_detail, price, vol_open, lev)
                 max_margin = float(cfg.get("MARGIN_CAP_RATIO", 1.0)) * available
                 if margin > max_margin:
-                    size_mult, _min_trade = _safe_extract_contract_fields(contract_detail)
+                    size_mult, _min_trade = _safe_extract_contract_fields(contract_detail, symbol)
                     vol_max_afford = int((max_margin * lev) / max(1e-12, size_mult * price))
                     vol_open = max(0, min(vol_open, vol_max_afford))
                     notional, margin = _estimate_margin(contract_detail, price, vol_open, lev)
-                size_mult, _m = _safe_extract_contract_fields(contract_detail)
+                size_mult, _m = _safe_extract_contract_fields(contract_detail, symbol)
                 taker = max(CONFIG.get("FEE_RATE", 0.0), 0.001)
                 required = (price * size_mult * vol_open / lev + taker * price * size_mult * vol_open) * 1.03
                 logging.info(
@@ -1155,9 +1191,9 @@ def main(argv: Optional[List[str]] = None) -> None:
                     "price": price,
                     "vol": vol_open,
                     "leverage": CONFIG["LEVERAGE"],
-                    "amount_usdt": round(price * vol_open, 2),
-                    "sl_usd": round((sl_short - price) * vol_open, 2),
-                    "tp_usd": round((price - tp_short) * vol_open, 2),
+                    "amount_usdt": round(price * size_mult * vol_open, 2),
+                    "sl_usd": round((sl_short - price) * size_mult * vol_open, 2),
+                    "tp_usd": round((price - tp_short) * size_mult * vol_open, 2),
                     "fee_rate": fee_rate,
                     "session_pnl": session_pnl,
                 }

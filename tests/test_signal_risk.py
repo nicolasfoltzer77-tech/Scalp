@@ -45,6 +45,10 @@ def test_risk_tables():
     assert rp == 0.01 * 1.25
     assert lev == int(20 * 0.75)
     assert cap == 0.55
+    rp2, lev2, cap2 = compute_risk_params(3, 1, 0.01, 20)
+    assert rp2 == 0.01 * 1.0
+    assert lev2 == int(20 * 0.5)
+    assert cap2 == 0.35
 
 
 def test_notional_cap():
