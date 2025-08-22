@@ -59,12 +59,20 @@ class Orchestrator:
         self._heartbeat_ts = 0.0
         self._paused = False
 
-        # journaux
-        self._log_dir = "logs"
+        # journaux — dossier forcé à côté de ce fichier
+        self._log_dir = os.path.join(os.path.dirname(__file__), "logs")
         try:
             os.makedirs(self._log_dir, exist_ok=True)
         except Exception:
             pass
+        self._init_log_file(
+            "signals.csv",
+            ["ts", "symbol", "side", "entry", "sl", "tp1", "tp2", "last"],
+        )
+        self._init_log_file(
+            "orders.csv",
+            ["ts", "symbol", "side", "price", "sl", "tp", "risk_pct", "status", "order_id"],
+        )
 
         # Telegram (facultatif)
         if TelegramAsync is not None:
@@ -101,15 +109,20 @@ class Orchestrator:
                 delay = min(backoff_max, delay * 1.7)
 
     # ----------------- journalisation simple -----------------
+    def _init_log_file(self, fname: str, headers: List[str]) -> None:
+        try:
+            fpath = os.path.join(self._log_dir, fname)
+            if not os.path.exists(fpath):
+                with open(fpath, "w", newline="", encoding="utf-8") as f:
+                    csv.DictWriter(f, fieldnames=headers).writeheader()
+        except Exception:
+            pass
+
     def _log_row(self, fname: str, row: Dict[str, Any]) -> None:
         try:
             fpath = os.path.join(self._log_dir, fname)
-            new = not os.path.exists(fpath)
             with open(fpath, "a", newline="", encoding="utf-8") as f:
-                w = csv.DictWriter(f, fieldnames=list(row.keys()))
-                if new:
-                    w.writeheader()
-                w.writerow(row)
+                csv.DictWriter(f, fieldnames=list(row.keys()))..writerow(row)
         except Exception:
             pass
 
