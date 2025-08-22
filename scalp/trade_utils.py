@@ -67,7 +67,7 @@ def compute_position_size(
     risk_pct: float,
     leverage: int,
     symbol: Optional[str] = None,
-    available_usdt: float | None = None,
+    available_usdt: Optional[float] = None,
 ) -> int:
     """Return contract volume to trade for the given risk parameters.
 
@@ -122,47 +122,17 @@ def compute_position_size(
             return 0
 
     if available_usdt is not None:
-        taker_fee = max(CONFIG.get("FEE_RATE", 0.0), 0.001)
-
-        def req_margin(v: int) -> float:
-            notional_v = price * contract_size * v
-            return (notional_v / float(leverage) + taker_fee * notional_v) * 1.03
-
-        required = req_margin(vol)
-        if required > available_usdt:
-            lo, hi = 0, vol
-            while lo < hi:
-                mid = (lo + hi + 1) // 2
-                if req_margin(mid) <= available_usdt:
-                    lo = mid
-                else:
-                    hi = mid - 1
-            vol_final = int(math.floor(lo / vol_unit) * vol_unit)
-            notional = vol_final * denom
-            if vol_final < min_vol or notional < min_usdt:
-                logging.getLogger(__name__).info(
-                    "cap_margin: available=%s, required=%s, vol_pre=%s, vol_final=0, price=%s, lev=%s",
-                    available_usdt,
-                    required,
-                    vol,
-                    price,
-                    leverage,
-                )
+        cap = available_usdt / (1 / float(leverage) + fee_rate)
+        cap_vol = int(math.floor(cap / denom / vol_unit) * vol_unit)
+        if cap_vol < min_vol:
+            return 0
+        if vol > cap_vol:
+            vol = cap_vol
+            notional = vol * denom
+            if notional < min_usdt:
                 return 0
-            if vol_final != vol:
-                logging.getLogger(__name__).info(
-                    "cap_margin: available=%s, required=%s, vol_pre=%s, vol_final=%s, price=%s, lev=%s",
-                    available_usdt,
-                    required,
-                    vol,
-                    vol_final,
-                    price,
-                    leverage,
-                )
-            vol = vol_final
 
-    return int(vol)
-
+    return vol
 
 def effective_leverage(
     entry_price: float,
