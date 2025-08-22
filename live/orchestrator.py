@@ -4,19 +4,20 @@ from __future__ import annotations
 import asyncio
 import signal
 import time
+import os
+import csv
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Sequence
 
-# --- Dépendances internes (tolérance si modules optionnels manquent) ---
+# --- Dépendances internes ---
 from scalp.adapters.bitget import BitgetFuturesClient
 try:
-    from live.telegram_async import TelegramAsync  # déjà ajouté précédemment
-except Exception:  # pas bloquant
+    from live.telegram_async import TelegramAsync  # optionnel
+except Exception:
     TelegramAsync = None  # type: ignore
 
 try:
-    # Adaptateur OHLCV/ticker normalisé (si présent)
-    from scalp.adapters.market_data import MarketData
+    from scalp.adapters.market_data import MarketData  # optionnel
 except Exception:
     MarketData = None  # type: ignore
 
@@ -38,23 +39,32 @@ class SymbolContext:
 # =======================================================
 class Orchestrator:
     """
-    Orchestrateur asyncio minimal, robuste aux variations de format des données OHLCV.
-    - Heartbeat
-    - Rafraîchissement watchlist (placeholder)
-    - Trade loop par symbole
-    - (Optionnel) Telegram si TELEGRAM_* fournis
+    Orchestrateur asyncio robuste:
+      - Heartbeat
+      - Watchlist auto = TOP 10 par volume (via tickers)
+      - Trade loop par symbole
+      - (Optionnel) Telegram
+      - Logs CSV des signaux & ordres
     """
 
     def __init__(self, exchange: BitgetFuturesClient, order_service: OrderService, config, symbols: Sequence[str]):
         self.exchange = exchange
         self.order_service = order_service
         self.config = config
-        self.symbols = list(symbols)
+        # on garde la liste fournie, mais la watchlist auto viendra la remplacer par le TOP 10
+        self.symbols = [s.replace("_", "").upper() for s in symbols]
         self.ctx: Dict[str, SymbolContext] = {s: SymbolContext(s, []) for s in self.symbols}
         self._running = False
         self._tasks: List[asyncio.Task] = []
         self._heartbeat_ts = 0.0
         self._paused = False
+
+        # journaux
+        self._log_dir = "logs"
+        try:
+            os.makedirs(self._log_dir, exist_ok=True)
+        except Exception:
+            pass
 
         # Telegram (facultatif)
         if TelegramAsync is not None:
@@ -67,7 +77,7 @@ class Orchestrator:
         # MarketData (normalisation OHLCV)
         self._md = MarketData(self.exchange) if MarketData is not None else None
 
-    # ----------------- Utilitaires communs -----------------
+    # ----------------- utilitaires communs -----------------
     async def _sleep(self, secs: float) -> None:
         try:
             await asyncio.sleep(secs)
@@ -77,7 +87,7 @@ class Orchestrator:
     async def _safe(self, coro_factory, *, label: str, backoff: float = 1.0, backoff_max: float = 30.0):
         """
         Exécute une fabrique de coroutine avec retry exponentiel.
-        Evite 'cannot reuse already awaited coroutine' (toujours créer un nouveau coroutine).
+        Evite 'cannot reuse already awaited coroutine'.
         """
         delay = backoff
         while self._running:
@@ -89,6 +99,19 @@ class Orchestrator:
                 print(f"[orchestrator] {label} failed: {e!r}, retry in {delay:.1f}s")
                 await self._sleep(delay)
                 delay = min(backoff_max, delay * 1.7)
+
+    # ----------------- journalisation simple -----------------
+    def _log_row(self, fname: str, row: Dict[str, Any]) -> None:
+        try:
+            fpath = os.path.join(self._log_dir, fname)
+            new = not os.path.exists(fpath)
+            with open(fpath, "a", newline="", encoding="utf-8") as f:
+                w = csv.DictWriter(f, fieldnames=list(row.keys()))
+                if new:
+                    w.writeheader()
+                w.writerow(row)
+        except Exception:
+            pass
 
     # ----------------- Normalisation OHLCV -----------------
     def _normalize_rows(self, rows: Any) -> List[Dict[str, float]]:
@@ -110,7 +133,7 @@ class Orchestrator:
                 v = float(r.get("volume", r.get("vol", 0.0)))
             else:
                 rr = list(r)
-                # Formats courants: [ts,o,h,l,c,v] ou [o,h,l,c,v,ts]
+                # Formats: [ts,o,h,l,c,v] ou [o,h,l,c,v,ts]
                 if len(rr) >= 6 and isinstance(rr[0], (int, float)) and rr[0] > 10**10:
                     ts, o, h, l, c = int(rr[0]), float(rr[1]), float(rr[2]), float(rr[3]), float(rr[4])
                     v = float(rr[5])
@@ -205,12 +228,10 @@ class Orchestrator:
                     vol = float(last.get("volume", last.get("usdtVolume", last.get("quoteVolume", 0.0))))
                 else:
                     seq = list(last)
-                    # heuristique indices
                     if len(seq) >= 5:
                         first_is_ts = isinstance(seq[0], (int, float)) and seq[0] > 10**10
                         if first_is_ts:
-                            p = float(seq[4])
-                            vol = float(seq[5]) if len(seq) > 5 else 0.0
+                            p = float(seq[4]); vol = float(seq[5]) if len(seq) > 5 else 0.0
                         else:
                             p = float(seq[3]) if len(seq) > 3 else float(seq[-2])
                             vol = float(seq[4]) if len(seq) > 4 else float(seq[-1])
@@ -222,17 +243,58 @@ class Orchestrator:
             pass
         return []
 
-    # ----------------- Tâches principales -----------------
+    # ----------------- Watchlist: TOP 10 -----------------
+    async def _task_refresh_watchlist(self):
+        """
+        Toutes les 2 minutes:
+          - récupère les tickers,
+          - classe par volume décroissant,
+          - sélectionne le TOP 10 (USDT en priorité),
+          - met à jour self.symbols et les contexts.
+        """
+        while self._running:
+            try:
+                all_tk = await self._safe(lambda: asyncio.to_thread(self.exchange.get_ticker, None),
+                                          label="get_tickers")
+                items = []
+                if isinstance(all_tk, dict):
+                    items = all_tk.get("data") or all_tk.get("result") or all_tk.get("tickers") or []
+                elif isinstance(all_tk, (list, tuple)):
+                    items = list(all_tk)
+
+                # normalisation minimale: symbol & volume
+                norm = []
+                for t in items:
+                    if isinstance(t, dict):
+                        s = (t.get("symbol") or t.get("instId") or "").replace("_", "").upper()
+                        v = float(t.get("volume", t.get("usdtVolume", t.get("quoteVolume", 0.0))) or 0.0)
+                        if s.endswith("USDT"):  # prioriser paires USDT
+                            norm.append((s, v))
+                # tri & top 10
+                norm.sort(key=lambda x: x[1], reverse=True)
+                top = [s for s, _ in norm[:10]]
+                if top:
+                    if top != self.symbols:
+                        self.symbols = top
+                        # sync contexts
+                        for s in top:
+                            if s not in self.ctx:
+                                self.ctx[s] = SymbolContext(s, [])
+                        # supprime les ctx obsolètes
+                        for s in list(self.ctx.keys()):
+                            if s not in top:
+                                del self.ctx[s]
+                        print(f"[watchlist] updated TOP10: {','.join(self.symbols)}")
+            except Exception as e:
+                print(f"[watchlist] error: {e!r}")
+            await self._sleep(120.0)
+
+    # ----------------- Heartbeat -----------------
     async def _task_heartbeat(self):
         while self._running:
             self._heartbeat_ts = time.time()
             print("[heartbeat] alive")
             await self._sleep(15)
-
-    async def _task_refresh_watchlist(self):
-        # Placeholder: implémente ici le filtrage de paires si nécessaire
-        while self._running:
-            await self._sleep(60)
 
     def _status_text(self) -> str:
         alive = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(self._heartbeat_ts)) if self._heartbeat_ts else "n/a"
@@ -240,6 +302,7 @@ class Orchestrator:
         return (f"Scalp bot\nrunning: {self._running}\npaused: {self._paused}\n"
                 f"heartbeat: {alive}\nsymbols: {syms}")
 
+    # ----------------- Telegram -----------------
     async def _task_telegram(self):
         if not self._tg or not self._tg.enabled():
             while self._running:
@@ -266,8 +329,8 @@ class Orchestrator:
                         if len(parts) == 2:
                             syms = [s.strip().replace("_", "") for s in parts[1].split(",") if s.strip()]
                             if syms:
-                                self.symbols = syms
-                                for s in syms:
+                                self.symbols = syms[:10]  # clamp à 10
+                                for s in self.symbols:
                                     if s not in self.ctx:
                                         self.ctx[s] = SymbolContext(s, [])
                                 await self._tg.send_message(f"Symbols updated: {','.join(self.symbols)}")
@@ -285,6 +348,7 @@ class Orchestrator:
             except Exception:
                 await self._sleep(2.0)
 
+    # ----------------- Trade loop -----------------
     async def _task_trade_loop(self, symbol: str):
         ctx = self.ctx[symbol]
         print(f"[trade-loop] start {symbol}")
@@ -294,7 +358,6 @@ class Orchestrator:
                                      label=f"fetch_ohlcv_boot:{symbol}")
         ctx.ohlcv = self._normalize_rows(boot_rows or [])
         if ctx.ohlcv:
-            # log de contrôle une seule fois
             print(f"[debug:{symbol}] ohlcv sample -> dict={list(ctx.ohlcv[0].keys())}")
 
         while self._running:
@@ -302,7 +365,7 @@ class Orchestrator:
                 await self._sleep(1.0)
                 continue
 
-            # Rafraîchi
+            # Rafraîchi (2 dernières bougies)
             new_rows = await self._safe(lambda: self._fetch_ohlcv_once(symbol, limit=2),
                                         label=f"fetch_ohlcv_tail:{symbol}")
             if new_rows:
@@ -329,6 +392,24 @@ class Orchestrator:
                 print(f"[trade-loop:{symbol}] normalize error: {e!r}")
                 sig = None
 
+            # Debug & journaux signaux
+            if sig:
+                try:
+                    last_close = ctx.ohlcv[-1]["close"] if ctx.ohlcv else float("nan")
+                    print(f"[signal:{symbol}] side={'LONG' if sig.side>0 else 'SHORT'} entry={sig.entry} sl={sig.sl} tp1={getattr(sig,'tp1',None)} tp2={getattr(sig,'tp2',None)} last={last_close}")
+                    self._log_row("signals.csv", {
+                        "ts": int(time.time()*1000),
+                        "symbol": symbol,
+                        "side": "LONG" if sig.side>0 else "SHORT",
+                        "entry": float(sig.entry),
+                        "sl": float(sig.sl),
+                        "tp1": float(getattr(sig, "tp1", 0) or 0),
+                        "tp2": float(getattr(sig, "tp2", 0) or 0),
+                        "last": float(last_close),
+                    })
+                except Exception:
+                    pass
+
             # Exécuter si signal et pas de position ouverte
             if sig and not ctx.position_open:
                 try:
@@ -341,19 +422,44 @@ class Orchestrator:
                                 equity_usdt = float(a.get("equity", 0))
                                 break
 
+                    # Garde-fous taille et fréquence
+                    risk_pct = float(getattr(self.config, "RISK_PCT", 0.01) or 0.01)
+                    min_notional = float(getattr(self.config, "MIN_TRADE_USDT", 5) or 5)
+                    if equity_usdt * risk_pct < min_notional:
+                        print(f"[order:{symbol}] skipped: notional too small (equity*risk={equity_usdt*risk_pct:.2f} < {min_notional})")
+                        await self._sleep(1.0)
+                        continue
+                    if time.time() - ctx.last_signal_ts < 5.0:
+                        # anti-spam: 1 ordre max / 5s par symbole
+                        continue
+
                     req = OrderRequest(
                         symbol=sig.symbol or symbol,
                         side="long" if sig.side > 0 else "short",
                         price=float(sig.entry),
                         sl=float(sig.sl),
                         tp=float(sig.tp1) if getattr(sig, "tp1", None) else (float(sig.tp2) if getattr(sig, "tp2", None) else None),
-                        risk_pct=float(getattr(self.config, "RISK_PCT", 0.01)),
+                        risk_pct=risk_pct,
                     )
                     res = self.order_service.prepare_and_place(equity_usdt, req)
                     if res.accepted:
                         ctx.position_open = True
                         ctx.last_signal_ts = time.time()
                         print(f"[order] {symbol} accepted")
+                        try:
+                            self._log_row("orders.csv", {
+                                "ts": int(time.time()*1000),
+                                "symbol": symbol,
+                                "side": req.side,
+                                "price": req.price,
+                                "sl": req.sl or 0.0,
+                                "tp": req.tp or 0.0,
+                                "risk_pct": req.risk_pct,
+                                "status": res.status or "accepted",
+                                "order_id": res.order_id or "",
+                            })
+                        except Exception:
+                            pass
                         if self._tg and self._tg.enabled():
                             await self._tg.send_message(f"Order accepted: {symbol} {req.side} @ {req.price}")
                     else:
@@ -376,15 +482,15 @@ class Orchestrator:
                 loop.add_signal_handler(sig, lambda s=sig: asyncio.create_task(self.stop(reason=f"signal:{s.name}")))
             except NotImplementedError:
                 pass  # Windows
+
         self._tasks = [
             asyncio.create_task(self._task_heartbeat(), name="heartbeat"),
             asyncio.create_task(self._task_refresh_watchlist(), name="watchlist"),
             *(
                 asyncio.create_task(self._task_trade_loop(s), name=f"trade:{s}")
                 for s in self.symbols
-            )
+            ),
         ]
-        # Telegram si dispo
         if self._tg and self._tg.enabled():
             self._tasks.append(asyncio.create_task(self._task_telegram(), name="telegram"))
 
