@@ -57,7 +57,8 @@ def create_dump_file(output_path: str = 'dump.txt', root: str = '.') -> None:
             dump.write(f"## {rel_path} (last modified: {mod_time})\n")
             try:
                 with file_path.open('r', encoding='utf-8') as f:
-                    dump.write(f.read())
+                    for i, line in enumerate(f, 1):
+                        dump.write(f"{i:6}: {line}")
             except Exception:
                 dump.write('[unreadable file]\n')
             dump.write('\n\n')
