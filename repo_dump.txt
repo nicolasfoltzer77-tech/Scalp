@@ -1,3 +1,4 @@
+Dump updated at 2025-08-21 17:19 UTC
 Repository tree:
 Scalp/
     Makefile
@@ -14,13 +15,6 @@ Scalp/
     requirements-dev.txt
     requirements.txt
     short_one_way.py
-    signals/
-        __init__.py
-        generator.py
-    backtest/
-        __init__.py
-        engine.py
-        optimize.py
     tests/
         conftest.py
         test_analyse_risque.py
@@ -50,10 +44,13 @@ Scalp/
         test_version.py
         test_walk_forward.py
         test_ws.py
-    notebooks/
-        spot/
-            bitget_bot.py
-    result/
+    live/
+        __init__.py
+        orchestrator.py
+    backtest/
+        __init__.py
+        engine.py
+        optimize.py
     scalp/
         VERSION
         __init__.py
@@ -69,6 +66,9 @@ Scalp/
         trade_utils.py
         version.py
         ws.py
+        risk/
+            __init__.py
+            manager.py
         backtest/
             __init__.py
             walkforward.py
@@ -76,16 +76,16 @@ Scalp/
             __init__.py
             momentum.py
             scanner.py
-        risk/
-            __init__.py
-            manager.py
-    logs/
+    notebooks/
+        spot/
+            bitget_bot.py
+    signals/
+        __init__.py
+        generator.py
+    result/
     data/
         __init__.py
         indicators.py
-    live/
-        __init__.py
-        orchestrator.py
 
 ## Makefile
 .PHONY: test
@@ -174,7 +174,7 @@ Ce fichier résume les modules et fonctions essentiels afin de recréer le bot d
   - `get_symbol_info(symbol=None)`, `get_kline(symbol, interval="1m", start=None, end=None)`, `get_ticker(symbol=None)`.
   - `_private_request(method, path, params=None, body=None)` : signe et exécute les requêtes privées.
   - `get_account()`, `get_open_orders(symbol=None)`.
-  - `place_order(symbol, side, quantity, order_type, price=None, reduce_only=False, stop_loss=None, take_profit=None)`.
+  - `place_order(symbol, side, quantity, order_type, price=None, stop_loss=None, take_profit=None)`.
   - `cancel_order(symbol, order_id)`, `cancel_all(symbol)`.
 
 ### pairs.py
@@ -851,7 +851,12 @@ from typing import Any, Dict, Optional, List
 
 import requests
 
-from scalp.logging_utils import get_jsonl_logger, TradeLogger
+from scalp.logging_utils import (
+    get_jsonl_logger,
+    TradeLogger,
+    log_position,
+    log_operation_memo,
+)
 from scalp.metrics import calc_pnl_pct, calc_atr
 from scalp.notifier import notify, _format_text
 from scalp import __version__, RiskManager
@@ -902,12 +907,99 @@ def check_config() -> None:
 
 
 class BitgetFuturesClient(_BaseBitgetFuturesClient):
-    """Wrapper injecting the ``requests`` module and logger."""
+    """Wrapper injectant ``requests`` + normalisations pour le bot."""
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         kwargs.setdefault("requests_module", requests)
         kwargs.setdefault("log_event", log_event)
         super().__init__(*args, **kwargs)
+
+    # --------- assets (\u00e9quity USDT) via endpoint priv\u00e9 -----------------------
+    def get_assets(self) -> Dict[str, Any]:
+        # Le client de base expose _private_request ; on l'utilise ici.
+        # GET /api/v2/mix/account/accounts?productType=...&marginCoin=USDT
+        params = {"productType": self.product_type, "marginCoin": "USDT"}
+        resp = self._private_request("GET", "/api/v2/mix/account/accounts", params=params)
+        rows = resp.get("data", []) or []
+        if not isinstance(rows, list):
+            rows = [rows]
+        # normalisation pour que bot.py trouve currency/equity
+        norm = []
+        for a in rows:
+            cur = a.get("marginCoin") or a.get("currency") or "USDT"
+
+            # Bitget peut retourner plusieurs clés différentes pour la marge
+            # disponible.  On tente en priorité ``available`` mais on supporte
+            # aussi ``availableBalance`` et ``availableMargin``.  Si aucune de
+            # ces clés n'est présente on se replie sur ``cashBalance`` puis sur
+            # les métriques d'équité totale.
+            available = None
+            for key in ("available", "availableBalance", "availableMargin", "cashBalance"):
+                val = a.get(key)
+                if val is None:
+                    continue
+                try:
+                    available = float(val) or 0.0
+                except Exception:  # pragma: no cover - cas rare
+                    available = 0.0
+                break
+
+            if available is None:
+                for key in ("equity", "usdtEquity"):
+                    val = a.get(key)
+                    if val is None:
+                        continue
+                    try:
+                        available = float(val) or 0.0
+                    except Exception:  # pragma: no cover - cas rare
+                        available = 0.0
+                    break
+
+            if available is None:
+                available = 0.0
+
+            norm.append({**a, "currency": cur, "equity": available, "available": available})
+
+        return {"code": resp.get("code", "00000"), "data": norm, "success": True}
+
+    # --------- tickers publics + normalisation champs ------------------------
+    def get_ticker(self, symbol: str | None = None) -> Dict[str, Any]:
+        base = self.base.rstrip("/")
+        if symbol:
+            url = f"{base}/api/v2/mix/market/ticker"
+            params = {"symbol": symbol.replace("_", ""), "productType": self.product_type}
+        else:
+            url = f"{base}/api/v2/mix/market/tickers"
+            params = {"productType": self.product_type}
+
+        r = self.requests.get(url, params=params, timeout=10)
+        r.raise_for_status()
+        payload = r.json()
+        rows = payload.get("data", []) or []
+        if not isinstance(rows, list):
+            rows = [rows]
+
+        norm = []
+        for row in rows:
+            d = dict(row)
+            # cl\u00e9s compatibles avec scalp/pairs.py
+            d["symbol"] = d.get("symbol") or d.get("instId")
+            d["lastPrice"] = d.get("lastPr") or d.get("lastPrice")
+            d["bidPrice"] = d.get("bestBidPrice") or d.get("bidPr") or d.get("bidPrice")
+            d["askPrice"] = d.get("bestAskPrice") or d.get("askPr") or d.get("askPrice")
+            vol = (
+                d.get("usdtVolume")
+                or d.get("quoteVolume")
+                or d.get("baseVolume")
+                or d.get("volume")
+                or 0
+            )
+            try:
+                d["volume"] = float(vol)
+            except Exception:
+                d["volume"] = 0.0
+            norm.append(d)
+        return {"success": True, "data": norm}
 
 
 # Re-export pair utilities with ability to monkeypatch ``ema``/``cross`` ---------
@@ -935,9 +1027,7 @@ def find_trade_positions(
     )
 
 
-def send_selected_pairs(
-    client: Any, top_n: int = 20, tg_bot: Any | None = None
-) -> Dict[str, str]:
+def send_selected_pairs(client: Any, top_n: int = 20) -> Dict[str, str]:
     """Send the selected trading pairs and return the payload."""
     payload = _pairs.send_selected_pairs(
         client,
@@ -945,14 +1035,12 @@ def send_selected_pairs(
         select_fn=filter_trade_pairs,
         notify_fn=notify,
     )
-    if tg_bot and payload:
-        tg_bot.send(_format_text("pair_list", payload))
     return payload
 
 
-def update(client: Any, top_n: int = 20, tg_bot: Any | None = None) -> Dict[str, str]:
+def update(client: Any, top_n: int = 20) -> Dict[str, str]:
     """Send a fresh list of pairs to reflect current market conditions."""
-    payload = send_selected_pairs(client, top_n=top_n, tg_bot=tg_bot)
+    payload = send_selected_pairs(client, top_n=top_n)
     text = _format_text("pair_list", payload)
     logging.info(text)
     return payload
@@ -992,14 +1080,7 @@ def main(argv: Optional[List[str]] = None) -> None:
         risk_pct=cfg["RISK_PCT_EQUITY"],
     )
 
-    # Ensure a clean state: cancel lingering orders and close leftover positions
-    try:
-        open_orders = client.get_open_orders(cfg["SYMBOL"])
-        if open_orders.get("data"):
-            logging.info("Annulation des ordres ouverts au démarrage")
-            client.cancel_all(cfg["SYMBOL"], margin_coin=cfg["MARGIN_COIN"])
-    except Exception as exc:  # pragma: no cover - best effort
-        logging.error("Erreur annulation ordres ouverts: %s", exc)
+    # Ensure a clean state: close leftover positions
     try:
         positions = client.get_positions(product_type=cfg["PRODUCT_TYPE"])
         if positions.get("data"):
@@ -1023,26 +1104,62 @@ def main(argv: Optional[List[str]] = None) -> None:
 
     try:
         contract_detail = client.get_contract_detail(symbol)
-    except requests.HTTPError as exc:  # pragma: no cover - network issues
+    except requests.RequestException as exc:  # pragma: no cover - network issues
         logging.error("Erreur r\u00e9cup\u00e9ration contract detail: %s", exc)
         contract_detail = {"success": False, "code": 404}
     log_event("contract_detail", contract_detail)
 
-    assets = client.get_assets()
-    log_event("assets", assets)
-    equity_usdt = 0.0
-    try:
+    def _fetch_equity() -> float:
+        """Retrieve available USDT balance from the exchange.
+
+        Bitget returns several balance metrics; ``available``/``cashBalance``
+        represent free margin and are therefore preferred over total equity.
+        ``0.0`` is returned when no usable balance can be obtained.
+        """
+
+        try:
+            assets = client.get_assets()
+            log_event("assets", assets)
+        except requests.RequestException as exc:  # pragma: no cover - network issues
+            logging.error("Erreur récupération assets: %s", exc)
+            return 0.0
+
         for row in assets.get("data", []):
             if row.get("currency") == "USDT":
-                equity_usdt = float(row.get("equity", 0.0))
+                # champs possibles suivant les versions de l'API
+                for key in (
+                    "available",
+                    "availableBalance",
+                    "availableMargin",
+                    "cashBalance",
+                ):
+                    val = row.get(key)
+                    if val is None:
+                        continue
+                    try:
+                        eq = float(val)
+                    except (TypeError, ValueError):
+                        continue
+                    return eq if eq > 0 else 0.0
+
+                for key in ("equity", "usdtEquity"):
+                    val = row.get(key)
+                    if val is None:
+                        continue
+                    try:
+                        eq = float(val)
+                    except (TypeError, ValueError):
+                        continue
+                    if eq > 0:
+                        return eq
                 break
-    except Exception:
-        pass
+        return 0.0
+
+    equity_usdt = _fetch_equity()
     if equity_usdt <= 0:
         logging.warning(
-            "Equity USDT non détectée, fallback symbolique à 100 USDT pour sizing."
+            "Aucun solde USDT disponible; en attente de fonds avant de trader."
         )
-        equity_usdt = 100.0
 
     prev_fast = prev_slow = None
     current_pos = 0
@@ -1079,9 +1196,9 @@ def main(argv: Optional[List[str]] = None) -> None:
             price=price,
             open_type=CONFIG["OPEN_TYPE"],
             leverage=CONFIG["LEVERAGE"],
-            reduce_only=True,
         )
-        equity_usdt *= 1 + pnl / 100.0
+        new_eq = _fetch_equity()
+        equity_usdt = new_eq
         risk_mgr.record_trade(pnl)
         logging.info("Nouveau risk_pct: %.4f", risk_mgr.risk_pct)
         kill = risk_mgr.kill_switch
@@ -1104,6 +1221,25 @@ def main(argv: Optional[List[str]] = None) -> None:
                 "pnl": pnl,
             }
         )
+        log_position(
+            {
+                "timestamp": int(time.time()),
+                "pair": symbol,
+                "direction": "long" if side > 0 else "short",
+                "entry": entry_price,
+                "exit": price,
+                "pnl_pct": pnl,
+                "fee_rate": fee_rate,
+                "notes": None,
+            }
+        )
+        log_operation_memo(
+            {
+                "timestamp": int(time.time()),
+                "pair": symbol,
+                "details": f"Closed with pnl {pnl}%",
+            }
+        )
         current_pos = 0
         entry_price = None
         entry_time = None
@@ -1115,7 +1251,7 @@ def main(argv: Optional[List[str]] = None) -> None:
 
     notify("bot_started")
     try:
-        update(client, top_n=20, tg_bot=tg_bot)
+        update(client, top_n=20)
     except Exception as exc:  # pragma: no cover - network
         logging.error("Erreur sélection paires: %s", exc)
     if tg_bot:
@@ -1133,12 +1269,14 @@ def main(argv: Optional[List[str]] = None) -> None:
         now = time.time()
         if now >= next_update:
             try:
-                update(client, top_n=20, tg_bot=tg_bot)
+                update(client, top_n=20)
             except Exception as exc:  # pragma: no cover - network
                 logging.error("Erreur update marché: %s", exc)
             next_update = now + 60
 
         try:
+            new_eq = _fetch_equity()
+            equity_usdt = new_eq
             if current_pos == 0:
                 pairs = filter_trade_pairs(client, top_n=20)
                 signals = find_trade_positions(
@@ -1153,7 +1291,7 @@ def main(argv: Optional[List[str]] = None) -> None:
                         symbol = next_symbol
                         try:
                             contract_detail = client.get_contract_detail(symbol)
-                        except requests.HTTPError as exc:  # pragma: no cover - network
+                        except requests.RequestException as exc:  # pragma: no cover - network
                             logging.error(
                                 "Erreur récupération contract detail: %s", exc
                             )
@@ -1195,11 +1333,22 @@ def main(argv: Optional[List[str]] = None) -> None:
             )
 
             tick = client.get_ticker(symbol)
-            if not (tick and tick.get("code") == "00000" and tick.get("data")):
+            tdata = tick.get("data") if tick else None
+            code = tick.get("code") if tick else None
+            success = tick.get("success") if tick else None
+            if (
+                tick is None
+                or (code is not None and code != "00000")
+                or (success is not None and not success)
+                or tdata is None
+            ):
                 logging.warning("Ticker vide: %s", tick)
                 time.sleep(cfg["LOOP_SLEEP_SECS"])
                 continue
-            tdata = tick["data"]
+            if hasattr(tdata, "items") and not isinstance(tdata, dict):
+                tdata = dict(tdata)
+            elif isinstance(tdata, list):
+                tdata = [dict(r) if hasattr(r, "items") and not isinstance(r, dict) else r for r in tdata]
             if isinstance(tdata, list):
                 price = None
                 for row in tdata:
@@ -1396,7 +1545,8 @@ def main(argv: Optional[List[str]] = None) -> None:
                 )
                 log_event("order_long", resp)
                 logging.info(
-                    "→ LONG vol=%s @~%.2f (SL~%.2f / TP~%.2f) [%s]",
+                    "→ LONG %s vol=%s @~%.2f (SL~%.2f / TP~%.2f) [%s]",
+                    symbol,
                     vol_open,
                     price,
                     sl_long,
@@ -1409,6 +1559,7 @@ def main(argv: Optional[List[str]] = None) -> None:
                     "price": price,
                     "vol": vol_open,
                     "leverage": CONFIG["LEVERAGE"],
+                    "amount_usdt": round(price * vol_open, 2),
                     "sl_usd": round((price - sl_long) * vol_open, 2),
                     "tp_usd": round((tp_long - price) * vol_open, 2),
                     "fee_rate": fee_rate,
@@ -1462,7 +1613,8 @@ def main(argv: Optional[List[str]] = None) -> None:
                 )
                 log_event("order_short", resp)
                 logging.info(
-                    "→ SHORT vol=%s @~%.2f (SL~%.2f / TP~%.2f) [%s]",
+                    "→ SHORT %s vol=%s @~%.2f (SL~%.2f / TP~%.2f) [%s]",
+                    symbol,
                     vol_open,
                     price,
                     sl_short,
@@ -1475,6 +1627,7 @@ def main(argv: Optional[List[str]] = None) -> None:
                     "price": price,
                     "vol": vol_open,
                     "leverage": CONFIG["LEVERAGE"],
+                    "amount_usdt": round(price * vol_open, 2),
                     "sl_usd": round((sl_short - price) * vol_open, 2),
                     "tp_usd": round((price - tp_short) * vol_open, 2),
                     "fee_rate": fee_rate,
@@ -1504,7 +1657,7 @@ def main(argv: Optional[List[str]] = None) -> None:
 if __name__ == "__main__":  # pragma: no cover - manual run
     try:
         main()
-    except requests.HTTPError as exc:  # pragma: no cover - network issues
+    except requests.RequestException as exc:  # pragma: no cover - network issues
         logging.error("Erreur HTTP principale: %s", exc)
 
 
@@ -2574,6 +2727,8 @@ class BitgetFuturesClient:
             logging.warning(
                 "\u26a0\ufe0f Cl\u00e9s API non d\u00e9finies. Le mode r\u00e9el ne fonctionnera pas.",
             )
+        # Cache for contract precision details to avoid repeated network calls
+        self._contract_cache: Dict[str, Dict[str, Any]] = {}
 
     # ------------------------------------------------------------------
     # Helpers
@@ -2659,6 +2814,30 @@ class BitgetFuturesClient:
         r.raise_for_status()
         return r.json()
 
+    # ------------------------------------------------------------------
+    def _get_contract_precision(self, symbol: str) -> tuple[int, int]:
+        """Return price and volume precision for ``symbol``.
+
+        Results are cached to minimise HTTP requests. If the contract
+        information cannot be retrieved, ``(0, 0)`` is returned.
+        """
+        sym = self._format_symbol(symbol)
+        info = self._contract_cache.get(sym)
+        if info is None:
+            detail = self.get_contract_detail(sym)
+            try:
+                data = detail.get("data", [])
+                if isinstance(data, list) and data:
+                    info = data[0]
+                else:
+                    info = {}
+            except Exception:
+                info = {}
+            self._contract_cache[sym] = info
+        price_place = int(info.get("pricePlace") or 0)
+        volume_place = int(info.get("volumePlace") or 0)
+        return price_place, volume_place
+
     def get_kline(
         self,
         symbol: str,
@@ -2732,7 +2911,6 @@ class BitgetFuturesClient:
         body: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         method = method.upper()
-        url = f"{self.base}{path}"
         ts = self._ms()
 
         if method in ("GET", "DELETE"):
@@ -2740,16 +2918,17 @@ class BitgetFuturesClient:
             req_path = path + (f"?{qs}" if qs else "")
             sig = self._sign(f"{ts}{method}{req_path}")
             headers = self._headers(sig, ts)
-            r = self.requests.request(method, url, params=params, headers=headers, timeout=20)
+            url = f"{self.base}{req_path}"
+            r = self.requests.request(method, url, headers=headers, timeout=20)
         elif method == "POST":
             qs = self._urlencode_sorted(params or {})
             req_path = path + (f"?{qs}" if qs else "")
             body_str = json.dumps(body or {}, separators=(",", ":"), ensure_ascii=False)
             sig = self._sign(f"{ts}{method}{req_path}{body_str}")
             headers = self._headers(sig, ts)
+            url = f"{self.base}{req_path}"
             r = self.requests.post(
                 url,
-                params=params,
                 data=body_str.encode("utf-8"),
                 headers=headers,
                 timeout=20,
@@ -2757,28 +2936,39 @@ class BitgetFuturesClient:
         else:
             raise ValueError("M\u00e9thode non support\u00e9e")
 
+        resp_text = getattr(r, "text", "")
         try:
-            r.raise_for_status()
             data = r.json()
-        except Exception as e:  # pragma: no cover - network errors
-            # Try to surface the response body to aid troubleshooting
-            resp_text = getattr(r, "text", "")
-            logging.error(
-                "Erreur HTTP/JSON %s %s -> %s %s", method, path, str(e), resp_text
-            )
-            try:
-                data = r.json()
-                # Ensure a consistent failure structure
+        except Exception:
+            data = {
+                "success": False,
+                "error": resp_text,
+                "status_code": getattr(r, "status_code", None),
+            }
+
+        status = getattr(r, "status_code", 0)
+        if status >= 400:
+            code = str(data.get("code")) if isinstance(data, dict) else ""
+            if code == "22001":
+                logging.info("Aucun ordre à annuler (%s %s)", method, path)
+            else:
+                try:
+                    r.raise_for_status()
+                except Exception as e:
+                    if not resp_text:
+                        resp_text = getattr(r, "text", "") or str(e)
+                logging.error(
+                    "Erreur HTTP/JSON %s %s -> %s %s",
+                    method,
+                    path,
+                    status,
+                    resp_text,
+                )
                 if isinstance(data, dict):
                     data.setdefault("success", False)
-                    data.setdefault("status_code", getattr(r, "status_code", None))
-                    data.setdefault("error", resp_text or str(e))
-            except Exception:
-                data = {
-                    "success": False,
-                    "error": resp_text or str(e),
-                    "status_code": getattr(r, "status_code", None),
-                }
+                    data.setdefault("status_code", status)
+                    data.setdefault("error", resp_text)
+
         self.log_event(
             "http_private",
             {"method": method, "path": path, "params": params, "body": body, "response": data},
@@ -2804,9 +2994,30 @@ class BitgetFuturesClient:
             margin_coin = _DEFAULT_MARGIN_COIN.get(self.product_type)
         if margin_coin:
             params["marginCoin"] = margin_coin
-        return self._private_request(
+        data = self._private_request(
             "GET", "/api/v2/mix/account/accounts", params=params
         )
+        if isinstance(data, dict):
+            data.setdefault("success", str(data.get("code")) == "00000")
+        try:
+            for row in data.get("data", []):
+                if "currency" not in row and row.get("marginCoin"):
+                    row["currency"] = str(row["marginCoin"]).upper()
+                chosen = None
+                for key in ("available", "cashBalance", "equity", "usdtEquity"):
+                    val = row.get(key)
+                    if val is not None:
+                        chosen = val
+                        break
+                if chosen is not None:
+                    row["equity"] = chosen
+                try:
+                    row["equity"] = float(row["equity"])
+                except Exception:
+                    pass
+        except Exception:  # pragma: no cover - best effort
+            pass
+        return data
 
     def get_positions(self, product_type: Optional[str] = None) -> Dict[str, Any]:
         if self.paper_trade:
@@ -2909,10 +3120,16 @@ class BitgetFuturesClient:
         external_oid: Optional[str] = None,
         stop_loss: Optional[float] = None,
         take_profit: Optional[float] = None,
-        reduce_only: Optional[bool] = None,
         position_mode: Optional[int] = None,
+        margin_coin: Optional[str] = None,
+        time_in_force: str = "normal",
     ) -> Dict[str, Any]:
-        """Submit an order."""
+        """Submit an order.
+
+        This helper keeps backward compatibility with the older numeric
+        parameters used by the bot while translating them to the string based
+        fields required by Bitget's v2 API.
+        """
         if self.paper_trade:
             logging.info(
                 "PAPER_TRADE=True -> ordre simul\u00e9: side=%s vol=%s type=%s price=%s",
@@ -2937,13 +3154,62 @@ class BitgetFuturesClient:
                 },
             }
 
+        # ------------------------------------------------------------------
+        # Parameter mapping
+        # ------------------------------------------------------------------
+        side_map = {
+            1: ("buy", "long"),
+            2: ("buy", "short"),
+            3: ("sell", "short"),
+            4: ("sell", "long"),
+        }
+        if isinstance(side, int):
+            mapped = side_map.get(side)
+            if not mapped:
+                raise ValueError(f"Invalid side value: {side}")
+            side_str, pos_side = mapped
+        else:
+            side_str = str(side)
+            pos_side = None
+
+        order_map = {1: "market", 2: "limit", 3: "post_only", 4: "fok", 5: "limit"}
+        if isinstance(order_type, int):
+            order_str = order_map.get(order_type)
+            if order_str is None:
+                order_str = "limit" if price is not None else "market"
+        else:
+            order_str = str(order_type)
+
+        margin_mode = "crossed" if int(open_type) == 1 else "isolated"
+
+        if margin_coin is None:
+            margin_coin = _DEFAULT_MARGIN_COIN.get(self.product_type)
+
+        # ------------------------------------------------------------------
+        # Precision handling
+        # ------------------------------------------------------------------
+        try:
+            price_place, volume_place = self._get_contract_precision(symbol)
+        except Exception:  # pragma: no cover - best effort
+            price_place = volume_place = 0
+        if price is not None:
+            price = round(float(price), price_place)
+        if vol is not None:
+            vol = round(float(vol), volume_place)
+
         body = {
             "symbol": self._format_symbol(symbol),
+            "productType": self.product_type,
+            "marginMode": margin_mode,
+            "orderType": order_str,
+            "side": side_str,
             "size": vol,
-            "side": side,
-            "orderType": order_type,
-            "openType": open_type,
+            "timeInForceValue": time_in_force,
         }
+        if pos_side is not None:
+            body["posSide"] = pos_side
+        if margin_coin:
+            body["marginCoin"] = margin_coin
         if price is not None:
             body["price"] = float(price)
         if leverage is not None:
@@ -2952,16 +3218,18 @@ class BitgetFuturesClient:
             body["positionId"] = int(position_id)
         if external_oid:
             body["clientOid"] = str(external_oid)[:32]
+        else:
+            body["clientOid"] = str(uuid.uuid4())[:32]
         if stop_loss is not None:
             body["stopLossPrice"] = float(stop_loss)
         if take_profit is not None:
             body["takeProfitPrice"] = float(take_profit)
-        if reduce_only is not None:
-            body["reduceOnly"] = bool(reduce_only)
         if position_mode is not None:
-            body["positionMode"] = int(position_mode)
+            body["posMode"] = "one_way_mode" if int(position_mode) == 1 else "hedge_mode"
+        elif pos_side is not None:
+            body["posMode"] = "hedge_mode"
 
-        return self._private_request("POST", "/api/v2/mix/order/place", body=body)
+        return self._private_request("POST", "/api/v2/mix/order/place-order", body=body)
 
     def cancel_order(self, order_ids: List[int]) -> Dict[str, Any]:
         if self.paper_trade:
@@ -2983,15 +3251,15 @@ class BitgetFuturesClient:
                 "PAPER_TRADE=True -> annulation simulée de tous les ordres"
             )
             return {"success": True, "code": 0}
-        params = {"productType": self.product_type}
+        body = {"productType": self.product_type}
         if symbol:
-            params["symbol"] = self._format_symbol(symbol)
+            body["symbol"] = self._format_symbol(symbol)
         if margin_coin is None:
             margin_coin = _DEFAULT_MARGIN_COIN.get(self.product_type)
         if margin_coin:
-            params["marginCoin"] = margin_coin
+            body["marginCoin"] = margin_coin
         return self._private_request(
-            "POST", "/api/v2/mix/order/cancel-all-orders", params=params
+            "POST", "/api/v2/mix/order/cancel-all-orders", body=body
         )
 
     def close_position(
@@ -3204,7 +3472,8 @@ import json
 import os
 import sqlite3
 import time
-from typing import Any, Dict
+from pathlib import Path
+from typing import Any, Dict, List
 
 
 def get_jsonl_logger(path: str, max_bytes: int = 0, backup_count: int = 0):
@@ -3324,6 +3593,41 @@ class TradeLogger:
             ),
         )
         self.conn.commit()
+
+
+BASE_DIR = Path(__file__).resolve().parents[2]
+
+
+def _append_csv(path: Path, fields: List[str], row: Dict[str, Any]) -> None:
+    """Append a row to ``path`` creating the file with ``fields`` if needed."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    file_exists = path.exists()
+    with path.open("a", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=fields)
+        if not file_exists:
+            writer.writeheader()
+        writer.writerow({k: row.get(k) for k in fields})
+
+
+def log_position(data: Dict[str, Any]) -> None:
+    """Log a closed position to ``../positions.csv``."""
+    fields = [
+        "timestamp",
+        "pair",
+        "direction",
+        "entry",
+        "exit",
+        "pnl_pct",
+        "fee_rate",
+        "notes",
+    ]
+    _append_csv(BASE_DIR / "positions.csv", fields, data)
+
+
+def log_operation_memo(data: Dict[str, Any]) -> None:
+    """Log operation details to ``../operations_memo.csv``."""
+    fields = ["timestamp", "pair", "details"]
+    _append_csv(BASE_DIR / "operations_memo.csv", fields, data)
 
 
 ## scalp/metrics.py
@@ -3594,9 +3898,14 @@ def _format_position_event(event: str, payload: Dict[str, Any]) -> str:
     head = " ".join(p for p in [action, side, symbol, icons] if p)
 
     lines = [head]
-    vol = payload.get("vol")
-    if vol is not None:
-        lines.append(f"Position: {vol}")
+    if event == "position_opened":
+        amt = payload.get("amount_usdt")
+        if amt is not None:
+            lines.append(f"Montant: {amt} USDT")
+    else:
+        vol = payload.get("vol")
+        if vol is not None:
+            lines.append(f"Position: {vol}")
     lev = payload.get("leverage")
     if lev is not None:
         lines.append(f"Levier: x{lev}")
@@ -3668,11 +3977,10 @@ def _format_text(event: str, payload: Dict[str, Any] | None = None) -> str:
 def notify(event: str, payload: Dict[str, Any] | None = None) -> None:
     """Send an event payload to configured endpoints.
 
-    Notifications can be delivered via a generic HTTP endpoint defined by
-    ``NOTIFY_URL`` and/or directly to Telegram when ``TELEGRAM_BOT_TOKEN`` and
-    ``TELEGRAM_CHAT_ID`` are provided. Missing configuration for one notifier
-    doesn't affect the others. Network errors are logged but otherwise ignored
-    so they don't interrupt the bot's execution.
+    Notifications are delivered via a generic webhook defined by ``NOTIFY_URL``
+    and/or directly to Telegram when ``TELEGRAM_BOT_TOKEN`` and
+    ``TELEGRAM_CHAT_ID`` are provided. Network errors are logged but otherwise
+    ignored so they do not interrupt the bot's execution.
     """
 
     data = {"event": event}
@@ -3687,14 +3995,16 @@ def notify(event: str, payload: Dict[str, Any] | None = None) -> None:
         except Exception as exc:  # pragma: no cover - best effort only
             logging.error("Notification error for %s: %s", event, exc)
 
-    # Telegram bot notification
+    # Telegram notification
     token = os.getenv("TELEGRAM_BOT_TOKEN")
     chat_id = os.getenv("TELEGRAM_CHAT_ID")
-    if token and chat_id:
-        tg_url = f"https://api.telegram.org/bot{token}/sendMessage"
-        tg_payload = {"chat_id": chat_id, "text": _format_text(event, payload)}
-        try:
-            requests.post(tg_url, json=tg_payload, timeout=5)
+    # ``pair_list`` notifications are intentionally not forwarded to Telegram
+    if token and chat_id and event != "pair_list":
+        text = _format_text(event, payload or {})
+        t_url = f"https://api.telegram.org/bot{token}/sendMessage"
+        t_payload = {"chat_id": chat_id, "text": text}
+        try:  # pragma: no cover - network
+            requests.post(t_url, json=t_payload, timeout=5)
         except Exception as exc:  # pragma: no cover - best effort only
             logging.error("Telegram notification error for %s: %s", event, exc)
 
@@ -4831,12 +5141,13 @@ class TelegramBot:
             [{"text": "Positions ouvertes", "callback_data": "positions"}],
             [{"text": "Update Cryptos", "callback_data": "update"}],
             [{"text": "Réglages", "callback_data": "settings"}],
+            [{"text": "Arrêt bot", "callback_data": "shutdown"}],
         ]
         self.settings_keyboard = [
             [{"text": "Stop trade", "callback_data": "stop"}],
             [{"text": "Réglage risk", "callback_data": "risk"}],
+            [{"text": "Nb positions", "callback_data": "maxpos"}],
             [{"text": "Reset risk", "callback_data": "reset_risk"}],
-            [{"text": "Arrêt bot", "callback_data": "shutdown"}],
             [{"text": "Reset total", "callback_data": "reset_all"}],
             [{"text": "Retour", "callback_data": "back"}],
         ]
@@ -4845,6 +5156,18 @@ class TelegramBot:
                 {"text": "🟢", "callback_data": "risk_green"},
                 {"text": "🟠", "callback_data": "risk_orange"},
                 {"text": "🔴", "callback_data": "risk_red"},
+            ],
+            [{"text": "Retour", "callback_data": "back"}],
+        ]
+        self.maxpos_keyboard = [
+            [
+                {"text": "1", "callback_data": "maxpos_1"},
+                {"text": "2", "callback_data": "maxpos_2"},
+                {"text": "3", "callback_data": "maxpos_3"},
+            ],
+            [
+                {"text": "4", "callback_data": "maxpos_4"},
+                {"text": "5", "callback_data": "maxpos_5"},
             ],
             [{"text": "Retour", "callback_data": "back"}],
         ]
@@ -4858,9 +5181,9 @@ class TelegramBot:
         return sym[:-4] if sym.endswith("USDT") else sym
 
     def _build_stop_keyboard(self) -> list[list[Dict[str, str]]]:
-        pos = self.client.get_positions()
+        pos = self.client.get_positions() or {}
         buttons: list[list[Dict[str, str]]] = []
-        for p in pos.get("data", []):
+        for p in pos.get("data") or []:
             sym = p.get("symbol")
             if not sym:
                 continue
@@ -4875,9 +5198,9 @@ class TelegramBot:
 
 
     def _menu_text(self, session_pnl: float) -> str:
-        assets = self.client.get_assets()
+        assets = self.client.get_assets() or {}
         equity = 0.0
-        for row in assets.get("data", []):
+        for row in assets.get("data") or []:
             if row.get("currency") == "USDT":
                 try:
                     equity = float(row.get("equity", 0.0))
@@ -4885,8 +5208,10 @@ class TelegramBot:
                     equity = 0.0
                 break
         return (
-            f"Solde: {equity} USDT\n"
-            f"PnL session: {session_pnl} USDT\n"
+            f"Solde: {equity:.2f} USDT\n"
+            f"PnL session: {session_pnl:.2f} USDT\n"
+            f"Positions max: {self.risk_mgr.max_positions}\n"
+            f"Risque actuel: {self.risk_mgr.risk_pct * 100:.2f}%\n"
             "Choisissez une option:"
         )
 
@@ -4895,8 +5220,7 @@ class TelegramBot:
 
     def update_pairs(self) -> None:
         from bot import update as _update  # lazy import to avoid cycle
-
-        _update(self.client, top_n=20, tg_bot=self)
+        _update(self.client, top_n=20)
 
     # ------------------------------------------------------------------
     def _api_url(self, method: str) -> str:
@@ -4973,9 +5297,9 @@ class TelegramBot:
         if not data:
             return None, None
         if data == "balance":
-            assets = self.client.get_assets()
+            assets = self.client.get_assets() or {}
             equity = 0.0
-            for row in assets.get("data", []):
+            for row in assets.get("data") or []:
                 if row.get("currency") == "USDT":
                     try:
                         equity = float(row.get("equity", 0.0))
@@ -4983,11 +5307,11 @@ class TelegramBot:
                         equity = 0.0
                     break
 
-            return f"Solde: {equity} USDT", self.main_keyboard
+            return f"Solde: {equity:.2f} USDT", self.main_keyboard
         if data == "positions":
-            pos = self.client.get_positions()
+            pos = self.client.get_positions() or {}
             lines = []
-            for p in pos.get("data", []):
+            for p in pos.get("data") or []:
                 symbol = p.get("symbol", "")
                 base = self._base_symbol(symbol)
                 side = p.get("side")
@@ -4998,18 +5322,20 @@ class TelegramBot:
                 pnl_pct = p.get("pnl_pct")
                 line = f"{base} {side} {vol}"
                 if pnl is not None and pnl_pct is not None:
-                    line += f"\nPnL: {pnl} USDT ({pnl_pct}%)"
+                    line += f"\nPnL: {pnl:.2f} USDT ({pnl_pct:.2f}%)"
                 lines.append(line)
             if not lines:
 
                 return "Aucune position ouverte", self.main_keyboard
             return "Positions:\n" + "\n".join(lines), self.main_keyboard
         if data == "pnl":
-            return f"PnL session: {session_pnl} USDT", self.main_keyboard
+            return f"PnL session: {session_pnl:.2f} USDT", self.main_keyboard
         if data == "risk":
             return "Choisissez le niveau de risque:", self.risk_keyboard
         if data == "settings":
             return "Réglages:", self.settings_keyboard
+        if data == "maxpos":
+            return "Choisissez le nombre de positions:", self.maxpos_keyboard
         if data == "reset_risk":
             try:
                 self.risk_mgr.reset_day()
@@ -5034,6 +5360,17 @@ class TelegramBot:
                 return f"Niveau de risque réglé sur {lvl}", self.main_keyboard
             return "Niveau de risque inchangé", self.main_keyboard
 
+        if data.startswith("maxpos_"):
+            try:
+                lvl = int(data.split("_", 1)[1])
+            except Exception:
+                lvl = None
+            if lvl:
+                self.config["MAX_POSITIONS"] = lvl
+                self.risk_mgr.max_positions = lvl
+                return f"Nombre de positions réglé sur {lvl}", self.main_keyboard
+            return "Nombre de positions inchangé", self.main_keyboard
+
         if data == "reset_all":
             try:
                 self.client.close_all_positions()
@@ -5043,8 +5380,8 @@ class TelegramBot:
                 return "Erreur lors du reset total", self.settings_keyboard
 
         if data == "stop":
-            pos = self.client.get_positions()
-            if not pos.get("data"):
+            pos = self.client.get_positions() or {}
+            if not (pos.get("data") or []):
                 return "Aucune crypto sélectionnée", self.settings_keyboard
             return "Choisissez la position à fermer:", self._build_stop_keyboard()
         if data == "stop_all":
@@ -5063,7 +5400,7 @@ class TelegramBot:
 
         if data == "shutdown":
             self.stop_requested = True
-            return "Arrêt du bot demandé", self.settings_keyboard
+            return "Arrêt du bot demandé", self.main_keyboard
 
         if data == "back":
             return self._menu_text(session_pnl), self.main_keyboard
@@ -5124,9 +5461,23 @@ def compute_position_size(
     notional = equity_usdt * float(risk_pct) * float(leverage)
     if notional <= 0.0:
         return 0
+
     vol = notional / (price * contract_size)
     vol = int(math.floor(vol / vol_unit) * vol_unit)
-    return max(min_vol, vol)
+    vol = max(min_vol, vol)
+
+    margin = price * contract_size * vol / leverage
+    if margin > equity_usdt:
+        vol = int(
+            math.floor(
+                equity_usdt * leverage / (price * contract_size) / vol_unit
+            )
+            * vol_unit
+        )
+        if vol < min_vol:
+            return 0
+
+    return vol
 
 
 def analyse_risque(
@@ -5519,14 +5870,16 @@ print(f"Base={BASE}  PT={PT}  SYMB={SYMB}  MC={MC}  Notional≈{NOTIONAL}USDT")
 def sign_get(ts, path, params):
     qs = "&".join(f"{k}={v}" for k, v in sorted((params or {}).items()))
     pre = f"{ts}GET{path}" + (f"?{qs}" if qs else "")
-    return base64.b64encode(hmac.new(SK.encode(), pre.encode(), hashlib.sha256).digest()).decode()
-
-
-def sign_post(ts, path, body):
-    body_str = json.dumps(body or {}, separators=(",", ":"), sort_keys=True, ensure_ascii=False)
-    pre = f"{ts}POST{path}{body_str}"
     sig = base64.b64encode(hmac.new(SK.encode(), pre.encode(), hashlib.sha256).digest()).decode()
-    return sig, body_str
+    return sig, qs
+
+
+def sign_post(ts, path, body, params=None):
+    qs = "&".join(f"{k}={v}" for k, v in sorted((params or {}).items()))
+    body_str = json.dumps(body or {}, separators=(",", ":"), sort_keys=True, ensure_ascii=False)
+    pre = f"{ts}POST{path}" + (f"?{qs}" if qs else "") + body_str
+    sig = base64.b64encode(hmac.new(SK.encode(), pre.encode(), hashlib.sha256).digest()).decode()
+    return sig, body_str, qs
 
 
 def headers(sig, ts):
@@ -5632,8 +5985,9 @@ def check_accounts():
     path = "/api/v2/mix/account/accounts"
     ts = int(time.time() * 1000)
     params = {"productType": PT}
-    sig = sign_get(ts, path, params)
-    r = requests.get(BASE + path, params=params, headers=headers(sig, ts), timeout=12)
+    sig, qs = sign_get(ts, path, params)
+    url = f"{BASE}{path}" + (f"?{qs}" if qs else "")
+    r = requests.get(url, headers=headers(sig, ts), timeout=12)
     print("accounts", r.status_code, r.text[:160])
     r.raise_for_status()
     j = r.json()
@@ -5645,8 +5999,9 @@ def set_position_mode_one_way():
     path = "/api/v2/mix/account/set-position-mode"
     ts = int(time.time() * 1000)
     body = {"productType": PT, "symbol": SYMB, "posMode": "one_way_mode"}
-    sig, b = sign_post(ts, path, body)
-    r = requests.post(BASE + path, headers=headers(sig, ts), data=b.encode(), timeout=12)
+    sig, b, qs = sign_post(ts, path, body)
+    url = f"{BASE}{path}" + (f"?{qs}" if qs else "")
+    r = requests.post(url, headers=headers(sig, ts), data=b.encode(), timeout=12)
     print("set-position-mode(one-way)", r.status_code, r.text[:160])
     r.raise_for_status()
 
@@ -5655,8 +6010,9 @@ def set_leverage(lv: int = 2):
     path = "/api/v2/mix/account/set-leverage"
     ts = int(time.time() * 1000)
     body = {"symbol": SYMB, "productType": PT, "marginCoin": MC, "leverage": int(lv)}
-    sig, b = sign_post(ts, path, body)
-    r = requests.post(BASE + path, headers=headers(sig, ts), data=b.encode(), timeout=12)
+    sig, b, qs = sign_post(ts, path, body)
+    url = f"{BASE}{path}" + (f"?{qs}" if qs else "")
+    r = requests.post(url, headers=headers(sig, ts), data=b.encode(), timeout=12)
     print("set-leverage", r.status_code, r.text[:160])
     r.raise_for_status()
 
@@ -5677,8 +6033,9 @@ def place_one_way_sell(size_coin: float):
         "timeInForceValue": "normal",
         "clientOid": str(uuid.uuid4())[:32],
     }
-    sig, b = sign_post(ts, path, body)
-    r = requests.post(BASE + path, headers=headers(sig, ts), data=b.encode(), timeout=15)
+    sig, b, qs = sign_post(ts, path, body)
+    url = f"{BASE}{path}" + (f"?{qs}" if qs else "")
+    r = requests.post(url, headers=headers(sig, ts), data=b.encode(), timeout=15)
     print("place-order(one-way SELL)", r.status_code, r.text[:220])
     r.raise_for_status()
     j = r.json()
@@ -6094,13 +6451,13 @@ import bot
 
 
 def test_update_displays_pairs(monkeypatch, caplog):
-    def fake_send(client, top_n=20, tg_bot=None):
-        assert (client, top_n, tg_bot) == ("cli", 5, "tg")
+    def fake_send(client, top_n=20):
+        assert (client, top_n) == ("cli", 5)
         return {"green": "BTC", "orange": "ETH", "red": "XRP"}
 
     monkeypatch.setattr(bot, "send_selected_pairs", fake_send)
     with caplog.at_level(logging.INFO):
-        payload = bot.update("cli", top_n=5, tg_bot="tg")
+        payload = bot.update("cli", top_n=5)
     assert payload["green"] == "BTC"
     assert "BTC" in caplog.text and "ETH" in caplog.text and "XRP" in caplog.text
 
@@ -6160,6 +6517,15 @@ def test_check_config_only_logs_critical_missing(monkeypatch, caplog):
     assert any("BITGET_ACCESS_KEY" in m for m in messages)
     assert any("BITGET_SECRET_KEY" in m for m in messages)
     assert all("NOTIFY_URL" not in m for m in messages)
+
+
+def test_check_config_does_not_log_present_keys(monkeypatch, caplog):
+    monkeypatch.setenv("BITGET_ACCESS_KEY", "abcdef")
+    monkeypatch.setenv("BITGET_SECRET_KEY", "abcdef")
+    monkeypatch.setenv("BITGET_PASSPHRASE", "abcdef")
+    with caplog.at_level(logging.INFO):
+        check_config()
+    assert caplog.records == []
 
 
 ## tests/test_cli.py
@@ -6257,10 +6623,9 @@ def test_private_request_get_signature(monkeypatch):
 
     called = {}
 
-    def fake_request(method, url, params=None, headers=None, timeout=None):
+    def fake_request(method, url, headers=None, timeout=None):
         called["method"] = method
         called["url"] = url
-        called["params"] = params
         called["headers"] = headers
 
         class Resp:
@@ -6285,7 +6650,7 @@ def test_private_request_get_signature(monkeypatch):
     assert called["headers"]["ACCESS-KEY"] == "key"
     assert called["headers"]["ACCESS-TIMESTAMP"] == "1000"
     assert called["headers"]["ACCESS-RECV-WINDOW"] == "30"
-    assert called["params"] == {"b": "2", "a": "1"}
+    assert called["url"] == "https://test/api/test?a=1&b=2"
 
 
 def test_private_request_post_signature(monkeypatch):
@@ -6294,9 +6659,8 @@ def test_private_request_post_signature(monkeypatch):
 
     called = {}
 
-    def fake_post(url, params=None, data=None, headers=None, timeout=None):
+    def fake_post(url, data=None, headers=None, timeout=None):
         called["url"] = url
-        called["params"] = params
         called["data"] = data
         called["headers"] = headers
 
@@ -6322,8 +6686,8 @@ def test_private_request_post_signature(monkeypatch):
     assert called["headers"]["ACCESS-KEY"] == "key"
     assert called["headers"]["ACCESS-TIMESTAMP"] == "1000"
     assert called["headers"]["ACCESS-RECV-WINDOW"] == "30"
-    assert called["params"] is None
     assert called["data"].decode("utf-8") == body
+    assert called["url"] == "https://test/api/test"
 
 
 def test_private_request_http_error(monkeypatch):
@@ -6347,12 +6711,144 @@ def test_private_request_http_error(monkeypatch):
     assert "teapot" in resp["error"]
 
 
-def test_get_assets_paper_trade():
-    client = BitgetFuturesClient("key", "secret", "https://test", paper_trade=True)
+def test_get_assets_normalization(monkeypatch):
+    client = BitgetFuturesClient("key", "secret", "https://test")
+
+    called = {}
+
+    def fake_private(self, method, path, params=None, body=None):
+        called["method"] = method
+        called["path"] = path
+        called["params"] = params
+        return {"code": "00000", "data": [{"marginCoin": "usdt", "equity": "1"}]}
+
+    monkeypatch.setattr(BitgetFuturesClient, "_private_request", fake_private)
+
     assets = client.get_assets()
+
     assert assets["success"] is True
-    usdt = next((row for row in assets.get("data", []) if row.get("currency") == "USDT"), None)
-    assert usdt and usdt["equity"] == 100.0
+    usdt = assets.get("data", [])[0]
+    assert usdt["currency"].upper() == "USDT"
+    assert usdt["equity"] == 1.0
+    assert called["params"] == {"productType": "USDT-FUTURES", "marginCoin": "USDT"}
+
+
+def test_get_assets_equity_fallback(monkeypatch):
+    client = BitgetFuturesClient("key", "secret", "https://test")
+
+    def fake_private(self, method, path, params=None, body=None):
+        return {"code": "00000", "data": [{"marginCoin": "USDT", "available": "2"}]}
+
+    monkeypatch.setattr(BitgetFuturesClient, "_private_request", fake_private)
+
+    assets = client.get_assets()
+    usdt = assets.get("data", [])[0]
+    assert usdt["currency"] == "USDT"
+    assert usdt["equity"] == 2.0
+
+
+def test_get_assets_prefers_available(monkeypatch):
+    """When both equity and available are returned, available should win."""
+    client = BitgetFuturesClient("key", "secret", "https://test")
+
+    def fake_private(self, method, path, params=None, body=None):
+        return {
+            "code": "00000",
+            "data": [
+                {
+                    "marginCoin": "USDT",
+                    "equity": "5",
+                    "available": "1",
+                }
+            ],
+        }
+
+    monkeypatch.setattr(BitgetFuturesClient, "_private_request", fake_private)
+
+    assets = client.get_assets()
+    usdt = assets.get("data", [])[0]
+    assert usdt["equity"] == 1.0
+
+
+
+def test_get_assets_zero_available(monkeypatch):
+    """Zero available balance should propagate as zero equity."""
+    client = BitgetFuturesClient("key", "secret", "https://test")
+
+    def fake_private(self, method, path, params=None, body=None):
+        return {
+            "code": "00000",
+            "data": [
+                {
+                    "marginCoin": "USDT",
+                    "available": "0",
+                    "equity": "5",
+                }
+            ],
+        }
+
+    monkeypatch.setattr(BitgetFuturesClient, "_private_request", fake_private)
+
+    assets = client.get_assets()
+    usdt = assets.get("data", [])[0]
+    assert usdt["equity"] == 0.0
+
+
+def test_get_assets_available_balance(monkeypatch):
+    """Support alternative ``availableBalance`` field name."""
+    client = BitgetFuturesClient("key", "secret", "https://test")
+
+    def fake_private(self, method, path, params=None, body=None):
+        return {
+            "code": "00000",
+            "data": [{"marginCoin": "USDT", "availableBalance": "3.5"}],
+        }
+
+    monkeypatch.setattr(BitgetFuturesClient, "_private_request", fake_private)
+
+    assets = client.get_assets()
+    usdt = assets.get("data", [])[0]
+    assert usdt["equity"] == 3.5
+
+
+def test_get_ticker_normalization(monkeypatch):
+    client = BitgetFuturesClient("key", "secret", "https://test")
+
+    called = {}
+
+    def fake_get(url, params=None, timeout=None):
+        called["url"] = url
+        called["params"] = params
+
+        class Resp:
+            def raise_for_status(self):
+                pass
+
+            def json(self):
+                return {
+                    "data": {
+                        "instId": "BTCUSDT",
+                        "lastPr": "1",
+                        "bestBidPrice": "0.9",
+                        "bestAskPrice": "1.1",
+                        "usdtVolume": "100",
+                    }
+                }
+
+        return Resp()
+
+    monkeypatch.setattr(bot.requests, "get", fake_get, raising=False)
+
+    ticker = client.get_ticker("BTC_USDT")
+
+    assert ticker["success"] is True
+    data = ticker["data"][0]
+    assert data["symbol"] == "BTCUSDT"
+    assert data["lastPrice"] == "1"
+    assert data["bidPrice"] == "0.9"
+    assert data["askPrice"] == "1.1"
+    assert data["volume"] == 100.0
+    assert called["params"] == {"symbol": "BTCUSDT", "productType": "USDT-FUTURES"}
 
 
 def test_http_client_context_manager(monkeypatch):
@@ -6510,13 +7006,91 @@ def test_cancel_all_endpoint(monkeypatch):
 
     assert called["method"] == "POST"
     assert called["path"] == "/api/v2/mix/order/cancel-all-orders"
-    assert called["params"] == {
+    assert called["params"] is None
+    assert called["body"] == {
         "productType": "USDT-FUTURES",
         "symbol": "BTCUSDT",
         "marginCoin": "USDT",
     }
-    assert called["body"] is None
 
+
+def test_place_order_endpoint(monkeypatch):
+    client = BitgetFuturesClient("key", "secret", "https://test", paper_trade=False)
+
+    called = {}
+
+    monkeypatch.setattr(BitgetFuturesClient, "_get_contract_precision", lambda self, symbol: (0, 0))
+
+    def fake_private(self, method, path, params=None, body=None):
+        called["method"] = method
+        called["path"] = path
+        called["body"] = body
+        return {"success": True}
+
+    monkeypatch.setattr(BitgetFuturesClient, "_private_request", fake_private)
+
+    resp = client.place_order("BTCUSDT_UMCBL", side=1, vol=1, order_type=1)
+
+    assert resp["success"] is True
+    assert called["method"] == "POST"
+    assert called["path"] == "/api/v2/mix/order/place-order"
+    body = called["body"]
+    assert body["symbol"] == "BTCUSDT"
+    assert body["marginCoin"] == "USDT"
+    assert body["marginMode"] == "crossed"
+    assert body["side"] == "buy"
+    assert body["posSide"] == "long"
+    assert "reduceOnly" not in body
+    assert body["posMode"] == "hedge_mode"
+
+
+@pytest.mark.parametrize(
+    "code, side_str, pos_side",
+    [
+        (4, "sell", "long"),
+        (2, "buy", "short"),
+    ],
+)
+def test_place_order_close_positions(monkeypatch, code, side_str, pos_side):
+    client = BitgetFuturesClient("key", "secret", "https://test", paper_trade=False)
+
+    monkeypatch.setattr(BitgetFuturesClient, "_get_contract_precision", lambda self, symbol: (0, 0))
+
+    called = {}
+
+    def fake_private(self, method, path, params=None, body=None):
+        called["body"] = body
+        return {"success": True}
+
+    monkeypatch.setattr(BitgetFuturesClient, "_private_request", fake_private)
+
+    client.place_order("BTCUSDT_UMCBL", side=code, vol=1, order_type=1)
+
+    body = called["body"]
+    assert body["side"] == side_str
+    assert body["posSide"] == pos_side
+    assert "reduceOnly" not in body
+
+
+def test_place_order_precision(monkeypatch):
+    client = BitgetFuturesClient("key", "secret", "https://test", paper_trade=False)
+
+    monkeypatch.setattr(BitgetFuturesClient, "_get_contract_precision", lambda self, symbol: (2, 3))
+
+    called = {}
+
+    def fake_private(self, method, path, params=None, body=None):
+        called["body"] = body
+        return {"success": True}
+
+    monkeypatch.setattr(BitgetFuturesClient, "_private_request", fake_private)
+
+    client.place_order(
+        "BTCUSDT_UMCBL", side=1, vol=1.23456, order_type=1, price=1234.5678
+    )
+
+    assert called["body"]["price"] == 1234.57
+    assert called["body"]["size"] == 1.235
 
 def test_get_open_orders_paper_trade(monkeypatch):
     client = BitgetFuturesClient("key", "secret", "https://test", paper_trade=True)
@@ -6632,6 +7206,28 @@ def test_compute_position_size_invalid_price():
         contract_detail,
         equity_usdt=1000,
         price=0,
+        risk_pct=0.01,
+        leverage=10,
+        symbol="BTC_USDT",
+    )
+    assert vol == 0
+
+
+def test_compute_position_size_respects_equity():
+    contract_detail = {
+        "data": [
+            {
+                "symbol": "BTC_USDT",
+                "contractSize": 1,
+                "volUnit": 1,
+                "minVol": 1,
+            }
+        ]
+    }
+    vol = compute_position_size(
+        contract_detail,
+        equity_usdt=5,
+        price=100,
         risk_pct=0.01,
         leverage=10,
         symbol="BTC_USDT",
@@ -6797,7 +7393,7 @@ def test_calc_atr_invalid_inputs(highs, lows, closes, period):
 import scalp.notifier as notifier
 
 
-def test_notify_skips_without_url(monkeypatch):
+def test_notify_skips_without_targets(monkeypatch):
     called = False
 
     def fake_post(url, json=None, timeout=5):  # pragma: no cover - fallback
@@ -6812,7 +7408,7 @@ def test_notify_skips_without_url(monkeypatch):
     assert called is False
 
 
-def test_notify_posts(monkeypatch):
+def test_notify_posts_http(monkeypatch):
     payload = {}
 
     def fake_post(url, json=None, timeout=5):
@@ -6831,10 +7427,12 @@ def test_notify_posts(monkeypatch):
 
 
 def test_notify_posts_telegram(monkeypatch):
-    calls = []
+    payload = {}
 
     def fake_post(url, json=None, timeout=5):
-        calls.append({"url": url, "json": json, "timeout": timeout})
+        payload["url"] = url
+        payload["json"] = json
+        payload["timeout"] = timeout
 
     monkeypatch.delenv("NOTIFY_URL", raising=False)
     monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "abc")
@@ -6843,12 +7441,9 @@ def test_notify_posts_telegram(monkeypatch):
 
     notifier.notify("evt", {"bar": 2})
 
-    assert len(calls) == 1
-    assert calls[0]["url"] == "https://api.telegram.org/botabc/sendMessage"
-    assert calls[0]["json"]["chat_id"] == "123"
-    assert calls[0]["json"]["text"].startswith("evt")
-    assert "bar" in calls[0]["json"]["text"]
-
+    assert payload["url"] == "https://api.telegram.org/botabc/sendMessage"
+    assert payload["json"]["chat_id"] == "123"
+    assert "evt" in payload["json"]["text"]
 
 
 def test_notify_posts_both(monkeypatch):
@@ -6865,8 +7460,26 @@ def test_notify_posts_both(monkeypatch):
     notifier.notify("evt", {"bar": 2})
 
     assert len(calls) == 2
-    assert calls[0]["url"] == "http://example.com"
-    assert calls[1]["url"] == "https://api.telegram.org/botabc/sendMessage"
+    urls = {c["url"] for c in calls}
+    assert "http://example.com" in urls
+    assert "https://api.telegram.org/botabc/sendMessage" in urls
+
+
+def test_notify_skips_telegram_for_pair_list(monkeypatch):
+    calls = []
+
+    def fake_post(url, json=None, timeout=5):
+        calls.append(url)
+
+    monkeypatch.setenv("NOTIFY_URL", "http://example.com")
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "abc")
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "123")
+    monkeypatch.setattr(notifier.requests, "post", fake_post)
+
+    notifier.notify("pair_list", {"pairs": "BTC"})
+
+    # Only the generic webhook should be called, not Telegram
+    assert calls == ["http://example.com"]
 
 
 def test_format_text_open_position():
@@ -6875,7 +7488,7 @@ def test_format_text_open_position():
         "symbol": "BTCUSDT",
         "vol": 1,
         "leverage": 10,
-
+        "amount_usdt": 100,
         "tp_usd": 5,
         "sl_usd": 2,
         "hold": "2h",
@@ -6884,7 +7497,7 @@ def test_format_text_open_position():
     lines = text.splitlines()
 
     assert lines[0] == "Ouvre long 📈 BTC"
-    assert lines[1] == "Position: 1"
+    assert lines[1] == "Montant: 100 USDT"
     assert lines[2] == "Levier: x10"
     assert "TP: +5 USDT" in lines
     assert "SL: -2 USDT" in lines
@@ -6930,6 +7543,7 @@ def test_format_position_event_helper():
         "symbol": "BTCUSDT",
         "vol": 1,
         "leverage": 10,
+        "amount_usdt": 100,
         "tp_pct": 5,
         "sl_pct": 2,
     }
@@ -7378,6 +7992,8 @@ class DummyRiskMgr:
 
     def __init__(self):
         self.reset_called = False
+        self.max_positions = 1
+        self.risk_pct = 0.01
 
     def reset_day(self):
         self.reset_called = True
@@ -7395,7 +8011,7 @@ class DummyRequests:
 
 
 def make_bot(config=None, requests_module=None):
-    cfg = {"RISK_LEVEL": 2}
+    cfg = {"RISK_LEVEL": 2, "MAX_POSITIONS": 1}
     if config:
         cfg.update(config)
     if requests_module is None:
@@ -7437,7 +8053,7 @@ def test_handle_positions_zero_pnl():
 
     bot.client.get_positions = zero_positions
     resp, _ = bot.handle_callback("positions", 0.0)
-    assert "PnL: 0.0 USDT" in resp
+    assert "PnL: 0.00 USDT" in resp
 
 
 
@@ -7445,7 +8061,7 @@ def test_handle_pnl():
     bot = make_bot()
     resp, _ = bot.handle_callback("pnl", 5.0)
 
-    assert "5.0" in resp
+    assert "5.00" in resp
 
 
 def test_handle_risk_change():
@@ -7500,7 +8116,7 @@ def test_shutdown_bot():
     resp, kb = bot.handle_callback("shutdown", 0.0)
     assert "arrêt" in resp.lower()
     assert bot.stop_requested is True
-    assert kb == bot.settings_keyboard
+    assert kb == bot.main_keyboard
 
 
 def test_start_sends_menu():
@@ -7509,6 +8125,8 @@ def test_start_sends_menu():
     assert req.posts
     text = req.posts[0][1]["text"]
     assert "Solde" in text and "PnL session" in text
+    assert "Positions max" in text
+    assert "Risque actuel" in text
 
 
 def test_settings_menu_and_reset_risk():
@@ -7533,6 +8151,18 @@ def test_update_button(monkeypatch):
     resp, kb = bot.handle_callback("update", 0.0)
     assert called["called"] is True
     assert "mise à jour" in resp.lower()
+    assert kb == bot.main_keyboard
+
+
+def test_maxpos_menu_and_change():
+    bot = make_bot()
+    resp, kb = bot.handle_callback("maxpos", 0.0)
+    assert "nombre" in resp.lower()
+    assert kb == bot.maxpos_keyboard
+    resp, kb = bot.handle_callback("maxpos_3", 0.0)
+    assert "3" in resp
+    assert bot.config["MAX_POSITIONS"] == 3
+    assert bot.risk_mgr.max_positions == 3
     assert kb == bot.main_keyboard
 
 
