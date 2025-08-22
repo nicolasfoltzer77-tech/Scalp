@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 from typing import Dict, List, Tuple
 
 from .engine import backtest_symbol
+from .grid_search import run_grid_search
 
 
 def _load_csv(symbol: str, timeframe: str, csv_dir: str) -> List[Dict[str, object]]:
@@ -254,6 +255,19 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--out-dir", default="./result")
     p.add_argument("--plot", action="store_true")
     p.add_argument("--dry-run", action="store_true")
+    # grid search options
+    p.add_argument("--grid", action="store_true", help="activate grid search")
+    p.add_argument("--grid-max", type=int, default=12)
+    p.add_argument("--grid-tf")
+    p.add_argument("--grid-score-min")
+    p.add_argument("--grid-atr-min")
+    p.add_argument("--grid-rr-min")
+    p.add_argument("--grid-risk-pct")
+    p.add_argument("--grid-slippage-bps")
+    p.add_argument("--grid-fee")
+    p.add_argument("--grid-cooldown")
+    p.add_argument("--grid-hours")
+    p.add_argument("--match-exchange-semantics", action="store_true")
     return p
 
 
@@ -261,6 +275,60 @@ def main(args: List[str] | None = None):
     parser = build_arg_parser()
     ns = parser.parse_args(args=args)
     symbols = [s.strip() for s in ns.symbols.split(",") if s.strip()]
+    if ns.grid:
+        # helper to parse comma separated values
+        def _parse(val: str | None, cast):
+            if not val:
+                return None
+            return [cast(v) for v in val.split(",") if v.strip()]
+
+        param_lists: Dict[str, List] = {}
+        if ns.grid_tf:
+            param_lists["timeframe"] = _parse(ns.grid_tf, str)
+        if ns.grid_score_min:
+            param_lists["score_min"] = _parse(ns.grid_score_min, float)
+        if ns.grid_atr_min:
+            param_lists["atr_min_ratio"] = _parse(ns.grid_atr_min, float)
+        if ns.grid_rr_min:
+            param_lists["rr_min"] = _parse(ns.grid_rr_min, float)
+        if ns.grid_risk_pct:
+            param_lists["risk_pct"] = _parse(ns.grid_risk_pct, float)
+        if ns.grid_slippage_bps:
+            param_lists["slippage_bps"] = _parse(ns.grid_slippage_bps, float)
+        if ns.grid_fee:
+            param_lists["fee_rate"] = _parse(ns.grid_fee, float)
+        if ns.grid_cooldown:
+            param_lists["cooldown_secs"] = _parse(ns.grid_cooldown, int)
+        if ns.grid_hours:
+            param_lists["hours"] = _parse(ns.grid_hours, str)
+
+        base_params = {
+            "timeframe": ns.timeframe,
+            "score_min": 55,
+            "atr_min_ratio": 0.002,
+            "rr_min": 1.2,
+            "risk_pct": ns.risk_pct,
+            "slippage_bps": ns.slippage_bps,
+            "fee_rate": ns.fee_rate,
+            "cooldown_secs": 300,
+            "hours": "7-11,13-17",
+        }
+
+        return run_grid_search(
+            symbols=symbols,
+            exchange=ns.exchange,
+            base_params=base_params,
+            param_lists=param_lists,
+            grid_max=ns.grid_max,
+            csv_dir=ns.csv_dir,
+            initial_equity=ns.initial_equity,
+            leverage=ns.leverage,
+            paper_constraints=ns.paper_constraints,
+            seed=ns.seed,
+            out_dir=os.path.join(ns.out_dir, "grid"),
+            match_exchange_semantics=ns.match_exchange_semantics,
+        )
+
     return run_backtest_multi(
         symbols=symbols,
         exchange=ns.exchange,
