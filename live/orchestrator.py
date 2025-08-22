@@ -110,13 +110,39 @@ class Orchestrator:
         rows: List = []
         if data is not None:
             if isinstance(data, dict):
-                rows = data.get("data") or data.get("result") or []
-            elif isinstance(data, list):
-                rows = data
+                # extraire une liste depuis différents schémas possibles
+                rows = (
+                    data.get("data")
+                    or data.get("result")
+                    or data.get("records")
+                    or data.get("list")
+                    or data.get("items")
+                    or data.get("candles")
+                    or []
+                )
+                # certains exchanges encapsulent encore un sous-dict ("data":{"candles":[...]})
+                depth_guard = 0
+                while isinstance(rows, dict) and depth_guard < 3:
+                    rows = (
+                        rows.get("data")
+                        or rows.get("result")
+                        or rows.get("records")
+                        or rows.get("list")
+                        or rows.get("items")
+                        or rows.get("candles")
+                        or rows.get("klines")
+                        or rows.get("bars")
+                        or []
+                    )
+                    depth_guard += 1
+            elif isinstance(data, (list, tuple)):
+                rows = list(data)
 
         # 2) Normalisation stricte: si dict -> lire clés; si liste -> lire indices
         out: List[Dict] = []
-        for r in rows[-limit:]:
+        # s'assurer qu'on a bien une séquence avant slicing
+        seq = list(rows) if isinstance(rows, (list, tuple)) else []
+        for r in seq[-limit:]:
             if isinstance(r, dict):
                 t = int(r.get("ts") or r.get("time") or r.get("timestamp") or 0)
                 o = float(r.get("open", 0.0))
