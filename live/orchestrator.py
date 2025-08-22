@@ -39,11 +39,54 @@ class Orchestrator:
         self._running = False
         self._tasks: List[asyncio.Task] = []
         self._heartbeat_ts = 0.0
+        # util de normalisation utilisé partout
+        self._row_keys = ("ts", "open", "high", "low", "close", "volume")
         self._paused = False
         self._tg = TelegramAsync(
             token=getattr(config, "TELEGRAM_BOT_TOKEN", None),
             chat_id=getattr(config, "TELEGRAM_CHAT_ID", None)
         )
+
+    # ---------- normalisation OHLCV ----------
+    def _normalize_rows(self, rows):
+        """
+        Garantit une liste de dicts {"ts","open","high","low","close","volume"}.
+        Accepte: list[dict] OU list[list/tuple].
+        """
+        out = []
+        if not rows:
+            return out
+        for r in rows:
+            if isinstance(r, dict):
+                d = {
+                    "ts": int(r.get("ts") or r.get("time") or r.get("timestamp") or 0),
+                    "open": float(r.get("open", 0.0)),
+                    "high": float(r.get("high", r.get("open", 0.0))),
+                    "low": float(r.get("low", r.get("open", 0.0))),
+                    "close": float(r.get("close", r.get("open", 0.0))),
+                    "volume": float(r.get("volume", r.get("vol", 0.0))),
+                }
+            else:
+                rr = list(r)
+                # tolérance longueurs partielles
+                ts = int(rr[0]) if len(rr) > 0 and isinstance(rr[0], (int, float)) and rr[0] > 10**10 else 0
+                if ts > 0:
+                    o = float(rr[1]) if len(rr) > 1 else 0.0
+                    h = float(rr[2]) if len(rr) > 2 else o
+                    l = float(rr[3]) if len(rr) > 3 else o
+                    c = float(rr[4]) if len(rr) > 4 else o
+                    v = float(rr[5]) if len(rr) > 5 else 0.0
+                else:
+                    # format [o,h,l,c,v,(ts)]
+                    o = float(rr[0]) if len(rr) > 0 else 0.0
+                    h = float(rr[1]) if len(rr) > 1 else o
+                    l = float(rr[2]) if len(rr) > 2 else o
+                    c = float(rr[3]) if len(rr) > 3 else o
+                    v = float(rr[4]) if len(rr) > 4 else 0.0
+                    ts = int(rr[5]) if len(rr) > 5 else 0
+                d = {"ts": ts, "open": o, "high": h, "low": l, "close": c, "volume": v}
+            out.append(d)
+        return out
 
     # ---------- UTILITAIRES ----------
     async def _sleep(self, secs: float) -> None:
@@ -105,8 +148,9 @@ class Orchestrator:
         ctx = self.ctx[symbol]
         print(f"[trade-loop] start {symbol}")
         # Pré-chargement fenêtre
-        ctx.ohlcv = await self._safe(lambda: self._fetch_ohlcv_once(symbol, limit=200),
+        boot_rows = await self._safe(lambda: self._fetch_ohlcv_once(symbol, limit=200),
                                      label=f"fetch_ohlcv_boot:{symbol}")
+        ctx.ohlcv = self._normalize_rows(boot_rows or [])
         while self._running:
             if self._paused:
                 await self._sleep(1.0)
@@ -116,9 +160,10 @@ class Orchestrator:
                                         label=f"fetch_ohlcv_tail:{symbol}")
             if new_rows:
                 # maintenir une fenêtre glissante
-                ctx.ohlcv = (ctx.ohlcv + new_rows)[-400:]
+                ctx.ohlcv = (ctx.ohlcv + self._normalize_rows(new_rows))[-400:]
             # 2) générer signal
             try:
+                # on envoie toujours une liste de dicts normalisés
                 sig: Optional[Signal] = generate_signal(ohlcv=ctx.ohlcv, config=self.config)
             except Exception as e:
                 print(f"[trade-loop:{symbol}] generate_signal error: {e!r}")
