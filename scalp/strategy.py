@@ -133,18 +133,26 @@ class Signal:
     """Trading signal with risk parameters."""
 
     symbol: str
-    side: str  # "long" or "short"
-    price: float
+    side: int  # 1 for long, -1 for short
+    entry: float
     sl: float
     tp1: float
     tp2: float
-    qty: float
+    qty: float = 0.0
     score: Optional[float] = None
     quality: Optional[float] = None
     reasons: Optional[List[str]] = None
 
+    def __post_init__(self) -> None:  # pragma: no cover - simple coercion
+        if isinstance(self.side, str):
+            self.side = 1 if self.side.lower() in {"long", "buy", "1", "true"} else -1
 
-def generate_signal(
+    @property
+    def price(self) -> float:
+        return self.entry
+
+
+def _generate_signal(
     symbol: str,
     ohlcv: Dict[str, Sequence[float]],
     *,
@@ -342,6 +350,23 @@ def generate_signal(
 
     qty = _size(sl_dist)
     return Signal(symbol, side, price, sl, tp1, tp2, qty, score, score, reasons)
+
+
+def generate_signal(*args, **kwargs) -> Optional[Signal]:
+    if "config" in kwargs:
+        config = kwargs.pop("config")
+        symbol = kwargs.pop("symbol", None)
+        ohlcv = kwargs.pop("ohlcv", None)
+        if ohlcv is None:
+            raise TypeError("ohlcv argument required")
+        return _generate_signal(
+            symbol or ohlcv.get("symbol", ""),
+            ohlcv,
+            equity=kwargs.pop("equity", 0.0),
+            risk_pct=getattr(config, "RISK_PCT", 0.0),
+            **kwargs,
+        )
+    return _generate_signal(*args, **kwargs)
 
 # ---------------------------------------------------------------------------
 # Backtesting utilities
