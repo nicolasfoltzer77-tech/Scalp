@@ -21,12 +21,52 @@ class BitgetFuturesClient(_Base):
       - get_ticker(symbol|None) -> {"success": True, "data":[{symbol,lastPrice,bidPrice,askPrice,volume}]}
       - get_open_positions(symbol|None) -> positions ouvertes normalisées
       - get_fills(symbol, order_id|None) -> fills normalisés
-    Tolérant aux schémas: top-level dict OU list, items dict OU list.
+
+    Tolérant aux schémas d'API et aux variations d'arguments __init__ du client de base.
     """
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """
+        Rend l'init tolérant aux noms d’arguments:
+        accepte indifféremment api_key/apiKey, api_secret/apiSecret/secret, passphrase/password.
+        Injecte requests_module si nécessaire.
+        """
+        kwargs = dict(kwargs)  # copie modifiable
         kwargs.setdefault("requests_module", requests)
-        super().__init__(*args, **kwargs)
+
+        # --- Normalisation des clés entrantes ---
+        # on accepte aussi 'secret' (venant du prompt bot.py)
+        incoming_key = kwargs.pop("api_key", None) or kwargs.pop("key", None) or kwargs.pop("API_KEY", None)
+        incoming_secret = (
+            kwargs.pop("api_secret", None)
+            or kwargs.pop("secret", None)
+            or kwargs.pop("API_SECRET", None)
+        )
+        incoming_pass = kwargs.pop("passphrase", None) or kwargs.pop("api_passphrase", None) or kwargs.pop("password", None)
+
+        # On ne sait pas si le client de base attend apiKey/apiSecret ou api_key/api_secret.
+        # On va tenter d'abord en camelCase, puis en snake_case si TypeError.
+        camel_kwargs = dict(kwargs)
+        if incoming_key is not None and "apiKey" not in camel_kwargs and "api_key" not in camel_kwargs:
+            camel_kwargs["apiKey"] = incoming_key
+        if incoming_secret is not None and "apiSecret" not in camel_kwargs and "api_secret" not in camel_kwargs:
+            camel_kwargs["apiSecret"] = incoming_secret
+        if incoming_pass is not None and "passphrase" not in camel_kwargs:
+            camel_kwargs["passphrase"] = incoming_pass
+
+        try:
+            super().__init__(*args, **camel_kwargs)
+            return
+        except TypeError:
+            # 2e essai: snake_case
+            snake_kwargs = dict(kwargs)
+            if incoming_key is not None and "api_key" not in snake_kwargs and "apiKey" not in snake_kwargs:
+                snake_kwargs["api_key"] = incoming_key
+            if incoming_secret is not None and "api_secret" not in snake_kwargs and "apiSecret" not in snake_kwargs:
+                snake_kwargs["api_secret"] = incoming_secret
+            if incoming_pass is not None and "passphrase" not in snake_kwargs and "password" not in snake_kwargs:
+                snake_kwargs["passphrase"] = incoming_pass
+            super().__init__(*args, **snake_kwargs)
 
     # -----------------------------------------------------
     #                    COMPTES / ASSETS
@@ -53,26 +93,21 @@ class BitgetFuturesClient(_Base):
           - top-level dict (data/result/tickers) ou list
           - items dict OU liste (indices)
         """
-        # ---- Récup brut
         try:
             raw: Any = super().get_ticker(symbol) if symbol else super().get_tickers()
         except Exception as e:
             return {"success": False, "error": repr(e), "data": []}
 
-        # ---- Extraire items top-level
         items: List[Any] = []
         if isinstance(raw, dict):
             d = raw.get("data")
             if symbol and isinstance(d, dict):
-                items = [d]  # get_ticker one-symbol -> dict
+                items = [d]  # un seul symbole -> dict unique
             else:
                 items = d or raw.get("result") or raw.get("tickers") or []
         elif isinstance(raw, (list, tuple)):
             items = list(raw)
-        else:
-            items = []
 
-        # ---- Normaliser chaque item
         norm: List[Dict[str, Any]] = []
         for t in items:
             if isinstance(t, dict):
@@ -121,9 +156,6 @@ class BitgetFuturesClient(_Base):
     #               POSITIONS / ORDRES / FILLS
     # -----------------------------------------------------
     def get_open_positions(self, symbol: Optional[str] = None) -> Dict[str, Any]:
-        """
-        Retourne: {"success": True, "data":[{symbol, side, qty, avgEntryPrice}]}
-        """
         raw: Dict[str, Any] = super().get_positions() if hasattr(super(), "get_positions") else {}
         items = raw.get("data") or raw.get("result") or raw.get("positions") or []
         out: List[Dict[str, Any]] = []
