@@ -1,3 +1,4 @@
+# scalper/live/orchestrator.py
 from __future__ import annotations
 
 import asyncio
@@ -43,7 +44,7 @@ def _csv_writer(path: Path, headers: Iterable[str]):
 
 
 # ---------------------------------------------------------------------
-# Orchestrateur affûté
+# Orchestrateur affûté (léger mais complet)
 # ---------------------------------------------------------------------
 @dataclass
 class Orchestrator:
@@ -85,24 +86,15 @@ class Orchestrator:
         self._w_positions = _csv_writer(LOGS_DIR / "positions.csv", ["ts","symbol","qty","avg_price","pnl"])
         self._w_watchlist = _csv_writer(LOGS_DIR / "watchlist.csv", ["ts","symbols"])
 
-        # Tâches background (⚠️ sans argument label)
-        # heartbeat: on lui passe un getter qui renvoie self.running + le notifier
+        # Tâches background (signatures MINIMALES confirmées)
         self._bg_tasks.append(asyncio.create_task(
-        heartbeat_task(lambda: self.running, self.notifier)
+            heartbeat_task(lambda: self.running)                # ✅ 1 arg: getter running
+        ))
+        self._bg_tasks.append(asyncio.create_task(
+            log_stats_task(lambda: self.ticks_total,            # ✅ 1er getter: ticks_total
+                           lambda: self.symbols)                # ✅ 2e getter: symbols
         ))
 
-        # stats périodiques: getters pour ticks_total et symbols (+ notifier si supporté)
-        try:
-            # version utils récente: (ticks_getter, symbols_getter, notifier=None, label=None)
-            self._bg_tasks.append(asyncio.create_task(
-                log_stats_task(lambda: self.ticks_total, lambda: self.symbols, self.notifier, "orchestrator")
-        ))
-        except TypeError:
-            # version plus simple: (ticks_getter, symbols_getter)
-            self._bg_tasks.append(asyncio.create_task(
-                log_stats_task(lambda: self.ticks_total, lambda: self.symbols)
-        ))
-        
         # Boucles par symbole
         for sym in self.symbols:
             self._per_symbol_tasks[sym] = asyncio.create_task(self._symbol_loop(sym))
@@ -111,7 +103,9 @@ class Orchestrator:
         asyncio.create_task(self._commands_loop())
 
         if not QUIET:
-            await self.notifier.send("🟢 Orchestrator PRELAUNCH.\nUtilise /setup ou /backtest. /resume pour démarrer le live.")
+            await self.notifier.send(
+                "🟢 Orchestrator PRELAUNCH.\nUtilise /setup ou /backtest. /resume pour démarrer le live."
+            )
 
     async def stop(self) -> None:
         if not self.running:
@@ -142,6 +136,7 @@ class Orchestrator:
                 elif cmd == "/stop":
                     await self._handle_stop()
                 elif cmd.startswith("/backtest"):
+                    # Déclenche le runner unifié (mono/multi) via handler Telegram
                     await handle_backtest_command(cmd, self, self.notifier)
                 else:
                     await self.notifier.send(f"Commande inconnue: {cmd}")
