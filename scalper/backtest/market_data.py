@@ -1,37 +1,35 @@
 # scalper/backtest/market_data.py
 from __future__ import annotations
 
-import json
-import time
+import json, time
 from dataclasses import dataclass
-from typing import Dict, List, Tuple, Optional
+from typing import List, Tuple, Optional
 from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
-
 import pandas as pd
 
-
 # Timeframe -> param API
-_GRAN_MIX = {  # mix (futures) uses 'granularity'
-    "1m": "1min", "3m": "3min", "5m": "5m", "15m": "15m",
-    "30m": "30m", "1h": "1h", "4h": "4h", "1d": "1day",
+# ⚠️ MIX utilise 'granularity' avec '5min', '1h', '1day', etc.
+_GRAN_MIX = {
+    "1m": "1min", "3m": "3min", "5m": "5min", "15m": "15min",
+    "30m": "30min", "1h": "1h", "4h": "4h", "1d": "1day",
 }
-_PERIOD_SPOT = {  # spot uses 'period'
+# ⚠️ SPOT utilise 'period' avec '5min', '1hour', etc.
+_PERIOD_SPOT = {
     "1m": "1min", "3m": "3min", "5m": "5min", "15m": "15min",
     "30m": "30min", "1h": "1hour", "4h": "4hour", "1d": "1day",
 }
 
 @dataclass
 class BitgetConfig:
-    market: str = "mix"   # "mix" (USDT‑M futures perp) ou "spot"
+    market: str = "mix"   # 'mix' (USDT-M perp) ou 'spot'
     timeout: int = 20
     max_retries: int = 3
-    # v1 endpoints stables (OK pour data publiques)
     base_spot_candles: str = "https://api.bitget.com/api/spot/v1/market/candles"
-    base_mix_candles: str  = "https://api.bitget.com/api/mix/v1/market/candles"
+    base_mix_candles:  str = "https://api.bitget.com/api/mix/v1/market/candles"
 
 def _http_get(url: str, timeout: int) -> dict:
-    req = Request(url, headers={"User-Agent": "scalper-backtest/1.1"})
+    req = Request(url, headers={"User-Agent": "scalper-backtest/1.2"})
     with urlopen(req, timeout=timeout) as resp:
         raw = resp.read()
     return json.loads(raw.decode("utf-8"))
@@ -52,12 +50,9 @@ def fetch_ohlcv_bitget(
     cfg: Optional[BitgetConfig] = None,
 ) -> pd.DataFrame:
     """
-    Télécharge des bougies OHLCV auprès de l'API publique de Bitget (sans auth).
-
-    - market='mix'  → GET /api/mix/v1/market/candles?symbol=BTCUSDT_UMCBL&granularity=5m&limit=...
-    - market='spot' → GET /api/spot/v1/market/candles?symbol=BTCUSDT_SPBL&period=5min&limit=...
-
-    Retour: DataFrame index=timestamp UTC, colonnes: open, high, low, close, volume
+    Télécharge OHLCV Bitget (public, sans auth).
+    mix : /api/mix/v1/market/candles?symbol=BTCUSDT_UMCBL&granularity=5min&limit=...
+    spot: /api/spot/v1/market/candles?symbol=BTCUSDT_SPBL&period=5min&limit=...
     """
     cfg = cfg or BitgetConfig()
     market = cfg.market.lower().strip()
@@ -78,30 +73,37 @@ def fetch_ohlcv_bitget(
     else:
         raise ValueError(f"market inconnu: {cfg.market} (attendu 'mix' ou 'spot')")
 
-    err: Optional[Exception] = None
+    last_err: Optional[Exception] = None
     for attempt in range(cfg.max_retries + 1):
         try:
             data = _http_get(url, cfg.timeout)
-            # v1 spot/mix peuvent renvoyer soit une liste brute, soit { "data": [...] }
-            rows = data.get("data") if isinstance(data, dict) else data
+            # Bitget peut renvoyer {code,msg,data} ou une liste brute
+            if isinstance(data, dict):
+                # si code non 00000 on remonte l’erreur lisible
+                code = data.get("code")
+                if code and str(code) != "00000" and "data" not in data:
+                    raise RuntimeError(f"Bitget error {code}: {data.get('msg')}")
+                rows = data.get("data", [])
+            else:
+                rows = data
+
             if not isinstance(rows, list):
                 raise ValueError(f"Réponse inattendue: {data}")
 
-            # Format: [ts, open, high, low, close, volume, ...] (ts en ms, strings)
-            records: List[Tuple[int, float, float, float, float, float]] = []
+            # Format: [ts, open, high, low, close, volume, ...] (ts ms, strings)
+            recs: List[Tuple[int, float, float, float, float, float]] = []
             for r in rows:
                 ts = int(str(r[0]))
                 o, h, l, c, v = map(float, (r[1], r[2], r[3], r[4], r[5]))
-                records.append((ts, o, h, l, c, v))
+                recs.append((ts, o, h, l, c, v))
+            recs.sort(key=lambda x: x[0])
 
-            records.sort(key=lambda x: x[0])
-            df = pd.DataFrame(records, columns=["ts", "open", "high", "low", "close", "volume"])
+            df = pd.DataFrame(recs, columns=["ts", "open", "high", "low", "close", "volume"])
             df["timestamp"] = pd.to_datetime(df["ts"], unit="ms", utc=True)
-            df = df.drop(columns=["ts"]).set_index("timestamp")
-            return df
+            return df.drop(columns=["ts"]).set_index("timestamp")
 
-        except (URLError, HTTPError, ValueError, KeyError) as e:
-            err = e
+        except (URLError, HTTPError, ValueError, KeyError, RuntimeError) as e:
+            last_err = e
             time.sleep(min(2 ** attempt, 5))
 
-    raise RuntimeError(f"Bitget OHLCV fetch failed for {symbol} {timeframe}: {err}")
+    raise RuntimeError(f"Bitget OHLCV fetch failed for {symbol} {timeframe}: {last_err}")
