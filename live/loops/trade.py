@@ -10,7 +10,6 @@ from ...risk.manager import compute_size
 QUIET = int(os.getenv("QUIET", "0") or "0")
 PRINT_OHLCV_SAMPLE = int(os.getenv("PRINT_OHLCV_SAMPLE", "0") or "0")
 
-# --- FSM ultra simple (à étendre si besoin)
 class PositionFSM:
     def __init__(self):
         self.state = "FLAT"
@@ -62,8 +61,15 @@ class TradeLoop:
         # Risk/frais
         self.risk_pct = float(self.config.get("risk_pct", 0.5))
         self.caps_by_symbol = self.config.get("caps", {})  # dict optionnel
-        self.fees_bps = float(self.config.get("fees_bps", 0.0))          # ex: 5 bps = 0.05%
-        self.slippage_bps = float(self.config.get("slippage_bps", 0.0))  # idem
+        self.fees_map = self.config.get("fees_by_symbol", {})  # {sym: {"maker_bps":..., "taker_bps":...}}
+        self.slippage_bps = float(self.config.get("slippage_bps", 0.0))
+
+    def _bps_for(self, order_type: str = "market") -> float:
+        # market -> taker; limit post-only -> maker
+        per = self.fees_map.get(self.symbol, {})
+        if order_type == "limit":
+            return float(per.get("maker_bps", 0.0))
+        return float(per.get("taker_bps", 0.0))
 
     async def run(self, running: Callable[[], bool]):
         lookback = 200
@@ -94,7 +100,7 @@ class TradeLoop:
             side = sig.get("side","flat"); entry = float(sig.get("entry", c)); sl = sig.get("sl"); tp = sig.get("tp")
             self.log_signals.write_row({"ts": ts, "symbol": self.symbol, "side": side, "entry": entry, "sl": sl, "tp": tp, "last": c})
 
-            # --- Entrée
+            # --- Entrée (market -> taker)
             if self.ctx.fsm.state == "FLAT" and side in ("long","short"):
                 balance = float(self.config.get("cash", 10_000.0))
                 qty = compute_size(
@@ -107,9 +113,9 @@ class TradeLoop:
                     order = await safe_call(_place, label=f"order:{self.symbol}")
                     self.ctx.fsm.on_open(side, entry or c, qty)
                     self.log_orders.write_row({"ts": ts, "symbol": self.symbol, "side": side, "qty": qty,
-                                               "status": "placed", "order_id": (order or {}).get("id",""), "note": "entry"})
+                                               "status": "placed", "order_id": (order or {}).get("id",""), "note": f"entry taker={self._bps_for('market')}bps"})
 
-            # --- Sortie (flat ou signal opposé)
+            # --- Sortie (market -> taker)
             elif self.ctx.fsm.state == "OPEN" and (side == "flat" or (side in ("long","short") and side != self.ctx.fsm.side)):
                 qty = self.ctx.fsm.qty
                 exit_side = "sell" if self.ctx.fsm.side == "long" else "buy"
@@ -117,13 +123,11 @@ class TradeLoop:
                     return await self.order_market(self.symbol, exit_side, qty)
                 order = await safe_call(_close, label=f"close:{self.symbol}")
 
-                # fill avec slippage/frais (simple)
+                # fill avec slippage + frais (taker)
                 price_fill = float(c)
-                # slippage
                 price_fill *= (1 + (self.slippage_bps/10000.0)) if exit_side == "buy" else (1 - (self.slippage_bps/10000.0))
-                # log
                 self.log_orders.write_row({"ts": ts, "symbol": self.symbol, "side": exit_side, "qty": qty,
-                                           "status": "placed", "order_id": (order or {}).get("id",""), "note": "exit"})
+                                           "status": "placed", "order_id": (order or {}).get("id",""), "note": f"exit taker={self._bps_for('market')}bps"})
                 self.log_fills.write_row({"ts": ts, "symbol": self.symbol, "side": exit_side, "price": price_fill, "qty": qty,
                                           "order_id": (order or {}).get("id","")})
                 self.ctx.fsm.on_close()
