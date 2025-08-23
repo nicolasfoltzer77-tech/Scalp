@@ -1,88 +1,90 @@
+# bot.py
 from __future__ import annotations
-import asyncio, os, subprocess, sys
-from typing import Any
+import asyncio, os, sys, subprocess
 
-from scalper.exchange.bitget_ccxt import BitgetExchange
+# --- sécurité: s'assurer que ccxt est dispo (une seule fois) ---
+def ensure_ccxt():
+    try:
+        import ccxt  # noqa
+    except ImportError:
+        print("[i] ccxt non installé, tentative d'installation...")
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "ccxt>=4"])
+        import ccxt  # noqa
+
+ensure_ccxt()
+
+# === imports de ton projet ===
+from scalper.config import load_settings
 from scalper.live.notify import build_notifier_and_commands
-from scalper.live.orchestrator import run_orchestrator
+from scalper.live.orchestrator import RunConfig, run_orchestrator
+from scalper.live.watchlist import WatchlistManager
+from scalper.exchanges.factory import build_exchange  # si tu as une factory d'exchange
 
-def ensure_deps() -> None:
-    def _pip(p: str) -> None:
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "--quiet", p])
-    try: import ccxt  # noqa: F401
-    except ImportError: print("[deps] install ccxt…"); _pip("ccxt")
-    try: import aiohttp  # noqa: F401
-    except ImportError: print("[deps] install aiohttp…"); _pip("aiohttp")
+# -------- helpers --------
+DEFAULT_TOP10 = [
+    "BTCUSDT","ETHUSDT","SOLUSDT","BNBUSDT","XRPUSDT",
+    "DOGEUSDT","ADAUSDT","LTCUSDT","AVAXUSDT","LINKUSDT",
+]
 
-def load_dotenv_simple(path: str) -> None:
-    if not os.path.isfile(path): return
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            for line in f:
-                s = line.strip()
-                if not s or s.startswith("#") or "=" not in s: continue
-                k, v = s.split("=", 1); k = k.strip(); v = v.strip()
-                if k and k not in os.environ: os.environ[k] = v
-    except Exception: ...
+async def build_run_config(exchange, app_cfg: dict) -> RunConfig:
+    """
+    Boote la watchlist et renvoie un RunConfig *avec symbols*.
+    Fallback sécurisé si la liste est vide.
+    """
+    # timeframe / risk / cash depuis ta conf
+    timeframe = app_cfg.get("timeframe", "5m")
+    risk_pct  = float(app_cfg.get("risk_pct", 0.05))
+    cash      = float(app_cfg.get("cash", 10_000.0))
 
-def _env_any(keys: list[str], default: Any = None) -> Any:
-    for k in keys:
-        v = os.environ.get(k)
-        if v is not None and str(v).strip() != "":
-            return v
-    return default
+    # 1) s'il y a déjà des symbols en dur dans la conf, garde-les
+    symbols = app_cfg.get("symbols") or app_cfg.get("pairs") or []
 
-def load_run_config() -> dict[str, Any]:
-    load_dotenv_simple("/notebooks/.env")
-    symbols = os.environ.get(
-        "TOP_SYMBOLS",
-        "BTCUSDT,ETHUSDT,SOLUSDT,BNBUSDT,XRPUSDT,DOGEUSDT,ADAUSDT,LTCUSDT,AVAXUSDT,LINKUSDT",
-    ).split(",")
-    cfg = {
-        "TIMEFRAME": os.environ.get("TIMEFRAME", "5m"),
-        "TOP_SYMBOLS": [s.strip() for s in symbols if s.strip()],
-        "FETCH_LIMIT": int(os.environ.get("FETCH_LIMIT", "1000")),
-        "DATA_DIR": os.environ.get("DATA_DIR", "/notebooks/data"),
-        "USE_CACHE": os.environ.get("USE_CACHE", "1") == "1",
-        "CACHE_MIN_FRESH_SECONDS": int(os.environ.get("CACHE_MIN_FRESH_SECONDS", "0")),
-        # Telegram (accept both naming styles)
-        "TELEGRAM_TOKEN": _env_any(["TELEGRAM_TOKEN","TELEGRAM_BOT_TOKEN"]),
-        "TELEGRAM_CHAT_ID": _env_any(["TELEGRAM_CHAT_ID","TELEGRAM_CHAT"]),
-        # Bitget (optional)
-        "BITGET_API_KEY": _env_any(["BITGET_API_KEY","BITGET_ACCESS_KEY"]),
-        "BITGET_API_SECRET": _env_any(["BITGET_API_SECRET","BITGET_SECRET_KEY","BITGET_SECRET"]),
-        "BITGET_API_PASSPHRASE": _env_any(["BITGET_API_PASSPHRASE","BITGET_PASSPHRASE","BITGET_PASSWORD"]),
-    }
-    print("[notify] TELEGRAM configured." if (cfg["TELEGRAM_TOKEN"] and cfg["TELEGRAM_CHAT_ID"]) else "[notify] TELEGRAM not configured -> Null notifier will be used.")
-    return cfg
-
-async def warmup_cache(exchange: BitgetExchange, symbols: list[str], tf: str, limit: int) -> None:
-    for s in symbols:
+    # 2) sinon, boot via WatchlistManager
+    if not symbols:
+        wm = WatchlistManager(exchange, app_cfg)
         try:
-            await exchange.fetch_ohlcv(s, tf, limit)
-            print(f"[cache] warmup OK for {s}")
-        except Exception as e: print(f"[cache] warmup FAIL for {s}: {e}")
+            symbols = await wm.boot()  # doit renvoyer une liste de symboles
+        except Exception as e:
+            print(f"[watchlist] boot error: {e!r}")
+            symbols = []
 
-async def main() -> None:
-    ensure_deps()
-    cfg = load_run_config()
-    ex = BitgetExchange(
-        api_key=cfg["BITGET_API_KEY"],
-        secret=cfg["BITGET_API_SECRET"],
-        password=cfg["BITGET_API_PASSPHRASE"],
-        data_dir=cfg["DATA_DIR"],
-        use_cache=cfg["USE_CACHE"],
-        min_fresh_seconds=cfg["CACHE_MIN_FRESH_SECONDS"],
-        spot=True,
+    # 3) fallback sûr si toujours vide
+    if not symbols:
+        symbols = DEFAULT_TOP10
+
+    # log/notify en clair
+    print(f"[watchlist] boot got: {symbols}")
+
+    return RunConfig(
+        symbols=symbols,
+        timeframe=timeframe,
+        risk_pct=risk_pct,
+        cash=cash,
     )
-    await warmup_cache(ex, cfg["TOP_SYMBOLS"], cfg["TIMEFRAME"], cfg["FETCH_LIMIT"])
-    notifier, factory = await build_notifier_and_commands(cfg)
-    try:
-        # positional args to survive older signatures
-        await run_orchestrator(ex, cfg, notifier, factory)
-    finally:
-        await notifier.close()
-        await ex.close()
+
+# -------- main --------
+async def main():
+    # charge la conf + secrets (.env, etc.)
+    app_cfg, secrets = load_settings()
+
+    # construit l'exchange (Bitget/ccxt, etc.)
+    exchange = await build_exchange(app_cfg, secrets)  # adapte si ton projet diffère
+
+    # notifier + flux de commandes Telegram (ou Null si pas configuré)
+    notifier, command_stream = await build_notifier_and_commands(app_cfg, secrets)
+
+    # >>> ICI: on prépare un RunConfig avec les *symbols* remplis
+    run_cfg = await build_run_config(exchange, app_cfg)
+
+    # petit message côté Telegram pour confirmer les paires
+    if notifier:
+        try:
+            await notifier.send("[watchlist] " + ", ".join(run_cfg.symbols))
+        except Exception:
+            pass
+
+    # lance l’orchestrateur (exchange, config avec symbols, notifier, commandes)
+    await run_orchestrator(exchange, run_cfg, notifier, command_stream)
 
 if __name__ == "__main__":
     asyncio.run(main())
