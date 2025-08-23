@@ -30,7 +30,7 @@ class TelegramNotifier(BaseNotifier):
         return self._session
 
     async def send(self, msg: str) -> None:
-        # send without parse_mode to avoid "can't parse entities"
+        # Pas de parse_mode pour éviter “can't parse entities…”
         url = f"https://api.telegram.org/bot{self.token}/sendMessage"
         payload = {"chat_id": self.chat_id, "text": msg, "disable_web_page_preview": True}
         async with self.session.post(url, json=payload) as r:
@@ -43,21 +43,33 @@ class TelegramNotifier(BaseNotifier):
             await self._session.close()
 
 
-async def _null_commands() -> AsyncIterator[str]:
-    # simple async generator that never yields commands
-    while True:
-        await asyncio.sleep(3600)
+class NullCommandStream:
+    """
+    Itérateur asynchrone infini qui n'émet… rien d’utile.
+    Permet à `async for` de tourner sans générer d’exceptions/CPU.
+    """
+    def __init__(self, period: float = 3600.0) -> None:
+        self.period = period
+
+    def __aiter__(self) -> "NullCommandStream":
+        return self
+
+    async def __anext__(self) -> str:
+        await asyncio.sleep(self.period)
+        return ""  # _handle_command() ignore les chaînes vides
 
 
 async def build_notifier_and_commands(config) -> Tuple[BaseNotifier, AsyncIterator[str]]:
-    """Return (notifier, command_stream). Falls back to Null when tokens are missing."""
+    """
+    Retourne (notifier, command_stream). Si TELEGRAM_* absent => Null.
+    """
     token = os.environ.get("TELEGRAM_BOT_TOKEN") or os.environ.get("TELEGRAM_BOT")
     chat = os.environ.get("TELEGRAM_CHAT_ID") or os.environ.get("TELEGRAM_CHAT")
 
     if token and chat:
         print("[notify] Using Telegram notifier/commands")
-        # Commands: for now we keep only outgoing (no polling) — separate runner handles commands if needed.
-        return TelegramNotifier(token, chat), _null_commands()
+        # Pour l’instant on ne “poll” pas les commandes, on garde un stream nul.
+        return TelegramNotifier(token, chat), NullCommandStream()
 
     print("[notify] Using Null notifier/commands")
-    return NullNotifier(), _null_commands()
+    return NullNotifier(), NullCommandStream()
