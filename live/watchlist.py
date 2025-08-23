@@ -5,7 +5,6 @@ import asyncio
 from typing import Any, Callable, List, Optional, Sequence, Tuple
 
 DBG = os.getenv("WATCHLIST_DEBUG", "0") == "1"
-
 def _dprint(msg: str):
     if DBG:
         print(f"[watchlist:debug] {msg}")
@@ -33,28 +32,48 @@ class WatchlistManager:
         self.period_s = period_s
         self.on_update = on_update
         self._running = False
-        # safe_call doit être une coroutine fournie par l'orchestrateur (self._safe)
-        # qui gère sync/async + retries.
+        # Doit être une coroutine fournie par l’orchestrateur (self._safe)
         self._safe = safe_call or (lambda f, _label: f())
 
-    # -------- helpers parsing --------
-    @staticmethod
-    def _extract_items(payload: Any) -> List[Any]:
-        if payload is None:
+    # ---------- recherche récursive de la 1ère liste ----------
+    def _find_first_list(self, obj: Any, depth: int = 0, path: str = "$") -> List[Any]:
+        """
+        Explore récursivement (profondeur <=3) pour trouver une liste exploitable.
+        On privilégie les clés usuelles: data, result, tickers, items, list, tickerList, records.
+        """
+        if obj is None or depth > 3:
             return []
-        if isinstance(payload, dict):
-            for k in (
-                "data", "result", "tickers", "items", "list",
-                "tickerList", "records"
-            ):
-                v = payload.get(k)
-                if v:
-                    return v if isinstance(v, list) else []
-            return []
-        if isinstance(payload, (list, tuple)):
-            return list(payload)
+
+        # cas direct: déjà une liste
+        if isinstance(obj, (list, tuple)):
+            _dprint(f"found list at path {path} (len={len(obj)})")
+            return list(obj)
+
+        if isinstance(obj, dict):
+            # 1) clés prioritaires
+            preferred = ["data", "result", "tickers", "items", "list", "tickerList", "records"]
+            for k in preferred:
+                if k in obj:
+                    v = obj.get(k)
+                    if isinstance(v, (list, tuple)):
+                        _dprint(f"found list at path {path}.{k} (len={len(v)})")
+                        return list(v)
+                    if isinstance(v, dict):
+                        res = self._find_first_list(v, depth + 1, f"{path}.{k}")
+                        if res:
+                            return res
+            # 2) sinon on parcourt toutes les valeurs
+            for k, v in obj.items():
+                if isinstance(v, (list, tuple)):
+                    _dprint(f"found list at path {path}.{k} (len={len(v)})")
+                    return list(v)
+                if isinstance(v, dict):
+                    res = self._find_first_list(v, depth + 1, f"{path}.{k}")
+                    if res:
+                        return res
         return []
 
+    # ---------- normalisation d’un item ticker ----------
     @staticmethod
     def _norm_symbol_and_volume(item: Any) -> Tuple[str, float]:
         if isinstance(item, dict):
@@ -74,7 +93,9 @@ class WatchlistManager:
             return "", 0.0
 
     def _pick_top(self, payload: Any) -> List[str]:
-        items = self._extract_items(payload)
+        items = self._find_first_list(payload, 0, "$")
+        if DBG and isinstance(payload, dict):
+            _dprint(f"top picking from dict keys={list(payload.keys())[:8]}")
         pairs: List[Tuple[str, float]] = []
         for it in items:
             s, v = self._norm_symbol_and_volume(it)
@@ -86,12 +107,8 @@ class WatchlistManager:
         pairs.sort(key=lambda x: x[1], reverse=True)
         return [s for s, _ in pairs[: self.top_n]]
 
-    # -------- boot / refresh --------
+    # ---------- boot / refresh ----------
     async def boot_topN(self) -> List[str]:
-        """
-        Essaie plusieurs endpoints pour récupérer les tickers.
-        Si rien ne sort, fallback -> ['BTCUSDT', 'ETHUSDT'].
-        """
         payload = None
         top: List[str] = []
 
@@ -100,7 +117,7 @@ class WatchlistManager:
             fn = getattr(self.exchange, name, None)
             if callable(fn):
                 try:
-                    payload = await self._safe(fn, f"{name}")  # ← AWAIT obligatoire
+                    payload = await self._safe(fn, f"{name}")
                     _dprint(f"payload via {name}: type={type(payload).__name__}")
                     top = self._pick_top(payload)
                     if top:
@@ -109,13 +126,13 @@ class WatchlistManager:
                     _dprint(f"{name} error: {e!r}")
                     payload = None
 
-        # 2) Variantes de get_ticker(arg) (renvoie souvent une coroutine)
+        # 2) Variantes de get_ticker(arg) (souvent async)
         if not top:
             get_ticker = getattr(self.exchange, "get_ticker", None)
             if callable(get_ticker):
                 for arg in (None, "ALL", "", "*"):
                     try:
-                        payload = await self._safe(lambda a=arg: get_ticker(a), f"get_ticker({arg})")  # ← AWAIT
+                        payload = await self._safe(lambda a=arg: get_ticker(a), f"get_ticker({arg})")
                         _dprint(f"payload via get_ticker({arg}): type={type(payload).__name__}")
                         top = self._pick_top(payload)
                         if top:
