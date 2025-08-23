@@ -1,4 +1,3 @@
-# scalper/live/orchestrator.py
 from __future__ import annotations
 
 import asyncio
@@ -12,9 +11,8 @@ from scalper.services.utils import safe_call, heartbeat_task, log_stats_task
 from scalper.live.notify import Notifier, CommandStream
 from scalper.live.backtest_telegram import handle_backtest_command
 
-# Watchlist provider (fallback simple)
 try:
-    from scalper.live.watchlist import get_boot_watchlist  # type: ignore
+    from scalper.live.watchlist import get_boot_watchlist
 except Exception:
     def get_boot_watchlist() -> List[str]:
         raw = os.getenv("TOP_SYMBOLS", "BTCUSDT,ETHUSDT")
@@ -27,20 +25,28 @@ LOGS_DIR = Path("scalper/live/logs")
 LOGS_DIR.mkdir(parents=True, exist_ok=True)
 
 
-# ---------------- CSV utils ----------------
 def _csv_writer(path: Path, headers: Iterable[str]):
     path.parent.mkdir(parents=True, exist_ok=True)
     if not path.exists():
         with path.open("w", newline="") as f:
             csv.writer(f).writerow(headers)
-
     def append(row: Iterable[Any]):
         with path.open("a", newline="") as f:
             csv.writer(f).writerow(row)
     return append
 
 
-# ---------------- Orchestrateur ----------------
+async def _safe_send(notifier: Notifier, text: str) -> None:
+    """Ne bloque jamais le flux, neutralise CancelledError et erreurs réseau."""
+    try:
+        # fire-and-forget pour éviter de bloquer le boot sur du réseau
+        asyncio.create_task(notifier.send(text))
+    except asyncio.CancelledError:
+        return
+    except BaseException:
+        return
+
+
 @dataclass
 class Orchestrator:
     exchange: Any
@@ -68,44 +74,33 @@ class Orchestrator:
 
         if not self.symbols:
             self.symbols = get_boot_watchlist()
-        if not QUIET:
-            await self.notifier.send(f"[watchlist] boot got: {self.symbols}")
+        await _safe_send(self.notifier, f"[watchlist] boot got: {self.symbols}")
 
-        # CSV writers
         self._w_signals   = _csv_writer(LOGS_DIR / "signals.csv",   ["ts","symbol","signal","price"])
         self._w_orders    = _csv_writer(LOGS_DIR / "orders.csv",    ["ts","symbol","side","qty","price","status"])
         self._w_fills     = _csv_writer(LOGS_DIR / "fills.csv",     ["ts","symbol","side","qty","price","fee"])
         self._w_positions = _csv_writer(LOGS_DIR / "positions.csv", ["ts","symbol","qty","avg_price","pnl"])
         self._w_watchlist = _csv_writer(LOGS_DIR / "watchlist.csv", ["ts","symbols"])
 
-        # Background: heartbeat (signature minimale confirmée = 1 getter)
+        # heartbeat: signature minimale 1 getter
         self._bg_tasks.append(asyncio.create_task(
             heartbeat_task(lambda: self.running)
         ))
 
-        # Background: stats — essaye plusieurs signatures pour s’adapter
+        # stats task: signatures multiples supportées
         self._append_log_stats_task()
 
-        # Boucles par symbole
         for sym in self.symbols:
             self._per_symbol_tasks[sym] = asyncio.create_task(self._symbol_loop(sym))
 
-        # Commandes (Telegram)
         asyncio.create_task(self._commands_loop())
 
-        if not QUIET:
-            await self.notifier.send(
-                "🟢 Orchestrator PRELAUNCH.\nUtilise /setup ou /backtest. /resume pour démarrer le live."
-            )
+        await _safe_send(
+            self.notifier,
+            "🟢 Orchestrator PRELAUNCH.\nUtilise /setup ou /backtest. /resume pour démarrer le live."
+        )
 
     def _append_log_stats_task(self) -> None:
-        """
-        Adapte l'appel à log_stats_task aux différentes signatures possibles dans services.utils :
-          1) (running_getter, ticks_getter, symbols_getter, notifier, label)
-          2) (running_getter, ticks_getter, symbols_getter, notifier)
-          3) (running_getter, ticks_getter, symbols_getter)
-          4) (ticks_getter, symbols_getter)
-        """
         variants = [
             (lambda: self.running, lambda: self.ticks_total, lambda: self.symbols, self.notifier, "orchestrator"),
             (lambda: self.running, lambda: self.ticks_total, lambda: self.symbols, self.notifier),
@@ -114,14 +109,11 @@ class Orchestrator:
         ]
         for args in variants:
             try:
-                task = asyncio.create_task(log_stats_task(*args))
-                self._bg_tasks.append(task)
+                self._bg_tasks.append(asyncio.create_task(log_stats_task(*args)))
                 return
             except TypeError:
                 continue
-        # Si vraiment rien ne matche, on ne crashe pas l’orchestrateur.
-        if not QUIET:
-            asyncio.create_task(self.notifier.send("⚠️ log_stats_task: aucune signature compatible"))
+        asyncio.create_task(self.notifier.send("⚠️ log_stats_task: aucune signature compatible"))
 
     async def stop(self) -> None:
         if not self.running:
@@ -136,8 +128,16 @@ class Orchestrator:
             t.cancel()
         self._bg_tasks.clear()
 
-        if not QUIET:
-            await self.notifier.send("🔴 Orchestrator stopped.")
+        try:
+            close = getattr(self.exchange, "close", None)
+            if close:
+                res = close()
+                if asyncio.iscoroutine(res):
+                    await res
+        except BaseException:
+            pass
+
+        await _safe_send(self.notifier, "🔴 Orchestrator stopped.")
 
     async def _commands_loop(self) -> None:
         async for cmd in self.cmd_stream:
@@ -153,9 +153,9 @@ class Orchestrator:
                 elif cmd.startswith("/backtest"):
                     await handle_backtest_command(cmd, self, self.notifier)
                 else:
-                    await self.notifier.send(f"Commande inconnue: {cmd}")
+                    await _safe_send(self.notifier, f"Commande inconnue: {cmd}")
             except Exception as e:
-                await self.notifier.send(f"Erreur commande: {e}")
+                await _safe_send(self.notifier, f"Erreur commande: {e}")
 
     async def _handle_status(self) -> None:
         msg = (
@@ -163,18 +163,18 @@ class Orchestrator:
             f"symbols={self.symbols}\n"
             f"ticks_total={self.ticks_total}"
         )
-        await self.notifier.send(msg)
+        await _safe_send(self.notifier, msg)
 
     async def _handle_pause(self) -> None:
         self.paused = True
-        await self.notifier.send("⏸️ Paused")
+        await _safe_send(self.notifier, "⏸️ Paused")
 
     async def _handle_resume(self) -> None:
         self.paused = False
-        await self.notifier.send("▶️ Resumed")
+        await _safe_send(self.notifier, "▶️ Resumed")
 
     async def _handle_stop(self) -> None:
-        await self.notifier.send("🛑 Stopping…")
+        await _safe_send(self.notifier, "🛑 Stopping…")
         await self.stop()
 
     async def _symbol_loop(self, symbol: str) -> None:
@@ -199,7 +199,7 @@ class Orchestrator:
                 sig = self._generate_signal(symbol, ohlcv)
 
                 if PRINT_OHLCV_SAMPLE and not QUIET:
-                    await self.notifier.send(f"[{symbol}] last={last_close} sig={sig}")
+                    await _safe_send(self.notifier, f"[{symbol}] last={last_close} sig={sig}")
 
                 self._w_signals([last_ts, symbol, sig, last_close])
                 self.ticks_total += 1
@@ -209,8 +209,7 @@ class Orchestrator:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                if not QUIET:
-                    await self.notifier.send(f"[{symbol}] loop error: {e}")
+                await _safe_send(self.notifier, f"[{symbol}] loop error: {e}")
                 await asyncio.sleep(0.5)
 
     def _generate_signal(self, symbol: str, ohlcv: List[List[float]]) -> str:
@@ -245,60 +244,19 @@ class Orchestrator:
         return int(asyncio.get_event_loop().time() * 1000)
 
 
-# ---------------- Wrapper compat pour bot.py ----------------
-async def run_orchestrator(
-    exchange,
-    config=None,
-    symbols=None,
-    notifier: Notifier | None = None,
-    command_stream: CommandStream | None = None,
-):
+async def run_orchestrator(exchange, config=None, symbols=None,
+                           notifier: Notifier | None = None,
+                           command_stream: CommandStream | None = None):
     if notifier is None or command_stream is None:
-        raise ValueError(
-            "run_orchestrator: 'notifier' et 'command_stream' sont requis "
-            "(ils sont construits dans notify.py / bot.py)."
-        )
-
-    orch = Orchestrator(
-        exchange=exchange,
-        notifier=notifier,
-        cmd_stream=command_stream,
-        symbols=list(symbols or []),
-    )
+        raise ValueError("run_orchestrator: 'notifier' et 'command_stream' requis.")
+    orch = Orchestrator(exchange=exchange, notifier=notifier,
+                        cmd_stream=command_stream, symbols=list(symbols or []))
     await orch.start()
-
     try:
         while orch.running:
             await asyncio.sleep(0.5)
     finally:
         await orch.stop()
-        
-# … tout le fichier tel que tu l’as posé précédemment …
-    async def stop(self) -> None:
-        if not self.running:
-            return
-        self.running = False
 
-        for t in list(self._per_symbol_tasks.values()):
-            t.cancel()
-        self._per_symbol_tasks.clear()
-
-        for t in list(self._bg_tasks):
-            t.cancel()
-        self._bg_tasks.clear()
-
-        # >>> fermeture gracieuse de l'exchange (si défini)
-        try:
-            close = getattr(self.exchange, "close", None)
-            if close:
-                res = close()
-                if asyncio.iscoroutine(res):
-                    await res
-        except Exception:
-            pass
-
-        if not QUIET:
-            await self.notifier.send("🔴 Orchestrator stopped.")
-# … __all__ etc. inchangés …
 
 __all__ = ["Orchestrator", "run_orchestrator"]
