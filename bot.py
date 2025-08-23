@@ -2,6 +2,17 @@
 from __future__ import annotations
 import asyncio
 import os
+import sys, subprocess
+
+def ensure_ccxt():
+    try:
+        import ccxt  # noqa
+    except ImportError:
+        print("[i] ccxt non installé, tentative d'installation...")
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "ccxt>=4.0.0"])
+        import ccxt  # noqa
+
+ensure_ccxt()
 
 os.environ["BT_DEBUG"] = "1"
 
