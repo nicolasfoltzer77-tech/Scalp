@@ -11,40 +11,38 @@ from urllib.error import URLError, HTTPError
 import pandas as pd
 
 
-# Map timeframe -> param Bitget `granularity`
-_GRANULARITY = {
-    "1m": "1min",
-    "3m": "3min",
-    "5m": "5min",
-    "15m": "15min",
-    "30m": "30min",
-    "1h": "1h",
-    "4h": "4h",
-    "1d": "1day",
+# Timeframe -> param API
+_GRAN_MIX = {  # mix (futures) uses 'granularity'
+    "1m": "1min", "3m": "3min", "5m": "5m", "15m": "15m",
+    "30m": "30m", "1h": "1h", "4h": "4h", "1d": "1day",
+}
+_PERIOD_SPOT = {  # spot uses 'period'
+    "1m": "1min", "3m": "3min", "5m": "5min", "15m": "15min",
+    "30m": "30min", "1h": "1hour", "4h": "4hour", "1d": "1day",
 }
 
 @dataclass
 class BitgetConfig:
-    market: str = "mix"   # "mix" (futures/USDT-M) ou "spot"
+    market: str = "mix"   # "mix" (USDT‑M futures perp) ou "spot"
     timeout: int = 20
     max_retries: int = 3
-    base_spot: str = "https://api.bitget.com/api/spot/v1/market/candles"
-    base_mix: str  = "https://api.bitget.com/api/mix/v1/market/candles"
+    # v1 endpoints stables (OK pour data publiques)
+    base_spot_candles: str = "https://api.bitget.com/api/spot/v1/market/candles"
+    base_mix_candles: str  = "https://api.bitget.com/api/mix/v1/market/candles"
 
 def _http_get(url: str, timeout: int) -> dict:
-    req = Request(url, headers={"User-Agent": "scalper-backtest/1.0"})
+    req = Request(url, headers={"User-Agent": "scalper-backtest/1.1"})
     with urlopen(req, timeout=timeout) as resp:
         raw = resp.read()
     return json.loads(raw.decode("utf-8"))
 
-def _endpoint(cfg: BitgetConfig) -> str:
-    return cfg.base_mix if cfg.market.lower() == "mix" else cfg.base_spot
+def _mix_symbol(sym: str) -> str:
+    sym = sym.upper()
+    return f"{sym}_UMCBL" if not sym.endswith("_UMCBL") else sym
 
-def _granularity(tf: str) -> str:
-    tf = tf.strip().lower()
-    if tf not in _GRANULARITY:
-        raise ValueError(f"Timeframe non supporté pour Bitget: {tf}")
-    return _GRANULARITY[tf]
+def _spot_symbol(sym: str) -> str:
+    sym = sym.upper()
+    return f"{sym}_SPBL" if not sym.endswith("_SPBL") else sym
 
 def fetch_ohlcv_bitget(
     symbol: str,
@@ -54,42 +52,56 @@ def fetch_ohlcv_bitget(
     cfg: Optional[BitgetConfig] = None,
 ) -> pd.DataFrame:
     """
-    Télécharge des bougies OHLCV auprès de l'API publique de Bitget (pas d'auth).
-    - symbol ex: BTCUSDT
-    - timeframe ex: 1m,5m,15m,1h,4h,1d
-    - limit: nb max de bougies (Bitget <= 1000)
-    Retour: DataFrame index datetime UTC, colonnes: open, high, low, close, volume
+    Télécharge des bougies OHLCV auprès de l'API publique de Bitget (sans auth).
+
+    - market='mix'  → GET /api/mix/v1/market/candles?symbol=BTCUSDT_UMCBL&granularity=5m&limit=...
+    - market='spot' → GET /api/spot/v1/market/candles?symbol=BTCUSDT_SPBL&period=5min&limit=...
+
+    Retour: DataFrame index=timestamp UTC, colonnes: open, high, low, close, volume
     """
     cfg = cfg or BitgetConfig()
-    gran = _granularity(timeframe)
-    url = f"{_endpoint(cfg)}?symbol={symbol}&granularity={gran}&limit={int(limit)}"
+    market = cfg.market.lower().strip()
+    tf = timeframe.lower().strip()
+
+    if market == "mix":
+        if tf not in _GRAN_MIX:
+            raise ValueError(f"Timeframe non supporté pour mix: {tf}")
+        sym = _mix_symbol(symbol)
+        gran = _GRAN_MIX[tf]
+        url = f"{cfg.base_mix_candles}?symbol={sym}&granularity={gran}&limit={int(limit)}"
+    elif market == "spot":
+        if tf not in _PERIOD_SPOT:
+            raise ValueError(f"Timeframe non supporté pour spot: {tf}")
+        sym = _spot_symbol(symbol)
+        per = _PERIOD_SPOT[tf]
+        url = f"{cfg.base_spot_candles}?symbol={sym}&period={per}&limit={int(limit)}"
+    else:
+        raise ValueError(f"market inconnu: {cfg.market} (attendu 'mix' ou 'spot')")
 
     err: Optional[Exception] = None
     for attempt in range(cfg.max_retries + 1):
         try:
             data = _http_get(url, cfg.timeout)
-            # Bitget renvoie une liste de listes (ordre: plus récentes en premier)
-            if isinstance(data, dict) and "data" in data:
-                rows = data["data"]
-            else:
-                rows = data
-            # Format attendu: [ts, open, high, low, close, volume, ...]
+            # v1 spot/mix peuvent renvoyer soit une liste brute, soit { "data": [...] }
+            rows = data.get("data") if isinstance(data, dict) else data
+            if not isinstance(rows, list):
+                raise ValueError(f"Réponse inattendue: {data}")
+
+            # Format: [ts, open, high, low, close, volume, ...] (ts en ms, strings)
             records: List[Tuple[int, float, float, float, float, float]] = []
             for r in rows:
-                # ts peut être ms (int/str), le reste en str
                 ts = int(str(r[0]))
-                # Bitget renvoie ms -> pandas to_datetime(ms, unit='ms')
                 o, h, l, c, v = map(float, (r[1], r[2], r[3], r[4], r[5]))
                 records.append((ts, o, h, l, c, v))
-            # tri chronologique croissant
+
             records.sort(key=lambda x: x[0])
             df = pd.DataFrame(records, columns=["ts", "open", "high", "low", "close", "volume"])
             df["timestamp"] = pd.to_datetime(df["ts"], unit="ms", utc=True)
             df = df.drop(columns=["ts"]).set_index("timestamp")
             return df
+
         except (URLError, HTTPError, ValueError, KeyError) as e:
             err = e
             time.sleep(min(2 ** attempt, 5))
 
-    # si on arrive ici -> échec
     raise RuntimeError(f"Bitget OHLCV fetch failed for {symbol} {timeframe}: {err}")
