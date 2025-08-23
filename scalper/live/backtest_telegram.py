@@ -37,6 +37,7 @@ def parse_backtest_args(cmd_tail: str, defaults: Dict[str, object]) -> BacktestA
         kv.get("symbols")
         or kv.get("s")
         or ",".join(defaults.get("top_symbols", []) or [])
+        or "BTCUSDT"
     ).strip()
     tfs = (kv.get("tf") or kv.get("timeframes") or defaults.get("timeframe", "5m")).strip()
     data_dir = kv.get("data", "data")
@@ -47,13 +48,8 @@ def parse_backtest_args(cmd_tail: str, defaults: Dict[str, object]) -> BacktestA
     sym_list = [s.strip().upper() for s in symbols.split(",") if s.strip()]
     tf_list = [t.strip() for t in tfs.split(",") if t.strip()]
     return BacktestArgs(
-        symbols=sym_list,
-        timeframes=tf_list,
-        data_dir=data_dir,
-        out_dir=out_dir,
-        cash=cash,
-        risk=risk,
-        slippage_bps=slip,
+        symbols=sym_list, timeframes=tf_list, data_dir=data_dir,
+        out_dir=out_dir, cash=cash, risk=risk, slippage_bps=slip
     )
 
 
@@ -67,55 +63,69 @@ async def handle_backtest_command(
     Lance un backtest multi {symbols x timeframes} et envoie :
       - un récapitulatif texte (top 3 par perf),
       - le fichier summary.csv en pièce jointe Telegram (si possible).
-    Exemple :
-      /backtest symbols=BTCUSDT,ETHUSDT tf=1m,5m cash=12000 risk=0.005
+    TOUTE erreur est capturée et notifiée.
     """
-    args = parse_backtest_args(cmd_tail, runtime_config or {})
-    if not args.symbols or not args.timeframes:
+    try:
+        args = parse_backtest_args(cmd_tail, runtime_config or {})
+        if not args.symbols or not args.timeframes:
+            await notifier.send(
+                "⚠️ Usage: /backtest symbols=BTCUSDT,ETHUSDT tf=1m,5m "
+                "[cash=10000 risk=0.005 slippage_bps=2 data=data out=result/backtests]"
+            )
+            return
+
         await notifier.send(
-            "⚠️ Usage: /backtest symbols=BTCUSDT,ETHUSDT tf=1m,5m [cash=10000 risk=0.005 slippage_bps=2]"
+            "🧪 Backtest en cours…\n"
+            f"• Symbols: {', '.join(args.symbols)}\n"
+            f"• TF: {', '.join(args.timeframes)}\n"
+            f"• Cash: {args.cash:.0f}  • Risk: {args.risk:.4f}  • Slippage: {args.slippage_bps} bps"
         )
-        return
 
-    await notifier.send(
-        f"🧪 Backtest en cours…\n"
-        f"• Symbols: {', '.join(args.symbols)}\n"
-        f"• TF: {', '.join(args.timeframes)}\n"
-        f"• Cash: {args.cash:.0f}  • Risk: {args.risk:.4f}  • Slippage: {args.slippage_bps} bps"
-    )
+        # loader CSV par défaut (plug & play)
+        loader = csv_loader_factory(args.data_dir)
 
-    loader = csv_loader_factory(args.data_dir)
-    loop = asyncio.get_running_loop()
-    results = await loop.run_in_executor(
-        None,
-        lambda: run_multi(
-            symbols=args.symbols,
-            timeframes=args.timeframes,
-            loader=loader,
-            out_dir=args.out_dir,
-            initial_cash=args.cash,
-            risk_pct=args.risk,
-            slippage_bps=args.slippage_bps,
-        ),
-    )
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(
+            None,
+            lambda: run_multi(
+                symbols=args.symbols,
+                timeframes=args.timeframes,
+                loader=loader,
+                out_dir=args.out_dir,
+                initial_cash=args.cash,
+                risk_pct=args.risk,
+                slippage_bps=args.slippage_bps,
+            ),
+        )
 
-    summary_path = Path(args.out_dir) / "summary.csv"
-    if summary_path.exists():
-        df = pd.read_csv(summary_path)
-        df = df.sort_values("return_pct", ascending=False)
-        top = df.head(3)
+        summary_path = Path(args.out_dir) / "summary.csv"
+        if not summary_path.exists():
+            await notifier.send(
+                "⚠️ Backtest terminé mais `summary.csv` introuvable.\n"
+                "Vérifie que tes CSV existent dans `data/` sous la forme `<SYMBOL>-<TF>.csv` (ex: BTCUSDT-5m.csv)."
+            )
+            return
+
+        df = pd.read_csv(summary_path).sort_values("return_pct", ascending=False)
         lines = ["✅ Backtest terminé. Top 3 (par %ret):"]
-        for _, r in top.iterrows():
+        for _, r in df.head(3).iterrows():
             lines.append(
                 f"• {r['symbol']} {r['timeframe']} — ret {r['return_pct']:.2f}% "
-                f"| trades {int(r['n_trades'])} | win {r['win_rate_pct']:.1f}% "
-                f"| DD {r['max_dd_pct']:.1f}%"
+                f"| trades {int(r['n_trades'])} | win {r['win_rate_pct']:.1f}% | DD {r['max_dd_pct']:.1f}%"
             )
         await notifier.send("\n".join(lines))
         if hasattr(notifier, "send_document"):
             try:
                 await notifier.send_document(summary_path, caption="📎 Résumé backtest")
             except Exception as e:
-                await notifier.send(f"(info) Impossible d’envoyer summary.csv: {e}")
-    else:
-        await notifier.send("⚠️ Backtest terminé mais summary.csv introuvable.")
+                await notifier.send(f"(info) Envoi summary.csv impossible: {e}")
+
+    except FileNotFoundError as e:
+        # Cas le plus courant: CSV manquant
+        await notifier.send(
+            f"⚠️ Fichier manquant: {e}\n"
+            "Place les CSV OHLCV dans `data/` au format `<SYMBOL>-<TF>.csv` "
+            "(colonnes: timestamp,open,high,low,close,volume)."
+        )
+    except Exception as e:
+        await notifier.send(f"⚠️ Backtest : erreur inattendue: {e}")
