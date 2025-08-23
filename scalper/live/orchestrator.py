@@ -93,14 +93,14 @@ class Orchestrator:
 
         # stats périodiques: getters pour ticks_total et symbols (+ notifier si supporté)
         try:
-        # version utils récente: (ticks_getter, symbols_getter, notifier=None, label=None)
-        self._bg_tasks.append(asyncio.create_task(
-        log_stats_task(lambda: self.ticks_total, lambda: self.symbols, self.notifier, "orchestrator")
+            # version utils récente: (ticks_getter, symbols_getter, notifier=None, label=None)
+            self._bg_tasks.append(asyncio.create_task(
+                log_stats_task(lambda: self.ticks_total, lambda: self.symbols, self.notifier, "orchestrator")
         ))
         except TypeError:
-        # version plus simple: (ticks_getter, symbols_getter)
-        self._bg_tasks.append(asyncio.create_task(
-        log_stats_task(lambda: self.ticks_total, lambda: self.symbols)
+            # version plus simple: (ticks_getter, symbols_getter)
+            self._bg_tasks.append(asyncio.create_task(
+                log_stats_task(lambda: self.ticks_total, lambda: self.symbols)
         ))
         
         # Boucles par symbole
