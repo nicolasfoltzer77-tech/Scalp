@@ -54,17 +54,53 @@ class WatchlistManager:
             return "", 0.0
 
     async def boot_topN(self) -> List[str]:
-        payload = await self._safe(lambda: self.exchange.get_ticker(None), "get_tickers_boot")  # type: ignore
+        """
+        Récupère le TOP N en essayant plusieurs endpoints possibles :
+        - exchange.get_tickers() (si dispo)
+        - exchange.get_ticker(None) / get_ticker('ALL') / get_ticker('')
+        - fallback: liste vide -> on garde la liste actuelle
+        """
+        payload = None
+
+        # 1) get_tickers() si exposé
+        for name in ("get_tickers", "list_tickers", "all_tickers"):
+            fn = getattr(self.exchange, name, None)
+            if callable(fn):
+                try:
+                    payload = fn()
+                    break
+                except Exception:
+                    payload = None
+
+        # 2) variantes de get_ticker()
+        if payload is None:
+            for arg in (None, "ALL", "", "*"):
+                try:
+                    payload = self.exchange.get_ticker(arg)  # type: ignore
+                    if payload: break
+                except Exception:
+                    payload = None
+
         items = self._extract_items(payload)
         pairs: List[Tuple[str, float]] = []
         for it in items:
             s, v = self._norm_symbol_and_volume(it)
-            if not s: continue
-            if self.only_suffix and not s.endswith(self.only_suffix): continue
+            if not s:
+                continue
+            if self.only_suffix and not s.endswith(self.only_suffix):
+                continue
             pairs.append((s, v))
+
         pairs.sort(key=lambda x: x[1], reverse=True)
         top = [s for s, _ in pairs[: self.top_n]]
-        if self.on_update: self.on_update(top)
+
+        # 🔴 Si vide, on ne casse pas le boot : on renvoie la liste actuelle
+        if not top:
+            # on tente au moins BTC/ETH pour démarrer proprement
+            top = ["BTCUSDT", "ETHUSDT"]
+
+        if self.on_update:
+            self.on_update(top)
         return top
 
     async def task_auto_refresh(self):
