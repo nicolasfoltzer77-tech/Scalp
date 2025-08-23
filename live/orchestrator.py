@@ -31,11 +31,8 @@ from live.position_fsm import (
     STATE_PENDING_EXIT,
 )
 
-# Telegram optionnel
-try:
-    from live.telegram_async import TelegramAsync  # type: ignore
-except Exception:  # pragma: no cover
-    TelegramAsync = None  # type: ignore
+# Notification/Commandes découplées (nouveau)
+from live.notify import Notifier, NullNotifier, TelegramNotifier, CommandStream
 
 
 # =========================  Types simples  =========================
@@ -51,12 +48,12 @@ class SymbolContext:
 class Orchestrator:
     """
     Orchestrateur asyncio MINCE :
-      - Watchlist TOP10 USDT (boot immédiat + refresh périodique)
+      - Watchlist TOP10 USDT (boot + refresh)
       - Service OHLCV (normalisation/fallback)
       - Journal CSV (signals, orders, fills, positions, watchlist)
       - Exécution d’ordres via OrderExecutor (sizing + OrderService)
       - FSM positions + persistance JSON (reprise après crash)
-      - (optionnel) commandes Telegram
+      - Notifications / commandes **découplées** via Notifier & CommandStream
     """
 
     def __init__(
@@ -69,7 +66,7 @@ class Orchestrator:
         self.exchange = exchange
         self.config = config
 
-        # Liste initiale (remplacée par TOP10 au boot)
+        # Liste initiale (remplacée par watchlist au boot)
         self.symbols = [s.replace("_", "").upper() for s in symbols] or ["BTCUSDT", "ETHUSDT"]
         self.ctx: Dict[str, SymbolContext] = {s: SymbolContext(s, []) for s in self.symbols}
 
@@ -95,15 +92,6 @@ class Orchestrator:
         self._fsm = PositionFSM(self.symbols)
         self.state = StateStore(os.path.join(log_dir, "state.json"), period_s=10.0)
 
-        # (optionnel) Telegram
-        if TelegramAsync is not None:
-            self._tg = TelegramAsync(
-                token=getattr(config, "TELEGRAM_BOT_TOKEN", None),
-                chat_id=getattr(config, "TELEGRAM_CHAT_ID", None),
-            )
-        else:
-            self._tg = None
-
         # Watchlist (TOP10 USDT)
         self._watch = WatchlistManager(
             exchange=self.exchange,
@@ -114,9 +102,15 @@ class Orchestrator:
             safe_call=lambda f, label: self._safe(f, label=label),
         )
 
-        # DEBUG: écrire des lignes "NONE" dans signals.csv si aucun signal (pour vérifier le pipeline)
+        # DEBUG: écrire des lignes "NONE" dans signals.csv si aucun signal (pour valider le pipeline)
         self._debug_noop = str(os.getenv("DEBUG_LOG_NOOP", "0")) == "1"
         self._last_noop_ts = 0.0
+
+        # ---- Notifications / Commandes (découplées)
+        token = getattr(config, "TELEGRAM_BOT_TOKEN", None)
+        chat  = getattr(config, "TELEGRAM_CHAT_ID", None)
+        self.notifier: Notifier = TelegramNotifier(token, chat) if (token and chat) else NullNotifier()
+        self._cmd_stream: Optional[CommandStream] = CommandStream(token, chat) if (token and chat) else None
 
         # Tentative de restauration d’état
         snap = self.state.load_state()
@@ -184,10 +178,9 @@ class Orchestrator:
                 del self.ctx[s]
 
         joined = ",".join(self.symbols)
-        print(f"[watchlist] TOP{len(self.symbols)} = {','.join(self.symbols)}")
+        print(f"[watchlist] TOP{len(self.symbols)} = {joined}")
         self.logs.row("watchlist.csv", {"ts": int(time.time() * 1000), "symbols": joined})
-        if self._tg and self._tg.enabled():
-            asyncio.create_task(self._tg.send_message(f"🔝 Watchlist: {joined}"))
+        asyncio.create_task(self.notifier.send(f"🔝 Watchlist: {joined}"))
 
     # --------------------- Tasks principales ---------------------
     async def _task_heartbeat(self):
@@ -254,7 +247,7 @@ class Orchestrator:
             if tail:
                 ctx.ohlcv = (self.ohlcv.normalize_rows(ctx.ohlcv) + self.ohlcv.normalize_rows(tail))[-400:]
 
-            # --- Appel stratégie (trois formes tolérées)
+            # --- Appel stratégie (3 formes tolérées)
             sig: Optional[Signal] = None
             try:
                 rd = ctx.ohlcv
@@ -277,7 +270,6 @@ class Orchestrator:
             except Exception as e:
                 print(f"[trade-loop:{symbol}] signal error: {e!r}")
 
-            
             if sig:
                 last_close = ctx.ohlcv[-1]["close"] if ctx.ohlcv else float("nan")
                 self.logs.row(
@@ -293,7 +285,11 @@ class Orchestrator:
                         "last": float(last_close),
                     },
                 )
-                print(f"[signal] {symbol} -> side={'LONG' if sig.side > 0 else 'SHORT'} entry={last_close}")
+                # info console + notifier
+                side_str = "LONG" if sig.side > 0 else "SHORT"
+                print(f"[signal] {symbol} -> {side_str} entry={last_close}")
+                await self.notifier.send(f"📈 {symbol}: {side_str} @ {last_close}")
+
             # --- Debug: écrire un "no-op" si pas de signal pendant longtemps
             if not sig and self._debug_noop:
                 now = time.time()
@@ -353,49 +349,35 @@ class Orchestrator:
                             },
                         )
                         self._fsm.set_pending_entry(symbol, res.order_id or "", "long" if sig.side > 0 else "short")
-                        if self._tg and self._tg.enabled():
-                            await self._tg.send_message(f"Order accepted: {symbol} {'long' if sig.side > 0 else 'short'} @ {entry_price}")
+                        await self.notifier.send(f"✅ Order accepted: {symbol} {'long' if sig.side > 0 else 'short'} @ {entry_price}")
                 except Exception as e:
                     print(f"[trade-loop:{symbol}] order error: {e!r}")
 
             await self._sleep(1.0)
 
-    async def _task_telegram(self):
-        if not self._tg or not self._tg.enabled():
-            while self._running:
-                await self._sleep(2.0)
-            return
-
-        await self._tg.send_message("Orchestrator started ✅")
-        while self._running:
-            try:
-                updates = await self._tg.poll_commands(timeout_s=20)
-                for u in updates:
-                    text = (u.get("text") or "").strip().lower()
-                    if text.startswith("/status"):
-                        alive = (
-                            time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(self._heartbeat_ts))
-                            if self._heartbeat_ts
-                            else "n/a"
-                        )
-                        await self._tg.send_message(
-                            f"running:{self._running} paused:{self._paused}\n"
-                            f"heartbeat:{alive}\n"
-                            f"symbols:{','.join(self.symbols)}"
-                        )
-                    elif text.startswith("/pause"):
-                        self._paused = True
-                        await self._tg.send_message("Paused ✅")
-                    elif text.startswith("/resume"):
-                        self._paused = False
-                        await self._tg.send_message("Resumed ▶️")
-                    elif text.startswith("/close"):
-                        await self._tg.send_message("Closing…")
-                        await self.stop("telegram:/close")
-            except asyncio.CancelledError:
+    # --------------------- Commandes (remplace l'ancien _task_telegram) ---------------------
+    async def _task_commands(self):
+        await self.notifier.send("Orchestrator started ✅\nCommands: /status • /pause • /resume • /stop")
+        assert self._cmd_stream is not None
+        async for text in self._cmd_stream:
+            t = (text or "").strip().lower()
+            if t.startswith("/status"):
+                alive = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(self._heartbeat_ts)) if self._heartbeat_ts else "n/a"
+                await self.notifier.send(
+                    f"running:{self._running} paused:{self._paused}\n"
+                    f"heartbeat:{alive}\n"
+                    f"symbols:{','.join(self.symbols)}"
+                )
+            elif t.startswith("/pause"):
+                self._paused = True
+                await self.notifier.send("Paused ✅")
+            elif t.startswith("/resume"):
+                self._paused = False
+                await self.notifier.send("Resumed ▶️")
+            elif t.startswith("/stop"):
+                await self.notifier.send("🛑 Stop demandé. Arrêt en cours…")
+                await self.stop("telegram:/stop")
                 break
-            except Exception:
-                await self._sleep(2.0)
 
     # --------------------- Snapshot état (autosave) ---------------------
     def _snapshot_state(self) -> dict:
@@ -426,7 +408,7 @@ class Orchestrator:
             except NotImplementedError:
                 pass
 
-        # TOP10 immédiat au boot
+        # TOPN immédiat au boot
         try:
             top = await self._watch.boot_topN()
             print(f"[watchlist] boot got: {top}")
@@ -434,6 +416,9 @@ class Orchestrator:
                 self._apply_symbols_update(top)
         except Exception as e:
             print(f"[watchlist] boot error: {e!r}")
+
+        # démarrage notifier
+        await self.notifier.start()
 
         # Tasks
         self._tasks = [
@@ -443,8 +428,8 @@ class Orchestrator:
             asyncio.create_task(self.state.task_autosave(self._snapshot_state), name="state-save"),
             *[asyncio.create_task(self._task_trade_loop(s), name=f"trade:{s}") for s in self.symbols],
         ]
-        if self._tg and self._tg.enabled():
-            self._tasks.append(asyncio.create_task(self._task_telegram(), name="telegram"))
+        if self._cmd_stream:
+            self._tasks.append(asyncio.create_task(self._task_commands(), name="commands"))
 
         print("[orchestrator] running")
         try:
@@ -464,6 +449,13 @@ class Orchestrator:
                 t.cancel()
             except Exception:
                 pass
+        # arrêt bus commandes + notifier
+        try:
+            if self._cmd_stream:
+                await self._cmd_stream.stop()
+            await self.notifier.stop()
+        except Exception:
+            pass
         await asyncio.sleep(0)
 
 
