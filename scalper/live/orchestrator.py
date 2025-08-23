@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
-from typing import Any, Awaitable, Callable, Iterable, Optional
+from typing import Any, Iterable, Optional, AsyncIterator
 
 from scalper.services.utils import heartbeat_task, log_stats_task
 from scalper.live.notify import build_notifier_and_commands
@@ -33,14 +33,12 @@ class RunConfig:
 
 
 class Orchestrator:
-    """Prelaunch orchestrator: notifies, keeps heartbeats & stats, listens to commands."""
-
     def __init__(
         self,
         exchange: Any,
         config: dict | RunConfig,
         notifier: Optional[Any] = None,
-        command_stream: Optional[Any] = None,
+        command_stream: Optional[AsyncIterator[str]] = None,
     ) -> None:
         self.exchange = exchange
         self.config = config if isinstance(config, RunConfig) else RunConfig(config)
@@ -52,7 +50,7 @@ class Orchestrator:
         self._ticks_total: int = 0
         self._symbols: list[str] = self.config.symbols or []
 
-    # ----- small getters used by bg tasks
+    # getters pour bg tasks
     def running(self) -> bool:
         return self._running
 
@@ -71,14 +69,11 @@ class Orchestrator:
             print(f"[notify] send fail: {e!r}")
 
     async def start(self) -> None:
-        """Build notifier/commands then launch background tasks + prelaunch msg."""
         if not self.notifier or not self.command_stream:
-            # IMPORTANT: pass config to builder
             self.notifier, self.command_stream = await build_notifier_and_commands(self.config)
 
         self._running = True
-
-        # background tasks (correct signatures)
+        # tâches de fond (signatures corrigées)
         self._bg_tasks.append(asyncio.create_task(heartbeat_task(self.running, self.notifier)))
         self._bg_tasks.append(
             asyncio.create_task(
@@ -102,7 +97,7 @@ class Orchestrator:
     async def run(self) -> None:
         await self.start()
         try:
-            async for cmd in self.command_stream:
+            async for cmd in self.command_stream:  # stream nul = tick toutes les heures
                 await self._handle_command(cmd)
         except asyncio.CancelledError:
             pass
@@ -113,27 +108,21 @@ class Orchestrator:
         cmd = (cmd or "").strip()
         if not cmd:
             return
-
         if cmd.startswith("/stop"):
             await self._send("🛑 Stop demandé.")
             await self.stop()
             return
-
         if cmd.startswith("/setup"):
             await self._send("ℹ️ PRELAUNCH: déjà prêt.")
             return
-
         if cmd.startswith("/resume"):
             await self._send("ℹ️ PRELAUNCH: déjà prêt.")
             return
-
         if cmd.startswith("/backtest"):
             await self._send("🧪 Backtest non branché ici (runner séparé).")
             return
-
         await self._send("❓ Commande inconnue. Utilise /setup, /backtest, /resume ou /stop.")
 
-    # hook called from the market loop to report activity
     def on_tick_batch(self, n: int, symbols_snapshot: Optional[Iterable[str]] = None) -> None:
         try:
             self._ticks_total += int(n)
@@ -147,7 +136,7 @@ async def run_orchestrator(
     exchange: Any,
     cfg: dict | RunConfig,
     notifier: Optional[Any] = None,
-    factory: Optional[Any] = None,  # reserved for later
+    factory: Optional[Any] = None,
 ) -> None:
     orch = Orchestrator(exchange=exchange, config=cfg, notifier=notifier, command_stream=None)
     await orch.run()
