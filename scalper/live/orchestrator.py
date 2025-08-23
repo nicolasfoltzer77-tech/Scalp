@@ -2,227 +2,205 @@
 from __future__ import annotations
 
 import asyncio
-import os
-import time
-from typing import Any, Callable, Dict, Iterable, List, Optional
+from typing import Any, Dict, List, Optional
 
-# Utilitaires communs
 from scalper.services.utils import safe_call, heartbeat_task, log_stats_task
+from scalper.live.notify import build_notifier_and_commands  # crée Notifier + CommandStream
 
-# Notifier & commandes Telegram (fallback automatique si KO)
-from scalper.live.notify import (
-    Notifier,
-    CommandStream,
-    build_notifier_and_commands,
-)
+# ------------------------------------------------------------------------------
+# Fabrique de signaux (plugin) — garde simple : current par défaut
+# ------------------------------------------------------------------------------
+def load_signal(name: str):
+    # Lazy import pour éviter les cycles
+    from importlib import import_module
+    try:
+        mod = import_module(f"scalper.signals.{name}")
+        return getattr(mod, "generate_signal")
+    except Exception:
+        # Fallback très simple
+        def _noop(symbol: str, ohlcv: list[list[float]], cash: float, risk_pct: float) -> dict:
+            return {"action": "hold"}
+        return _noop
 
-# Backtest côté Telegram (pour /backtest)
-try:
-    from scalper.live.backtest_telegram import handle_backtest_command
-except Exception:
-    async def handle_backtest_command(notifier: Notifier, symbols: List[str], timeframe: str = "5m"):
-        await notifier.send("⚠️ Backtest indisponible dans cette build.")
-
-# ---------------------------------------------------------------------------
-
-def _env_bool(name: str, default: str = "0") -> bool:
-    return (os.getenv(name, default) or "").strip().lower() not in ("0", "false", "no", "")
-
-QUIET = _env_bool("QUIET", "1")  # réduit le bruit par défaut
-
-# ---------------------------------------------------------------------------
 
 class Orchestrator:
     """
     Orchestrateur live :
-      - création notifier + flux de commandes (Telegram ou Null)
-      - boucles par symbole : fetch OHLCV -> génération signal -> logs
-      - tâches de fond : heartbeat + stats périodiques
+    - PRELAUNCH : heartbeat + stats + commandes Telegram (si dispo)
+    - RUNNING   : crée une tâche par symbole (boucle OHLCV -> signal -> logs/exec)
     """
 
-    def __init__(
-        self,
-        exchange: Any,
-        config: Dict[str, Any],
-        symbols: Iterable[str],
-        timeframe: str = "5m",
-    ):
+    def __init__(self, exchange: Any, config: Dict[str, Any]):
         self.exchange = exchange
-        self.config = config
-        self.timeframe = timeframe
-        self.symbols: List[str] = list(symbols)
+        self.config = dict(config)
+
+        self.symbols: List[str] = list(self.config.get("symbols") or [])
+        self.timeframe: str = str(self.config.get("timeframe") or "5m")
+
+        # stratégie (factory commune live/backtest)
+        self.selected = {
+            "strategy": str(self.config.get("strategy") or "current"),
+        }
+        self.generate_signal = load_signal(self.selected["strategy"])
 
         # état
-        self._state = "PRELAUNCH"  # PRELAUNCH|RUNNING|PAUSED|STOPPED
-        self._closing = False
+        self._state: str = "PRELAUNCH"
+        self.ticks_total: int = 0
 
-        # comptage/metrics
-        self.ticks_total = 0
-
-        # notifier/commandes
-        self.notifier: Notifier
-        self.command_stream: Optional[CommandStream] = None
+        # Notifier & commandes
+        self.notifier = None
+        self.command_stream = None  # itérable async des commandes
 
         # tâches de fond
         self._bg_tasks: List[asyncio.Task] = []
-        self._symbol_tasks: List[asyncio.Task] = []
+        self._loops: List[asyncio.Task] = []
 
-    # ------------- helpers état -------------
-    def is_running(self) -> bool:
-        return self._state == "RUNNING" and not self._closing
+    # -------------------------- propriétés utils -----------------------------
+    def running(self) -> bool:
+        return self._state == "RUNNING"
 
-    # ------------- IO wrappers -------------
-    async def ohlcv_fetch(self, symbol: str, timeframe: str, limit: int = 200):
-        async def _call():
-            return await self.exchange.fetch_ohlcv(symbol, timeframe=timeframe, limit=limit)
-        return await safe_call(_call, label=f"ohlcv:{symbol}", max_retry=5, base_delay=0.4)
+    def _stats_snapshot(self) -> Dict[str, Any]:
+        return {
+            "state": self._state,
+            "timeframe": self.timeframe,
+            "symbols": list(self.symbols),
+        }
 
-    # ------------- core loops -------------
-    async def _symbol_loop(self, symbol: str):
-        """Boucle par symbole: fetch ohlcv -> (générer signal) -> (passer ordre/logs)."""
-        # NB: remplace generate_signal(...)/order_executor(...) par tes fonctions si disponibles
-        default_cash = float(self.config.get("cash", 10_000.0))
-        risk_pct = float(self.config.get("risk_pct", 0.05))
+    # -------------------------- API publique ---------------------------------
+    async def run(self) -> None:
+        await self.start()           # PRELAUNCH
+        await self._prelaunch_loop() # attend /resume (ou run direct si config)
 
-        while not self._closing:
-            if not self.is_running():
-                await asyncio.sleep(0.5)
+    async def start(self) -> None:
+        # Notifier/commandes (Null si Telegram indispo)
+        self.notifier, self.command_stream = await build_notifier_and_commands(self.config)
+
+        await self.notifier.send("🟢 Orchestrator PRELAUNCH.\nUtilise /setup ou /backtest. /resume pour démarrer le live.")
+
+        # tâches heartbeat & stats
+        self._bg_tasks.append(asyncio.create_task(
+            heartbeat_task(lambda: self._state != "STOPPED", self.notifier, interval=30.0, name="orchestrator")
+        ))
+        self._bg_tasks.append(asyncio.create_task(
+            log_stats_task(
+                lambda: self.ticks_total,
+                lambda: self.symbols,
+                self._stats_snapshot,
+                interval=30.0,
+            )
+        ))
+
+        # démarrage direct si demandé
+        if str(self.config.get("autostart", "0")).lower() in ("1", "true", "yes"):
+            await self._resume_live()
+
+    async def stop(self) -> None:
+        await self._set_state("STOPPED")
+        await self.notifier.send("🛑 Orchestrator stopped.")
+        # cancel tâches
+        for t in self._loops + self._bg_tasks:
+            if not t.done():
+                t.cancel()
+        self._loops.clear()
+        self._bg_tasks.clear()
+
+    # -------------------------- Boucle PRELAUNCH -----------------------------
+    async def _prelaunch_loop(self) -> None:
+        """
+        Boucle d'attente : /resume pour lancer le live, /stop pour quitter,
+        /backtest & /setup sont relayés par le Notifier/CommandStream si disponible.
+        """
+        try:
+            while self._state != "STOPPED":
+                cmd = None
+                if self.command_stream is not None:
+                    try:
+                        cmd = await asyncio.wait_for(self.command_stream.get(), timeout=1.0)
+                    except asyncio.TimeoutError:
+                        cmd = None
+
+                if not cmd:
+                    await asyncio.sleep(0.2)
+                    continue
+
+                # Parsing très simple
+                cmd = str(cmd).strip().lower()
+                if cmd == "/resume":
+                    await self._resume_live()
+                elif cmd == "/stop":
+                    await self.stop()
+                    break
+                elif cmd in ("/status",):
+                    await self._send_status()
+                else:
+                    # d'autres commandes (/setup, /backtest) sont gérées dans notify
+                    pass
+        finally:
+            # propre quand on sort
+            for t in self._bg_tasks:
+                if not t.done():
+                    t.cancel()
+            self._bg_tasks.clear()
+
+    async def _send_status(self) -> None:
+        pairs = ", ".join(self.symbols) or "-"
+        await self.notifier.send(f"ℹ️ state={self._state} | tf={self.timeframe} | pairs={pairs} | ticks={self.ticks_total}")
+
+    async def _resume_live(self) -> None:
+        if self.running():
+            await self.notifier.send("⚠️ Live déjà démarré.")
+            return
+        await self._set_state("RUNNING")
+        await self.notifier.send("▶️ Live démarré.")
+
+        # Crée une tâche par symbole
+        self._loops = [
+            asyncio.create_task(self._symbol_loop(sym))
+            for sym in self.symbols
+        ]
+
+    async def _set_state(self, new_state: str) -> None:
+        self._state = new_state
+
+    # -------------------------- Boucle par symbole ---------------------------
+    async def _symbol_loop(self, symbol: str) -> None:
+        """
+        Boucle : fetch OHLCV -> generate_signal -> (logs/exec hook à compléter)
+        Tous les IO passent via safe_call.
+        """
+        tf = self.timeframe
+        while self.running():
+            try:
+                ohlcv = await safe_call(self.exchange.fetch_ohlcv, f"{symbol}", symbol, tf, limit=200)
+                # incrément ticks
+                self.ticks_total += 1
+
+                # stratégie
+                sig = self.generate_signal(
+                    symbol,
+                    ohlcv,
+                    float(self.config.get("cash", 10_000.0)),
+                    float(self.config.get("risk_pct", 0.05)),
+                )
+                # TODO: brancher logs CSV et exécution d’ordres
+                # ex: await self._log_signal(symbol, ohlcv[-1], sig)
+
+            except Exception as e:  # noqa: BLE001
+                await self.notifier.send(f"[{symbol}] loop error: {e}")
+                await asyncio.sleep(1.0)
                 continue
 
-            try:
-                ohlcv = await self.ohlcv_fetch(symbol, self.timeframe, limit=200)
-                # --- placeholder stratégie ---
-                # Ici appelle ta fabrique de signaux: self.generate_signal(symbol, ohlcv, ...)
-                # Exemple factice: on incrémente juste les ticks.
-                self.ticks_total += 1
-                # -----------------------------
+            await asyncio.sleep(0.2)  # tempo court (évite boucle trop serrée)
 
-            except asyncio.CancelledError:
-                raise
-            except Exception as e:
-                # Erreur de boucle symbole → on notifie mais on ne stoppe pas tout
-                try:
-                    await self.notifier.send(f"[{symbol}] loop error: {e}")
-                except Exception:
-                    pass
-                await asyncio.sleep(1.0)
-
-            # cadence
-            await asyncio.sleep(0.2)
-
-    async def _commands_loop(self):
-        assert self.command_stream is not None
-        async for cmd in self.command_stream:
-            c = cmd.strip().lower()
-            if c in ("/status", "status"):
-                await self._send_status()
-
-            elif c.startswith("/setup"):
-                await self.notifier.send("🧩 Setup wizard à compléter (placeholder).")
-
-            elif c.startswith("/backtest"):
-                await self.notifier.send("🧪 Backtest en cours…")
-                try:
-                    await handle_backtest_command(self.notifier, self.symbols, timeframe=self.timeframe)
-                except Exception as e:
-                    await self.notifier.send(f"⚠️ Backtest : erreur inattendue: {e}")
-
-            elif c in ("/resume", "resume"):
-                self._state = "RUNNING"
-                await self.notifier.send("🚀 Passage en RUNNING")
-
-            elif c in ("/pause", "pause"):
-                self._state = "PAUSED"
-                await self.notifier.send("⏸️ Pause")
-
-            elif c in ("/stop", "stop"):
-                await self.notifier.send("🛑 Arrêt orchestrateur demandé.")
-                await self.stop()
-                break
-
-            else:
-                await self.notifier.send("ℹ️ Commandes: /status /setup /backtest /resume /pause /stop")
-
-    async def _send_status(self):
-        await self.notifier.send(
-            "🟢 Orchestrator PRELAUNCH." if self._state == "PRELAUNCH"
-            else ("🚀 RUNNING" if self._state == "RUNNING" else ("⏸️ PAUSED" if self._state == "PAUSED" else "🛑 STOPPED"))
-            + f"\n• TF: {self.timeframe}\n• Symbols: {', '.join(self.symbols)}"
-        )
-
-    # ------------- life-cycle -------------
-    async def start(self):
-        # Notifier + commandes (fallback automatique)
-        self.notifier, self.command_stream, notify_status = await build_notifier_and_commands()
-        if not QUIET:
-            print(f"[notify] {notify_status}")
-        try:
-            await self.notifier.send(
-                f"🟢 Orchestrator PRELAUNCH.\nUtilise /setup ou /backtest. /resume pour démarrer le live."
-            )
-        except Exception:
-            pass
-
-        # tâches de fond: heartbeat + stats
-        self._bg_tasks.append(
-            asyncio.create_task(heartbeat_task(lambda: not self._closing))
-        )
-        self._bg_tasks.append(
-            asyncio.create_task(log_stats_task(lambda: self.ticks_total, lambda: self.symbols))
-        )
-
-        # commandes Telegram (si dispo)
-        if self.command_stream:
-            self._bg_tasks.append(asyncio.create_task(self._commands_loop()))
-
-        # boucles symboles
-        for sym in self.symbols:
-            self._symbol_tasks.append(asyncio.create_task(self._symbol_loop(sym)))
-
-    async def stop(self):
-        if self._closing:
-            return
-        self._closing = True
-        self._state = "STOPPED"
-
-        # stop tasks
-        for t in self._symbol_tasks:
-            t.cancel()
-        for t in self._bg_tasks:
-            t.cancel()
-        await asyncio.gather(*self._symbol_tasks, return_exceptions=True)
-        await asyncio.gather(*self._bg_tasks, return_exceptions=True)
-
-        # fermer notifier/command stream
-        if self.command_stream:
-            try:
-                await self.command_stream.stop()
-            except Exception:
-                pass
-        try:
-            await self.notifier.close()
-        except Exception:
-            pass
-
-    # point d’entrée externe: l’orchestrateur tourne tant qu’on ne stoppe pas
-    async def run(self):
-        await self.start()
-        # PRELAUNCH : on attend commandes /resume
-        while not self._closing:
-            await asyncio.sleep(0.5)
-
-# ---------------------------------------------------------------------------
-
+# ------------------------------------------------------------------------------
+# Entrée unique appelée par bot.py
+# ------------------------------------------------------------------------------
 async def run_orchestrator(exchange: Any, config: Dict[str, Any]) -> None:
-    """
-    Point d’entrée appelé par bot.py
-    config attend au minimum:
-      - symbols: list[str]
-      - timeframe: str
-      - (optionnel) cash, risk_pct, ...
-    """
-    symbols = list(config.get("symbols") or [])
-    timeframe = str(config.get("timeframe") or "5m")
-
-    orch = Orchestrator(exchange, config, symbols, timeframe=timeframe)
-    await orch.run()
+    orch = Orchestrator(exchange, config)
+    try:
+        await orch.run()
+    finally:
+        try:
+            await orch.stop()
+        except Exception:
+            pass
