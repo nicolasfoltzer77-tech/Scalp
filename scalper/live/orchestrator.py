@@ -12,6 +12,7 @@ from scalper.services.utils import safe_call, heartbeat_task, log_stats_task
 from scalper.live.notify import Notifier, CommandStream
 from scalper.live.backtest_telegram import handle_backtest_command
 
+# Watchlist provider (fallback simple)
 try:
     from scalper.live.watchlist import get_boot_watchlist  # type: ignore
 except Exception:
@@ -26,6 +27,7 @@ LOGS_DIR = Path("scalper/live/logs")
 LOGS_DIR.mkdir(parents=True, exist_ok=True)
 
 
+# ---------------- CSV utils ----------------
 def _csv_writer(path: Path, headers: Iterable[str]):
     path.parent.mkdir(parents=True, exist_ok=True)
     if not path.exists():
@@ -38,6 +40,7 @@ def _csv_writer(path: Path, headers: Iterable[str]):
     return append
 
 
+# ---------------- Orchestrateur ----------------
 @dataclass
 class Orchestrator:
     exchange: Any
@@ -68,27 +71,57 @@ class Orchestrator:
         if not QUIET:
             await self.notifier.send(f"[watchlist] boot got: {self.symbols}")
 
+        # CSV writers
         self._w_signals   = _csv_writer(LOGS_DIR / "signals.csv",   ["ts","symbol","signal","price"])
         self._w_orders    = _csv_writer(LOGS_DIR / "orders.csv",    ["ts","symbol","side","qty","price","status"])
         self._w_fills     = _csv_writer(LOGS_DIR / "fills.csv",     ["ts","symbol","side","qty","price","fee"])
         self._w_positions = _csv_writer(LOGS_DIR / "positions.csv", ["ts","symbol","qty","avg_price","pnl"])
         self._w_watchlist = _csv_writer(LOGS_DIR / "watchlist.csv", ["ts","symbols"])
 
-        # Background tasks — signatures minimales confirmées
-        self._bg_tasks.append(asyncio.create_task(heartbeat_task(lambda: self.running)))
+        # Background: heartbeat (signature minimale confirmée = 1 getter)
         self._bg_tasks.append(asyncio.create_task(
-            log_stats_task(lambda: self.ticks_total, lambda: self.symbols)
+            heartbeat_task(lambda: self.running)
         ))
 
+        # Background: stats — essaye plusieurs signatures pour s’adapter
+        self._append_log_stats_task()
+
+        # Boucles par symbole
         for sym in self.symbols:
             self._per_symbol_tasks[sym] = asyncio.create_task(self._symbol_loop(sym))
 
+        # Commandes (Telegram)
         asyncio.create_task(self._commands_loop())
 
         if not QUIET:
             await self.notifier.send(
                 "🟢 Orchestrator PRELAUNCH.\nUtilise /setup ou /backtest. /resume pour démarrer le live."
             )
+
+    def _append_log_stats_task(self) -> None:
+        """
+        Adapte l'appel à log_stats_task aux différentes signatures possibles dans services.utils :
+          1) (running_getter, ticks_getter, symbols_getter, notifier, label)
+          2) (running_getter, ticks_getter, symbols_getter, notifier)
+          3) (running_getter, ticks_getter, symbols_getter)
+          4) (ticks_getter, symbols_getter)
+        """
+        variants = [
+            (lambda: self.running, lambda: self.ticks_total, lambda: self.symbols, self.notifier, "orchestrator"),
+            (lambda: self.running, lambda: self.ticks_total, lambda: self.symbols, self.notifier),
+            (lambda: self.running, lambda: self.ticks_total, lambda: self.symbols),
+            (lambda: self.ticks_total, lambda: self.symbols),
+        ]
+        for args in variants:
+            try:
+                task = asyncio.create_task(log_stats_task(*args))
+                self._bg_tasks.append(task)
+                return
+            except TypeError:
+                continue
+        # Si vraiment rien ne matche, on ne crashe pas l’orchestrateur.
+        if not QUIET:
+            asyncio.create_task(self.notifier.send("⚠️ log_stats_task: aucune signature compatible"))
 
     async def stop(self) -> None:
         if not self.running:
@@ -212,6 +245,7 @@ class Orchestrator:
         return int(asyncio.get_event_loop().time() * 1000)
 
 
+# ---------------- Wrapper compat pour bot.py ----------------
 async def run_orchestrator(
     exchange,
     config=None,
