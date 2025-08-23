@@ -184,7 +184,7 @@ class Orchestrator:
                 del self.ctx[s]
 
         joined = ",".join(self.symbols)
-        print(f"[watchlist] TOP{len(self.symbols)} = {joined}")
+        print(f"[watchlist] TOP{len(self.symbols)} = {','.join(self.symbols)}")
         self.logs.row("watchlist.csv", {"ts": int(time.time() * 1000), "symbols": joined})
         if self._tg and self._tg.enabled():
             asyncio.create_task(self._tg.send_message(f"🔝 Watchlist: {joined}"))
