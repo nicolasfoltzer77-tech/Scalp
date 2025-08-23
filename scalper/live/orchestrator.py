@@ -6,18 +6,19 @@ import csv
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Dict, Iterable, List
 
 from scalper.services.utils import safe_call, heartbeat_task, log_stats_task
 from scalper.live.notify import Notifier, CommandStream
 from scalper.live.backtest_telegram import handle_backtest_command
 
-# Si tu as un provider de watchlist, importe-le ici (facultatif)
+# Watchlist provider (fallback simple si module absent)
 try:
     from scalper.live.watchlist import get_boot_watchlist  # type: ignore
-except Exception:  # fallback neutre
+except Exception:
     def get_boot_watchlist() -> List[str]:
-        return [s.strip().upper() for s in os.getenv("TOP_SYMBOLS", "BTCUSDT,ETHUSDT").split(",") if s.strip()]
+        raw = os.getenv("TOP_SYMBOLS", "BTCUSDT,ETHUSDT")
+        return [s.strip().upper() for s in raw.split(",") if s.strip()]
 
 QUIET = int(os.getenv("QUIET", "0") or "0")
 PRINT_OHLCV_SAMPLE = int(os.getenv("PRINT_OHLCV_SAMPLE", "0") or "0")
@@ -26,9 +27,9 @@ LOGS_DIR = Path("scalper/live/logs")
 LOGS_DIR.mkdir(parents=True, exist_ok=True)
 
 
-# -----------------------------------------------------------------------------
-# CSV utils (mince et suffisant)
-# -----------------------------------------------------------------------------
+# ---------------------------------------------------------------------
+# CSV utils — minimalistes
+# ---------------------------------------------------------------------
 def _csv_writer(path: Path, headers: Iterable[str]):
     path.parent.mkdir(parents=True, exist_ok=True)
     if not path.exists():
@@ -42,9 +43,9 @@ def _csv_writer(path: Path, headers: Iterable[str]):
     return append
 
 
-# -----------------------------------------------------------------------------
-# Orchestrateur "fit" : commandes, watchlist, boucles par symbole
-# -----------------------------------------------------------------------------
+# ---------------------------------------------------------------------
+# Orchestrateur affûté
+# ---------------------------------------------------------------------
 @dataclass
 class Orchestrator:
     exchange: Any
@@ -72,11 +73,11 @@ class Orchestrator:
             return
         self.running = True
 
-        # Watchlist
+        # Watchlist initiale
         if not self.symbols:
             self.symbols = get_boot_watchlist()
         if not QUIET:
-            await self.notifier.send(f"[orchestrator] boot watchlist: {self.symbols}")
+            await self.notifier.send(f"[watchlist] boot got: {self.symbols}")
 
         # Writers CSV
         self._w_signals   = _csv_writer(LOGS_DIR / "signals.csv",   ["ts","symbol","signal","price"])
@@ -85,7 +86,7 @@ class Orchestrator:
         self._w_positions = _csv_writer(LOGS_DIR / "positions.csv", ["ts","symbol","qty","avg_price","pnl"])
         self._w_watchlist = _csv_writer(LOGS_DIR / "watchlist.csv", ["ts","symbols"])
 
-        # BG tasks
+        # Tâches background
         self._bg_tasks.append(asyncio.create_task(heartbeat_task(self.notifier, label="orchestrator")))
         self._bg_tasks.append(asyncio.create_task(log_stats_task(self._stats_snapshot)))
 
@@ -93,29 +94,27 @@ class Orchestrator:
         for sym in self.symbols:
             self._per_symbol_tasks[sym] = asyncio.create_task(self._symbol_loop(sym))
 
-        # Commandes Telegram
+        # Commandes (Telegram)
         asyncio.create_task(self._commands_loop())
 
         if not QUIET:
-            await self.notifier.send("[orchestrator] running")
+            await self.notifier.send("🟢 Orchestrator PRELAUNCH.\nUtilise /setup ou /backtest. /resume pour démarrer le live.")
 
     async def stop(self) -> None:
         if not self.running:
             return
         self.running = False
 
-        # Stop per-symbol tasks
         for t in list(self._per_symbol_tasks.values()):
             t.cancel()
         self._per_symbol_tasks.clear()
 
-        # Stop BG tasks
         for t in list(self._bg_tasks):
             t.cancel()
         self._bg_tasks.clear()
 
         if not QUIET:
-            await self.notifier.send("[orchestrator] stopped")
+            await self.notifier.send("🔴 Orchestrator stopped.")
 
     # ---------------- Commandes ----------------
     async def _commands_loop(self) -> None:
@@ -130,7 +129,6 @@ class Orchestrator:
                 elif cmd == "/stop":
                     await self._handle_stop()
                 elif cmd.startswith("/backtest"):
-                    # déclenche le runner unifié (async en tâche de fond)
                     await handle_backtest_command(cmd, self, self.notifier)
                 else:
                     await self.notifier.send(f"Commande inconnue: {cmd}")
@@ -159,44 +157,33 @@ class Orchestrator:
 
     # ---------------- Boucle par symbole ----------------
     async def _symbol_loop(self, symbol: str) -> None:
-        """
-        Boucle ultra-légère :
-        - fetch OHLCV (safe_call)
-        - compute signal (generate_signal)
-        - log CSV
-        - (place order via _maybe_place_order si besoin)
-        """
         timeframe = os.getenv("LIVE_TIMEFRAME", "5m")
         limit = int(os.getenv("LIVE_LIMIT", "200"))
 
         while self.running:
             try:
                 if self.paused:
-                    await asyncio.sleep(0.5)
+                    await asyncio.sleep(0.4)
                     continue
 
                 ohlcv = await safe_call(
                     self.exchange.fetch_ohlcv, label=f"ohlcv:{symbol}",
                     symbol=symbol, timeframe=timeframe, limit=limit
                 )
-
                 if not ohlcv:
-                    await asyncio.sleep(0.2); continue
+                    await asyncio.sleep(0.2)
+                    continue
 
-                # format attendu : [[ts,o,h,l,c,v], ...]
                 last_ts, _, _, _, last_close, _ = ohlcv[-1]
                 sig = self._generate_signal(symbol, ohlcv)
 
                 if PRINT_OHLCV_SAMPLE and not QUIET:
                     await self.notifier.send(f"[{symbol}] last={last_close} sig={sig}")
 
-                # log signal
                 self._w_signals([last_ts, symbol, sig, last_close])
                 self.ticks_total += 1
 
-                # ici tu peux brancher le Risk Manager / FSM / Orders
                 await self._maybe_place_order(symbol, sig, last_close)
-
                 await asyncio.sleep(0)  # yield
             except asyncio.CancelledError:
                 break
@@ -205,14 +192,9 @@ class Orchestrator:
                     await self.notifier.send(f"[{symbol}] loop error: {e}")
                 await asyncio.sleep(0.5)
 
-    # ---------------- Hooks trading (stubs minces) ----------------
+    # ---------------- Hooks trading (stubs) ----------------
     def _generate_signal(self, symbol: str, ohlcv: List[List[float]]) -> str:
-        """
-        Place-holder (remplacer par ta factory de stratégies live) :
-        retourne 'BUY' | 'SELL' | 'HOLD'
-        """
-        # Exemple hyper-simple: croisement close vs moyenne des 10 dernières
-        closes = [r[4] for r in ohlcv[-10:]] if len(ohlcv) >= 10 else [r[4] for r in ohlcv]
+        closes = [r[4] for r in (ohlcv[-10:] if len(ohlcv) >= 10 else ohlcv)]
         if not closes:
             return "HOLD"
         avg = sum(closes) / len(closes)
@@ -224,17 +206,13 @@ class Orchestrator:
         return "HOLD"
 
     async def _maybe_place_order(self, symbol: str, signal: str, price: float) -> None:
-        """
-        Stub : branche ton OrderExecutor ici.
-        On se contente de logger pour rester mince.
-        """
         ts = self._now_ms()
         if signal == "BUY":
             self._w_orders([ts, symbol, "buy", 0, price, "skipped"])
         elif signal == "SELL":
             self._w_orders([ts, symbol, "sell", 0, price, "skipped"])
 
-    # ---------------- Stats / Heartbeat ----------------
+    # ---------------- Stats / misc ----------------
     def _stats_snapshot(self) -> Dict[str, Any]:
         return {
             "ticks_total": self.ticks_total,
@@ -246,3 +224,41 @@ class Orchestrator:
     @staticmethod
     def _now_ms() -> int:
         return int(asyncio.get_event_loop().time() * 1000)
+
+
+# ---------------------------------------------------------------------
+# Wrapper de compatibilité pour bot.py
+# ---------------------------------------------------------------------
+async def run_orchestrator(
+    exchange,
+    config=None,                   # gardé pour compat (non utilisé ici)
+    symbols=None,
+    notifier: Notifier | None = None,
+    command_stream: CommandStream | None = None,
+):
+    """
+    Démarre l'orchestrateur et bloque tant qu'il tourne.
+    Signature compatible avec l'ancien bot.py.
+    """
+    if notifier is None or command_stream is None:
+        raise ValueError(
+            "run_orchestrator: 'notifier' et 'command_stream' sont requis "
+            "(ils sont construits dans notify.py / bot.py)."
+        )
+
+    orch = Orchestrator(
+        exchange=exchange,
+        notifier=notifier,
+        cmd_stream=command_stream,
+        symbols=list(symbols or []),
+    )
+    await orch.start()
+
+    try:
+        while orch.running:
+            await asyncio.sleep(0.5)
+    finally:
+        await orch.stop()
+
+
+__all__ = ["Orchestrator", "run_orchestrator"]
