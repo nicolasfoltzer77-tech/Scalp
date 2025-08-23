@@ -13,7 +13,7 @@ from scalp.adapters.bitget import BitgetFuturesClient
 from scalp.services.order_service import OrderService
 
 # Stratégie
-from scalp.strategy import generate_signal, Signal  # noqa: F401  (utilisé dynamiquement)
+from scalp.strategy import generate_signal, Signal  # noqa: F401
 
 # Modules internes factorisés
 from live.watchlist import WatchlistManager
@@ -113,6 +113,10 @@ class Orchestrator:
             on_update=self._apply_symbols_update,
             safe_call=lambda f, label: self._safe(f, label=label),
         )
+
+        # DEBUG: écrire des lignes "NONE" dans signals.csv si aucun signal (pour vérifier le pipeline)
+        self._debug_noop = str(os.getenv("DEBUG_LOG_NOOP", "0")) == "1"
+        self._last_noop_ts = 0.0
 
         # Tentative de restauration d’état
         snap = self.state.load_state()
@@ -289,6 +293,26 @@ class Orchestrator:
                     },
                 )
 
+            # --- Debug: écrire un "no-op" si pas de signal pendant longtemps
+            if not sig and self._debug_noop:
+                now = time.time()
+                if now - self._last_noop_ts > 20.0:
+                    last_close = ctx.ohlcv[-1]["close"] if ctx.ohlcv else float("nan")
+                    self.logs.row(
+                        "signals.csv",
+                        {
+                            "ts": int(now * 1000),
+                            "symbol": symbol,
+                            "side": "NONE",
+                            "entry": float(last_close),
+                            "sl": 0.0,
+                            "tp1": 0.0,
+                            "tp2": 0.0,
+                            "last": float(last_close),
+                        },
+                    )
+                    self._last_noop_ts = now
+
             # --- Ouverture d’ordre (pilotée FSM)
             st = self._fsm.get(symbol)
             if sig and st.state == STATE_FLAT:
@@ -404,6 +428,7 @@ class Orchestrator:
         # TOP10 immédiat au boot
         try:
             top = await self._watch.boot_topN()
+            print(f"[watchlist] boot got: {top}")
             if top:
                 self._apply_symbols_update(top)
         except Exception as e:
