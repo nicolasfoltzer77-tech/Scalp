@@ -1,3 +1,4 @@
+# scalp/live/watchlist.py
 from __future__ import annotations
 import os
 import asyncio
@@ -6,7 +7,7 @@ from typing import Any, Callable, List, Optional, Sequence, Tuple
 DBG = os.getenv("WATCHLIST_DEBUG", "0") == "1"
 
 def _dprint(msg: str):
-    if DBG:  # petit helper de debug
+    if DBG:
         print(f"[watchlist:debug] {msg}")
 
 class WatchlistManager:
@@ -32,20 +33,18 @@ class WatchlistManager:
         self.period_s = period_s
         self.on_update = on_update
         self._running = False
+        # safe_call doit être une coroutine fournie par l'orchestrateur (self._safe)
+        # qui gère sync/async + retries.
         self._safe = safe_call or (lambda f, _label: f())
 
     # -------- helpers parsing --------
     @staticmethod
     def _extract_items(payload: Any) -> List[Any]:
-        """
-        Accepte plusieurs formes possibles de réponses Bitget/CCXT-like.
-        """
         if payload is None:
             return []
         if isinstance(payload, dict):
             for k in (
                 "data", "result", "tickers", "items", "list",
-                # variantes observées
                 "tickerList", "records"
             ):
                 v = payload.get(k)
@@ -91,16 +90,17 @@ class WatchlistManager:
     async def boot_topN(self) -> List[str]:
         """
         Essaie plusieurs endpoints pour récupérer les tickers.
-        Si rien ne sort, fallback -> ['BTCUSDT', 'ETHUSDT'] pour ne pas bloquer.
+        Si rien ne sort, fallback -> ['BTCUSDT', 'ETHUSDT'].
         """
         payload = None
+        top: List[str] = []
 
-        # 1) Méthodes "all tickers" s'il y en a
+        # 1) Méthodes "all tickers" si présentes (sync ou async)
         for name in ("get_tickers", "list_tickers", "all_tickers"):
             fn = getattr(self.exchange, name, None)
             if callable(fn):
                 try:
-                    payload = self._safe(fn, f"{name}")  # sync ou async accepté par _safe du caller
+                    payload = await self._safe(fn, f"{name}")  # ← AWAIT obligatoire
                     _dprint(f"payload via {name}: type={type(payload).__name__}")
                     top = self._pick_top(payload)
                     if top:
@@ -109,24 +109,23 @@ class WatchlistManager:
                     _dprint(f"{name} error: {e!r}")
                     payload = None
 
-        # 2) Variantes de get_ticker(arg)
-        if not self._pick_top(payload):
-            for arg in (None, "ALL", "", "*"):
-                try:
-                    fn = getattr(self.exchange, "get_ticker")
-                    payload = self._safe(lambda a=arg: fn(a), f"get_ticker({arg})")
-                    _dprint(f"payload via get_ticker({arg}): type={type(payload).__name__}")
-                    top = self._pick_top(payload)
-                    if top:
-                        break
-                except Exception as e:
-                    _dprint(f"get_ticker({arg}) error: {e!r}")
-                    payload = None
+        # 2) Variantes de get_ticker(arg) (renvoie souvent une coroutine)
+        if not top:
+            get_ticker = getattr(self.exchange, "get_ticker", None)
+            if callable(get_ticker):
+                for arg in (None, "ALL", "", "*"):
+                    try:
+                        payload = await self._safe(lambda a=arg: get_ticker(a), f"get_ticker({arg})")  # ← AWAIT
+                        _dprint(f"payload via get_ticker({arg}): type={type(payload).__name__}")
+                        top = self._pick_top(payload)
+                        if top:
+                            break
+                    except Exception as e:
+                        _dprint(f"get_ticker({arg}) error: {e!r}")
+                        payload = None
 
         # 3) Décision finale
-        top = self._pick_top(payload)
         if not top:
-            # fallback safe
             top = ["BTCUSDT", "ETHUSDT"]
             _dprint("fallback to ['BTCUSDT','ETHUSDT']")
 
