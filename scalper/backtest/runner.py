@@ -1,53 +1,99 @@
-# scalp/backtest/runner.py
 from __future__ import annotations
-import json, os, asyncio
-from typing import List, Dict, Callable
-from .engine import BacktestEngine
-from ..signals.factory import load_signal
 
-def default_loader(fetch_sync: Callable) -> Callable:
-    return fetch_sync
+import json
+from pathlib import Path
+from typing import Callable, Dict, Iterable, List, Optional
 
-class BacktestRunner:
-    def __init__(self, loader, out_dir: str, strategy: str, cfg: Dict,
-                 cash: float, risk_pct: float, max_conc: int=4):
-        self.loader = loader
-        self.out_dir = out_dir
-        self.strategy_fn = load_signal(strategy)
-        self.cfg = dict(cfg)
-        self.cash = cash
-        self.risk_pct = risk_pct
-        self.sem = asyncio.Semaphore(max_conc)
+import pandas as pd
 
-    async def _run_one(self, symbol: str, timeframe: str, start: int, end: int) -> Dict:
-        async with self.sem:
-            engine = BacktestEngine(self.loader, self.strategy_fn, self.cfg,
-                                    os.path.join(self.out_dir, f"{symbol}_{timeframe}"),
-                                    self.cash, self.risk_pct)
-            loop = asyncio.get_running_loop()
-            return await loop.run_in_executor(None, engine.run_pair, symbol, timeframe, start, end)
+from scalper.backtest.engine import run_single, OHLCVLoader
 
-    async def run_all(self, symbols: List[str], timeframes: List[str], start: int, end: int) -> Dict:
-        os.makedirs(self.out_dir, exist_ok=True)
-        tasks = [self._run_one(sym, tf, start, end) for sym in symbols for tf in timeframes]
-        results = await asyncio.gather(*tasks)
+# ==== Loader OHLCV par défaut ================================================
+# Tu peux brancher ici ton adapter maison (ccxt, Bitget CSV, Parquet local, etc.)
+def csv_loader_factory(data_dir: str) -> OHLCVLoader:
+    root = Path(data_dir)
 
-        per_symbol_best = {}
-        for r in results:
-            if "error" in r: continue
-            sym = r["symbol"]
-            if sym not in per_symbol_best or r["score"] > per_symbol_best[sym]["score"]:
-                per_symbol_best[sym] = r
+    def load(symbol: str, timeframe: str, start: str | None, end: str | None) -> pd.DataFrame:
+        # Exemple: data/BTCUSDT-1m.csv ; colonnes: timestamp,open,high,low,close,volume
+        # Adapte si tu as d'autres noms de fichiers
+        tf = timeframe.replace(":", "")
+        path = root / f"{symbol}-{tf}.csv"
+        if not path.exists():
+            raise FileNotFoundError(f"Fichier introuvable: {path}")
+        df = pd.read_csv(path)
+        # normalisation
+        ts_col = next((c for c in df.columns if c.lower() in ("ts", "timestamp", "time", "date")), None)
+        if ts_col is None:
+            raise ValueError("Colonne temps introuvable")
+        df = df.rename(columns={ts_col: "timestamp"})
+        df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True, infer_datetime_format=True)
+        df = df.set_index("timestamp").sort_index()
+        # slice temporel si demandé
+        if start:
+            df = df.loc[pd.Timestamp(start, tz="UTC") :]
+        if end:
+            df = df.loc[: pd.Timestamp(end, tz="UTC")]
+        return df
 
-        top_overall = sorted([r for r in results if "error" not in r], key=lambda x: x["score"], reverse=True)[:10]
-        proposal = {
-            "per_symbol_best": {k: {"timeframe": v["timeframe"], "score": v["score"], "pf": v["pf"],
-                                    "winrate": v["winrate"], "maxdd": v["maxdd"]}
-                                for k,v in per_symbol_best.items()},
-            "top_overall": top_overall,
-            "suggested_timeframes": {k: v["timeframe"] for k,v in per_symbol_best.items()},
-            "note": "Suggestion basée sur score composite (WR, PF, MaxDD, Sharpe)."
-        }
-        with open(os.path.join(self.out_dir, "metrics.json"), "w") as f:
-            json.dump({"results": results, "proposal": proposal}, f, indent=2)
-        return {"results": results, "proposal": proposal}
+    return load
+
+
+# ==== Run multi ==============================================================
+def run_multi(
+    *,
+    symbols: Iterable[str],
+    timeframes: Iterable[str],
+    loader: OHLCVLoader,
+    out_dir: str = "backtests",
+    initial_cash: float = 10_000.0,
+    risk_pct: float = 0.005,
+    slippage_bps: float = 1.5,
+) -> Dict[str, Dict[str, Dict]]:
+    """
+    Lance un backtest **multi symboles / multi timeframes** et écrit
+    `equity_curve.csv`, `trades.csv`, `fills.csv`, `metrics.json` par combinaison.
+    Retourne un dict {symbol: {tf: result}} où result = sortie run_single.
+    """
+    Path(out_dir).mkdir(parents=True, exist_ok=True)
+    results: Dict[str, Dict[str, Dict]] = {}
+
+    for sym in symbols:
+        results[sym] = {}
+        for tf in timeframes:
+            res = run_single(
+                symbol=sym,
+                timeframe=tf,
+                loader=loader,
+                initial_cash=initial_cash,
+                risk_pct=risk_pct,
+                slippage_bps=slippage_bps,
+            )
+            # sauvegarde
+            base = Path(out_dir) / f"{sym}_{tf}"
+            base.parent.mkdir(parents=True, exist_ok=True)
+            res["equity_curve"].to_csv(base.with_suffix(".equity_curve.csv"), index=False)
+            res["trades"].to_csv(base.with_suffix(".trades.csv"), index=False)
+            res["fills"].to_csv(base.with_suffix(".fills.csv"), index=False)
+            with open(base.with_suffix(".metrics.json"), "w", encoding="utf-8") as fh:
+                json.dump(res["metrics"], fh, ensure_ascii=False, indent=2)
+            results[sym][tf] = res
+
+    # tableau récapitulatif pour choisir une config
+    summary_rows = []
+    for sym, tfs in results.items():
+        for tf, res in tfs.items():
+            m = res["metrics"]
+            summary_rows.append(
+                {
+                    "symbol": sym,
+                    "timeframe": tf,
+                    "return_pct": m["return_pct"],
+                    "n_trades": m["n_trades"],
+                    "win_rate_pct": m["win_rate_pct"],
+                    "max_dd_pct": m["max_dd_pct"],
+                }
+            )
+    pd.DataFrame(summary_rows).sort_values(["symbol", "timeframe"]).to_csv(
+        Path(out_dir) / "summary.csv", index=False
+    )
+    return results
