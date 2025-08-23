@@ -272,6 +272,33 @@ async def run_orchestrator(
             await asyncio.sleep(0.5)
     finally:
         await orch.stop()
+        
+# … tout le fichier tel que tu l’as posé précédemment …
+    async def stop(self) -> None:
+        if not self.running:
+            return
+        self.running = False
 
+        for t in list(self._per_symbol_tasks.values()):
+            t.cancel()
+        self._per_symbol_tasks.clear()
+
+        for t in list(self._bg_tasks):
+            t.cancel()
+        self._bg_tasks.clear()
+
+        # >>> fermeture gracieuse de l'exchange (si défini)
+        try:
+            close = getattr(self.exchange, "close", None)
+            if close:
+                res = close()
+                if asyncio.iscoroutine(res):
+                    await res
+        except Exception:
+            pass
+
+        if not QUIET:
+            await self.notifier.send("🔴 Orchestrator stopped.")
+# … __all__ etc. inchangés …
 
 __all__ = ["Orchestrator", "run_orchestrator"]
