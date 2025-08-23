@@ -3,198 +3,206 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
-from typing import Callable, Iterable, Optional, Tuple
+from typing import Any, Awaitable, Callable, Iterable, Optional, Tuple
 
-# Le notifier/commandes (Telegram ou Null) est construit ici si non injecté
-from scalper.live.notify import build_notifier_and_commands  # -> (notifier, command_stream)
+# Services utilitaires (déjà présents dans le repo)
+from scalper.services.utils import heartbeat_task, log_stats_task
+
+# Système de notifications/commandes
+# NOTE: build_notifier_and_commands attend "config" en paramètre -> on lui passe self.config
+from scalper.live.notify import build_notifier_and_commands
 
 
-# --------------------------------------------------------------------------
-# Types & petites utilités
-# --------------------------------------------------------------------------
-NotifierSend = Callable[[str], asyncio.Future]  # await notifier.send("msg")
+# ---------------------------------------------------------------------
+# Types légers
+# ---------------------------------------------------------------------
+SendFn = Callable[[str], Awaitable[None]]
+CommandStream = Iterable[Awaitable[str]]  # async generator dans l’implémentation réelle
 
 
 @dataclass
 class RunConfig:
-    timeframe: str = "5m"
-    risk_pct: float = 0.05
-    slippage_bps: float = 0.0
-    cash: float = 10_000.0
+    """Boîte à clés minimaliste pour le run.
+    On accepte un dict-like en entrée, on l'enrobe pour l'accès par .get().
+    """
+    data: dict
+
+    def get(self, key: str, default: Any = None) -> Any:
+        return self.data.get(key, default)
+
+    @property
+    def timeframe(self) -> str:
+        return self.get("timeframe", "5m")
+
+    @property
+    def risk_pct(self) -> float:
+        # clamp ailleurs si besoin
+        return float(self.get("risk_pct", 0.05))
+
+    @property
+    def symbols(self) -> list[str]:
+        syms = self.get("symbols") or self.get("watchlist") or []
+        if isinstance(syms, str):
+            # "BTCUSDT,ETHUSDT" -> ["BTCUSDT","ETHUSDT"]
+            syms = [s.strip() for s in syms.split(",") if s.strip()]
+        return list(syms)
 
 
-# --------------------------------------------------------------------------
-# Tasks utilitaires (stables)
-# --------------------------------------------------------------------------
-async def heartbeat_task(send: NotifierSend, label: str = "orchestrator"):
-    """Ping périodique vers le notifier (ne dépend d'aucun état interne)."""
-    while True:
-        try:
-            await send(f"[{label}] heartbeat alive")
-        except Exception as e:  # on ne casse pas la boucle
-            # Optionnel: log local
-            pass
-        await asyncio.sleep(30.0)
-
-
-async def log_stats_task(
-    ticks_getter: Callable[[], int],
-    symbols_getter: Callable[[], Iterable[str]],
-    send: Optional[NotifierSend] = None,
-):
-    """Journalise périodiquement les compteurs."""
-    prev = 0
-    while True:
-        total = int(ticks_getter() or 0)
-        diff = total - prev
-        prev = total
-        symbols = list(symbols_getter() or [])
-        line = f"[stats] ticks_total={total} (+{diff} /30s) | pairs=" + ",".join(symbols)
-        print(line, flush=True)
-        if send:
-            try:
-                await send(line)
-            except Exception:
-                pass
-        await asyncio.sleep(30.0)
-
-
-# --------------------------------------------------------------------------
+# ---------------------------------------------------------------------
 # Orchestrateur
-# --------------------------------------------------------------------------
+# ---------------------------------------------------------------------
 class Orchestrator:
+    """Boucle de pré-lancement + hooks commandes Telegram.
+    - Warmup cache (fait côté bot avant la construction)
+    - Heartbeat + stats périodiques
+    - Consommation de /setup /backtest /resume /stop
+    """
+
     def __init__(
         self,
-        symbols: Iterable[str],
-        run_config: RunConfig,
-    ):
-        self._symbols = list(symbols)
-        self.config = run_config
+        exchange: Any,
+        config: dict | RunConfig,
+        notifier: Optional[Any] = None,
+        command_stream: Optional[Any] = None,
+    ) -> None:
+        self.exchange = exchange
+        self.config = config if isinstance(config, RunConfig) else RunConfig(config)
+        self.notifier = notifier
+        self.command_stream = command_stream
 
-        self._running = asyncio.Event()
-        self._running.clear()
-
+        # état simple
+        self._running = False
         self._bg_tasks: list[asyncio.Task] = []
+        self._ticks_total: int = 0
+        self._symbols: list[str] = self.config.symbols or []
 
-        # compteur global simple (incrémenté quand on fetch)
-        self._ticks_total = 0
-
-        # Notifier/stream éventuellement injectés de l’extérieur
-        self.notifier = None
-        self.command_stream = None
-
-    # --- getters utilisés par log_stats_task ---
-    def symbols(self) -> list[str]:
-        return self._symbols
+    # --------- getters pour les tasks background ---------
+    @property
+    def running(self) -> bool:
+        return self._running
 
     def ticks_total(self) -> int:
         return self._ticks_total
 
-    # --- OHLCV fetch (adapter/brancher ici ta vraie source) ---
-    async def fetch_ohlcv(self, symbol: str) -> None:
-        """
-        Placeholder: simule un fetch OHLCV.
-        -> branche ta source (CSV cache, ccxt, Bitget REST, etc.) ici si besoin.
-        """
-        await asyncio.sleep(0.05)  # latence simulée
-        self._ticks_total += 1
+    def symbols(self) -> list[str]:
+        return list(self._symbols)
 
-    # --- boucle par symbole (prélaunch simple) ---
-    async def _symbol_loop(self, symbol: str):
-        while not self._running.is_set():  # PRELAUNCH: chauffe/cycle court
-            try:
-                await self.fetch_ohlcv(symbol)
-            except Exception as e:
-                # Optionnel: send une alerte symbolique
-                if self.notifier:
-                    try:
-                        await self.notifier.send(f"[{symbol}] loop error: {e}")
-                    except Exception:
-                        pass
-            await asyncio.sleep(1.0)
+    async def _send(self, msg: str) -> None:
+        if not self.notifier:
+            return
+        try:
+            await self.notifier.send(msg)
+        except Exception as e:  # garde‑fou: jamais planter la boucle pour un send
+            print(f"[notify] send fail: {e!r}")
 
-    # --- démarrage (notifier; tasks de fond) ---
-    async def start(self):
-        # 1) Notifier & stream : utiliser l’injection si déjà présents
+    # -----------------------------------------------------------------
+    # Cycle de vie
+    # -----------------------------------------------------------------
+    async def start(self) -> None:
+        """Prépare le notifier & démarre le PRELAUNCH + tâches background."""
+        # ⚠️ Correction ici : on passe bien self.config à build_notifier_and_commands
         if not self.notifier or not self.command_stream:
-            self.notifier, self.command_stream = await build_notifier_and_commands()
-        send = self.notifier.send
+            self.notifier, self.command_stream = await build_notifier_and_commands(self.config)
 
-        # 2) Annonce PRELAUNCH
-        await send(
-            "Orchestrator PRELAUNCH. Utilise /setup ou /backtest. /resume pour démarrer le live."
-        )
-        print("[orchestrator] PRELAUNCH", flush=True)
+        await self._send("🟢 Orchestrator PRELAUNCH. Utilise /setup ou /backtest. /resume pour démarrer le live.")
 
-        # 3) Tasks de fond (heartbeat + stats)
-        self._bg_tasks.append(asyncio.create_task(heartbeat_task(send, label="orchestrator")))
+        self._running = True
+
+        # Tâche heartbeat (toutes les 30s par défaut dans utils.heartbeat_task)
+        self._bg_tasks.append(asyncio.create_task(heartbeat_task(lambda: self._running, self.notifier)))
+        # Tâche logs de stats (ticks_total & symbols), toutes les 30s
         self._bg_tasks.append(
-            asyncio.create_task(
-                log_stats_task(self.ticks_total, self.symbols, send=send)
-            )
+            asyncio.create_task(log_stats_task(lambda: self._ticks_total, lambda: self._symbols))
         )
 
-        # 4) Boucles PRELAUNCH par symbole (léger)
-        for s in self._symbols:
-            self._bg_tasks.append(asyncio.create_task(self._symbol_loop(s)))
+    async def stop(self) -> None:
+        """Arrête proprement l’orchestrateur et ses tâches."""
+        if not self._running:
+            return
 
-    async def stop(self):
-        self._running.set()
+        self._running = False
         for t in self._bg_tasks:
             t.cancel()
-        await asyncio.gather(*self._bg_tasks, return_exceptions=True)
         self._bg_tasks.clear()
+        await self._send("🛑 Arrêt orchestrateur.")
 
-    async def run(self):
+    async def run(self) -> None:
+        """Boucle de pré‑lancement : on écoute les commandes, on garde le heartbeat/metrics."""
         await self.start()
-        # On reste en PRELAUNCH jusqu’à stop() (ou une commande externe qui modifie l’état)
-        while not self._running.is_set():
-            await asyncio.sleep(0.5)
+        try:
+            # Consommation du flux de commandes (async generator)
+            async for cmd in self.command_stream:
+                await self._handle_command(cmd)
+        except asyncio.CancelledError:
+            pass
+        finally:
+            await self.stop()
+
+    # -----------------------------------------------------------------
+    # Commandes
+    # -----------------------------------------------------------------
+    async def _handle_command(self, cmd: str) -> None:
+        cmd = (cmd or "").strip()
+        if not cmd:
+            return
+
+        if cmd.startswith("/stop"):
+            await self._send("🛑 Stop demandé.")
+            await self.stop()
+            return
+
+        if cmd.startswith("/setup"):
+            await self._send("ℹ️ PRELAUNCH: déjà prêt.")
+            return
+
+        if cmd.startswith("/resume"):
+            # Ici ton démarrage live réel (non branché dans ce prélaunch)
+            await self._send("ℹ️ PRELAUNCH: déjà prêt.")
+            return
+
+        if cmd.startswith("/backtest"):
+            # Backtest géré par un runner séparé -> simple message
+            await self._send("🧪 Backtest non branché ici (runner séparé).")
+            return
+
+        # Commande inconnue => echo help court
+        await self._send("❓ Commande inconnue. Utilise /setup, /backtest, /resume ou /stop.")
+
+    # -----------------------------------------------------------------
+    # Hooks pour incrémenter les ticks (appelés ailleurs dans le code live)
+    # -----------------------------------------------------------------
+    def on_tick_batch(self, n: int, symbols_snapshot: Optional[Iterable[str]] = None) -> None:
+        """Appelle cette méthode depuis ta boucle de marché pour tracer les stats."""
+        try:
+            self._ticks_total += int(n)
+        except Exception:
+            pass
+        if symbols_snapshot:
+            self._symbols = list(symbols_snapshot)
 
 
-# --------------------------------------------------------------------------
-# API de module (compat signatures 0→4 args)
-# --------------------------------------------------------------------------
-async def run_orchestrator(*args, **kwargs):
-    """
-    Compat:
-      - run_orchestrator()
-      - run_orchestrator(exchange, config)
-      - run_orchestrator(exchange, config, notifier, factory)
-    Les paramètres supplémentaires sont ignorés si non utilisés.
-    """
-    # 0) parse arguments
-    exchange = args[0] if len(args) > 0 else kwargs.get("exchange")  # ignoré ici
-    config = args[1] if len(args) > 1 and isinstance(args[1], dict) else kwargs.get("config")
-    ext_notifier = args[2] if len(args) > 2 else kwargs.get("notifier")
-    _factory = args[3] if len(args) > 3 else kwargs.get("factory")  # non utilisé ici
-
-    ext_cmd_stream = None
-    if isinstance(ext_notifier, tuple) and len(ext_notifier) == 2:
-        # on accepte (notifier, command_stream)
-        ext_notifier, ext_cmd_stream = ext_notifier
-
-    # 1) valeurs par défaut
-    default_symbols = [
-        "BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT",
-        "DOGEUSDT", "ADAUSDT", "LTCUSDT", "AVAXUSDT", "LINKUSDT",
-    ]
-    symbols = (config or {}).get("symbols") or default_symbols
-
-    run_cfg = RunConfig(
-        timeframe=(config or {}).get("timeframe", "5m"),
-        risk_pct=float((config or {}).get("risk_pct", 0.05)),
-        slippage_bps=float((config or {}).get("slippage_bps", 0.0)),
-        cash=float((config or {}).get("cash", 10_000.0)),
-    )
-
-    # 2) Orchestrateur
-    orch = Orchestrator(symbols=symbols, run_config=run_cfg)
-
-    # 3) Injection éventuelle d’un notifier/stream fourni par le caller
-    if ext_notifier:
-        orch.notifier = ext_notifier
-        orch.command_stream = ext_cmd_stream
-
-    # 4) Run
+# ---------------------------------------------------------------------
+# API module‑level (utilisée par bot.py)
+# ---------------------------------------------------------------------
+async def run_orchestrator(
+    exchange: Any,
+    cfg: dict | RunConfig,
+    notifier: Optional[Any] = None,
+    factory: Optional[Any] = None,  # réservé si tu veux brancher une fabrique plus tard
+) -> None:
+    """Point d’entrée simple, utilisé par bot.py."""
+    orch = Orchestrator(exchange=exchange, config=cfg, notifier=notifier, command_stream=None)
     await orch.run()
+
+
+# ---------------------------------------------------------------------
+# Petit main pour tests manuels (optionnel)
+# ---------------------------------------------------------------------
+if __name__ == "__main__":  # pragma: no cover
+    async def _demo():
+        class DummyExchange:
+            pass
+
+        await run_orchestrator(DummyExchange(), {"symbols": ["BTCUSDT", "ETHUSDT"], "timeframe": "5m"})
+
+    asyncio.run(_demo())
