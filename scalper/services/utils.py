@@ -2,91 +2,111 @@
 from __future__ import annotations
 
 import asyncio
+import functools
+import os
 import time
-from typing import Any, Awaitable, Callable, Optional
+from typing import Any, Awaitable, Callable, TypeVar
+
+T = TypeVar("T")
+
 
 # ---------------------------------------------------------------------
-# safe_call : retry exponentiel (async/sync)
+# Retry commun (sync/async)
 # ---------------------------------------------------------------------
-def _sleep(s: float) -> Awaitable[None]:
-    return asyncio.sleep(s)
+async def _async_sleep(seconds: float) -> None:
+    await asyncio.sleep(seconds)
+
+
+def _sync_sleep(seconds: float) -> None:
+    time.sleep(seconds)
+
+
+def _is_coro_fn(fn: Callable[..., Any]) -> bool:
+    return asyncio.iscoroutinefunction(fn)
+
 
 async def safe_call(
-    fn: Callable[..., Any],
-    label: str = "",
+    fn: Callable[..., T] | Callable[..., Awaitable[T]],
     *args: Any,
+    label: str = "call",
     retries: int = 5,
-    base_delay: float = 0.4,
-    max_delay: float = 5.0,
+    backoff: float = 0.4,
+    backoff_mul: float = 1.6,
     **kwargs: Any,
-) -> Any:
+) -> T:
     """
-    Appelle fn(*args, **kwargs) avec retry exponentiel.
-    - fn peut être sync ou async.
+    Appelle fn avec retry exponentiel.
+    Supporte fn sync/async.
     """
     attempt = 0
-    delay = base_delay
+    delay = backoff
     while True:
         try:
-            res = fn(*args, **kwargs)
-            if asyncio.iscoroutine(res):
-                return await res
-            return res
+            if _is_coro_fn(fn):
+                return await fn(*args, **kwargs)  # type: ignore[misc]
+            # sync
+            return functools.partial(fn, *args, **kwargs)()  # type: ignore[misc]
         except Exception as e:  # noqa: BLE001
             attempt += 1
             if attempt > retries:
                 raise
-            print(f"[safe_call] retry {attempt}/{retries} after {delay:.2f}s (ohlcv:{label})")
-            await _sleep(delay)
-            delay = min(delay * 2.0, max_delay)
+            print(f"[safe_call] retry {attempt}/{retries} after {delay:.2f}s ({label})")
+            if asyncio.get_event_loop().is_running():
+                await _async_sleep(delay)
+            else:
+                _sync_sleep(delay)
+            delay *= backoff_mul
+
 
 # ---------------------------------------------------------------------
-# heartbeat : envoie un "alive" régulier (respecte QUIET=1 côté notifier)
+# Tasks utilitaires
 # ---------------------------------------------------------------------
 async def heartbeat_task(
     running_getter: Callable[[], bool],
     notifier: Any,
-    interval: float = 30.0,
-    name: str = "orchestrator",
+    label: str = "orchestrator",
+    period: float = 30.0,
 ) -> None:
     """
-    running_getter() -> bool
-    notifier.send(text: str) -> coroutine
+    Envoie un heartbeat périodique tant que running_getter() est True.
     """
+    quiet = os.environ.get("QUIET", "0") == "1"
     try:
         while running_getter():
+            if not quiet:
+                print("[heartbeat] alive")
             try:
-                await notifier.send("[heartbeat] alive")
+                await notifier.send(f"[{label}] heartbeat alive")
             except Exception:
                 pass
-            await asyncio.sleep(interval)
-    except asyncio.CancelledError:
-        pass
+            await asyncio.sleep(period)
+    except asyncio.CancelledError:  # graceful stop
+        return
 
-# ---------------------------------------------------------------------
-# log stats
-# ---------------------------------------------------------------------
+
 async def log_stats_task(
     ticks_getter: Callable[[], int],
-    symbols_getter: Callable[[], list[str]],
-    snapshot_getter: Callable[[], dict[str, Any]],
+    symbols_getter: Callable[[], list[str] | tuple[str, ...]],
+    notifier: Any,
     interval: float = 30.0,
 ) -> None:
     """
-    ticks_getter() -> int
-    symbols_getter() -> list[str]
-    snapshot_getter() -> dict (libre) pour enrichir les logs/CSV si besoin
+    Log périodique des stats (ticks_total + pairs).
     """
-    t0 = time.time()
+    quiet = os.environ.get("QUIET", "0") == "1"
     last = ticks_getter()
     try:
         while True:
             await asyncio.sleep(interval)
-            cur = ticks_getter()
-            add = cur - last
-            last = cur
-            pairs = ",".join(symbols_getter()) or "-"
-            print(f"[stats] ticks_total={cur} (+{add} /{int(interval)}s) | pairs={pairs}")
-            _ = snapshot_getter()  # hook, non utilisé ici
+            now = ticks_getter()
+            delta = now - last
+            last = now
+            pairs = ",".join(symbols_getter())
+            if not quiet:
+                print(f"[stats] ticks_total={now} (+{delta} /{int(interval)}s) | pairs={pairs}")
+            try:
+                await notifier.send(f"[stats] ticks_total={now} (+{delta} /{int(interval)}s)")
+            except Exception:
+                pass
     except asyncio.CancelledError:
-        pass
+        return
