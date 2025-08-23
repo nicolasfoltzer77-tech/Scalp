@@ -1,107 +1,91 @@
-# scalper/live/orchestrator.py
+# -*- coding: utf-8 -*-
 from __future__ import annotations
-
 import asyncio
-from dataclasses import dataclass
-from typing import Any, Callable, List, Optional, Tuple
+from dataclasses import dataclass, field
+from typing import Callable, Iterable, List, Optional, AsyncIterator
 
-from scalper.live.watchlist import make_watchlist_manager, WatchlistManager
-from scalper.live.ohlcv_service import OhlcvService  # assumed existing
-from scalper.hooks.prewarm_cache import prewarm_cache  # assumed existing
+from scalper.hooks.prewarm_cache import prewarm_cache
 
 
 @dataclass
 class RunConfig:
+    symbols: List[str] = field(default_factory=lambda: [
+        "BTCUSDT","ETHUSDT","SOLUSDT","BNBUSDT","XRPUSDT",
+        "DOGEUSDT","ADAUSDT","LTCUSDT","AVAXUSDT","LINKUSDT"
+    ])
     timeframe: str = "5m"
-    refresh_s: int = 300
-    risk_pct: float = 0.05
-    slippage_bps: float = 0.0
+    refresh_secs: float = 30.0
+    cache_dir: str = "/notebooks/data"
+    # Tu peux ajouter d'autres paramètres ici (risques, stratégie, etc.)
 
 
 class Orchestrator:
-    def __init__(
-        self,
-        exchange: Any,
-        run_cfg: RunConfig,
-        notifier: Any,
-        command_stream: Any,
-        watchlist: Optional[WatchlistManager] = None,
-    ) -> None:
-        self.exchange = exchange
-        self.cfg = run_cfg
+    def __init__(self, cfg: RunConfig, notifier, cache_dir_factory: Optional[Callable[[], str]] = None):
+        self.cfg = cfg
         self.notifier = notifier
-        self.command_stream = command_stream
-        self.watchlist = watchlist or make_watchlist_manager()
+        self._cache_dir_factory = cache_dir_factory
+        self._bg_tasks: list[asyncio.Task] = []
+        self._ticks_total: int = 0
+        self._running: bool = False
 
-        self._bg_tasks: List[asyncio.Task] = []
-        self._running = False
-        self._ticks_total = 0
+    # --- getters exposés aux tâches de log/heartbeat
+    def ticks_total(self) -> int:
+        return self._ticks_total
 
-        self._ohlcv = OhlcvService(exchange=self.exchange, timeframe=self.cfg.timeframe)
+    def symbols(self) -> List[str]:
+        return list(self.cfg.symbols)
 
-    # ------------------------------------------------------------------ tasks
     async def _heartbeat_task(self) -> None:
         while self._running:
             try:
                 await self.notifier.send("heartbeat alive")
-            except Exception:
-                pass
-            await asyncio.sleep(30)
+            finally:
+                await asyncio.sleep(30)
 
-    async def _stats_task(self) -> None:
+    async def _log_stats_task(self) -> None:
+        # log toutes les 30s
         while self._running:
             try:
-                pairs = ", ".join(self.watchlist.pairs)
-                await self.notifier.send(f"[stats] ticks_total={self._ticks_total} (+0 /30s) | pairs={pairs}")
-            except Exception:
-                pass
-            await asyncio.sleep(30)
+                msg = f"[stats] ticks_total={self._ticks_total} (+0 /30s) | pairs={','.join(self.cfg.symbols) if self.cfg.symbols else ''}"
+                await self.notifier.send(msg)
+            finally:
+                await asyncio.sleep(30)
 
-    # --------------------------------------------------------------- life-cycle
+    async def _main_loop(self) -> None:
+        """Boucle principale ultra‑simple qui incrémente un compteur."""
+        refresh = max(2.0, float(self.cfg.refresh_secs))
+        while self._running:
+            # Ici tu brancheras fetch_ohlcv / signaux / stratégies
+            self._ticks_total += len(self.cfg.symbols)
+            await asyncio.sleep(refresh)
+
     async def start(self) -> None:
-        # PRELAUNCH banner already sent by notify builder; repeat here in case of null notifier
-        try:
-            await self.notifier.send("Orchestrator PRELAUNCH. Utilise /setup ou /backtest. /resume pour démarrer le live.")
-        except Exception:
-            pass
-
-        # Warm cache (non‑fatal)
-        try:
-            prewarm_cache(self.exchange, top_n=10, timeframe=self.cfg.timeframe)
-        except Exception:
-            pass
-
-        # Build initial watchlist (this is what was missing)
-        self.watchlist.boot(exchange=self.exchange)
+        # Pré‑chauffe cache (non bloquant et robuste)
+        prewarm_cache(
+            cfg={},  # placeholder
+            symbols=self.cfg.symbols,
+            timeframe=self.cfg.timeframe,
+            out_dir=(self._cache_dir_factory() if self._cache_dir_factory else self.cfg.cache_dir),
+        )
+        await self.notifier.send("🟢 Orchestrator PRELAUNCH. Utilise /setup ou /backtest. /resume pour démarrer le live.")
 
         self._running = True
-        self._bg_tasks = [
-            asyncio.create_task(self._heartbeat_task()),
-            asyncio.create_task(self._stats_task()),
-        ]
-
-    async def stop(self) -> None:
-        self._running = False
-        for t in self._bg_tasks:
-            t.cancel()
-        self._bg_tasks.clear()
+        self._bg_tasks.append(asyncio.create_task(self._heartbeat_task()))
+        self._bg_tasks.append(asyncio.create_task(self._log_stats_task()))
+        try:
+            await self._main_loop()
+        finally:
+            # arrêt propre
+            self._running = False
+            for t in self._bg_tasks:
+                t.cancel()
+            self._bg_tasks.clear()
 
     async def run(self) -> None:
         await self.start()
-        try:
-            # Minimal live loop: fetch last candle for each pair just to bump ticks
-            while self._running:
-                if not self.watchlist.pairs:
-                    await asyncio.sleep(1.0)
-                    continue
-                await asyncio.gather(*(self._ohlcv.fetch_last(symbol) for symbol in self.watchlist.pairs))
-                self._ticks_total += len(self.watchlist.pairs)
-                await asyncio.sleep(1.0)
-        finally:
-            await self.stop()
 
 
-# ---------------------------------------------------------------- entry point
-async def run_orchestrator(exchange: Any, cfg: RunConfig, notifier: Any, command_stream: Any) -> None:
-    orch = Orchestrator(exchange=exchange, run_cfg=cfg, notifier=notifier, command_stream=command_stream)
+async def run_orchestrator(cfg: RunConfig, notifier, cache_dir_factory: Optional[Callable[[], str]] = None) -> None:
+    """Entrée unique utilisée par bot.py"""
+    orch = Orchestrator(cfg, notifier, cache_dir_factory)
     await orch.run()
