@@ -17,7 +17,7 @@ class BaseNotifier:
 
 class NullNotifier(BaseNotifier):
     async def send(self, text: str) -> None:
-        # log console seulement
+        # log console uniquement
         print(f"[notify:null] {text}")
 
 
@@ -45,11 +45,10 @@ class TelegramNotifier(BaseNotifier):
 
 
 # ---------------------------------------------------------------------
-# CommandStream (ex: commandes reçues via Telegram webhook)
-# pour l’instant, mock simple = asyncio.Queue
+# CommandStream (file d’attente des commandes) – simple queue pour l’instant
 # ---------------------------------------------------------------------
 class CommandStream:
-    def __init__(self):
+    def __init__(self) -> None:
         self.q: asyncio.Queue[str] = asyncio.Queue()
 
     async def get(self) -> str:
@@ -62,24 +61,10 @@ class CommandStream:
 # ---------------------------------------------------------------------
 # Factory
 # ---------------------------------------------------------------------
-async def build_notifier_and_commands(config: dict[str, Any] | None = None) -> Tuple[BaseNotifier, CommandStream]:
+async def build_notifier_and_commands(
+    config: dict[str, Any] | None = None,
+) -> Tuple[BaseNotifier, CommandStream]:
     """
     Construit un Notifier + CommandStream.
-    Si config contient TELEGRAM_TOKEN et TELEGRAM_CHAT_ID → TelegramNotifier,
-    sinon NullNotifier.
-    """
-    config = config or {}
 
-    token = config.get("TELEGRAM_TOKEN") or os.environ.get("TELEGRAM_TOKEN")
-    chat_id = config.get("TELEGRAM_CHAT_ID") or os.environ.get("TELEGRAM_CHAT_ID")
-
-    if token and chat_id:
-        notifier = TelegramNotifier(token, chat_id)
-        cmd_stream = CommandStream()
-        print("[notify] Using Telegram notifier/commands")
-    else:
-        notifier = NullNotifier()
-        cmd_stream = CommandStream()
-        print("[notify] Using Null notifier/commands")
-
-    return notifier, cmd_stream
+   
