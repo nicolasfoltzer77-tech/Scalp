@@ -1,17 +1,15 @@
 # scalper/services/utils.py
 from __future__ import annotations
 import asyncio
-import datetime as dt
-from typing import Callable, Awaitable, Any
+from typing import Callable, Any
 
 
 class NullNotifier:
-    async def send(self, _msg: str) -> None:  # no-op
+    async def send(self, _msg: str) -> None:
         return
 
 
 async def heartbeat_task(running_getter: Callable[[], bool], notifier: Any, period: float = 30.0) -> None:
-    """Ping 'alive' regularly while running."""
     if notifier is None:
         notifier = NullNotifier()
     try:
@@ -28,7 +26,6 @@ async def log_stats_task(
     symbols_getter: Callable[[], list[str]],
     period: float = 30.0,
 ) -> None:
-    """Log ticks & pairs for visibility (used in PRELAUNCH)."""
     if notifier is None:
         notifier = NullNotifier()
     last = 0
