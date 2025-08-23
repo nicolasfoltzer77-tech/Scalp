@@ -15,7 +15,7 @@ from scalper.services.utils import heartbeat_task, log_stats_task
 from scalper.exchange.fees import load_bitget_fees
 from scalper.signals.factory import load_signal
 
-# --- Logs CSV utilitaires (minimal) ------------------------------------------
+# --- Logs CSV utilitaires ----------------------------------------------------
 import csv
 class CsvLog:
     def __init__(self, path: str, headers: List[str]):
@@ -46,12 +46,11 @@ class OrderService:
         # Renvoie {id, status, ...} selon ton client exchange
         return await self.exchange.create_order(symbol, "market", side, qty)
 
-# ---------------- Trade loop (placeholder léger, brancher ton implémentation) -
+# ---------------- Trade loop (placeholder) -----------------------------------
 class TradeLoop:
     """
     Boucle de trading asynchrone par symbole.
-    Ce placeholder illustre les points d'intégration (fetch -> signal -> ordre/logs).
-    Remplace-le par ta version si tu en as déjà une dans scalper/live/loops/trade.py.
+    Remplace par ta version si tu en as déjà une (ex: scalper/live/loops/trade.py).
     """
     def __init__(
         self,
@@ -106,7 +105,7 @@ class TradeLoop:
                 continue
 
             now = int(time.time() * 1000)
-            # Exemple de logging du signal (côté live)
+            # Exemple de logging du signal
             if sig:
                 self.log_signals.write_row({
                     "ts": now, "symbol": self.symbol, "side": getattr(sig, "side", ""),
@@ -114,12 +113,10 @@ class TradeLoop:
                     "tp": getattr(sig, "tp", getattr(sig, "tp1", "")), "last": getattr(sig, "last", "")
                 })
 
-            # Ici, place tes règles d'exécution (guards/risk manager/fees/etc.)
-            # ...
             self._add_ticks(1)
             await asyncio.sleep(0.2)
 
-# ---------------- Orchestrator (maigre) --------------------------------------
+# ---------------- Orchestrator -----------------------------------------------
 class Orchestrator:
     def __init__(
         self,
@@ -133,17 +130,27 @@ class Orchestrator:
         self.config = dict(config)  # {"timeframe","cash","risk_pct","slippage_bps","caps","fees_by_symbol"...}
         self._running = True
 
+        # Sanitizing risk_pct (0..5%)
+        val = float(self.config.get("risk_pct", 0.005))
+        if val > 0.05:
+            if not QUIET:
+                print(f"[orchestrator] risk_pct trop élevé ({val}), clamp à 0.05")
+            val = 0.05
+        if val <= 0.0:
+            val = 0.005
+        self.config["risk_pct"] = val
+        self.config.setdefault("slippage_bps", float(os.getenv("SLIPPAGE_BPS", "0") or "0"))
+        self.config.setdefault("caps", {})
+        self.config.setdefault("fees_by_symbol", {})
+
         # État & sélection
         self.mode = "PRELAUNCH"  # PRELAUNCH | RUNNING | PAUSED | STOPPING
         self.selected = {
             "strategy": "current",  # via load_signal()
             "symbols": symbols or [],
             "timeframes": [self.config.get("timeframe", "5m")],
-            "risk_pct": float(self.config.get("risk_pct", 0.5)),
+            "risk_pct": self.config["risk_pct"],
         }
-        self.config.setdefault("slippage_bps", float(os.getenv("SLIPPAGE_BPS", "0") or "0"))
-        self.config.setdefault("caps", {})
-        self.config.setdefault("fees_by_symbol", {})
 
         # Notifier / commandes
         self.notifier = notifier
@@ -228,7 +235,7 @@ class Orchestrator:
                 await self.notifier.send(f"⚠️ Impossible de charger les frais Bitget: {e}. Défaut 0 bps.")
 
     async def _positions_sync(self):
-        # Placeholder de rapprochement; à brancher sur tes positions réelles
+        # Placeholder; branche-le sur tes positions réelles si besoin
         while self.get_running():
             now = int(time.time() * 1000)
             for s in self.symbols:
@@ -244,6 +251,7 @@ class Orchestrator:
             "ticks_total": self._ticks_total,
             "hb_age_ms": int(time.time() * 1000) - self._last_hb_ms,
             "strategy": self.selected["strategy"],
+            "risk_pct": self.config.get("risk_pct"),
         }
 
     def _apply_setup_cfg(self, cfg: Dict):
@@ -254,7 +262,7 @@ class Orchestrator:
         - bascule en RUNNING
         """
         self.selected.update(cfg)
-        self.config["risk_pct"] = float(cfg.get("risk_pct", self.config.get("risk_pct", 0.5)))
+        self.config["risk_pct"] = float(cfg.get("risk_pct", self.config.get("risk_pct", 0.005)))
         self.generate_signal = load_signal(cfg["strategy"])
         self.symbols = list(cfg["symbols"])
         self.timeframe = cfg["timeframes"][0]
@@ -296,7 +304,7 @@ class Orchestrator:
             asyncio.create_task(self._positions_sync()),
         ]
 
-        # Commandes (wizard + pause/resume/stop/status + backtest)
+        # Commandes (pause/resume/stop/status/setup/backtest)
         cmd = CommandHandler(
             notifier=self.notifier,
             command_stream=self.command_stream,
@@ -318,6 +326,7 @@ class Orchestrator:
                     "risk_pct": self.config.get("risk_pct", 0.005),
                     "slippage_bps": self.config.get("slippage_bps", 2.0),
                 },
+                exchange=self.exchange,   # <<< on passe l'exchange au handler
             )
         )))
 
@@ -334,7 +343,7 @@ class Orchestrator:
                     ohlcv_fetch=self.ohlcv.fetch_once,
                     order_market=self.order.market,
                     generate_signal=self.generate_signal,
-                    config=self.config,                         # risk_pct, caps, slippage_bps, fees_by_symbol
+                    config=self.config,
                     mode_getter=self.get_mode,
                     log_signals=self.log_signals,
                     log_orders=self.log_orders,
@@ -354,10 +363,8 @@ class Orchestrator:
             while self.get_running():
                 cur_sig = (tuple(self.symbols), self.timeframe, getattr(self.generate_signal, "__name__", "gen"))
                 if cur_sig != prev_sig:
-                    # (Re)charge frais si symboles changés
                     if cur_sig[0] != prev_sig[0]:
                         await self._refresh_fees()
-                    # Respawn boucles
                     for t in trade_tasks.values():
                         t.cancel()
                     trade_tasks.clear()
