@@ -1,4 +1,3 @@
-# scalper/live/orchestrator.py
 from __future__ import annotations
 
 import asyncio
@@ -86,8 +85,8 @@ class Orchestrator:
         self._w_positions = _csv_writer(LOGS_DIR / "positions.csv", ["ts","symbol","qty","avg_price","pnl"])
         self._w_watchlist = _csv_writer(LOGS_DIR / "watchlist.csv", ["ts","symbols"])
 
-        # Tâches background
-        self._bg_tasks.append(asyncio.create_task(heartbeat_task(self.notifier, label="orchestrator")))
+        # Tâches background (⚠️ sans argument label)
+        self._bg_tasks.append(asyncio.create_task(heartbeat_task(self.notifier)))
         self._bg_tasks.append(asyncio.create_task(log_stats_task(self._stats_snapshot)))
 
         # Boucles par symbole
@@ -236,10 +235,6 @@ async def run_orchestrator(
     notifier: Notifier | None = None,
     command_stream: CommandStream | None = None,
 ):
-    """
-    Démarre l'orchestrateur et bloque tant qu'il tourne.
-    Signature compatible avec l'ancien bot.py.
-    """
     if notifier is None or command_stream is None:
         raise ValueError(
             "run_orchestrator: 'notifier' et 'command_stream' sont requis "
