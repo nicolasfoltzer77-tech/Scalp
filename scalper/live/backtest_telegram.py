@@ -4,12 +4,13 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 import pandas as pd
 
 from scalper.backtest.runner import run_multi
 from scalper.backtest.market_data import hybrid_loader_from_exchange
+from scalper.adapters.bitget_fetch import ensure_bitget_fetch
 
 
 @dataclass
@@ -57,13 +58,13 @@ async def handle_backtest_command(
     notifier,
     cmd_tail: str,
     runtime_config: Dict[str, object],
-    exchange=None,  # <— NOUVEAU: on peut passer l'exchange du live
+    exchange=None,  # l'exchange live nous est passé par l'orchestrateur
 ) -> None:
     """
     Backtest multi {symbols x timeframes}:
-      - utilise l'exchange.fetch_ohlcv pour éviter les soucis d'endpoint
-      - met en cache en CSV (data/)
-      - envoie summary.csv et un résumé texte
+      - utilise exchange.fetch_ohlcv (via adaptateur Bitget au besoin)
+      - met en cache CSV dans data/
+      - envoie summary.csv + résumé texte
     """
     try:
         args = parse_backtest_args(cmd_tail, runtime_config or {})
@@ -74,15 +75,18 @@ async def handle_backtest_command(
             )
             return
 
+        # Assure que l'exchange dispose d'un fetch_ohlcv CCXT-like
+        ex = ensure_bitget_fetch(exchange, market_hint=None)
+
         await notifier.send(
             "🧪 Backtest en cours…\n"
             f"• Symbols: {', '.join(args.symbols)}\n"
             f"• TF: {', '.join(args.timeframes)}\n"
             f"• Cash: {args.cash:.0f}  • Risk: {args.risk:.4f}  • Slippage: {args.slippage_bps} bps\n"
-            f"• Source: exchange.fetch_ohlcv + cache CSV"
+            "• Source: exchange.fetch_ohlcv (adapté) + cache CSV"
         )
 
-        loader = hybrid_loader_from_exchange(exchange, data_dir=args.data_dir, api_limit=1000)
+        loader = hybrid_loader_from_exchange(ex, data_dir=args.data_dir, api_limit=1000)
 
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(
