@@ -1,55 +1,46 @@
 # bot.py
 from __future__ import annotations
+
 import asyncio
 import os
-import sys, subprocess
+import sys
+import subprocess
 
-def ensure_ccxt():
+def ensure_ccxt() -> None:
     try:
         import ccxt  # noqa
     except ImportError:
-        print("[i] ccxt non installé, tentative d'installation...")
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "ccxt>=4.0.0"])
-        import ccxt  # noqa
+        print("[i] ccxt non installé, tentative d'installation…")
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "ccxt"])
 
 ensure_ccxt()
 
-os.environ["BT_DEBUG"] = "1"
+# Debug backtest optionnel
+os.environ.setdefault("BT_DEBUG", "1")
 
-from scalper.config import load_settings          # ✅ maintenant import direct
 from scalper.live.orchestrator import run_orchestrator
-from scalper.live.notify import build_notifier_and_stream
-
-# >>>> TODO: remplace DummyExchange par ton client Bitget/CCXT asynchrone
-class DummyExchange:
-    async def fetch_ohlcv(self, symbol, timeframe="5m", limit=150):
-        raise NotImplementedError("Brancher fetch_ohlcv sur ta source historique/CCXT.")
-    async def create_order(self, symbol, type, side, qty):
-        return {"id": "dummy", "status": "filled", "side": side, "qty": qty}
+from scalper.live.notify import build_notifier_and_commands
+from scalper.exchange.bitget_ccxt import create_exchange
+# si tu as besoin de config: from scalper.config import load_settings
 
 async def main():
-    # Charge config (runtime) + secrets (.env)
-    config, secrets = load_settings()
+    # notifier + flux de commandes (Telegram)
+    notifier, command_stream = await build_notifier_and_commands()
 
-    # TODO: branche ici ton vrai exchange Bitget avec secrets
-    # Exemple si tu utilises CCXT (asynchrone) :
-    # import ccxt.async_support as ccxt
-    # exchange = ccxt.bitget({
-    #     "apiKey": secrets["BITGET_API_KEY"],
-    #     "secret": secrets["BITGET_API_SECRET"],
-    #     "password": secrets["BITGET_API_PASSWORD"],
-    # })
-    exchange = DummyExchange()
+    # exchange CCXT Bitget (public si pas de clés)
+    exchange = await create_exchange()
 
-    notifier, command_stream = await build_notifier_and_stream()
+    # symbols boot: laissé à l’orchestrateur (watchlist.get_boot_watchlist)
+    symbols = []
+
     await run_orchestrator(
-        exchange,
-        config,
-        symbols=config.get("top_symbols", []),
+        exchange=exchange,
+        config=None,
+        symbols=symbols,
         notifier=notifier,
         command_stream=command_stream,
     )
 
 if __name__ == "__main__":
+    print("[*] Lancement du bot.py dans /scalp...")
     asyncio.run(main())
-    
