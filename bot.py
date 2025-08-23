@@ -6,6 +6,8 @@ from scalper.config import load_settings          # ✅ maintenant import direct
 from scalper.live.orchestrator import run_orchestrator
 from scalper.live.notify import build_notifier_and_stream
 
+os.environ["BT_DEBUG"] = "1"
+
 # >>>> TODO: remplace DummyExchange par ton client Bitget/CCXT asynchrone
 class DummyExchange:
     async def fetch_ohlcv(self, symbol, timeframe="5m", limit=150):
