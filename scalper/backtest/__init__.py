@@ -1,8 +1,14 @@
 # scalper/backtest/__init__.py
-"""
-Backtest package (API publique).
-"""
-from .engine import run_single
-from .runner import run_multi, csv_loader_factory
+from .runner import (
+    BTConfig,
+    run_single,
+    run_multi,
+    save_results,
+)
 
-__all__ = ["run_single", "run_multi", "csv_loader_factory"]
+__all__ = [
+    "BTConfig",
+    "run_single",
+    "run_multi",
+    "save_results",
+]
