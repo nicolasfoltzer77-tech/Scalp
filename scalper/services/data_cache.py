@@ -5,22 +5,23 @@ import asyncio
 import csv
 import os
 import time
-from typing import Iterable, List, Optional, Tuple, Dict, Any
+from typing import Iterable, List, Optional, Tuple, Dict
 
-# -----------------------------------------------------------------------------
-# Réglages via env
-# -----------------------------------------------------------------------------
+# ---------------------------------------------------------------------
+# Réglages via env (valeurs sûres par défaut)
+# ---------------------------------------------------------------------
 DATA_DIR = os.getenv("DATA_DIR", "/notebooks/data")           # dossier PERSISTANT (hors-git)
-CSV_MAX_AGE = int(os.getenv("CSV_MAX_AGE_SECONDS", "0"))      # 0 = auto par timeframe
-CSV_MIN_ROWS = int(os.getenv("CSV_MIN_ROWS", "200"))          # fail si trop peu de lignes
+CSV_MAX_AGE = int(os.getenv("CSV_MAX_AGE_SECONDS", "0"))      # 0 = auto (en fonction du TF)
+CSV_MIN_ROWS = int(os.getenv("CSV_MIN_ROWS", "200"))          # minimum de lignes attendues
 STALE_FACTOR = float(os.getenv("CSV_STALE_FACTOR", "6"))      # âge max = STALE_FACTOR * tf_sec
+PREFETCH_CONC = int(os.getenv("CSV_PREFETCH_CONC", "4"))      # concurrence préchauffage
 
 os.makedirs(DATA_DIR, exist_ok=True)
 
 
-# -----------------------------------------------------------------------------
-# Utils
-# -----------------------------------------------------------------------------
+# ---------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------
 def parse_timeframe_to_seconds(tf: str) -> int:
     tf = tf.strip().lower()
     unit = tf[-1]
@@ -38,8 +39,7 @@ def parse_timeframe_to_seconds(tf: str) -> int:
 
 
 def csv_path(symbol: str, timeframe: str) -> str:
-    fname = f"{symbol}-{timeframe}.csv"
-    return os.path.join(DATA_DIR, fname)
+    return os.path.join(DATA_DIR, f"{symbol}-{timeframe}.csv")
 
 
 def read_csv_ohlcv(path: str) -> List[Tuple[int, float, float, float, float, float]]:
@@ -48,9 +48,7 @@ def read_csv_ohlcv(path: str) -> List[Tuple[int, float, float, float, float, flo
         return rows
     with open(path, "r", newline="") as f:
         r = csv.reader(f)
-        header = next(r, None)
-        # Accepte soit header standard soit brut
-        # attendu: timestamp,open,high,low,close,volume
+        header = next(r, None)  # accepte avec ou sans header
         for line in r:
             if not line:
                 continue
@@ -60,11 +58,11 @@ def read_csv_ohlcv(path: str) -> List[Tuple[int, float, float, float, float, flo
 
 
 def write_csv_ohlcv(path: str, data: Iterable[Tuple[int, float, float, float, float, float]]) -> None:
-    first_write = not os.path.exists(path)
+    first = not os.path.exists(path)
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "a", newline="") as f:
         w = csv.writer(f)
-        if first_write:
+        if first:
             w.writerow(["timestamp", "open", "high", "low", "close", "volume"])
         for row in data:
             w.writerow(row)
@@ -74,40 +72,39 @@ def last_ts(rows: List[Tuple[int, float, float, float, float, float]]) -> Option
     return rows[-1][0] if rows else None
 
 
-# -----------------------------------------------------------------------------
-# CCXT fetch
-# -----------------------------------------------------------------------------
+# ---------------------------------------------------------------------
+# Fetch CCXT paginé
+# ---------------------------------------------------------------------
 async def ccxt_fetch_ohlcv_all(
-    exchange, symbol: str, timeframe: str, since_ms: Optional[int], limit: int = 1000
+    exchange,
+    symbol: str,
+    timeframe: str,
+    since_ms: Optional[int],
+    limit: int = 1000,
 ) -> List[Tuple[int, float, float, float, float, float]]:
     """
-    Récupère OHLCV par pages (limit 1000) depuis 'since_ms' jusqu'à maintenant.
-    Retourne une liste triée par ts croissant.
+    Récupère OHLCV par pages (limit 1000) depuis since_ms jusqu'à ~now.
+    Retourne une liste triée/dédupliquée.
     """
     out: List[Tuple[int, float, float, float, float, float]] = []
     tf_ms = parse_timeframe_to_seconds(timeframe) * 1000
-    now = exchange.milliseconds()
+    now_ms = exchange.milliseconds() if hasattr(exchange, "milliseconds") else int(time.time() * 1000)
 
-    cursor = since_ms or (now - 200 * tf_ms)  # par sécurité si since None
+    cursor = since_ms or (now_ms - 200 * tf_ms)
     while True:
         batch = await exchange.fetch_ohlcv(symbol, timeframe=timeframe, since=cursor, limit=limit)
         if not batch:
             break
-        # normalise en tuples
         for ts, o, h, l, c, v in batch:
             out.append((int(ts), float(o), float(h), float(l), float(c), float(v)))
-        # avance le curseur (évite boucle infinie si même ts)
         next_cursor = batch[-1][0] + tf_ms
         if next_cursor <= cursor:
             break
         cursor = next_cursor
-        # stop si on est arrivé au présent (2 * tf d'avance)
-        if cursor >= now + (2 * tf_ms):
+        if cursor >= now_ms + (2 * tf_ms):
             break
-        # évite spam API
-        await asyncio.sleep(exchange.rateLimit / 1000 if getattr(exchange, "rateLimit", None) else 0.2)
+        await asyncio.sleep(getattr(exchange, "rateLimit", 200) / 1000)
 
-    # dé-duplique et ordonne
     out.sort(key=lambda x: x[0])
     dedup: List[Tuple[int, float, float, float, float, float]] = []
     seen = set()
@@ -119,16 +116,18 @@ async def ccxt_fetch_ohlcv_all(
     return dedup
 
 
-# -----------------------------------------------------------------------------
+# ---------------------------------------------------------------------
 # Cache manager
-# -----------------------------------------------------------------------------
+# ---------------------------------------------------------------------
 async def ensure_symbol_csv_cache(
-    exchange, symbol: str, timeframe: str, min_rows: int = CSV_MIN_ROWS
+    exchange,
+    symbol: str,
+    timeframe: str,
+    min_rows: int = CSV_MIN_ROWS,
 ) -> str:
     """
-    Garantit qu'un CSV OHLCV récent existe en DATA_DIR pour (symbol, timeframe).
-    - crée ou met à jour si trop vieux
-    - retourne le chemin vers le CSV
+    Garantit qu'un CSV OHLCV récent existe pour (symbol, timeframe).
+    Crée/append si nécessaire. Retourne le chemin.
     """
     path = csv_path(symbol, timeframe)
     rows = read_csv_ohlcv(path)
@@ -136,7 +135,7 @@ async def ensure_symbol_csv_cache(
     tf_ms = tf_sec * 1000
     now_ms = int(time.time() * 1000)
 
-    # âge max autorisé
+    # âge max
     max_age = CSV_MAX_AGE if CSV_MAX_AGE > 0 else int(tf_sec * STALE_FACTOR)
 
     need_full = False
@@ -147,30 +146,23 @@ async def ensure_symbol_csv_cache(
     else:
         last = last_ts(rows) or 0
         age_sec = max(0, (now_ms - last) // 1000)
-        if age_sec > max_age:
-            need_append = True
-        if len(rows) < min_rows:
-            # Trop court → on repart plus loin pour étoffer
+        if age_sec > max_age or len(rows) < min_rows:
             need_append = True
 
     if need_full:
-        since = now_ms - (1000 * tf_sec * 2000)  # ~2000 bougies par défaut
+        since = now_ms - (tf_ms * 2000)  # ~2000 bougies
         fresh = await ccxt_fetch_ohlcv_all(exchange, symbol, timeframe, since_ms=since)
         if len(fresh) < min_rows:
-            # on essaye plus loin
-            since = now_ms - (1000 * tf_sec * 5000)
+            since = now_ms - (tf_ms * 5000)
             fresh = await ccxt_fetch_ohlcv_all(exchange, symbol, timeframe, since_ms=since)
-        # (ré)écrit
         if os.path.exists(path):
             os.remove(path)
         write_csv_ohlcv(path, fresh)
         return path
 
     if need_append:
-        last = last_ts(rows) or (now_ms - (1000 * tf_sec * 2000))
-        since = last + tf_ms
+        since = (last_ts(rows) or now_ms - (tf_ms * 2000)) + tf_ms
         fresh = await ccxt_fetch_ohlcv_all(exchange, symbol, timeframe, since_ms=since)
-        # append uniquement les nouvelles lignes
         if fresh:
             write_csv_ohlcv(path, fresh)
 
@@ -179,16 +171,16 @@ async def ensure_symbol_csv_cache(
 
 async def prewarm_csv_cache(exchange, symbols: Iterable[str], timeframe: str) -> Dict[str, str]:
     """
-    Prépare le cache CSV pour une liste de symboles (en parallèle limité).
-    Retourne {symbol: path_csv}
+    Prépare le cache pour plusieurs symboles (concurrence limitée).
+    Retourne {symbol: path}.
     """
-    sem = asyncio.Semaphore(int(os.getenv("CSV_PREFETCH_CONC", "4")))
-    results: Dict[str, str] = {}
+    sem = asyncio.Semaphore(PREFETCH_CONC)
+    result: Dict[str, str] = {}
 
     async def _one(sym: str):
         async with sem:
             p = await ensure_symbol_csv_cache(exchange, sym, timeframe)
-            results[sym] = p
+            result[sym] = p
 
     await asyncio.gather(*[_one(s) for s in symbols])
-    return results
+    return result
