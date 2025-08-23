@@ -86,9 +86,23 @@ class Orchestrator:
         self._w_watchlist = _csv_writer(LOGS_DIR / "watchlist.csv", ["ts","symbols"])
 
         # Tâches background (⚠️ sans argument label)
-        self._bg_tasks.append(asyncio.create_task(heartbeat_task(self.notifier)))
-        self._bg_tasks.append(asyncio.create_task(log_stats_task(self._stats_snapshot)))
+        # heartbeat: on lui passe un getter qui renvoie self.running + le notifier
+        self._bg_tasks.append(asyncio.create_task(
+        heartbeat_task(lambda: self.running, self.notifier)
+        ))
 
+        # stats périodiques: getters pour ticks_total et symbols (+ notifier si supporté)
+        try:
+        # version utils récente: (ticks_getter, symbols_getter, notifier=None, label=None)
+        self._bg_tasks.append(asyncio.create_task(
+        log_stats_task(lambda: self.ticks_total, lambda: self.symbols, self.notifier, "orchestrator")
+        ))
+        except TypeError:
+        # version plus simple: (ticks_getter, symbols_getter)
+        self._bg_tasks.append(asyncio.create_task(
+        log_stats_task(lambda: self.ticks_total, lambda: self.symbols)
+        ))
+        
         # Boucles par symbole
         for sym in self.symbols:
             self._per_symbol_tasks[sym] = asyncio.create_task(self._symbol_loop(sym))
