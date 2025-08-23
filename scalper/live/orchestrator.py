@@ -2,141 +2,214 @@
 from __future__ import annotations
 
 import asyncio
-from dataclasses import dataclass
-from typing import Any, Iterable, Optional, AsyncIterator
+import os
+from dataclasses import dataclass, field
+from typing import Awaitable, Callable, Dict, Iterable, List, Optional
 
-from scalper.services.utils import heartbeat_task, log_stats_task
-from scalper.live.notify import build_notifier_and_commands
+# Types légers pour notifier & commandes
+Notifier = object  # doit implémenter: async def send(self, msg: str) -> None
+CommandStream = Awaitable[str] | asyncio.Queue  # une queue d'events "str"
 
+# --- Utils petits & purs ------------------------------------------------------
+
+async def _sleep_grace(sec: float) -> None:
+    try:
+        await asyncio.sleep(sec)
+    except asyncio.CancelledError:
+        raise
+
+# log stats périodiques (déporté ici pour être simple)
+async def log_stats_task(
+    notifier_getter: Callable[[], Notifier],
+    ticks_getter: Callable[[], int],
+    symbols_getter: Callable[[], List[str]],
+    period: float = 30.0,
+    label: str = "stats",
+) -> None:
+    while True:
+        await _sleep_grace(period)
+        n = ticks_getter()
+        syms = symbols_getter()
+        pairs = ",".join(syms)
+        try:
+            await notifier_getter().send(f"[{label}] ticks_total={n} (+0 /{int(period)}s) | pairs={pairs}")
+        except Exception:
+            # on ne tue pas la boucle stats si Telegram a un caprice
+            pass
+
+# --- Orchestrateur ------------------------------------------------------------
 
 @dataclass
 class RunConfig:
-    data: dict
-
-    def get(self, key: str, default: Any = None) -> Any:
-        return self.data.get(key, default)
-
-    @property
-    def timeframe(self) -> str:
-        return self.get("timeframe", "5m")
-
-    @property
-    def risk_pct(self) -> float:
-        return float(self.get("risk_pct", 0.05))
-
-    @property
-    def symbols(self) -> list[str]:
-        syms = self.get("symbols") or self.get("watchlist") or []
-        if isinstance(syms, str):
-            syms = [s.strip() for s in syms.split(",") if s.strip()]
-        return list(syms)
-
+    timeframe: str = "5m"
+    risk_pct: float = 0.05
+    symbols_static: List[str] = field(default_factory=list)  # fallback si WL vide
+    autostart: bool = False  # pour démarrer directement en RUNNING
 
 class Orchestrator:
+    """
+    Orchestrateur léger :
+    - PRELAUNCH: prêt, attend /resume
+    - RUNNING: crée 1 tâche par symbole (boucle "live_loop")
+    """
     def __init__(
         self,
-        exchange: Any,
-        config: dict | RunConfig,
-        notifier: Optional[Any] = None,
-        command_stream: Optional[AsyncIterator[str]] = None,
-    ) -> None:
+        exchange,                # objet bourse (doit fournir fetch_ohlcv ou équivalent)
+        config: RunConfig,
+        notifier: Notifier,
+        command_stream: CommandStream,
+        watchlist_factory: Callable[[], "WatchlistManager"],
+        csv_cache_dir: str = "data",
+    ):
         self.exchange = exchange
-        self.config = config if isinstance(config, RunConfig) else RunConfig(config)
+        self.config = config
         self.notifier = notifier
         self.command_stream = command_stream
+        self.watchlist = watchlist_factory()
 
-        self._running: bool = False
-        self._bg_tasks: list[asyncio.Task] = []
+        self.csv_cache_dir = csv_cache_dir
+
+        self.state: str = "PRELAUNCH"
+        self._symbols: List[str] = []
+        self._bg_tasks: List[asyncio.Task] = []
+        self._symbol_tasks: Dict[str, asyncio.Task] = {}
         self._ticks_total: int = 0
-        self._symbols: list[str] = self.config.symbols or []
+        self._stop = asyncio.Event()
 
-    # getters pour bg tasks
-    def running(self) -> bool:
-        return self._running
+    # --- Getters utilisés par les tâches
+    def ticks_total(self) -> int: return self._ticks_total
+    def symbols(self) -> List[str]: return list(self._symbols)
 
-    def ticks_total(self) -> int:
-        return self._ticks_total
-
-    def symbols(self) -> list[str]:
-        return list(self._symbols)
-
-    async def _send(self, msg: str) -> None:
-        if not self.notifier:
-            return
-        try:
-            await self.notifier.send(msg)
-        except Exception as e:
-            print(f"[notify] send fail: {e!r}")
+    # --- Boot / commandes / cycle état
 
     async def start(self) -> None:
-        if not self.notifier or not self.command_stream:
-            self.notifier, self.command_stream = await build_notifier_and_commands(self.config)
+        # 1) Boot watchlist
+        self._symbols = await self._boot_symbols()
+        pairs = ",".join(self._symbols)
+        await self.notifier.send(f"[orchestrator] PRELAUNCH\n[watchlist] boot got: [{pairs}] (tf={self.config.timeframe})")
 
-        self._running = True
-        # tâches de fond (signatures corrigées)
-        self._bg_tasks.append(asyncio.create_task(heartbeat_task(self.running, self.notifier)))
-        self._bg_tasks.append(
-            asyncio.create_task(
-                log_stats_task(self.notifier, self.ticks_total, self.symbols)
-            )
-        )
+        # 2) Tâches d'arrière-plan
+        self._bg_tasks.append(asyncio.create_task(
+            log_stats_task(lambda: self.notifier, self.ticks_total, self.symbols, period=30.0, label="stats")
+        ))
+        self._bg_tasks.append(asyncio.create_task(self._command_loop()))
+        # 3) Autostart éventuel
+        if self.config.autostart:
+            await self._resume()
 
-        await self._send(
-            "🟢 Orchestrator PRELAUNCH. Utilise /setup ou /backtest. /resume pour démarrer le live."
-        )
-
-    async def stop(self) -> None:
-        if not self._running:
-            return
-        self._running = False
-        for t in self._bg_tasks:
-            t.cancel()
-        self._bg_tasks.clear()
-        await self._send("🛑 Arrêt orchestrateur.")
+        await self.notifier.send("🟢 Orchestrator PRELAUNCH. Utilise /setup ou /backtest. /resume pour démarrer le live.")
 
     async def run(self) -> None:
-        await self.start()
-        try:
-            async for cmd in self.command_stream:  # stream nul = tick toutes les heures
-                await self._handle_command(cmd)
-        except asyncio.CancelledError:
-            pass
-        finally:
-            await self.stop()
+        # garde le process en vie tant qu'on n'a pas stop
+        await self._stop.wait()
 
-    async def _handle_command(self, cmd: str) -> None:
-        cmd = (cmd or "").strip()
-        if not cmd:
-            return
-        if cmd.startswith("/stop"):
-            await self._send("🛑 Stop demandé.")
-            await self.stop()
-            return
-        if cmd.startswith("/setup"):
-            await self._send("ℹ️ PRELAUNCH: déjà prêt.")
-            return
-        if cmd.startswith("/resume"):
-            await self._send("ℹ️ PRELAUNCH: déjà prêt.")
-            return
-        if cmd.startswith("/backtest"):
-            await self._send("🧪 Backtest non branché ici (runner séparé).")
-            return
-        await self._send("❓ Commande inconnue. Utilise /setup, /backtest, /resume ou /stop.")
+    async def stop(self) -> None:
+        # stop global
+        await self._halt_live()
+        for t in self._bg_tasks:
+            t.cancel()
+        self._stop.set()
 
-    def on_tick_batch(self, n: int, symbols_snapshot: Optional[Iterable[str]] = None) -> None:
+    # --- Commandes Telegram
+    async def _command_loop(self) -> None:
+        """
+        Consomme les commandes ('resume', 'stop', 'setup', 'backtest'…).
+        """
+        # Le command_stream est soit une Queue, soit un awaitable (générateur async)
+        async def _aiter():
+            if isinstance(self.command_stream, asyncio.Queue):
+                while True:
+                    cmd = await self.command_stream.get()
+                    yield cmd
+            else:
+                # stream asynchrone "aiterable"
+                async for cmd in self.command_stream:
+                    yield cmd
+
+        async for raw in _aiter():
+            cmd = (raw or "").strip().lower()
+            if not cmd:
+                continue
+            if cmd in {"resume", "/resume"}:
+                await self._resume()
+            elif cmd in {"stop", "/stop"}:
+                await self._halt_live()
+                await self.notifier.send("🛑 Arrêt orchestrateur.")
+            elif cmd in {"setup", "/setup"}:
+                await self.notifier.send("ℹ️ PRELAUNCH: déjà prêt.")
+            elif cmd.startswith("/backtest"):
+                await self.notifier.send("🧪 Backtest non branché ici (runner séparé).")
+            else:
+                await self.notifier.send(f"❓Commande inconnue: {cmd}")
+
+    # --- États
+
+    async def _resume(self) -> None:
+        if not self._symbols:
+            # tente de rebooter la WL avant de refuser
+            self._symbols = await self._boot_symbols()
+        if not self._symbols:
+            await self.notifier.send("⚠️ Impossible de démarrer: watchlist vide. Utilise /setup ou configure des symboles.")
+            return
+        if self.state == "RUNNING":
+            await self.notifier.send("ℹ️ Déjà en RUNNING.")
+            return
+        await self._launch_live()
+        self.state = "RUNNING"
+        await self.notifier.send("🚀 LIVE démarré.")
+
+    async def _launch_live(self) -> None:
+        # crée 1 tâche par symbole
+        for sym in self._symbols:
+            if sym in self._symbol_tasks and not self._symbol_tasks[sym].done():
+                continue
+            self._symbol_tasks[sym] = asyncio.create_task(self._live_loop(sym))
+
+    async def _halt_live(self) -> None:
+        self.state = "PRELAUNCH"
+        for t in self._symbol_tasks.values():
+            t.cancel()
+        self._symbol_tasks.clear()
+
+    # --- Watchlist & warmup
+
+    async def _boot_symbols(self) -> List[str]:
+        """
+        1) Tente la watchlist
+        2) Sinon le fallback statique
+        3) Sinon []
+        """
         try:
-            self._ticks_total += int(n)
+            syms = await self.watchlist.boot()
+            if syms:
+                return syms
         except Exception:
             pass
-        if symbols_snapshot:
-            self._symbols = list(symbols_snapshot)
+        if self.config.symbols_static:
+            return list(dict.fromkeys(self.config.symbols_static))  # uniq, preserve order
+        return []
 
+    # --- Boucle par symbole
 
-async def run_orchestrator(
-    exchange: Any,
-    cfg: dict | RunConfig,
-    notifier: Optional[Any] = None,
-    factory: Optional[Any] = None,
-) -> None:
-    orch = Orchestrator(exchange=exchange, config=cfg, notifier=notifier, command_stream=None)
-    await orch.run()
+    async def _live_loop(self, symbol: str) -> None:
+        """
+        Boucle simple: fetch OHLCV via exchange/cache, évalue la stratégie, compte les ticks.
+        Ici on ne place pas d'ordres: on veut d'abord valider le flux & les stats.
+        """
+        tf = self.config.timeframe
+        while self.state == "RUNNING":
+            try:
+                # 1) Fetch OHLCV (éventuellement via ton cache CSV sur disque)
+                # Doit être non-bloquant (ton exchange adapté est asynchrone dans le repo)
+                await self.exchange.fetch_ohlcv(symbol, tf, limit=2)  # ne garde pas le résultat ici
+                # 2) Ticks ++
+                self._ticks_total += 1
+            except Exception as e:
+                try:
+                    await self.notifier.send(f"[{symbol}] loop error: {e}")
+                except Exception:
+                    pass
+                # on évite le spin
+                await _sleep_grace(0.5)
+            # cadence
+            await _sleep_grace(0.25)
