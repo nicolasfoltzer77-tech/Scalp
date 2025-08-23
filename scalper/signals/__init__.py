@@ -1,5 +1,4 @@
-"""Signal generation utilities."""
+# scalper/signals/__init__.py
+from .factory import load_signal, available_strategies
 
-from .generator import generate_signal
-
-__all__ = ["generate_signal"]
+__all__ = ["load_signal", "available_strategies"]
