@@ -119,7 +119,7 @@ def swing_levels(
 # ---------------------------------------------------------------------------
 
 # The first and second level pair selection helpers now live in
-# :mod:`scalp.selection`.  They are re-exported here for backward compatibility
+# :mod:`scalper.selection`.  They are re-exported here for backward compatibility
 # and to keep the public API unchanged.
 from .selection.scanner import scan_pairs  # noqa: E402
 from .selection.momentum import select_active_pairs  # noqa: E402

@@ -1,6 +1,6 @@
 import pytest
 
-from scalp.risk import calc_risk_amount, calc_position_size
+from scalper.risk import calc_risk_amount, calc_position_size
 
 
 def test_calc_risk_amount_basic():

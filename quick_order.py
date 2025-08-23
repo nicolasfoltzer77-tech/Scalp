@@ -29,7 +29,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from scalp.bitget_client import BitgetFuturesClient
+from scalper.bitget_client import BitgetFuturesClient
 
 # Load variables from `.env` if present
 load_dotenv(Path(__file__).resolve().parent / ".env")

@@ -2,9 +2,9 @@
 from __future__ import annotations
 import asyncio
 
-from scalp.config import load_settings          # ✅ maintenant import direct
-from scalp.live.orchestrator import run_orchestrator
-from scalp.live.notify import build_notifier_and_stream
+from scalper.config import load_settings          # ✅ maintenant import direct
+from scalper.live.orchestrator import run_orchestrator
+from scalper.live.notify import build_notifier_and_stream
 
 # >>>> TODO: remplace DummyExchange par ton client Bitget/CCXT asynchrone
 class DummyExchange:

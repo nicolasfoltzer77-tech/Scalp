@@ -233,8 +233,8 @@ def _default_telegram_factory(token: str):
     # Essais de chemins courants dans le projet
     candidates = (
         # ex: scalp/live/telegram_async.py
-        ("scalp.live.telegram_async", "TelegramAsync"),
-        ("scalp.integrations.telegram_async", "TelegramAsync"),
+        ("scalper.live.telegram_async", "TelegramAsync"),
+        ("scalper.integrations.telegram_async", "TelegramAsync"),
         ("telegram_async", "TelegramAsync"),
     )
     last_err = None

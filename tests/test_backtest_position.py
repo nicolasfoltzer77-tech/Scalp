@@ -4,7 +4,7 @@ import pytest
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
-from scalp.metrics import backtest_position
+from scalper.metrics import backtest_position
 
 
 def test_backtest_position_long():

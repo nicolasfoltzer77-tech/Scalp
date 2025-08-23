@@ -1,4 +1,4 @@
-from scalp.backtest import walk_forward_windows
+from scalper.backtest import walk_forward_windows
 
 
 def test_walk_forward_windows():

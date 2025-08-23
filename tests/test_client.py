@@ -252,7 +252,7 @@ def test_http_client_context_manager(monkeypatch):
     sys.modules.pop('requests', None)
     real_requests = importlib.import_module('requests')
     sys.modules['requests'] = real_requests
-    import scalp.client as http_client
+    import scalper.client as http_client
     importlib.reload(http_client)
 
     closed = {"count": 0}

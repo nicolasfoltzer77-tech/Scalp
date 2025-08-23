@@ -1,7 +1,7 @@
 import pytest
 
 from scalp import strategy
-from scalp.trade_utils import trailing_stop, should_scale_in, timeout_exit
+from scalper.trade_utils import trailing_stop, should_scale_in, timeout_exit
 
 
 def make_ohlcv(n=60, start=100, step=1):
