@@ -2,393 +2,425 @@
 from __future__ import annotations
 
 import asyncio
+import csv
 import os
 import signal
 import time
-from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Sequence
+from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional, Callable, Tuple
 
-from scalp.adapters.bitget import BitgetFuturesClient
-from scalp.services.order_service import OrderService
-from scalp.services.utils import safe_call, heartbeat_task, log_stats_task
+from ..services.utils import safe_call, heartbeat_task, log_stats_task
+from .notify import Notifier, CommandStream, build_notifier_and_stream
+from .watchlist import WatchlistManager
+from ..signals.factory import load_signal
+from ..backtest.cli import fetch_ohlcv_sync  # à brancher sur ta source historique
+from .setup_wizard import SetupWizard
 
-from scalp.strategy import generate_signal, Signal  # noqa: F401
+# -----------------------------------------------------------------------------
+# Config globale
+# -----------------------------------------------------------------------------
+QUIET = int(os.getenv("QUIET", "0") or "0")
+PRINT_OHLCV_SAMPLE = int(os.getenv("PRINT_OHLCV_SAMPLE", "0") or "0")
 
-from live.watchlist import WatchlistManager
-from live.ohlcv_service import OhlcvService
-from live.journal import LogWriter
-from live.orders import OrderExecutor
-from live.state_store import StateStore
+LOG_DIR = os.path.join(os.path.dirname(__file__), "logs")
+os.makedirs(LOG_DIR, exist_ok=True)
 
-from live.position_fsm import (
-    PositionFSM,
-    STATE_FLAT,
-    STATE_OPEN,
-    STATE_PENDING_ENTRY,
-    STATE_PENDING_EXIT,
-)
+# -----------------------------------------------------------------------------
+# Utilitaires de log CSV minimalistes
+# -----------------------------------------------------------------------------
 
-from live.notify import Notifier, NullNotifier, TelegramNotifier, CommandStream
+class _CsvLog:
+    def __init__(self, path: str, headers: List[str]):
+        self.path = path
+        self.headers = headers
+        self._ensure_header()
 
-QUIET = os.getenv("QUIET", "0") == "1"
-PRINT_OHLCV_SAMPLE = os.getenv("PRINT_OHLCV_SAMPLE", "0") == "1"
+    def _ensure_header(self):
+        must_write = not os.path.exists(self.path) or os.path.getsize(self.path) == 0
+        os.makedirs(os.path.dirname(self.path), exist_ok=True)
+        if must_write:
+            with open(self.path, "w", newline="") as f:
+                csv.writer(f).writerow(self.headers)
 
+    def write_row(self, row: Dict[str, Any]):
+        with open(self.path, "a", newline="") as f:
+            w = csv.DictWriter(f, fieldnames=self.headers)
+            w.writerow({k: row.get(k, "") for k in self.headers})
+
+# -----------------------------------------------------------------------------
+# Abstractions très légères pour les services de marché (à adapter à ton repo)
+# -----------------------------------------------------------------------------
+
+class OhlcvService:
+    """Wrappe l'exchange pour fetch l'OHLCV d'un symbole/timeframe."""
+    def __init__(self, exchange):
+        self.exchange = exchange
+
+    async def fetch_once(self, symbol: str, timeframe: str = "5m", limit: int = 150) -> List[List[float]]:
+        # doit retourner [[ts, o, h, l, c, v], ...]
+        return await self.exchange.fetch_ohlcv(symbol, timeframe=timeframe, limit=limit)
+
+class OrderService:
+    """Interface simplifiée vers l'exchange pour passer des ordres (à adapter)."""
+    def __init__(self, exchange):
+        self.exchange = exchange
+
+    async def place_market(self, symbol: str, side: str, qty: float) -> Dict[str, Any]:
+        # Adapte au client Bitget/CCXT : retourne un dict avec id, status, price, filled, etc.
+        return await self.exchange.create_order(symbol, "market", side, qty)
+
+class PositionFSM:
+    """FSM minimaliste pour positions par symbole (à étendre selon ton impl)."""
+    def __init__(self):
+        self.state = "FLAT"  # FLAT | OPEN
+        self.entry = 0.0
+        self.qty = 0.0
+        self.side = "flat"
+
+    def can_open(self) -> bool:
+        return self.state == "FLAT"
+
+    def on_open(self, side: str, entry: float, qty: float):
+        self.state = "OPEN"; self.side = side; self.entry = entry; self.qty = qty
+
+    def can_close(self) -> bool:
+        return self.state == "OPEN"
+
+    def on_close(self):
+        self.state = "FLAT"; self.side = "flat"; self.entry = 0.0; self.qty = 0.0
+
+# -----------------------------------------------------------------------------
+# Orchestrateur
+# -----------------------------------------------------------------------------
 
 @dataclass
 class SymbolContext:
     symbol: str
-    ohlcv: List[Dict[str, float]]
-    position_open: bool = False
-    last_signal_ts: float = 0.0
+    timeframe: str
+    ohlcv: List[List[float]] = field(default_factory=list)
     ticks: int = 0
-
+    fsm: PositionFSM = field(default_factory=PositionFSM)
 
 class Orchestrator:
     def __init__(
         self,
-        exchange: BitgetFuturesClient,
-        order_service: OrderService,
-        config: Any,
-        symbols: Sequence[str],
-    ) -> None:
+        exchange,
+        config: Dict[str, Any],
+        symbols: Optional[List[str]] = None,
+        notifier: Optional[Notifier] = None,
+        command_stream: Optional[CommandStream] = None,
+    ):
         self.exchange = exchange
         self.config = config
+        self._running = True
 
-        self.symbols = [s.replace("_", "").upper() for s in symbols] or ["BTCUSDT", "ETHUSDT"]
-        self.ctx: Dict[str, SymbolContext] = {s: SymbolContext(s, []) for s in self.symbols}
+        # Mode de vie / contrôle
+        self.mode = "PRELAUNCH"  # PRELAUNCH | RUNNING | PAUSED | STOPPING
+        self.selected = {"strategy": "current", "symbols": symbols or [], "timeframes": [], "risk_pct": 0.5}
 
-        self._running = False
-        self._paused = False
-        self._tasks: List[asyncio.Task] = []
-        self._heartbeat_ts = 0.0
+        # Notifier / commandes
+        self.notifier = notifier
+        self.command_stream = command_stream
 
-        self.ohlcv = OhlcvService(self.exchange)
+        # Services
+        self.ohlcv_service = OhlcvService(exchange)
+        self.order_service = OrderService(exchange)
 
-        log_dir = os.path.join(os.path.dirname(__file__), "logs")
-        self.logs = LogWriter(log_dir)
-        self.logs.init("signals.csv",   ["ts", "symbol", "side", "entry", "sl", "tp1", "tp2", "last"])
-        self.logs.init("orders.csv",    ["ts", "symbol", "side", "price", "sl", "tp", "risk_pct", "status", "order_id"])
-        self.logs.init("fills.csv",     ["ts", "symbol", "order_id", "trade_id", "price", "qty", "fee"])
-        self.logs.init("positions.csv", ["ts", "symbol", "state", "qty", "entry"])
-        self.logs.init("watchlist.csv", ["ts", "symbols"])
-
-        self.orders = OrderExecutor(order_service=order_service, exchange=self.exchange, config=self.config)
-
-        self._fsm = PositionFSM(self.symbols)
-        self.state = StateStore(os.path.join(log_dir, "state.json"), period_s=10.0)
-
-        self._watch = WatchlistManager(
-            exchange=self.exchange,
-            only_suffix="USDT",
-            top_n=10,
-            period_s=120.0,
-            on_update=self._apply_symbols_update,
-            safe_call=lambda f, label: safe_call(f, label=label, running_flag=lambda: self._running),
-            ohlcv_fetch=lambda s, tf, n: self.ohlcv.fetch_once(s, tf, n),  # pour WATCHLIST_MODE=local
+        # Stratégie (factory, remplaçable via /setup)
+        self.generate_signal: Callable[[List[List[float]], Dict[str, Any]], Dict[str, Any]] = load_signal(
+            self.selected["strategy"]
         )
 
-        self._debug_noop = str(os.getenv("DEBUG_LOG_NOOP", "0")) == "1"
-        self._last_noop_ts = 0.0
+        # Watchlist
+        self.watchlist = WatchlistManager(
+            watchlist_mode=os.getenv("WATCHLIST_MODE", "static"),
+            top_candidates=os.getenv("TOP_CANDIDATES", ""),
+            local_conc=int(os.getenv("WATCHLIST_LOCAL_CONC", "4") or "4"),
+            ohlcv_fetch=self.ohlcv_service.fetch_once,
+        )
 
-        token = getattr(config, "TELEGRAM_BOT_TOKEN", None)
-        chat  = getattr(config, "TELEGRAM_CHAT_ID", None)
-        self.notifier: Notifier = TelegramNotifier(token, chat) if (token and chat) else NullNotifier()
-        self._cmd_stream: Optional[CommandStream] = CommandStream(token, chat) if (token and chat) else None
+        # Contexte par symbole (initialement vide; sera rempli au boot watchlist)
+        self.timeframe = self.config.get("timeframe", "5m")
+        base_symbols = symbols or []
+        self.symbol_contexts: Dict[str, SymbolContext] = {
+            s: SymbolContext(symbol=s, timeframe=self.timeframe) for s in base_symbols
+        }
 
-        snap = self.state.load_state()
-        for sym, ts in (snap.get("last_signal_ts") or {}).items():
-            if sym in self.ctx:
-                try:
-                    self.ctx[sym].last_signal_ts = float(ts)
-                except Exception:
-                    pass
-        for sym, st in (snap.get("fsm") or {}).items():
+        # Stats
+        self._ticks_total = 0
+        self._last_heartbeat_ms = int(time.time() * 1000)
+
+        # Logs CSV
+        self.log_signals = _CsvLog(os.path.join(LOG_DIR, "signals.csv"),
+                                   ["ts","symbol","side","entry","sl","tp","last"])
+        self.log_orders  = _CsvLog(os.path.join(LOG_DIR, "orders.csv"),
+                                   ["ts","symbol","side","qty","status","order_id","note"])
+        self.log_fills   = _CsvLog(os.path.join(LOG_DIR, "fills.csv"),
+                                   ["ts","symbol","side","price","qty","order_id"])
+        self.log_pos     = _CsvLog(os.path.join(LOG_DIR, "positions.csv"),
+                                   ["ts","symbol","state","side","entry","qty"])
+        self.log_wl      = _CsvLog(os.path.join(LOG_DIR, "watchlist.csv"),
+                                   ["ts","mode","symbols"])
+
+    # -------------------------------------------------------------------------
+    # Cycle de vie
+    # -------------------------------------------------------------------------
+    def get_running(self) -> bool:
+        return self._running
+
+    async def stop(self, reason: str = ""):
+        self._running = False
+        self.mode = "STOPPING"
+        if self.notifier:
             try:
-                itm = self._fsm.get(sym)
-                itm.state = st.get("state", itm.state)
-                itm.side = st.get("side", itm.side)
-                itm.qty = float(st.get("qty", itm.qty))
-                itm.entry = float(st.get("entry", itm.entry))
-                itm.order_id = st.get("order_id", itm.order_id)
+                await self.notifier.send(f"🛑 Arrêt orchestrateur. {reason}")
             except Exception:
                 pass
 
-    # ---- watchlist hook ----
-    def _apply_symbols_update(self, new_syms: Sequence[str]) -> None:
-        ns = [s.replace("_", "").upper() for s in new_syms]
-        if not ns or ns == self.symbols:
+    # -------------------------------------------------------------------------
+    # Tâches secondaires
+    # -------------------------------------------------------------------------
+    async def _task_commands(self):
+        """Gestion des commandes Telegram (ou autre backend)."""
+        if not self.command_stream:
             return
+        if self.notifier:
+            await self.notifier.send("Commandes: /setup /status /pause /resume /stop")
 
-        self.symbols = list(ns)
-        for s in self.symbols:
-            if s not in self.ctx:
-                self.ctx[s] = SymbolContext(s, [])
-            self._fsm.ensure_symbol(s)
-        for s in list(self.ctx.keys()):
-            if s not in self.symbols:
-                del self.ctx[s]
+        async for text in self.command_stream:
+            cmd = (text or "").strip().lower()
+            if cmd == "/status":
+                await self._cmd_status()
+                continue
 
-        joined = ",".join(self.symbols)
-        print(f"[watchlist] TOP{len(self.symbols)} = {joined}")
-        self.logs.row("watchlist.csv", {"ts": int(time.time() * 1000), "symbols": joined})
-        asyncio.create_task(self.notifier.send(f"🔝 Watchlist: {joined}"))
+            if cmd == "/pause":
+                if self.mode == "RUNNING":
+                    self.mode = "PAUSED"
+                if self.notifier: await self.notifier.send("⏸️ Paused")
+                continue
 
-    # ---- positions sync ----
-    async def _task_positions_sync(self):
-        while self._running:
-            try:
-                pos = await safe_call(
-                    lambda: self.exchange.get_open_positions(None),
-                    label="get_open_positions",
-                    running_flag=lambda: self._running,
-                )
-                pos_list = pos.get("data") if isinstance(pos, dict) else []
+            if cmd == "/resume":
+                self.mode = "RUNNING"
+                if self.notifier: await self.notifier.send("▶️ Running")
+                continue
 
-                fills_by_sym: Dict[str, List[Dict[str, Any]]] = {}
-                for sym, st in self._fsm.all().items():
-                    if st.state in (STATE_PENDING_ENTRY, STATE_OPEN):
-                        fl = self.orders.fetch_fills(sym, st.order_id, 50)
-                        fills_by_sym[sym] = fl
-                        for f in fl:
-                            self.logs.row(
-                                "fills.csv",
-                                {
-                                    "ts": int(time.time() * 1000),
-                                    "symbol": sym,
-                                    "order_id": f.get("orderId", ""),
-                                    "trade_id": f.get("tradeId", ""),
-                                    "price": float(f.get("price", 0.0)),
-                                    "qty": float(f.get("qty", 0.0)),
-                                    "fee": float(f.get("fee", 0.0)),
-                                },
-                            )
+            if cmd == "/stop":
+                if self.notifier: await self.notifier.send("🛑 Stop demandé")
+                await self.stop("telegram:/stop")
+                return
 
-                self._fsm.reconcile(pos_list, fills_by_sym)
+            if cmd == "/setup":
+                await self._cmd_setup()
+                continue
 
-                now = int(time.time() * 1000)
-                for sym, st in self._fsm.all().items():
-                    if sym in self.ctx:
-                        self.ctx[sym].position_open = st.state in (STATE_OPEN, STATE_PENDING_EXIT)
-                    self.logs.row(
-                        "positions.csv",
-                        {"ts": now, "symbol": sym, "state": st.state, "qty": st.qty, "entry": st.entry},
-                    )
-            except Exception as e:
-                if not QUIET:
-                    print(f"[positions] sync error: {e!r}")
+            # commandes non reconnues
+            if self.notifier:
+                await self.notifier.send("Commande inconnue. Utilise /setup /status /pause /resume /stop")
 
-            await asyncio.sleep(5.0)
-
-    # ---- trade loop ----
-    async def _task_trade_loop(self, symbol: str):
-        ctx = self.ctx[symbol]
-        if not QUIET:
-            print(f"[trade-loop] start {symbol}")
-
-        boot = await safe_call(
-            lambda: self.ohlcv.fetch_once(symbol, "1m", 200),
-            label=f"ohlcv_boot:{symbol}",
-            running_flag=lambda: self._running,
+    async def _cmd_status(self):
+        hb_age = int(time.time() * 1000) - self._last_heartbeat_ms
+        symbols = ",".join(sorted(self.symbol_contexts.keys())) or "(aucun)"
+        msg = (
+            f"mode={self.mode} | timeframe={self.timeframe}\n"
+            f"symbols={symbols}\n"
+            f"ticks_total={self._ticks_total} | heartbeat_age_ms={hb_age}"
         )
-        ctx.ohlcv = self.ohlcv.normalize_rows(boot or [])
-        if PRINT_OHLCV_SAMPLE and ctx.ohlcv:
-            print(f"[debug:{symbol}] ohlcv sample -> dict={list(ctx.ohlcv[0].keys())}")
+        if self.notifier:
+            await self.notifier.send(msg)
 
-        while self._running:
-            if self._paused:
+    async def _cmd_setup(self):
+        """Wizard + backtest, puis application si accepté."""
+        if not self.notifier or not self.command_stream:
+            return
+        default_syms = list(self.symbol_contexts.keys()) or ["BTCUSDT","ETHUSDT","SOLUSDT","XRPUSDT"]
+        default_tfs = ["5m","15m","1h","4h"]
+        wiz = SetupWizard(self.notifier, self.command_stream, fetch_ohlcv_sync, out_dir="out_bt_setup")
+        res = await wiz.run(default_syms, default_tfs, default_strategy=self.selected["strategy"])
+        if res.accepted:
+            # Applique la config
+            self.selected = {"strategy": res.strategy, "symbols": res.symbols,
+                             "timeframes": res.timeframes, "risk_pct": res.risk_pct}
+            # Rechargement stratégie
+            self.generate_signal = load_signal(res.strategy)
+            # Mise à jour des symboles / contexts
+            self.symbol_contexts = {s: SymbolContext(symbol=s, timeframe=res.timeframes[0]) for s in res.symbols}
+            self.timeframe = res.timeframes[0]
+            # Bascule en RUNNING directement (ou laisse /resume si tu préfères)
+            self.mode = "RUNNING"
+            if self.notifier:
+                await self.notifier.send("✅ Configuration appliquée. Démarrage du trading (RUNNING).")
+        else:
+            self.mode = "PRELAUNCH"
+            if self.notifier:
+                await self.notifier.send("ℹ️ Setup annulé. Le bot reste en PRELAUNCH.")
+
+    async def _task_watchlist_boot(self):
+        """Boot de la watchlist (écrit dans watchlist.csv)."""
+        top = await self.watchlist.boot_topN()
+        now = int(time.time()*1000)
+        self.log_wl.write_row({"ts": now, "mode": self.watchlist.mode, "symbols": ",".join(top)})
+        # Si aucun symbole fourni, utilise ceux de la watchlist
+        if not self.symbol_contexts:
+            self.symbol_contexts = {s: SymbolContext(symbol=s, timeframe=self.timeframe) for s in top}
+
+    async def _task_watchlist_refresh(self):
+        """Rafraîchissement périodique de la watchlist (sans changer les boucles en cours)."""
+        async for top in self.watchlist.task_auto_refresh():
+            now = int(time.time()*1000)
+            self.log_wl.write_row({"ts": now, "mode": self.watchlist.mode, "symbols": ",".join(top)})
+
+    async def _task_positions_sync(self):
+        """Exemple de tâche de rapprochement positions (à adapter selon ton repo)."""
+        while self.get_running():
+            # Ici tu peux rapprocher open_positions exchange ↔ FSM et logguer positions.csv
+            now = int(time.time()*1000)
+            for s, ctx in self.symbol_contexts.items():
+                self.log_pos.write_row({
+                    "ts": now, "symbol": s, "state": ctx.fsm.state, "side": ctx.fsm.side,
+                    "entry": ctx.fsm.entry, "qty": ctx.fsm.qty
+                })
+            await asyncio.sleep(10.0 if QUIET else 3.0)
+
+    # -------------------------------------------------------------------------
+    # Boucles de trading
+    # -------------------------------------------------------------------------
+    async def _task_trade_loop(self, symbol: str):
+        """Boucle principale par symbole : fetch OHLCV → signal → éventuellement ordre."""
+        timeframe = self.timeframe
+        ctx = self.symbol_contexts[symbol]
+        lookback = 200
+        while self.get_running():
+            # Garde PRELAUNCH/PAUSED
+            if self.mode != "RUNNING":
+                await asyncio.sleep(0.5)
+                continue
+
+            async def _fetch():
+                return await self.ohlcv_service.fetch_once(symbol, timeframe=timeframe, limit=lookback+2)
+
+            ohlcv = await safe_call(_fetch, label=f"fetch_ohlcv:{symbol}")
+            if not ohlcv or len(ohlcv) < lookback+1:
                 await asyncio.sleep(1.0)
                 continue
 
-            tail = await safe_call(
-                lambda: self.ohlcv.fetch_once(symbol, "1m", 2),
-                label=f"ohlcv_tail:{symbol}",
-                running_flag=lambda: self._running,
-            )
-            if tail:
-                ctx.ohlcv = (self.ohlcv.normalize_rows(ctx.ohlcv) + self.ohlcv.normalize_rows(tail))[-400:]
-                ctx.ticks += 1
+            ctx.ohlcv = ohlcv
+            ctx.ticks += 1
+            self._ticks_total += 1
+            self._last_heartbeat_ms = int(time.time()*1000)
 
-            # stratégie : tolère dict/list/cols
-            sig: Optional[Signal] = None
+            window = ohlcv[-(lookback+1):]  # liste de [ts,o,h,l,c,v]
+            ts, _o, _h, _l, c, _v = window[-1]
+
+            # Appel stratégie
             try:
-                rd = ctx.ohlcv
-                seq = [[r["ts"], r["open"], r["high"], r["low"], r["close"], r["volume"]] for r in rd]
-                cols = {
-                    "ts": [r["ts"] for r in rd],
-                    "open": [r["open"] for r in rd],
-                    "high": [r["high"] for r in rd],
-                    "low": [r["low"] for r in rd],
-                    "close": [r["close"] for r in rd],
-                    "volume": [r["volume"] for r in rd],
-                }
-                try:
-                    sig = generate_signal(ohlcv=rd, config=self.config)
-                except Exception:
-                    try:
-                        sig = generate_signal(ohlcv=seq, config=self.config)
-                    except Exception:
-                        sig = generate_signal(ohlcv=cols, config=self.config)
+                sig = self.generate_signal(window, self.config) or {}
             except Exception as e:
                 if not QUIET:
-                    print(f"[trade-loop:{symbol}] signal error: {e!r}")
+                    print(f"[orchestrator] generate_signal error {symbol}: {e}", flush=True)
+                await asyncio.sleep(0.5)
+                continue
 
-            if sig:
-                last_close = ctx.ohlcv[-1]["close"] if ctx.ohlcv else float("nan")
-                self.logs.row(
-                    "signals.csv",
-                    {
-                        "ts": int(time.time() * 1000),
-                        "symbol": symbol,
-                        "side": "LONG" if sig.side > 0 else "SHORT",
-                        "entry": float(getattr(sig, "entry", last_close) or last_close),
-                        "sl": float(getattr(sig, "sl", 0) or 0),
-                        "tp1": float(getattr(sig, "tp1", 0) or 0),
-                        "tp2": float(getattr(sig, "tp2", 0) or 0),
-                        "last": float(last_close),
-                    },
-                )
-                if not QUIET:
-                    side_str = "LONG" if sig.side > 0 else "SHORT"
-                    print(f"[signal] {symbol} -> {side_str} entry={last_close}")
+            side = sig.get("side", "flat")
+            entry = sig.get("entry", c)
+            sl = sig.get("sl"); tp = sig.get("tp")
 
-            # no-op debug
-            if not sig and self._debug_noop:
-                now = time.time()
-                if now - self._last_noop_ts > 20.0 and ctx.ohlcv:
-                    last_close = ctx.ohlcv[-1]["close"]
-                    self.logs.row(
-                        "signals.csv",
-                        {"ts": int(now * 1000), "symbol": symbol, "side": "NONE", "entry": float(last_close),
-                         "sl": 0.0, "tp1": 0.0, "tp2": 0.0, "last": float(last_close)},
-                    )
-                    self._last_noop_ts = now
+            # Log signal
+            self.log_signals.write_row({"ts": ts, "symbol": symbol, "side": side, "entry": entry, "sl": sl, "tp": tp, "last": c})
 
-            # ouverture
-            st = self._fsm.get(symbol)
-            if sig and st.state == STATE_FLAT:
-                try:
-                    risk_pct = float(getattr(self.config, "RISK_PCT", 0.01) or 0.01)
-                    min_notional = float(getattr(self.config, "MIN_TRADE_USDT", 5) or 5)
-                    if self.orders.get_equity_usdt() * risk_pct < min_notional:
-                        await asyncio.sleep(1.0); continue
-                    if time.time() - ctx.last_signal_ts < 5.0:
-                        continue
-                    entry_price = float(getattr(sig, "entry", ctx.ohlcv[-1]["close"]))
-                    res = self.orders.place_entry(
-                        symbol=symbol,
-                        side=("long" if sig.side > 0 else "short"),
-                        price=entry_price,
-                        sl=float(getattr(sig, "sl", 0) or 0) or None,
-                        tp=float(getattr(sig, "tp1", 0) or 0) or None,
-                        risk_pct=risk_pct,
-                    )
-                    if res.accepted:
-                        ctx.last_signal_ts = time.time()
-                        self.logs.row(
-                            "orders.csv",
-                            {"ts": int(time.time() * 1000), "symbol": symbol,
-                             "side": "long" if sig.side > 0 else "short",
-                             "price": entry_price, "sl": float(getattr(sig, "sl", 0) or 0),
-                             "tp": float(getattr(sig, "tp1", 0) or 0), "risk_pct": risk_pct,
-                             "status": res.status or "accepted", "order_id": res.order_id or ""},
-                        )
-                except Exception as e:
-                    if not QUIET:
-                        print(f"[trade-loop:{symbol}] order error: {e!r}")
+            # Trading rules simples (à adapter à ton RiskManager et OrderExecutor)
+            if ctx.fsm.state == "FLAT" and side in ("long","short"):
+                # sizing trivial: risk_pct du solde → qty notionnelle / prix
+                balance = self.config.get("cash", 10_000.0)
+                risk_pct = float(self.selected.get("risk_pct", 0.5))
+                notionnel = max(0.0, balance * risk_pct)
+                qty = max(0.0, notionnel / max(entry or c, 1e-9))
+                if qty > 0:
+                    async def _place():
+                        return await self.order_service.place_market(symbol, side, qty)
+                    order = await safe_call(_place, label=f"order:{symbol}")
+                    ctx.fsm.on_open(side, entry or c, qty)
+                    self.log_orders.write_row({"ts": ts, "symbol": symbol, "side": side, "qty": qty,
+                                               "status": "placed", "order_id": order.get("id") if order else "", "note": "entry"})
+            elif ctx.fsm.state == "OPEN":
+                # Sortie sur signal flat/opposé (gestion SL/TP à implémenter si besoin)
+                if side == "flat" or (side in ("long","short") and side != ctx.fsm.side):
+                    exit_side = "sell" if ctx.fsm.side == "long" else "buy"
+                    qty = ctx.fsm.qty
+                    async def _close():
+                        return await self.order_service.place_market(symbol, exit_side, qty)
+                    order = await safe_call(_close, label=f"close:{symbol}")
+                    self.log_orders.write_row({"ts": ts, "symbol": symbol, "side": exit_side, "qty": qty,
+                                               "status": "placed", "order_id": order.get("id") if order else "", "note": "exit"})
+                    # Log fill simple
+                    self.log_fills.write_row({"ts": ts, "symbol": symbol, "side": exit_side, "price": c, "qty": qty,
+                                              "order_id": order.get("id") if order else ""})
+                    ctx.fsm.on_close()
 
-            await asyncio.sleep(1.0)
+            if PRINT_OHLCV_SAMPLE and (ctx.ticks % 20 == 0) and not QUIET:
+                print(f"[{symbol}] last close={c} (ticks={ctx.ticks})", flush=True)
 
-    # ---- commandes ----
-    async def _task_commands(self):
-        await self.notifier.send("Orchestrator started ✅\nCommands: /status • /pause • /resume • /stop")
-        assert self._cmd_stream is not None
-        async for text in self._cmd_stream:
-            t = (text or "").strip().lower()
-            if t.startswith("/status"):
-                alive = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(self._heartbeat_ts)) if self._heartbeat_ts else "n/a"
-                await self.notifier.send(
-                    f"running:{self._running} paused:{self._paused}\n"
-                    f"heartbeat:{alive}\n"
-                    f"symbols:{','.join(self.symbols)}"
-                )
-            elif t.startswith("/pause"):
-                self._paused = True; await self.notifier.send("Paused ✅")
-            elif t.startswith("/resume"):
-                self._paused = False; await self.notifier.send("Resumed ▶️")
-            elif t.startswith("/stop"):
-                await self.notifier.send("🛑 Stop demandé. Arrêt en cours…")
-                await self.stop("telegram:/stop")
-                break
+            await asyncio.sleep(0.1 if QUIET else 0.01)
 
-    # ---- snapshot / run / stop ----
-    def _snapshot_state(self) -> dict:
-        return {
-            "last_signal_ts": {s: ctx.last_signal_ts for s, ctx in self.ctx.items()},
-            "fsm": {
-                s: {"state": st.state, "side": st.side, "qty": st.qty, "entry": st.entry, "order_id": st.order_id}
-                for s, st in self._fsm.all().items()
-            },
-        }
-
+    # -------------------------------------------------------------------------
+    # Run
+    # -------------------------------------------------------------------------
     async def run(self):
-        if self._running: return
-        self._running = True
+        # Notifier / CommandStream si non fournis
+        if not self.notifier or not self.command_stream:
+            self.notifier, self.command_stream = await build_notifier_and_stream()
 
+        # Signaux OS pour arrêt propre
         loop = asyncio.get_running_loop()
         for sig in (signal.SIGINT, signal.SIGTERM):
             try:
-                loop.add_signal_handler(sig, lambda s=sig: asyncio.create_task(self.stop(reason=f"signal:{s.name}")))
+                loop.add_signal_handler(sig, lambda s=sig: asyncio.create_task(self.stop(f"os:{s.name}")))
             except NotImplementedError:
+                # Windows / environnements limités
                 pass
 
+        # Boot watchlist
+        await self._task_watchlist_boot()
+
+        # Tâches
+        tasks = []
+
+        # Heartbeat + stats (respectent QUIET dans services.utils)
+        tasks.append(asyncio.create_task(heartbeat_task(self.get_running, period=15.0)))
+        tasks.append(asyncio.create_task(log_stats_task(self.get_running, lambda: self._ticks_total,
+                                                        lambda: list(self.symbol_contexts.keys()), period=30.0)))
+
+        # Watchlist refresh
+        tasks.append(asyncio.create_task(self._task_watchlist_refresh()))
+
+        # Positions sync
+        tasks.append(asyncio.create_task(self._task_positions_sync()))
+
+        # Commandes
+        tasks.append(asyncio.create_task(self._task_commands()))
+
+        # Boucles trade par symbole
+        for s in list(self.symbol_contexts.keys()):
+            tasks.append(asyncio.create_task(self._task_trade_loop(s)))
+
+        if self.notifier:
+            await self.notifier.send("🟢 Orchestrator running (mode PRELAUNCH). Utilise /setup pour valider avant trading.")
+
+        # Attente des tâches
         try:
-            top = await self._watch.boot_topN()
-            print(f"[watchlist] boot got: {top}")
-            if top: self._apply_symbols_update(top)
-        except Exception as e:
-            if not QUIET:
-                print(f"[watchlist] boot error: {e!r}")
-
-        await self.notifier.start()
-
-        self._tasks = [
-            asyncio.create_task(heartbeat_task(lambda: self._running), name="heartbeat"),
-            asyncio.create_task(
-                log_stats_task(lambda: self._running,
-                               get_ticks=lambda: sum(c.ticks for c in self.ctx.values()),
-                               get_pairs=lambda: len(self.symbols)),
-                name="stats"),
-            asyncio.create_task(self._watch.task_auto_refresh(), name="watchlist"),
-            asyncio.create_task(self._task_positions_sync(), name="positions"),
-            asyncio.create_task(self.state.task_autosave(self._snapshot_state), name="state-save"),
-            *[asyncio.create_task(self._task_trade_loop(s), name=f"trade:{s}") for s in self.symbols],
-        ]
-        if self._cmd_stream:
-            self._tasks.append(asyncio.create_task(self._task_commands(), name="commands"))
-
-        print("[orchestrator] running")
-        try:
-            await asyncio.gather(*self._tasks)
-        except asyncio.CancelledError:
-            pass
+            await asyncio.gather(*tasks)
         finally:
-            print("[orchestrator] stopped")
+            if self.notifier:
+                try:
+                    await self.notifier.send("🔴 Orchestrator stopped.")
+                except Exception:
+                    pass
 
-    async def stop(self, reason: str = "unknown"):
-        if not self._running: return
-        print(f"[orchestrator] stopping: {reason}")
-        self._running = False
-        for t in self._tasks:
-            try: t.cancel()
-            except Exception: pass
-        try:
-            if self._cmd_stream: await self._cmd_stream.stop()
-            await self.notifier.stop()
-        except Exception:
-            pass
-        await asyncio.sleep(0)
+# -----------------------------------------------------------------------------
+# Helper d’entrée unique (facultatif) — appelé par bot.py
+# -----------------------------------------------------------------------------
 
-
-async def run_orchestrator(exchange: BitgetFuturesClient, order_service: OrderService, config: Any, symbols: Sequence[str]):
-    orch = Orchestrator(exchange, order_service, config, symbols)
+async def run_orchestrator(exchange, config: Dict[str, Any], symbols: Optional[List[str]] = None,
+                           notifier: Optional[Notifier] = None, command_stream: Optional[CommandStream] = None):
+    orch = Orchestrator(exchange=exchange, config=config, symbols=symbols,
+                        notifier=notifier, command_stream=command_stream)
     await orch.run()
