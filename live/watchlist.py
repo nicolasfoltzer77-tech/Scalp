@@ -108,46 +108,36 @@ class WatchlistManager:
         return [s for s, _ in pairs[: self.top_n]]
 
     # ---------- boot / refresh ----------
-    async def boot_topN(self) -> List[str]:
-        payload = None
-        top: List[str] = []
+        async def boot_topN(self) -> List[str]:
+        """
+        Fallback robuste : si l'API ne renvoie rien d'exploitable,
+        on lit TOP_SYMBOLS depuis l'env, sinon un TOP10 par défaut.
+        """
+        # 1) Essai API (garde si fonctionnel chez toi un jour)
+        try:
+            payload = await self._safe(lambda: self.exchange.get_ticker(None), "get_ticker(None)")
+            top = self._pick_top(payload)
+            if top:
+                if self.on_update: self.on_update(top)
+                return top
+        except Exception:
+            pass
 
-        # 1) Méthodes "all tickers" si présentes (sync ou async)
-        for name in ("get_tickers", "list_tickers", "all_tickers"):
-            fn = getattr(self.exchange, name, None)
-            if callable(fn):
-                try:
-                    payload = await self._safe(fn, f"{name}")
-                    _dprint(f"payload via {name}: type={type(payload).__name__}")
-                    top = self._pick_top(payload)
-                    if top:
-                        break
-                except Exception as e:
-                    _dprint(f"{name} error: {e!r}")
-                    payload = None
+        # 2) Env override
+        env_syms = (os.getenv("TOP_SYMBOLS") or "").replace(" ", "")
+        if env_syms:
+            top = [s for s in env_syms.split(",") if s]
+            top = [s.replace("_","").upper() for s in top][: self.top_n]
+        else:
+            # 3) TOP10 par défaut (futures USDT liquides)
+            top = ["BTCUSDT","ETHUSDT","SOLUSDT","BNBUSDT","XRPUSDT",
+                   "DOGEUSDT","ADAUSDT","TRXUSDT","TONUSDT","LTCUSDT"][: self.top_n]
 
-        # 2) Variantes de get_ticker(arg) (souvent async)
-        if not top:
-            get_ticker = getattr(self.exchange, "get_ticker", None)
-            if callable(get_ticker):
-                for arg in (None, "ALL", "", "*"):
-                    try:
-                        payload = await self._safe(lambda a=arg: get_ticker(a), f"get_ticker({arg})")
-                        _dprint(f"payload via get_ticker({arg}): type={type(payload).__name__}")
-                        top = self._pick_top(payload)
-                        if top:
-                            break
-                    except Exception as e:
-                        _dprint(f"get_ticker({arg}) error: {e!r}")
-                        payload = None
+        # log debug
+        if os.getenv("WATCHLIST_DEBUG","0") == "1":
+            print(f"[watchlist:debug] using static TOP{len(top)} = {top}")
 
-        # 3) Décision finale
-        if not top:
-            top = ["BTCUSDT", "ETHUSDT"]
-            _dprint("fallback to ['BTCUSDT','ETHUSDT']")
-
-        if self.on_update:
-            self.on_update(top)
+        if self.on_update: self.on_update(top)
         return top
 
     async def task_auto_refresh(self):
