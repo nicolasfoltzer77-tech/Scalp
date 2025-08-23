@@ -108,11 +108,11 @@ class WatchlistManager:
         return [s for s, _ in pairs[: self.top_n]]
 
     # ---------- boot / refresh ----------
-        async def boot_topN(self) -> List[str]:
-        """
-        Fallback robuste : si l'API ne renvoie rien d'exploitable,
-        on lit TOP_SYMBOLS depuis l'env, sinon un TOP10 par défaut.
-        """
+    async def boot_topN(self) -> List[str]:
+        
+        #Fallback robuste : si l'API ne renvoie rien d'exploitable,
+        #on lit TOP_SYMBOLS depuis l'env, sinon un TOP10 par défaut.
+        
         # 1) Essai API (garde si fonctionnel chez toi un jour)
         try:
             payload = await self._safe(lambda: self.exchange.get_ticker(None), "get_ticker(None)")
