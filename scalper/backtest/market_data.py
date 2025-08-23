@@ -63,18 +63,17 @@ def _rows_to_df(rows: Iterable[Iterable[float]]) -> pd.DataFrame:
     return df
 
 # ---------------------------------------------------------------------------
-# 1) Source: exchange.fetch_ohlcv si dispo (sync/async via simple appel direct)
+# 1) Source: exchange.fetch_ohlcv si dispo
 # ---------------------------------------------------------------------------
 def fetch_ohlcv_via_exchange(exchange: Any, symbol: str, timeframe: str, *, limit: int = 1000) -> pd.DataFrame:
     if not hasattr(exchange, "fetch_ohlcv"):
         raise AttributeError("exchange.fetch_ohlcv introuvable")
     _log(f"fetch via exchange.fetch_ohlcv: symbol={symbol} tf={timeframe} limit={limit}")
-    rows = exchange.fetch_ohlcv(symbol, timeframe=timeframe, limit=limit)
-    # attendu: [[ts,o,h,l,c,v], ...]
+    rows = exchange.fetch_ohlcv(symbol, timeframe=timeframe, limit=limit)  # attendu: [[ts,o,h,l,c,v], ...]
     return _rows_to_df(rows)
 
 # ---------------------------------------------------------------------------
-# 2) Source: HTTP Bitget public (sans CCXT)
+# 2) Source: HTTP Bitget public (sans CCXT) — avec start/end automatiques
 # ---------------------------------------------------------------------------
 _GRAN_MIX = {  # mix: granularity
     "1m": "1min", "3m": "3min", "5m": "5min", "15m": "15min",
@@ -84,9 +83,13 @@ _PERIOD_SPOT = {  # spot: period
     "1m": "1min", "3m": "3min", "5m": "5min", "15m": "15min",
     "30m": "30min", "1h": "1hour", "4h": "4hour", "1d": "1day",
 }
+_TF_SECS = {
+    "1m": 60, "3m": 180, "5m": 300, "15m": 900,
+    "30m": 1800, "1h": 3600, "4h": 14400, "1d": 86400,
+}
 
 def _http_get(url: str, timeout: int = 20) -> dict | list:
-    req = Request(url, headers={"User-Agent": "scalper-backtest/1.3"})
+    req = Request(url, headers={"User-Agent": "scalper-backtest/1.4"})
     with urlopen(req, timeout=timeout) as resp:
         return json.loads(resp.read().decode("utf-8"))
 
@@ -105,11 +108,31 @@ def _normalize_http_rows(data: dict | list) -> list[list[float]]:
         raise ValueError(f"Réponse OHLCV inattendue: {data}")
     out = []
     for r in rows:
-        # attendu: [ts, open, high, low, close, volume, ...] (ts en ms)
         ts = int(str(r[0]))
         o, h, l, c, v = map(float, (r[1], r[2], r[3], r[4], r[5]))
         out.append([ts, o, h, l, c, v])
+    # Bitget peut renvoyer décroissant → on trie par ts ascendant
+    out.sort(key=lambda x: x[0])
     return out
+
+def _build_urls(base: str, *, symbol: str, tf_key: str, tf_val: str, limit: int,
+                start_ms: int, end_ms: int, is_spot: bool) -> list[str]:
+    """
+    Construit plusieurs variantes avec/ sans startTime/endTime selon l'API.
+    Spot accepte parfois 'after' (point de départ) au lieu de startTime.
+    """
+    urls = [
+        f"{base}?symbol={symbol}&{tf_key}={tf_val}&limit={limit}&startTime={start_ms}&endTime={end_ms}",
+        f"{base}?symbol={symbol}&{tf_key}={tf_val}&limit={limit}&startTime={start_ms}",
+        f"{base}?symbol={symbol}&{tf_key}={tf_val}&limit={limit}&start={start_ms}&end={end_ms}",
+    ]
+    if is_spot:
+        # variantes spot (certains endpoints utilisent 'after' pour la borne)
+        urls.append(f"{base}?symbol={symbol}&{tf_key}={tf_val}&limit={limit}&after={start_ms}")
+        urls.append(f"{base}?symbol={symbol}&{tf_key}={tf_val}&limit={limit}&after={end_ms}")
+    # version minimale (certains serveurs n'aiment aucun filtre)
+    urls.append(f"{base}?symbol={symbol}&{tf_key}={tf_val}&limit={limit}")
+    return urls
 
 def fetch_ohlcv_via_http_bitget(
     symbol: str,
@@ -118,52 +141,63 @@ def fetch_ohlcv_via_http_bitget(
     limit: int = 1000,
     market_hint: Optional[str] = None,  # "mix" | "spot" | None
     timeout: int = 20,
-    max_retries: int = 3,
+    max_retries: int = 2,
 ) -> pd.DataFrame:
     """
     Essaie en cascade:
-      - mix candles (granularity=5min) sur <SYM> et <SYM>_UMCBL
-      - spot candles (period=5min) sur <SYM> et <SYM>_SPBL
-    Utilise les endpoints publics v1.
+      - mix candles (granularity=5min) sur <SYM>, <SYM>_UMCBL
+      - spot candles (period=5min) sur <SYM>, <SYM>_SPBL
+    En fournissant une fenêtre de temps par défaut (≈ 1.5 * limit * tf).
     """
     tf = timeframe.lower().strip()
     mix_g = _GRAN_MIX.get(tf)
     spot_p = _PERIOD_SPOT.get(tf)
-    if not mix_g or not spot_p:
+    secs = _TF_SECS.get(tf)
+    if not (mix_g and spot_p and secs):
         raise ValueError(f"Timeframe non supporté: {timeframe}")
+
+    # Fenêtre temporelle par défaut ~ 1.5 * limit * tf
+    now = int(time.time() * 1000)
+    window = int(limit * secs * 1000 * 1.5)
+    start = now - window
+    end = now
 
     base_mix = "https://api.bitget.com/api/mix/v1/market/candles"
     base_spot = "https://api.bitget.com/api/spot/v1/market/candles"
 
     # ordre d'essais selon hint
-    paths = []
+    plans: list[tuple[str, str, str, str, bool]] = []
     if (market_hint or "").lower() == "mix":
-        paths += [("mix", base_mix, "granularity", mix_g)]
-        paths += [("spot", base_spot, "period", spot_p)]
+        plans += [("mix", base_mix, "granularity", mix_g, False), ("spot", base_spot, "period", spot_p, True)]
     elif (market_hint or "").lower() == "spot":
-        paths += [("spot", base_spot, "period", spot_p)]
-        paths += [("mix", base_mix, "granularity", mix_g)]
+        plans += [("spot", base_spot, "period", spot_p, True), ("mix", base_mix, "granularity", mix_g, False)]
     else:
-        paths += [("mix", base_mix, "granularity", mix_g), ("spot", base_spot, "period", spot_p)]
+        plans += [("mix", base_mix, "granularity", mix_g, False), ("spot", base_spot, "period", spot_p, True)]
 
     last_err: Optional[Exception] = None
-    for market, base, tf_key, tf_val in paths:
+    for market, base, tf_key, tf_val, is_spot in plans:
         for sym in _sym_variants(symbol):
-            url = f"{base}?symbol={sym}&{tf_key}={tf_val}&limit={int(limit)}"
-            for attempt in range(max_retries + 1):
-                try:
-                    _log(f"HTTP Bitget {market}: GET {url}")
-                    data = _http_get(url, timeout=timeout)
-                    # certains endpoints renvoient {code,msg,data}
-                    if isinstance(data, dict) and "code" in data and str(data["code"]) != "00000" and "data" not in data:
-                        raise RuntimeError(f"Bitget error {data.get('code')}: {data.get('msg')}")
-                    rows = _normalize_http_rows(data)
-                    _log(f"HTTP OK via {market} {sym} ({len(rows)} bougies)")
-                    return _rows_to_df(rows)
-                except (URLError, HTTPError, ValueError, KeyError, RuntimeError) as e:
-                    last_err = e
-                    time.sleep(min(2 ** attempt, 5))
-                    continue
+            urls = _build_urls(base, symbol=sym, tf_key=tf_key, tf_val=tf_val,
+                               limit=int(limit), start_ms=start, end_ms=end, is_spot=is_spot)
+            for url in urls:
+                for attempt in range(max_retries + 1):
+                    try:
+                        _log(f"HTTP Bitget {market}: GET {url}")
+                        data = _http_get(url, timeout=timeout)
+                        # format {code,msg,data} (mix) ou liste directe (spot)
+                        if isinstance(data, dict) and "code" in data and str(data["code"]) != "00000" and "data" not in data:
+                            raise RuntimeError(f"Bitget error {data.get('code')}: {data.get('msg')}")
+                        rows = _normalize_http_rows(data)
+                        if not rows:
+                            raise ValueError("Réponse vide")
+                        _log(f"HTTP OK via {market} {sym} ({len(rows)} bougies) "
+                             f"range=[{rows[0][0]} .. {rows[-1][0]}] (ms)")
+                        return _rows_to_df(rows)
+                    except (URLError, HTTPError, ValueError, KeyError, RuntimeError) as e:
+                        last_err = e
+                        _log(f"HTTP fail: {e} (retry {attempt}/{max_retries})")
+                        time.sleep(min(2 ** attempt, 5))
+                        continue
     raise last_err or RuntimeError(f"Bitget OHLCV HTTP KO pour {symbol} {timeframe}")
 
 # ---------------------------------------------------------------------------
