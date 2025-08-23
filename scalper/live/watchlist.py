@@ -1,158 +1,175 @@
 # scalper/live/watchlist.py
 from __future__ import annotations
 
-import asyncio
-import os
-import statistics
-from dataclasses import dataclass
-from typing import Awaitable, Callable, Iterable, List, Optional, Sequence
+"""
+Watchlist minimaliste et robuste, pensée pour l'orchestrateur "fit".
 
-# Types
-OHLCVFetcher = Callable[[str, str], Awaitable[Sequence[Sequence[float]]]]
-# attendu: fetch(symbol, timeframe="5m", limit=?), renvoie [[ts,o,h,l,c,v], ...]
+Modes (via ENV):
+  - WATCHLIST_MODE=static  : utilise TOP_SYMBOLS (ou défaut)
+  - WATCHLIST_MODE=local   : calcule un TOPN depuis CSV (DATA_DIR) par (close*volume) ~24h
+  - WATCHLIST_MODE=api     : placeholder "léger" -> TOP_SYMBOLS ou défaut
+
+Autres ENV utiles:
+  - TOP_SYMBOLS="BTCUSDT,ETHUSDT,..."   # prioritaire en static/api
+  - TOPN=10                              # taille de la watchlist cible
+  - DATA_DIR="/notebooks/data"           # où lire les CSV
+  - QUIET=1                              # mute logs
+"""
+
+import os
+from pathlib import Path
+from typing import List, Tuple, Optional
 
 QUIET = int(os.getenv("QUIET", "0") or "0")
 
-DEFAULT_SHORTLIST = [
-    # shortlist liquides futures USDT (à ajuster)
-    "BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "DOGEUSDT",
-    "ADAUSDT", "LTCUSDT", "AVAXUSDT", "LINKUSDT", "TRXUSDT", "UNIUSDT",
-    "SHIBUSDT", "OPUSDT", "APTUSDT", "ETCUSDT", "NEARUSDT", "FILUSDT",
-    "SUIUSDT", "TONUSDT",
+# ---------------------------------------------------------------------
+# Défauts sûrs (liquidité élevée)
+# ---------------------------------------------------------------------
+DEFAULT_CANDIDATES = [
+    "BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT",
+    "DOGEUSDT", "ADAUSDT", "LTCUSDT", "AVAXUSDT", "LINKUSDT",
+    "TRXUSDT", "MATICUSDT", "DOTUSDT", "TONUSDT", "NEARUSDT",
+    "ATOMUSDT", "AAVEUSDT", "OPUSDT", "ARBUSDT", "SUIUSDT",
+    "PEPEUSDT", "SHIBUSDT",
 ]
-
-def _parse_csv_env(name: str, default: List[str]) -> List[str]:
-    raw = os.getenv(name, "")
-    if not raw:
-        return list(default)
-    return [s.strip().upper() for s in raw.split(",") if s.strip()]
 
 def _log(msg: str) -> None:
     if not QUIET:
         print(f"[watchlist] {msg}", flush=True)
 
-@dataclass
-class WatchlistManager:
-    # Public API compatible avec orchestrator
-    mode: str
-    top_candidates: List[str]
-    local_conc: int
-    ohlcv_fetch: OHLCVFetcher
-    timeframe: str = "5m"
-    refresh_sec: int = int(os.getenv("WATCHLIST_REFRESH_SEC", "300") or "300")
-    topn: int = int(os.getenv("TOPN", "10") or "10")
+def _parse_symbols_env(var: str) -> List[str]:
+    raw = os.getenv(var, "")
+    if not raw.strip():
+        return []
+    return [s.strip().upper() for s in raw.split(",") if s.strip()]
 
-    # NOTE: le constructeur accepte **watchlist_mode** pour compatibilité
-    def __init__(
-        self,
-        *,
-        watchlist_mode: str = "static",
-        top_candidates: str | Iterable[str] | None = None,
-        local_conc: int = int(os.getenv("WATCHLIST_LOCAL_CONC", "5") or "5"),
-        ohlcv_fetch: OHLCVFetcher | None = None,
-        timeframe: str = os.getenv("WATCHLIST_TIMEFRAME", "5m"),
-        refresh_sec: int = int(os.getenv("WATCHLIST_REFRESH_SEC", "300") or "300"),
-        topn: int = int(os.getenv("TOPN", "10") or "10"),
-    ):
-        self.mode = (watchlist_mode or "static").lower()
-        if isinstance(top_candidates, str):
-            self.top_candidates = _parse_csv_env("", []) if top_candidates == "" else (
-                [s.strip().upper() for s in top_candidates.split(",") if s.strip()]
-            )
-        elif top_candidates is None:
-            self.top_candidates = _parse_csv_env("TOP_CANDIDATES", DEFAULT_SHORTLIST)
-        else:
-            self.top_candidates = [s.strip().upper() for s in top_candidates]
+def _topn_value() -> int:
+    try:
+        return max(1, int(os.getenv("TOPN", "10")))
+    except Exception:
+        return 10
 
-        self.local_conc = int(local_conc)
-        self.ohlcv_fetch = ohlcv_fetch or (lambda sym, timeframe="5m", limit=150: asyncio.sleep(0.0))  # type: ignore
-        self.timeframe = timeframe
-        self.refresh_sec = int(refresh_sec)
-        self.topn = int(topn)
+# ---------------------------------------------------------------------
+# Mode STATIC/API (léger)
+# ---------------------------------------------------------------------
+def _from_env_or_default(topn: int) -> List[str]:
+    env_syms = _parse_symbols_env("TOP_SYMBOLS")
+    if env_syms:
+        return env_syms[:topn]
+    return DEFAULT_CANDIDATES[:topn]
 
-        if self.mode not in ("static", "local", "api"):
-            _log(f"mode inconnu '{self.mode}', fallback -> static")
-            self.mode = "static"
+# ---------------------------------------------------------------------
+# Mode LOCAL : calcule TOPN via CSV (close*volume) ~24h
+# Recherche d’abord 5m, sinon 1m, sinon fallback défaut
+# ---------------------------------------------------------------------
+def _data_dir() -> Path:
+    return Path(os.getenv("DATA_DIR", "data")).resolve()
 
-        _log(f"init: mode={self.mode} topn={self.topn} timeframe={self.timeframe} refresh={self.refresh_sec}s")
+def _find_csvs() -> List[Tuple[Path, str]]:
+    """
+    Retourne [(path, timeframe_str)] pour les CSV présents en 5m/1m.
+    Fichiers attendus: <SYMBOL>-<TF>.csv (ex: BTCUSDT-5m.csv)
+    """
+    root = _data_dir()
+    if not root.exists():
+        return []
+    out: List[Tuple[Path, str]] = []
+    for tf in ("5m", "1m"):
+        out.extend([(p, tf) for p in root.glob(f"*-{tf}.csv") if p.is_file()])
+    return out
 
-    # ----------------------------- PUBLIC ---------------------------------
+def _symbol_from_csv_path(p: Path) -> Optional[str]:
+    # BTCUSDT-5m.csv -> BTCUSDT
+    name = p.name
+    if "-" not in name:
+        return None
+    return name.split("-", 1)[0].upper()
 
-    async def boot_topN(self) -> List[str]:
-        """Calcul initial de la watchlist TOPN."""
-        if self.mode == "static":
-            syms = self._static_symbols()
-            _log(f"boot got (static): {syms[:self.topn]}")
-            return syms[:self.topn]
-        elif self.mode == "local":
-            syms = await self._local_topN()
-            _log(f"boot got (local): {syms}")
-            return syms
-        else:
-            # placeholder API -> pour l’instant même comportement que static
-            syms = self._static_symbols()
-            _log(f"boot got (api placeholder->static): {syms[:self.topn]}")
-            return syms[:self.topn]
+def _score_csv(path: Path, tf: str) -> float:
+    """
+    Score = somme(close * volume) sur ~24h de barres.
+    5m -> 288 barres ; 1m -> 1440 barres. Si moins, prend tout.
+    """
+    import pandas as pd
+    try:
+        df = pd.read_csv(path)
+        cols = {c.lower(): c for c in df.columns}
+        need = ["close", "volume"]
+        for c in need:
+            if c not in cols:
+                return 0.0
+        close = df[cols["close"]].astype(float)
+        volume = df[cols["volume"]].astype(float)
+        n = 288 if tf == "5m" else 1440
+        if len(close) == 0:
+            return 0.0
+        c = close.tail(n)
+        v = volume.tail(n)
+        # simple robustesse longueur
+        m = min(len(c), len(v))
+        if m <= 0:
+            return 0.0
+        return float((c.tail(m) * v.tail(m)).sum())
+    except Exception:
+        return 0.0
 
-    async def task_auto_refresh(self):
-        """
-        Async generator: recalcule périodiquement la watchlist et la renvoie.
-        Usage:
-            async for top in watchlist.task_auto_refresh():
-                ...
-        """
-        while True:
-            try:
-                if self.mode == "local":
-                    syms = await self._local_topN()
-                elif self.mode == "static":
-                    syms = self._static_symbols()[:self.topn]
-                else:
-                    syms = self._static_symbols()[:self.topn]  # placeholder
-                yield syms
-            except Exception as e:
-                _log(f"refresh error: {e}")
-            await asyncio.sleep(max(15, self.refresh_sec))
+def _local_top(topn: int) -> List[str]:
+    csvs = _find_csvs()
+    if not csvs:
+        _log("mode local: aucun CSV trouvé → fallback défaut")
+        return _from_env_or_default(topn)
 
-    # ----------------------------- MODES ----------------------------------
+    # Priorise 5m si dispo
+    # regroupe par symbole et garde le meilleur score (5m prioritaire)
+    scores: dict[str, float] = {}
+    for path, tf in csvs:
+        sym = _symbol_from_csv_path(path)
+        if not sym:
+            continue
+        s = _score_csv(path, tf)
+        if s <= 0:
+            continue
+        scores[sym] = max(scores.get(sym, 0.0), s)
 
-    def _static_symbols(self) -> List[str]:
-        # priorise TOP_SYMBOLS si défini, sinon shortlist/candidats
-        top_symbols_env = _parse_csv_env("TOP_SYMBOLS", [])
-        if top_symbols_env:
-            return top_symbols_env
-        return list(self.top_candidates or DEFAULT_SHORTLIST)
+    if not scores:
+        _log("mode local: CSV illisibles → fallback défaut")
+        return _from_env_or_default(topn)
 
-    async def _local_topN(self) -> List[str]:
-        """
-        Classement local via 'somme(close*volume)' sur ~24h pour la shortlist.
-        """
-        shortlist = self._static_symbols()
-        if not shortlist:
-            shortlist = list(DEFAULT_SHORTLIST)
+    ordered = sorted(scores.items(), key=lambda kv: kv[1], reverse=True)
+    top = [sym for sym, _ in ordered[:topn]]
+    _log(f"mode local → top={top}")
+    return top
 
-        async def score_symbol(sym: str) -> tuple[str, float]:
-            try:
-                # on récupère ~24h pour 5m -> ~288 bougies (on prend 300 pour marge)
-                raw = await self.ohlcv_fetch(sym, self.timeframe, limit=300)  # type: ignore[arg-type]
-                total = 0.0
-                for r in raw or []:
-                    # r: [ts, o, h, l, c, v]
-                    c = float(r[4]); v = float(r[5])
-                    total += c * v
-                return sym, total
-            except Exception:
-                return sym, 0.0
+# ---------------------------------------------------------------------
+# API publique
+# ---------------------------------------------------------------------
+def get_boot_watchlist() -> List[str]:
+    """
+    Watchlist initiale, en respectant WATCHLIST_MODE.
+    - static : TOP_SYMBOLS ou DEFAULT_CANDIDATES (TOPN)
+    - local  : calcule via CSV (DATA_DIR), fallback env/défaut
+    - api    : identique à static (placeholder light)
+    """
+    mode = os.getenv("WATCHLIST_MODE", "static").strip().lower()
+    topn = _topn_value()
 
-        # Concurrence limitée
-        sem = asyncio.Semaphore(max(1, self.local_conc))
-        results: list[tuple[str, float]] = []
+    if mode == "local":
+        syms = _local_top(topn)
+    elif mode in ("static", "api"):
+        syms = _from_env_or_default(topn)
+    else:
+        _log(f"mode inconnu '{mode}', fallback static")
+        syms = _from_env_or_default(topn)
 
-        async def worker(s: str):
-            async with sem:
-                results.append(await score_symbol(s))
+    _log(f"boot got: {syms}")
+    return syms
 
-        await asyncio.gather(*(worker(s) for s in shortlist))
-        results.sort(key=lambda kv: kv[1], reverse=True)
-        top = [s for s, _ in results[: self.topn]]
-        return top
+# ---------------------------------------------------------------------
+# Rafraîchissement (optionnel)
+# ---------------------------------------------------------------------
+def on_update() -> List[str]:
+    """
+    Permet de recalculer la watchlist à la demande (mêmes règles que boot).
+    Idéal pour un cron ou une commande Telegram /watchlist_refresh (si tu l’ajoutes).
+    """
+    return get_boot_watchlist()
