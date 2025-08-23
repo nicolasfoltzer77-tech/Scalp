@@ -8,7 +8,7 @@ from typing import Dict, List
 
 import pandas as pd
 
-from scalper.backtest.runner import run_multi, csv_loader_factory
+from scalper.backtest.runner import run_multi, hybrid_loader_factory
 
 
 @dataclass
@@ -20,6 +20,8 @@ class BacktestArgs:
     cash: float = 10_000.0
     risk: float = 0.005
     slippage_bps: float = 2.0
+    market: str = "mix"       # "mix" (futures USDT-M) ou "spot"
+    api: bool = True          # True = autorise téléchargement auto s/ Bitget
 
 
 def _parse_kv(text: str) -> Dict[str, str]:
@@ -44,12 +46,17 @@ def parse_backtest_args(cmd_tail: str, defaults: Dict[str, object]) -> BacktestA
     out_dir = kv.get("out", "result/backtests")
     cash = float(kv.get("cash", defaults.get("cash", 10_000)))
     risk = float(kv.get("risk", defaults.get("risk_pct", 0.005)))
+    # Clamp du risque (0%..5%)
+    risk = max(0.0, min(risk, 0.05))
     slip = float(kv.get("slippage_bps", defaults.get("slippage_bps", 2.0)))
+    market = kv.get("market", "mix").lower()
+    api = (kv.get("api", "1") not in ("0", "false", "no"))
     sym_list = [s.strip().upper() for s in symbols.split(",") if s.strip()]
     tf_list = [t.strip() for t in tfs.split(",") if t.strip()]
     return BacktestArgs(
         symbols=sym_list, timeframes=tf_list, data_dir=data_dir,
-        out_dir=out_dir, cash=cash, risk=risk, slippage_bps=slip
+        out_dir=out_dir, cash=cash, risk=risk, slippage_bps=slip,
+        market=market, api=api
     )
 
 
@@ -63,14 +70,14 @@ async def handle_backtest_command(
     Lance un backtest multi {symbols x timeframes} et envoie :
       - un récapitulatif texte (top 3 par perf),
       - le fichier summary.csv en pièce jointe Telegram (si possible).
-    TOUTE erreur est capturée et notifiée.
+    Utilise un loader hybride (CSV -> API Bitget -> cache CSV).
     """
     try:
         args = parse_backtest_args(cmd_tail, runtime_config or {})
         if not args.symbols or not args.timeframes:
             await notifier.send(
                 "⚠️ Usage: /backtest symbols=BTCUSDT,ETHUSDT tf=1m,5m "
-                "[cash=10000 risk=0.005 slippage_bps=2 data=data out=result/backtests]"
+                "[cash=10000 risk=0.005 slippage_bps=2 data=data out=result/backtests market=mix api=1]"
             )
             return
 
@@ -78,11 +85,11 @@ async def handle_backtest_command(
             "🧪 Backtest en cours…\n"
             f"• Symbols: {', '.join(args.symbols)}\n"
             f"• TF: {', '.join(args.timeframes)}\n"
-            f"• Cash: {args.cash:.0f}  • Risk: {args.risk:.4f}  • Slippage: {args.slippage_bps} bps"
+            f"• Cash: {args.cash:.0f}  • Risk: {args.risk:.4f}  • Slippage: {args.slippage_bps} bps\n"
+            f"• Source: {'CSV+API Bitget' if args.api else 'CSV uniquement'} (market={args.market})"
         )
 
-        # loader CSV par défaut (plug & play)
-        loader = csv_loader_factory(args.data_dir)
+        loader = hybrid_loader_factory(args.data_dir, use_api=args.api, market=args.market)
 
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(
@@ -101,8 +108,7 @@ async def handle_backtest_command(
         summary_path = Path(args.out_dir) / "summary.csv"
         if not summary_path.exists():
             await notifier.send(
-                "⚠️ Backtest terminé mais `summary.csv` introuvable.\n"
-                "Vérifie que tes CSV existent dans `data/` sous la forme `<SYMBOL>-<TF>.csv` (ex: BTCUSDT-5m.csv)."
+                "⚠️ Backtest terminé mais `summary.csv` introuvable."
             )
             return
 
@@ -121,11 +127,10 @@ async def handle_backtest_command(
                 await notifier.send(f"(info) Envoi summary.csv impossible: {e}")
 
     except FileNotFoundError as e:
-        # Cas le plus courant: CSV manquant
         await notifier.send(
             f"⚠️ Fichier manquant: {e}\n"
-            "Place les CSV OHLCV dans `data/` au format `<SYMBOL>-<TF>.csv` "
-            "(colonnes: timestamp,open,high,low,close,volume)."
+            "Tu peux laisser `api=1` (défaut) pour télécharger auto depuis Bitget, "
+            "ou déposer des CSV dans `data/` au format `<SYMBOL>-<TF>.csv`."
         )
     except Exception as e:
         await notifier.send(f"⚠️ Backtest : erreur inattendue: {e}")
