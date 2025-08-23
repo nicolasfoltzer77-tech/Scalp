@@ -1,5 +1,4 @@
-"""Live trading helpers."""
+# scalper/live/__init__.py
+from .orchestrator import Orchestrator, RunConfig, run_orchestrator
 
-from .orchestrator import Orchestrator, run_orchestrator
-
-__all__ = ["Orchestrator", "run_orchestrator"]
+__all__ = ["Orchestrator", "RunConfig", "run_orchestrator"]
