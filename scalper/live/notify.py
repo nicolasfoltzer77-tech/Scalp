@@ -2,85 +2,135 @@
 from __future__ import annotations
 
 import asyncio
-import aiohttp
 import os
-from typing import Any, Tuple
+from typing import Any, AsyncGenerator, Callable, Optional, Tuple
+
+try:
+    import aiohttp
+except Exception as e:  # noqa: BLE001
+    raise RuntimeError("Le module 'aiohttp' est requis pour Telegram. Installe-le via 'pip install aiohttp'.") from e
 
 
-# ---------------------------------------------------------------------
-# Notifier abstrait
-# ---------------------------------------------------------------------
-class BaseNotifier:
+# -----------------------------------------------------------
+# Null Notifier (fallback quand Telegram n'est pas configuré)
+# -----------------------------------------------------------
+class NullNotifier:
+    name = "null"
+
     async def send(self, text: str) -> None:
-        raise NotImplementedError
-
-
-class NullNotifier(BaseNotifier):
-    async def send(self, text: str) -> None:
-        # log console seulement (silencieux si QUIET=1 géré côté orchestrateur)
+        # Pas d’IO : juste un print pour la trace
         print(f"[notify:null] {text}")
 
+    async def close(self) -> None:
+        pass
 
-class TelegramNotifier(BaseNotifier):
-    def __init__(self, token: str, chat_id: str):
-        self.token = token
+
+async def null_command_stream() -> AsyncGenerator[str, None]:
+    # Générateur vide (aucune commande)
+    if False:  # pragma: no cover
+        yield ""
+
+
+# -----------------------------------------------------------
+# Telegram Notifier + Commandes (polling simple)
+# -----------------------------------------------------------
+class TelegramNotifier:
+    name = "telegram"
+
+    def __init__(self, token: str, chat_id: str, session: Optional[aiohttp.ClientSession] = None) -> None:
+        self.base = f"https://api.telegram.org/bot{token}"
         self.chat_id = chat_id
-        self.session: aiohttp.ClientSession | None = None
-
-    async def _ensure_session(self) -> aiohttp.ClientSession:
-        if self.session is None or self.session.closed:
-            self.session = aiohttp.ClientSession()
-        return self.session
+        self.session = session or aiohttp.ClientSession()
+        self._owned_session = session is None
 
     async def send(self, text: str) -> None:
+        url = f"{self.base}/sendMessage"
+        payload = {"chat_id": self.chat_id, "text": text, "parse_mode": "Markdown"}
+        for attempt in range(3):
+            try:
+                async with self.session.post(url, json=payload, timeout=15) as r:
+                    if r.status == 200:
+                        return
+                    body = await r.text()
+                    raise RuntimeError(f"HTTP {r.status}: {body}")
+            except Exception as e:  # noqa: BLE001
+                if attempt == 2:
+                    print(f"[notify:telegram] send fail: {e}")
+                else:
+                    await asyncio.sleep(1.5 * (attempt + 1))
+
+    async def commands(self, *, allowed: Optional[set[str]] = None) -> AsyncGenerator[str, None]:
+        """
+        Polling léger getUpdates. Émet des chaînes "/setup", "/backtest", "/resume", "/stop", …
+        """
+        url = f"{self.base}/getUpdates"
+        offset = None
+        allowed_set = allowed or {"/setup", "/backtest", "/resume", "/stop"}
+        while True:
+            try:
+                params = {"timeout": 20}
+                if offset is not None:
+                    params["offset"] = offset
+                async with self.session.get(url, params=params, timeout=25) as r:
+                    data = await r.json()
+                if not data.get("ok"):
+                    await asyncio.sleep(2.0)
+                    continue
+                for upd in data.get("result", []):
+                    offset = upd["update_id"] + 1
+                    msg = upd.get("message") or upd.get("edited_message")
+                    if not msg:
+                        continue
+                    if str(msg.get("chat", {}).get("id")) != str(self.chat_id):
+                        continue
+                    text = (msg.get("text") or "").strip()
+                    if not text:
+                        continue
+                    # commande reconnue ?
+                    if text.split()[0] in allowed_set:
+                        yield text
+            except asyncio.CancelledError:
+                break
+            except Exception:
+                await asyncio.sleep(2.0)
+
+    async def close(self) -> None:
+        if self._owned_session:
+            try:
+                await self.session.close()
+            except Exception:
+                pass
+
+
+# -----------------------------------------------------------
+# Fabrique : choisit Telegram si configuré, sinon Null
+# -----------------------------------------------------------
+def _env(name: str, default: Optional[str] = None) -> Optional[str]:
+    v = os.environ.get(name, default)
+    return v if (v is not None and str(v).strip() != "") else None
+
+
+async def build_notifier_and_commands(config: dict[str, Any]) -> Tuple[Any, Callable[[], AsyncGenerator[str, None]]]:
+    """
+    Retourne (notifier, command_stream_factory)
+    - notifier: objet avec .send(str) et .close()
+    - command_stream_factory: function sans arg -> async generator des commandes
+    """
+    token = _env("TELEGRAM_TOKEN") or config.get("TELEGRAM_TOKEN")
+    chat = _env("TELEGRAM_CHAT_ID") or config.get("TELEGRAM_CHAT_ID")
+
+    if token and chat:
         try:
-            sess = await self._ensure_session()
-            url = f"https://api.telegram.org/bot{self.token}/sendMessage"
-            payload = {"chat_id": self.chat_id, "text": text}
-            async with sess.post(url, json=payload, timeout=30) as r:
-                if r.status != 200:
-                    print(f"[notify:telegram] HTTP {r.status}")
+            notifier = TelegramNotifier(token=token, chat_id=str(chat))
+            async def factory() -> AsyncGenerator[str, None]:
+                async for cmd in notifier.commands():
+                    yield cmd
+            # Premier ping amical (non bloquant)
+            asyncio.create_task(notifier.send("🟢 Orchestrator PRELAUNCH. Utilise /setup ou /backtest. /resume pour démarrer le live."))
+            print("[notify] Using Telegram notifier/commands")
+            return notifier, factory
         except Exception as e:  # noqa: BLE001
-            print(f"[notify:telegram] error: {e}")
+            print(f"[notify] Telegram init failed: {e} -> fallback to Null")
 
-
-# ---------------------------------------------------------------------
-# CommandStream : simple file d’attente de commandes
-# ---------------------------------------------------------------------
-class CommandStream:
-    def __init__(self) -> None:
-        self.q: asyncio.Queue[str] = asyncio.Queue()
-
-    async def get(self) -> str:
-        return await self.q.get()
-
-    async def put(self, cmd: str) -> None:
-        await self.q.put(cmd)
-
-
-# ---------------------------------------------------------------------
-# Factory
-# ---------------------------------------------------------------------
-async def build_notifier_and_commands(
-    config: dict[str, Any] | None = None,
-) -> Tuple[BaseNotifier, CommandStream]:
-    """
-    Construit (notifier, command_stream).
-
-    Si TELEGRAM_TOKEN et TELEGRAM_CHAT_ID (config ou env) sont fournis,
-    utilise TelegramNotifier. Sinon NullNotifier.
-    """
-    config = config or {}
-    token = config.get("TELEGRAM_TOKEN") or os.environ.get("TELEGRAM_TOKEN")
-    chat_id = config.get("TELEGRAM_CHAT_ID") or os.environ.get("TELEGRAM_CHAT_ID")
-
-    if token and chat_id:
-        notifier = TelegramNotifier(token, chat_id)
-        cmd_stream = CommandStream()
-        print("[notify] Using Telegram notifier/commands")
-    else:
-        notifier = NullNotifier()
-        cmd_stream = CommandStream()
-        print("[notify] Using Null notifier/commands")
-
-    return notifier, cmd_stream
+    print("[notify] Using Null notifier/commands")
+    return NullNotifier(), null_command_stream
