@@ -1,4 +1,4 @@
-from scalp.trade_utils import break_even_stop
+from scalper.trade_utils import break_even_stop
 
 
 def test_break_even_stop_long() -> None:

@@ -2,7 +2,7 @@ import os, sys, types, pytest
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 sys.modules['requests'] = types.ModuleType('requests')
 
-from scalp.trade_utils import (
+from scalper.trade_utils import (
     get_contract_size,
     notional as calc_notional,
     required_margin as calc_required_margin,

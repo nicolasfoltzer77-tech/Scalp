@@ -1,6 +1,6 @@
 import pytest
 from bot import ema, cross, compute_position_size, CONFIG
-from scalp.trade_utils import extract_available_balance
+from scalper.trade_utils import extract_available_balance
 
 
 def test_ema_basic():

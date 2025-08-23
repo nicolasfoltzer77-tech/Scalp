@@ -1,4 +1,4 @@
-from scalp.trade_utils import marketable_limit_price
+from scalper.trade_utils import marketable_limit_price
 
 
 def test_marketable_limit_price_buy_sell():

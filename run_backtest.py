@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import os
-from scalp.backtest.engine import BacktestEngine
+from scalper.backtest.engine import BacktestEngine
 
 def main():
     print("[*] Lancement du backtest...")

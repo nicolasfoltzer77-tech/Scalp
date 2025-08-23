@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from backtest.run_multi import run_backtest_multi
-from scalp.strategy import Signal
+from scalper.backtest.run_multi import run_backtest_multi
+from scalper.strategy import Signal
 
 
 def make_csv(tmp_path: Path, symbol: str, timeframe: str = "1m") -> None:
@@ -62,7 +62,7 @@ def find_row(summary, symbol):
 def test_csv_multi_pairs(tmp_path, monkeypatch):
     for sym in ["BTC/USDT", "ETH/USDT"]:
         make_csv(tmp_path, sym)
-    monkeypatch.setattr("scalp.strategy.generate_signal", simple_signal)
+    monkeypatch.setattr("scalper.strategy.generate_signal", simple_signal)
     monkeypatch.setattr("backtest.engine.generate_signal", simple_signal)
     out = tmp_path / "out"
     summary, trades = run_backtest_multi(
@@ -98,7 +98,7 @@ def test_csv_multi_pairs(tmp_path, monkeypatch):
 
 def test_fee_slippage(tmp_path, monkeypatch):
     make_csv(tmp_path, "BTC/USDT")
-    monkeypatch.setattr("scalp.strategy.generate_signal", simple_signal)
+    monkeypatch.setattr("scalper.strategy.generate_signal", simple_signal)
     monkeypatch.setattr("backtest.engine.generate_signal", simple_signal)
     summary1, _ = run_backtest_multi(
         symbols=["BTC/USDT"],
@@ -125,7 +125,7 @@ def test_fee_slippage(tmp_path, monkeypatch):
 
 def test_paper_constraints(tmp_path, monkeypatch):
     make_csv(tmp_path, "BTC/USDT")
-    monkeypatch.setattr("scalp.strategy.generate_signal", tiny_qty_signal)
+    monkeypatch.setattr("scalper.strategy.generate_signal", tiny_qty_signal)
     monkeypatch.setattr("backtest.engine.generate_signal", tiny_qty_signal)
     summary, trades = run_backtest_multi(
         symbols=["BTC/USDT"],
@@ -142,7 +142,7 @@ def test_paper_constraints(tmp_path, monkeypatch):
 
 def test_seed_reproducible(tmp_path, monkeypatch):
     make_csv(tmp_path, "BTC/USDT")
-    monkeypatch.setattr("scalp.strategy.generate_signal", random_signal)
+    monkeypatch.setattr("scalper.strategy.generate_signal", random_signal)
     monkeypatch.setattr("backtest.engine.generate_signal", random_signal)
     s1, t1 = run_backtest_multi(
         symbols=["BTC/USDT"],

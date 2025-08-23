@@ -5,7 +5,7 @@ import logging
 import math
 from typing import Any, Dict, List, Optional, Tuple
 
-from scalp.bot_config import CONFIG
+from scalper.bot_config import CONFIG
 
 
 def get_contract_size(contract_detail: Dict[str, Any], symbol: Optional[str] = None) -> float:

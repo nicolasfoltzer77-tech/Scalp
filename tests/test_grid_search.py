@@ -3,7 +3,7 @@ import random
 
 import pytest
 
-from backtest import grid_search
+from scalper.backtest import grid_search
 
 
 def test_build_grid_sampling():
