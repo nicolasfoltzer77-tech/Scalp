@@ -1,10 +1,11 @@
 # scalp/live/loops/trade.py
 from __future__ import annotations
-import asyncio, time, os
+import asyncio, os
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Callable
 
 from ...services.utils import safe_call
+from ...risk.manager import compute_size
 
 QUIET = int(os.getenv("QUIET", "0") or "0")
 PRINT_OHLCV_SAMPLE = int(os.getenv("PRINT_OHLCV_SAMPLE", "0") or "0")
@@ -58,6 +59,12 @@ class TradeLoop:
         self.ctx = SymbolContext(symbol, timeframe)
         self._tick_add = tick_counter_add
 
+        # Risk/frais
+        self.risk_pct = float(self.config.get("risk_pct", 0.5))
+        self.caps_by_symbol = self.config.get("caps", {})  # dict optionnel
+        self.fees_bps = float(self.config.get("fees_bps", 0.0))          # ex: 5 bps = 0.05%
+        self.slippage_bps = float(self.config.get("slippage_bps", 0.0))  # idem
+
     async def run(self, running: Callable[[], bool]):
         lookback = 200
         while running():
@@ -84,15 +91,16 @@ class TradeLoop:
                     print(f"[trade:{self.symbol}] generate_signal error: {e}", flush=True)
                 await asyncio.sleep(0.5); continue
 
-            side = sig.get("side","flat"); entry = sig.get("entry", c); sl = sig.get("sl"); tp = sig.get("tp")
+            side = sig.get("side","flat"); entry = float(sig.get("entry", c)); sl = sig.get("sl"); tp = sig.get("tp")
             self.log_signals.write_row({"ts": ts, "symbol": self.symbol, "side": side, "entry": entry, "sl": sl, "tp": tp, "last": c})
 
-            # Entrée
+            # --- Entrée
             if self.ctx.fsm.state == "FLAT" and side in ("long","short"):
-                balance = self.config.get("cash", 10_000.0)
-                risk_pct = float(self.config.get("risk_pct", 0.5))
-                notionnel = max(0.0, balance * risk_pct)
-                qty = max(0.0, notionnel / max(entry or c, 1e-9))
+                balance = float(self.config.get("cash", 10_000.0))
+                qty = compute_size(
+                    symbol=self.symbol, price=entry or c, balance_cash=balance,
+                    risk_pct=self.risk_pct, caps_by_symbol=self.caps_by_symbol
+                )
                 if qty > 0:
                     async def _place():
                         return await self.order_market(self.symbol, side, qty)
@@ -100,16 +108,23 @@ class TradeLoop:
                     self.ctx.fsm.on_open(side, entry or c, qty)
                     self.log_orders.write_row({"ts": ts, "symbol": self.symbol, "side": side, "qty": qty,
                                                "status": "placed", "order_id": (order or {}).get("id",""), "note": "entry"})
-            # Sortie
+
+            # --- Sortie (flat ou signal opposé)
             elif self.ctx.fsm.state == "OPEN" and (side == "flat" or (side in ("long","short") and side != self.ctx.fsm.side)):
                 qty = self.ctx.fsm.qty
                 exit_side = "sell" if self.ctx.fsm.side == "long" else "buy"
                 async def _close():
                     return await self.order_market(self.symbol, exit_side, qty)
                 order = await safe_call(_close, label=f"close:{self.symbol}")
+
+                # fill avec slippage/frais (simple)
+                price_fill = float(c)
+                # slippage
+                price_fill *= (1 + (self.slippage_bps/10000.0)) if exit_side == "buy" else (1 - (self.slippage_bps/10000.0))
+                # log
                 self.log_orders.write_row({"ts": ts, "symbol": self.symbol, "side": exit_side, "qty": qty,
                                            "status": "placed", "order_id": (order or {}).get("id",""), "note": "exit"})
-                self.log_fills.write_row({"ts": ts, "symbol": self.symbol, "side": exit_side, "price": c, "qty": qty,
+                self.log_fills.write_row({"ts": ts, "symbol": self.symbol, "side": exit_side, "price": price_fill, "qty": qty,
                                           "order_id": (order or {}).get("id","")})
                 self.ctx.fsm.on_close()
 
