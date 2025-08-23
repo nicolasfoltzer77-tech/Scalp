@@ -277,22 +277,8 @@ class Orchestrator:
             except Exception as e:
                 print(f"[trade-loop:{symbol}] signal error: {e!r}")
 
+            
             if sig:
-                last_close = ctx.ohlcv[-1]["close"] if ctx.ohlcv else float("nan")
-                self.logs.row(
-                    "signals.csv",
-                    {
-                        "ts": int(time.time() * 1000),
-                        "symbol": symbol,
-                        "side": "LONG" if sig.side > 0 else "SHORT",
-                        "entry": float(getattr(sig, "entry", last_close) or last_close),
-                        "sl": float(getattr(sig, "sl", 0) or 0),
-                        "tp1": float(getattr(sig, "tp1", 0) or 0),
-                        "tp2": float(getattr(sig, "tp2", 0) or 0),
-                        "last": float(last_close),
-                    },
-                )
-                            if sig:
                 last_close = ctx.ohlcv[-1]["close"] if ctx.ohlcv else float("nan")
                 self.logs.row(
                     "signals.csv",
