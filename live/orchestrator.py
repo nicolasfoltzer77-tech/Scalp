@@ -11,6 +11,7 @@ from typing import Any, Dict, List, Optional, Sequence
 # Adapters / services cœur
 from scalp.adapters.bitget import BitgetFuturesClient
 from scalp.services.order_service import OrderService
+from scalp.services.utils import safe_call, heartbeat_task, log_stats_task  # NEW
 
 # Stratégie
 from scalp.strategy import generate_signal, Signal  # noqa: F401
@@ -31,7 +32,7 @@ from live.position_fsm import (
     STATE_PENDING_EXIT,
 )
 
-# Notification/Commandes découplées (nouveau)
+# Notifications / commandes décorrélées
 from live.notify import Notifier, NullNotifier, TelegramNotifier, CommandStream
 
 
@@ -42,18 +43,20 @@ class SymbolContext:
     ohlcv: List[Dict[str, float]]
     position_open: bool = False
     last_signal_ts: float = 0.0
+    ticks: int = 0  # NEW : compteur de ticks reçus
 
 
 # =========================  ORCHESTRATEUR  =========================
 class Orchestrator:
     """
-    Orchestrateur asyncio MINCE :
+    Orchestrateur asyncio :
       - Watchlist TOP10 USDT (boot + refresh)
       - Service OHLCV (normalisation/fallback)
       - Journal CSV (signals, orders, fills, positions, watchlist)
       - Exécution d’ordres via OrderExecutor (sizing + OrderService)
       - FSM positions + persistance JSON (reprise après crash)
-      - Notifications / commandes **découplées** via Notifier & CommandStream
+      - Notifications / commandes via Notifier & CommandStream
+      - Robustesse : tous les IO passent par safe_call() + stats périodiques
     """
 
     def __init__(
@@ -92,14 +95,14 @@ class Orchestrator:
         self._fsm = PositionFSM(self.symbols)
         self.state = StateStore(os.path.join(log_dir, "state.json"), period_s=10.0)
 
-        # Watchlist (TOP10 USDT)
+        # Watchlist (TOP10 USDT) – fallback statique si API vide
         self._watch = WatchlistManager(
             exchange=self.exchange,
             only_suffix="USDT",
             top_n=10,
             period_s=120.0,
             on_update=self._apply_symbols_update,
-            safe_call=lambda f, label: self._safe(f, label=label),
+            safe_call=lambda f, label: safe_call(f, label=label, running_flag=lambda: self._running),
         )
 
         # DEBUG: écrire des lignes "NONE" dans signals.csv si aucun signal (pour valider le pipeline)
@@ -131,36 +134,6 @@ class Orchestrator:
             except Exception:
                 pass
 
-    # --------------------- Utilitaires ---------------------
-    async def _sleep(self, secs: float) -> None:
-        try:
-            await asyncio.sleep(secs)
-        except asyncio.CancelledError:
-            pass
-
-    async def _safe(
-        self,
-        factory,
-        *,
-        label: str,
-        backoff: float = 1.0,
-        backoff_max: float = 30.0,
-    ):
-        """Retry exponentiel commun (sync/async)."""
-        delay = backoff
-        while self._running:
-            try:
-                res = factory()
-                if asyncio.iscoroutine(res):
-                    return await res
-                return res
-            except asyncio.CancelledError:
-                raise
-            except Exception as e:
-                print(f"[orchestrator] {label} failed: {e!r}, retry in {delay:.1f}s")
-                await self._sleep(delay)
-                delay = min(backoff_max, delay * 1.7)
-
     # ----------------- Watchlist update hook -----------------
     def _apply_symbols_update(self, new_syms: Sequence[str]) -> None:
         ns = [s.replace("_", "").upper() for s in new_syms]
@@ -183,16 +156,14 @@ class Orchestrator:
         asyncio.create_task(self.notifier.send(f"🔝 Watchlist: {joined}"))
 
     # --------------------- Tasks principales ---------------------
-    async def _task_heartbeat(self):
-        while self._running:
-            self._heartbeat_ts = time.time()
-            print("[heartbeat] alive")
-            await self._sleep(15)
-
     async def _task_positions_sync(self):
         while self._running:
             try:
-                pos = await self._safe(lambda: self.exchange.get_open_positions(None), label="get_open_positions")
+                pos = await safe_call(
+                    lambda: self.exchange.get_open_positions(None),
+                    label="get_open_positions",
+                    running_flag=lambda: self._running,
+                )
                 pos_list = pos.get("data") if isinstance(pos, dict) else []
 
                 fills_by_sym: Dict[str, List[Dict[str, Any]]] = {}
@@ -227,25 +198,34 @@ class Orchestrator:
             except Exception as e:
                 print(f"[positions] sync error: {e!r}")
 
-            await self._sleep(5.0)
+            await asyncio.sleep(5.0)
 
     async def _task_trade_loop(self, symbol: str):
         ctx = self.ctx[symbol]
         print(f"[trade-loop] start {symbol}")
 
-        boot = await self._safe(lambda: self.ohlcv.fetch_once(symbol, "1m", 200), label=f"ohlcv_boot:{symbol}")
+        boot = await safe_call(
+            lambda: self.ohlcv.fetch_once(symbol, "1m", 200),
+            label=f"ohlcv_boot:{symbol}",
+            running_flag=lambda: self._running,
+        )
         ctx.ohlcv = self.ohlcv.normalize_rows(boot or [])
         if ctx.ohlcv:
             print(f"[debug:{symbol}] ohlcv sample -> dict={list(ctx.ohlcv[0].keys())}")
 
         while self._running:
             if self._paused:
-                await self._sleep(1.0)
+                await asyncio.sleep(1.0)
                 continue
 
-            tail = await self._safe(lambda: self.ohlcv.fetch_once(symbol, "1m", 2), label=f"ohlcv_tail:{symbol}")
+            tail = await safe_call(
+                lambda: self.ohlcv.fetch_once(symbol, "1m", 2),
+                label=f"ohlcv_tail:{symbol}",
+                running_flag=lambda: self._running,
+            )
             if tail:
                 ctx.ohlcv = (self.ohlcv.normalize_rows(ctx.ohlcv) + self.ohlcv.normalize_rows(tail))[-400:]
+                ctx.ticks += 1  # NEW : incrément tick
 
             # --- Appel stratégie (3 formes tolérées)
             sig: Optional[Signal] = None
@@ -285,7 +265,6 @@ class Orchestrator:
                         "last": float(last_close),
                     },
                 )
-                # info console + notifier
                 side_str = "LONG" if sig.side > 0 else "SHORT"
                 print(f"[signal] {symbol} -> {side_str} entry={last_close}")
                 await self.notifier.send(f"📈 {symbol}: {side_str} @ {last_close}")
@@ -318,7 +297,7 @@ class Orchestrator:
                     min_notional = float(getattr(self.config, "MIN_TRADE_USDT", 5) or 5)
 
                     if self.orders.get_equity_usdt() * risk_pct < min_notional:
-                        await self._sleep(1.0)
+                        await asyncio.sleep(1.0)
                         continue
                     if time.time() - ctx.last_signal_ts < 5.0:
                         continue
@@ -353,9 +332,8 @@ class Orchestrator:
                 except Exception as e:
                     print(f"[trade-loop:{symbol}] order error: {e!r}")
 
-            await self._sleep(1.0)
+            await asyncio.sleep(1.0)
 
-    # --------------------- Commandes (remplace l'ancien _task_telegram) ---------------------
     async def _task_commands(self):
         await self.notifier.send("Orchestrator started ✅\nCommands: /status • /pause • /resume • /stop")
         assert self._cmd_stream is not None
@@ -408,7 +386,7 @@ class Orchestrator:
             except NotImplementedError:
                 pass
 
-        # TOPN immédiat au boot
+        # Watchlist au boot
         try:
             top = await self._watch.boot_topN()
             print(f"[watchlist] boot got: {top}")
@@ -420,9 +398,17 @@ class Orchestrator:
         # démarrage notifier
         await self.notifier.start()
 
-        # Tasks
+        # Tasks système (heartbeat + stats + autosave)
         self._tasks = [
-            asyncio.create_task(self._task_heartbeat(), name="heartbeat"),
+            asyncio.create_task(heartbeat_task(lambda: self._running), name="heartbeat"),
+            asyncio.create_task(
+                log_stats_task(
+                    lambda: self._running,
+                    get_ticks=lambda: sum(c.ticks for c in self.ctx.values()),
+                    get_pairs=lambda: len(self.symbols),
+                ),
+                name="stats",
+            ),
             asyncio.create_task(self._watch.task_auto_refresh(), name="watchlist"),
             asyncio.create_task(self._task_positions_sync(), name="positions"),
             asyncio.create_task(self.state.task_autosave(self._snapshot_state), name="state-save"),
@@ -449,7 +435,6 @@ class Orchestrator:
                 t.cancel()
             except Exception:
                 pass
-        # arrêt bus commandes + notifier
         try:
             if self._cmd_stream:
                 await self._cmd_stream.stop()
