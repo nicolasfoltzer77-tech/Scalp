@@ -14,6 +14,7 @@ from scalper.live.watchlist import WatchlistManager
 from scalper.services.utils import heartbeat_task, log_stats_task
 from scalper.exchange.fees import load_bitget_fees
 from scalper.signals.factory import load_signal
+from scalper.live.backtest_telegram import handle_backtest_command
 
 # --- Logs CSV utilitaires ----------------------------------------------------
 import csv
