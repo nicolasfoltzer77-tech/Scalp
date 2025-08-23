@@ -11,13 +11,17 @@ from urllib.error import URLError, HTTPError
 
 import pandas as pd
 
+# ---------------------------------------------------------------------------
+# Debug
+# ---------------------------------------------------------------------------
 BT_DEBUG = int(os.getenv("BT_DEBUG", "0") or "0")
-
 def _log(msg: str) -> None:
     if BT_DEBUG:
         print(f"[bt.debug] {msg}", flush=True)
 
-# ---------------- CSV utils ----------------
+# ---------------------------------------------------------------------------
+# CSV helpers
+# ---------------------------------------------------------------------------
 def _csv_path(data_dir: str | Path, symbol: str, timeframe: str) -> Path:
     root = Path(data_dir)
     root.mkdir(parents=True, exist_ok=True)
@@ -43,7 +47,9 @@ def _write_csv(path: Path, df: pd.DataFrame) -> None:
     tmp.to_csv(path, index=False)
     _log(f"écrit CSV: {path} (n={len(df)})")
 
-# -------------- OHLCV normalize --------------
+# ---------------------------------------------------------------------------
+# Normalisation OHLCV → DataFrame
+# ---------------------------------------------------------------------------
 def _rows_to_df(rows: Iterable[Iterable[float]]) -> pd.DataFrame:
     rows = list(rows)
     if not rows:
@@ -55,20 +61,24 @@ def _rows_to_df(rows: Iterable[Iterable[float]]) -> pd.DataFrame:
     _log(f"→ OHLCV normalisé: n={len(df)}, t0={df.index.min()}, t1={df.index.max()}")
     return df
 
-# -------------- Exchange direct --------------
+# ---------------------------------------------------------------------------
+# 1) Source: exchange.fetch_ohlcv si dispo
+# ---------------------------------------------------------------------------
 def fetch_ohlcv_via_exchange(exchange: Any, symbol: str, timeframe: str, *, limit: int = 1000) -> pd.DataFrame:
     if not hasattr(exchange, "fetch_ohlcv"):
         raise AttributeError("exchange.fetch_ohlcv introuvable")
     _log(f"fetch via exchange.fetch_ohlcv: symbol={symbol} tf={timeframe} limit={limit}")
-    rows = exchange.fetch_ohlcv(symbol, timeframe=timeframe, limit=limit)
+    rows = exchange.fetch_ohlcv(symbol, timeframe=timeframe, limit=limit)  # [[ts,o,h,l,c,v], ...]
     return _rows_to_df(rows)
 
-# ---------------- Bitget HTTP helpers ----------------
-_GRAN_MIX = {
+# ---------------------------------------------------------------------------
+# 2) Source: HTTP Bitget (v2 prioritaire, v1 fallback)
+# ---------------------------------------------------------------------------
+_GRAN_MIX = {  # mix: granularity
     "1m": "1min", "3m": "3min", "5m": "5min", "15m": "15min",
     "30m": "30min", "1h": "1h", "4h": "4h", "1d": "1day",
 }
-_PERIOD_SPOT = {
+_PERIOD_SPOT = {  # spot: period
     "1m": "1min", "3m": "3min", "5m": "5min", "15m": "15min",
     "30m": "30min", "1h": "1hour", "4h": "4hour", "1d": "1day",
 }
@@ -78,17 +88,17 @@ _TF_SECS = {
 }
 
 def _http_get(url: str, timeout: int = 20) -> dict | list:
-    req = Request(url, headers={"User-Agent": "scalper-backtest/2.0"})
+    req = Request(url, headers={"User-Agent": "scalper-backtest/2.1"})
     with urlopen(req, timeout=timeout) as resp:
         return json.loads(resp.read().decode("utf-8"))
 
 def _sym_variants(sym: str) -> List[Tuple[str, Optional[str]]]:
     """
-    Retourne (symbol, productType) pour les essais:
-    - (BTCUSDT_UMCBL, None)
-    - (BTCUSDT, 'umcbl')          # v2 mix accepte productType si pas de suffixe
-    - (BTCUSDT_SPBL, None)
-    - (BTCUSDT, 'spbl')           # spot v2 si besoin
+    (symbol, productType)
+    - BTCUSDT_UMCBL / None
+    - BTCUSDT / 'umcbl'
+    - BTCUSDT_SPBL / None
+    - BTCUSDT / 'spbl'
     """
     s = sym.upper()
     out: List[Tuple[str, Optional[str]]] = []
@@ -96,13 +106,11 @@ def _sym_variants(sym: str) -> List[Tuple[str, Optional[str]]]:
     out.append((s, "umcbl"))
     out.append((s + "_SPBL", None))
     out.append((s, "spbl"))
-    # garde uniques
-    seen = set()
-    uniq = []
-    for item in out:
-        if item not in seen:
-            seen.add(item)
-            uniq.append(item)
+    # uniques
+    uniq, seen = [], set()
+    for t in out:
+        if t not in seen:
+            uniq.append(t); seen.add(t)
     return uniq
 
 def _normalize_http_rows(data: dict | list) -> list[list[float]]:
@@ -117,32 +125,13 @@ def _normalize_http_rows(data: dict | list) -> list[list[float]]:
     out.sort(key=lambda x: x[0])
     return out
 
-def _build_urls_mix_v2(base: str, *, symbol: str, product: Optional[str],
-                       granularity: str, limit: int, start_ms: int, end_ms: int) -> list[str]:
+def _build_url_v2(base: str, *, symbol: str, product: Optional[str],
+                  tf_key: str, tf_val: str, limit: int, start_ms: int, end_ms: int) -> str:
     qsym = f"symbol={symbol}"
     qprod = f"&productType={product}" if product else ""
-    qtf = f"&granularity={granularity}"
+    qtf = f"&{tf_key}={tf_val}"
     qlim = f"&limit={limit}"
-    # différentes variantes de bornes
-    urls = [
-        f"{base}?{qsym}{qprod}{qtf}{qlim}&startTime={start_ms}&endTime={end_ms}",
-        f"{base}?{qsym}{qprod}{qtf}{qlim}&startTime={start_ms}",
-        f"{base}?{qsym}{qprod}{qtf}{qlim}",
-    ]
-    return urls
-
-def _build_urls_spot_v2(base: str, *, symbol: str, product: Optional[str],
-                        period: str, limit: int, start_ms: int, end_ms: int) -> list[str]:
-    qsym = f"symbol={symbol}"
-    qprod = f"&productType={product}" if product else ""  # souvent ignoré côté spot, mais inoffensif
-    qtf = f"&period={period}"
-    qlim = f"&limit={limit}"
-    urls = [
-        f"{base}?{qsym}{qprod}{qtf}{qlim}&startTime={start_ms}&endTime={end_ms}",
-        f"{base}?{qsym}{qprod}{qtf}{qlim}&after={start_ms}",   # certaines variantes utilisent 'after'
-        f"{base}?{qsym}{qprod}{qtf}{qlim}",
-    ]
-    return urls
+    return f"{base}?{qsym}{qprod}{qtf}{qlim}&startTime={start_ms}&endTime={end_ms}"
 
 def fetch_ohlcv_via_http_bitget(
     symbol: str,
@@ -151,10 +140,9 @@ def fetch_ohlcv_via_http_bitget(
     limit: int = 1000,
     market_hint: Optional[str] = None,  # "mix" | "spot" | None
     timeout: int = 20,
-    max_retries: int = 2,
 ) -> pd.DataFrame:
     """
-    HTTP Bitget (priorité v2, fallback v1) avec fenêtre temporelle auto.
+    Bitget HTTP v2 (`history-candles`) + fallback v1, avec start/end obligatoires en v2.
     """
     tf = timeframe.lower().strip()
     mix_g = _GRAN_MIX.get(tf)
@@ -168,17 +156,15 @@ def fetch_ohlcv_via_http_bitget(
     start = now - window
     end = now
 
-    # endpoints
-    MIX_V2 = ["https://api.bitget.com/api/mix/v2/market/candles",
-              "https://api.bitget.com/api/mix/v2/market/history-candles"]
-    MIX_V1 = ["https://api.bitget.com/api/mix/v1/market/candles",
-              "https://api.bitget.com/api/mix/v1/market/history-candles"]
-    SPOT_V2 = ["https://api.bitget.com/api/spot/v2/market/candles"]
+    # endpoints (v2 history-candles, v1 candles/history-candles)
+    MIX_V2 = ["https://api.bitget.com/api/mix/v2/market/history-candles"]
+    MIX_V1 = ["https://api.bitget.com/api/mix/v1/market/history-candles",
+              "https://api.bitget.com/api/mix/v1/market/candles"]
+    SPOT_V2 = ["https://api.bitget.com/api/spot/v2/market/history-candles"]
     SPOT_V1 = ["https://api.bitget.com/api/spot/v1/market/candles"]
 
-    # plan d’essais
+    # ordre d’essais
     plans: list[tuple[str, str]] = []
-    # priorité selon hint
     if (market_hint or "").lower() == "mix":
         plans += [("mix_v2", u) for u in MIX_V2] + [("mix_v1", u) for u in MIX_V1]
         plans += [("spot_v2", u) for u in SPOT_V2] + [("spot_v1", u) for u in SPOT_V1]
@@ -192,38 +178,40 @@ def fetch_ohlcv_via_http_bitget(
     last_err: Optional[Exception] = None
     for kind, base in plans:
         is_mix = kind.startswith("mix")
-        is_spot = kind.startswith("spot")
+        tf_key, tf_val = ("granularity", mix_g) if is_mix else ("period", spot_p)
         for sym, product in _sym_variants(symbol):
-            urls = (
-                _build_urls_mix_v2(base, symbol=sym, product=product if is_mix else None,
-                                   granularity=mix_g, limit=int(limit),
-                                   start_ms=start, end_ms=end)
-                if is_mix else
-                _build_urls_spot_v2(base, symbol=sym, product=product if is_spot else None,
-                                    period=spot_p, limit=int(limit),
-                                    start_ms=start, end_ms=end)
-            )
-            for url in urls:
-                for attempt in range(max_retries + 1):
-                    try:
-                        _log(f"HTTP {kind}: GET {url}")
-                        data = _http_get(url, timeout=timeout)
-                        if isinstance(data, dict) and "code" in data and str(data["code"]) != "00000" and "data" not in data:
-                            raise RuntimeError(f"Bitget error {data.get('code')}: {data.get('msg')}")
-                        rows = _normalize_http_rows(data)
-                        if not rows:
-                            raise ValueError("Réponse vide")
-                        _log(f"HTTP OK via {kind} {sym} ({len(rows)} bougies) "
-                             f"range=[{rows[0][0]} .. {rows[-1][0]}] (ms)")
-                        return _rows_to_df(rows)
-                    except (URLError, HTTPError, ValueError, KeyError, RuntimeError) as e:
-                        last_err = e
-                        _log(f"HTTP fail ({kind}): {e} (retry {attempt}/{max_retries})")
-                        time.sleep(min(2 ** attempt, 5))
-                        continue
+            try:
+                if kind.endswith("_v2"):
+                    url = _build_url_v2(base, symbol=sym, product=product if is_mix else None,
+                                        tf_key=tf_key, tf_val=tf_val,
+                                        limit=int(limit), start_ms=start, end_ms=end)
+                else:
+                    # v1 : start/end facultatifs, on tente d’abord avec
+                    qsym = f"symbol={sym}"
+                    qtf = f"&{tf_key}={tf_val}"
+                    qlim = f"&limit={int(limit)}"
+                    qprod = f"&productType={product}" if (product and is_mix) else ""
+                    url = f"{base}?{qsym}{qprod}{qtf}{qlim}&startTime={start}&endTime={end}"
+                _log(f"HTTP {kind}: GET {url}")
+                data = _http_get(url, timeout=timeout)
+                if isinstance(data, dict) and "code" in data and str(data["code"]) != "00000" and "data" not in data:
+                    raise RuntimeError(f"Bitget error {data.get('code')}: {data.get('msg')}")
+                rows = _normalize_http_rows(data)
+                if not rows:
+                    raise ValueError("Réponse vide")
+                _log(f"HTTP OK via {kind} {sym} ({len(rows)} bougies) "
+                     f"range=[{rows[0][0]} .. {rows[-1][0]}] (ms)")
+                return _rows_to_df(rows)
+            except (URLError, HTTPError, ValueError, KeyError, RuntimeError) as e:
+                last_err = e
+                _log(f"HTTP fail ({kind}): {e}")
+                continue
+
     raise last_err or RuntimeError(f"Bitget OHLCV HTTP KO pour {symbol} {timeframe}")
 
-# -------------- Loader hybride --------------
+# ---------------------------------------------------------------------------
+# Loader hybride : CSV → exchange → HTTP (v2/v1), cache CSV
+# ---------------------------------------------------------------------------
 def hybrid_loader(
     data_dir: str = "data",
     *,
@@ -266,6 +254,7 @@ def hybrid_loader(
 
     return load
 
+# compat (appelée par backtest_telegram)
 def hybrid_loader_from_exchange(
     exchange: Any,
     data_dir: str = "data",
