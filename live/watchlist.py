@@ -1,19 +1,22 @@
 # scalp/live/watchlist.py
 from __future__ import annotations
-import os
+
 import asyncio
-from typing import Any, Callable, List, Optional, Sequence, Tuple
+import os
+from typing import Any, Callable, Awaitable, List, Optional, Sequence, Tuple
 
 DBG = os.getenv("WATCHLIST_DEBUG", "0") == "1"
 def _dprint(msg: str):
     if DBG:
         print(f"[watchlist:debug] {msg}")
 
+
 class WatchlistManager:
     """
-    TOP N par volume (suffixe USDT par défaut).
-    - boot_topN(): construit la liste au démarrage (avec fallbacks agressifs)
-    - task_auto_refresh(): rafraîchit périodiquement
+    Génération de watchlist TOP N :
+      - mode='local'  : calcule TOPN via OHLCV (volume quote ~ 24h)
+      - mode='api'    : utilise un endpoint bulk (si disponible)
+      - mode='static' : valeurs fixes (TOP_SYMBOLS ou défaut)
     """
 
     def __init__(
@@ -25,55 +28,39 @@ class WatchlistManager:
         period_s: float = 120.0,
         on_update: Optional[Callable[[Sequence[str]], None]] = None,
         safe_call: Optional[Callable[[Callable[[], Any], str], Any]] = None,
+        ohlcv_fetch: Optional[Callable[[str, str, int], Awaitable[List[Any]]]] = None,
     ) -> None:
         self.exchange = exchange
         self.only_suffix = only_suffix.upper() if only_suffix else ""
         self.top_n = top_n
         self.period_s = period_s
         self.on_update = on_update
-        self._running = False
-        # Doit être une coroutine fournie par l’orchestrateur (self._safe)
         self._safe = safe_call or (lambda f, _label: f())
+        self._running = False
+        self._ohlcv_fetch = ohlcv_fetch
+        self.mode = (os.getenv("WATCHLIST_MODE") or "static").lower()  # static | api | local
 
-    # ---------- recherche récursive de la 1ère liste ----------
-    def _find_first_list(self, obj: Any, depth: int = 0, path: str = "$") -> List[Any]:
-        """
-        Explore récursivement (profondeur <=3) pour trouver une liste exploitable.
-        On privilégie les clés usuelles: data, result, tickers, items, list, tickerList, records.
-        """
-        if obj is None or depth > 3:
+    # ---------- extraction API générique ----------
+    @staticmethod
+    def _extract_items(payload: Any) -> List[Any]:
+        if payload is None:
             return []
-
-        # cas direct: déjà une liste
-        if isinstance(obj, (list, tuple)):
-            _dprint(f"found list at path {path} (len={len(obj)})")
-            return list(obj)
-
-        if isinstance(obj, dict):
-            # 1) clés prioritaires
-            preferred = ["data", "result", "tickers", "items", "list", "tickerList", "records"]
-            for k in preferred:
-                if k in obj:
-                    v = obj.get(k)
-                    if isinstance(v, (list, tuple)):
-                        _dprint(f"found list at path {path}.{k} (len={len(v)})")
-                        return list(v)
-                    if isinstance(v, dict):
-                        res = self._find_first_list(v, depth + 1, f"{path}.{k}")
-                        if res:
-                            return res
-            # 2) sinon on parcourt toutes les valeurs
-            for k, v in obj.items():
-                if isinstance(v, (list, tuple)):
-                    _dprint(f"found list at path {path}.{k} (len={len(v)})")
-                    return list(v)
+        if isinstance(payload, dict):
+            for k in ("data", "result", "tickers", "items", "list", "tickerList", "records"):
+                v = payload.get(k)
+                if isinstance(v, list):
+                    return v
                 if isinstance(v, dict):
-                    res = self._find_first_list(v, depth + 1, f"{path}.{k}")
-                    if res:
-                        return res
+                    # un niveau de plus
+                    for kk in ("data", "result", "tickers", "items", "list", "tickerList", "records"):
+                        vv = v.get(kk)
+                        if isinstance(vv, list):
+                            return vv
+            return []
+        if isinstance(payload, (list, tuple)):
+            return list(payload)
         return []
 
-    # ---------- normalisation d’un item ticker ----------
     @staticmethod
     def _norm_symbol_and_volume(item: Any) -> Tuple[str, float]:
         if isinstance(item, dict):
@@ -93,9 +80,7 @@ class WatchlistManager:
             return "", 0.0
 
     def _pick_top(self, payload: Any) -> List[str]:
-        items = self._find_first_list(payload, 0, "$")
-        if DBG and isinstance(payload, dict):
-            _dprint(f"top picking from dict keys={list(payload.keys())[:8]}")
+        items = self._extract_items(payload)
         pairs: List[Tuple[str, float]] = []
         for it in items:
             s, v = self._norm_symbol_and_volume(it)
@@ -107,36 +92,75 @@ class WatchlistManager:
         pairs.sort(key=lambda x: x[1], reverse=True)
         return [s for s, _ in pairs[: self.top_n]]
 
-    # ---------- boot / refresh ----------
-    async def boot_topN(self) -> List[str]:
-        
-        #Fallback robuste : si l'API ne renvoie rien d'exploitable,
-        #on lit TOP_SYMBOLS depuis l'env, sinon un TOP10 par défaut.
-        
-        # 1) Essai API (garde si fonctionnel chez toi un jour)
-        try:
-            payload = await self._safe(lambda: self.exchange.get_ticker(None), "get_ticker(None)")
-            top = self._pick_top(payload)
-            if top:
-                if self.on_update: self.on_update(top)
-                return top
-        except Exception:
-            pass
-
-        # 2) Env override
-        env_syms = (os.getenv("TOP_SYMBOLS") or "").replace(" ", "")
-        if env_syms:
-            top = [s for s in env_syms.split(",") if s]
-            top = [s.replace("_","").upper() for s in top][: self.top_n]
+    # ---------- TOPN local via OHLCV ----------
+    async def _build_top_local(self) -> List[str]:
+        if not self._ohlcv_fetch:
+            return []
+        # candidates : env ou liste par défaut (~40 liquides)
+        raw = (os.getenv("TOP_CANDIDATES") or "")
+        if raw:
+            candidates = [s.strip().upper().replace("_", "") for s in raw.split(",") if s.strip()]
         else:
-            # 3) TOP10 par défaut (futures USDT liquides)
-            top = ["BTCUSDT","ETHUSDT","SOLUSDT","BNBUSDT","XRPUSDT",
-                   "DOGEUSDT","ADAUSDT","TRXUSDT","TONUSDT","LTCUSDT"][: self.top_n]
+            candidates = [
+                "BTCUSDT","ETHUSDT","SOLUSDT","BNBUSDT","XRPUSDT","DOGEUSDT","ADAUSDT","TRXUSDT","TONUSDT","LTCUSDT",
+                "LINKUSDT","ARBUSDT","OPUSDT","APTUSDT","SUIUSDT","PEPEUSDT","AVAXUSDT","DOTUSDT","MATICUSDT","ATOMUSDT",
+                "NEARUSDT","SEIUSDT","RUNEUSDT","TIAUSDT","WIFUSDT","JUPUSDT","ICPUSDT","FILUSDT","ETCUSDT","BCHUSDT",
+                "XLMUSDT","HBARUSDT","EOSUSDT","TRBUSDT","AAVEUSDT","UNIUSDT","FLOWUSDT","RNDRUSDT","ORDIUSDT","SEIUSDT",
+            ]
+        sem = asyncio.Semaphore(int(os.getenv("WATCHLIST_LOCAL_CONC", "5")))
 
-        # log debug
-        if os.getenv("WATCHLIST_DEBUG","0") == "1":
-            print(f"[watchlist:debug] using static TOP{len(top)} = {top}")
+        async def score(sym: str) -> Tuple[str, float]:
+            async with sem:
+                try:
+                    rows = await self._ohlcv_fetch(sym, "1m", 1440)
+                    tot = 0.0
+                    for r in rows or []:
+                        if isinstance(r, dict):
+                            tot += float(r.get("close", 0.0)) * float(r.get("volume", 0.0))
+                        else:
+                            tot += float(r[4]) * float(r[5])  # [.., close, volume]
+                    return sym, tot
+                except Exception:
+                    return sym, 0.0
 
+        scores = await asyncio.gather(*(score(s) for s in candidates))
+        scores.sort(key=lambda x: x[1], reverse=True)
+        top = [s for s, v in scores if s.endswith(self.only_suffix)][: self.top_n]
+        if DBG:
+            _dprint(f"local scores top={top[:5]}")
+        return top
+
+    # ---------- public ----------
+    async def boot_topN(self) -> List[str]:
+        # 1) local (réel) si demandé
+        if self.mode == "local":
+            try:
+                top = await self._build_top_local()
+                if top:
+                    if self.on_update: self.on_update(top)
+                    return top
+            except Exception as e:
+                _dprint(f"local mode error: {e!r}")
+
+        # 2) api (si un bulk existe un jour)
+        if self.mode in ("api", "local"):
+            try:
+                payload = await self._safe(lambda: self.exchange.get_ticker(None), "get_ticker(None)")
+                _dprint(f"payload via get_ticker(None): type={type(payload).__name__}")
+                top = self._pick_top(payload)
+                if top:
+                    if self.on_update: self.on_update(top)
+                    return top
+            except Exception as e:
+                _dprint(f"api mode error: {e!r}")
+
+        # 3) fallback statique
+        env_syms = (os.getenv("TOP_SYMBOLS") or "").replace(" ", "")
+        top = [s for s in env_syms.split(",") if s] if env_syms else \
+              ["BTCUSDT","ETHUSDT","SOLUSDT","BNBUSDT","XRPUSDT","DOGEUSDT","ADAUSDT","TRXUSDT","TONUSDT","LTCUSDT"]
+        top = [s.replace("_", "").upper() for s in top][: self.top_n]
+        if DBG:
+            _dprint(f"using static TOP{len(top)} = {top}")
         if self.on_update: self.on_update(top)
         return top
 
