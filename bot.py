@@ -8,88 +8,83 @@ import sys
 import subprocess
 from typing import Any, Dict, Tuple
 
-# -----------------------------------------------------------------------------
-# ccxt : install auto si absent
-# -----------------------------------------------------------------------------
+# ---------------------------------------------------------------------
+# ccxt : installation auto si besoin
+# ---------------------------------------------------------------------
 def ensure_ccxt() -> None:
     try:
         import ccxt  # noqa: F401
         import ccxt.async_support  # noqa: F401
     except ImportError:
         print("[i] ccxt non installé, tentative d'installation...")
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "ccxt>=4.0.0"])
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "ccxt>=4.0.0"])
         import ccxt  # noqa: F401
         import ccxt.async_support  # noqa: F401
 
 ensure_ccxt()
 import ccxt.async_support as ccxt  # type: ignore
 
-# -----------------------------------------------------------------------------
-# Config
-# -----------------------------------------------------------------------------
+# ---------------------------------------------------------------------
+# Config (avec fallback)
+# ---------------------------------------------------------------------
 try:
-    # après ton refactor, c'est bien ce chemin-là
-    from scalper.config import load_settings
+    from scalper.config import load_settings  # doit retourner (config, secrets)
 except Exception:
-    # fallback si jamais ton loader est ailleurs
     def load_settings() -> Tuple[Dict[str, Any], Dict[str, Any]]:
-        # minimal: vide
+        # Fallback mini : aucune config, aucune clé
         return {}, {}
 
-# -----------------------------------------------------------------------------
-# Orchestrateur (il gère lui-même Telegram & commandes)
-# -----------------------------------------------------------------------------
+# ---------------------------------------------------------------------
+# Orchestrateur (gère Telegram en interne)
+# ---------------------------------------------------------------------
 from scalper.live.orchestrator import run_orchestrator
 
-# -----------------------------------------------------------------------------
-# Utilitaires
-# -----------------------------------------------------------------------------
+# ---------------------------------------------------------------------
+# Pré-chauffage cache CSV persistant
+# ---------------------------------------------------------------------
+from scalper.hooks.prewarm_cache import prewarm_from_config
+
+
 def env_bool(name: str, default: str = "0") -> bool:
     return (os.getenv(name, default) or "").strip().lower() not in ("0", "false", "no", "")
 
 
-# -----------------------------------------------------------------------------
-# Création exchange Bitget (ccxt async)
-# -----------------------------------------------------------------------------
 async def make_bitget(secrets: Dict[str, Any], config: Dict[str, Any]):
+    """
+    Crée un client CCXT Bitget (async). Si aucune clé, client public (OK pour OHLCV).
+    Secrets acceptés : BITGET_API_KEY / _SECRET / _PASSWORD (ou apiKey/secret/password).
+    """
     api_key = secrets.get("BITGET_API_KEY") or secrets.get("apiKey")
     secret = secrets.get("BITGET_API_SECRET") or secrets.get("secret")
     password = secrets.get("BITGET_API_PASSWORD") or secrets.get("password")  # Bitget = "password"
 
     params = {
-        "apiKey": api_key,
-        "secret": secret,
-        "password": password,
-        # options ccxt utiles
         "enableRateLimit": True,
         "timeout": int(config.get("HTTP_TIMEOUT_MS", 30000)),
     }
-    # enlève les champs None
-    params = {k: v for k, v in params.items() if v}
+    if api_key and secret:
+        params.update({"apiKey": api_key, "secret": secret})
+        if password:
+            params["password"] = password
 
-    # Si pas de clés → client public (OK pour OHLCV)
-    ex = ccxt.bitget(params)
-    return ex
+    return ccxt.bitget(params)
 
 
-# -----------------------------------------------------------------------------
-# Main
-# -----------------------------------------------------------------------------
 async def main() -> None:
-    print("[*] Lancement du bot.py dans /scalp...")
+    print("[*] Lancement du bot.py…")
 
-    # Un peu de debug si besoin
+    # Debug optionnel
     if env_bool("BT_DEBUG", "0"):
         os.environ["BT_DEBUG"] = "1"
 
     # 1) Charge config + secrets
-    config, secrets = load_settings()  # attendu par ton refactor
-    timeframe = str(config.get("timeframe") or os.getenv("TIMEFRAME", "5m"))
+    config, secrets = load_settings()
 
-    # 2) Symbols (fallback si vide)
+    # 2) Timeframe + Symbols
+    timeframe = str(config.get("timeframe") or os.getenv("TIMEFRAME", "5m"))
     symbols = list(config.get("symbols") or [])
     if not symbols:
-        # TOP10 de secours (cohérent avec tes captures)
+        # fallback solide (TOP10 liquides)
         symbols = [
             "BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT",
             "DOGEUSDT", "ADAUSDT", "LTCUSDT", "AVAXUSDT", "LINKUSDT",
@@ -100,29 +95,34 @@ async def main() -> None:
     # 3) Exchange (public si pas de clés)
     exchange = await make_bitget(secrets, config)
 
-    # Gestion arrêt propre (SIGINT/SIGTERM)
-    closing = {"flag": False}
+    # 3.1) Pré-chauffage du cache CSV (persistant, hors-git)
+    try:
+        await prewarm_from_config(exchange, config, symbols, timeframe)
+    except Exception as e:
+        print(f"[cache] prewarm échoué: {e}")
 
-    def _handle_signal(sig, frame):
-        if not closing["flag"]:
-            closing["flag"] = True
-            print("[i] Arrêt demandé, merci de patienter...")
-
-    for s in (signal.SIGINT, signal.SIGTERM):
-        try:
-            signal.signal(s, _handle_signal)
-        except Exception:
-            pass  # selon l’environnement
-
-    # 4) Inject config runtime minimal pour l’orchestrateur
+    # 4) Paramètres par défaut pour l’orchestrateur
     run_config = dict(config)
     run_config.setdefault("symbols", symbols)
     run_config.setdefault("timeframe", timeframe)
-    # paramètres de sizing par défaut si absents
-    run_config.setdefault("cash", 10_000.0)
+    run_config.setdefault("cash", 10_000.0)    # sizing défaut
     run_config.setdefault("risk_pct", 0.05)
 
-    # 5) Run orchestrator (gère notifier/commandes en interne)
+    # Gestion arrêt propre (SIGINT/SIGTERM)
+    stop_flag = {"v": False}
+
+    def _on_signal(sig, frame):
+        if not stop_flag["v"]:
+            stop_flag["v"] = True
+            print("[i] Arrêt demandé…")
+
+    for s in (signal.SIGINT, signal.SIGTERM):
+        try:
+            signal.signal(s, _on_signal)
+        except Exception:
+            pass
+
+    # 5) Run orchestrator (gère Notifier/Telegram en interne)
     try:
         await run_orchestrator(exchange, run_config)
     finally:
