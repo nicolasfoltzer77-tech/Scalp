@@ -1,7 +1,7 @@
 # scalp/live/orchestrator.py
 from __future__ import annotations
 import asyncio, os, time, signal
-from typing import Any, Dict, List, Optional, Callable
+from typing import Any, Dict, List, Optional
 
 from ..services.utils import safe_call, heartbeat_task, log_stats_task
 from .notify import Notifier, CommandStream, build_notifier_and_stream
@@ -15,15 +15,18 @@ QUIET = int(os.getenv("QUIET", "0") or "0")
 LOG_DIR = os.path.join(os.path.dirname(__file__), "logs")
 os.makedirs(LOG_DIR, exist_ok=True)
 
-# Services simples (wrappers vers exchange)
+# ---------------- Services simples ----------------
 class OhlcvService:
     def __init__(self, exchange): self.exchange = exchange
-    async def fetch_once(self, symbol, timeframe="5m", limit=150): return await self.exchange.fetch_ohlcv(symbol, timeframe=timeframe, limit=limit)
+    async def fetch_once(self, symbol, timeframe="5m", limit=150): 
+        return await self.exchange.fetch_ohlcv(symbol, timeframe=timeframe, limit=limit)
 
 class OrderService:
     def __init__(self, exchange): self.exchange = exchange
-    async def market(self, symbol, side, qty): return await self.exchange.create_order(symbol, "market", side, qty)
+    async def market(self, symbol, side, qty): 
+        return await self.exchange.create_order(symbol, "market", side, qty)
 
+# ---------------- Orchestrator ----------------
 class Orchestrator:
     def __init__(self, exchange, config: Dict[str, Any], symbols: Optional[List[str]] = None,
                  notifier: Optional[Notifier] = None, command_stream: Optional[CommandStream] = None):
@@ -33,8 +36,18 @@ class Orchestrator:
 
         # état exécution
         self.mode = "PRELAUNCH"  # PRELAUNCH | RUNNING | PAUSED | STOPPING
-        self.selected = {"strategy": "current", "symbols": symbols or [], "timeframes": [self.config.get("timeframe","5m")], "risk_pct": 0.5}
-        self.config["risk_pct"] = self.selected["risk_pct"]  # pour TradeLoop
+        self.selected = {
+            "strategy": "current",
+            "symbols": symbols or [],
+            "timeframes": [self.config.get("timeframe","5m")],
+            "risk_pct": float(self.config.get("risk_pct", 0.5)),
+        }
+        # defaults risk/frais/slippage
+        self.config.setdefault("risk_pct", self.selected["risk_pct"])
+        self.config.setdefault("fees_bps", float(os.getenv("FEES_BPS", "0") or "0"))
+        self.config.setdefault("slippage_bps", float(os.getenv("SLIPPAGE_BPS", "0") or "0"))
+        # caps par symbole (optionnel : min_qty/min_notional)
+        self.config.setdefault("caps", {})
 
         # notifier / commandes
         self.notifier = notifier
@@ -99,7 +112,6 @@ class Orchestrator:
     async def _positions_sync(self):
         while self.get_running():
             now = int(time.time()*1000)
-            # (placeholder) si tu as un vrai store de positions, rapproche ici
             for s in self.symbols:
                 self.log_pos.write_row({"ts": now, "symbol": s, "state": "N/A", "side": "N/A", "entry": "", "qty": ""})
             await asyncio.sleep(10.0 if QUIET else 3.0)
@@ -116,9 +128,8 @@ class Orchestrator:
         }
 
     def _apply_setup_cfg(self, cfg: Dict):
-        # Appliqué après /setup (ACCEPTER)
         self.selected.update(cfg)
-        self.config["risk_pct"] = float(cfg.get("risk_pct", self.config.get("risk_pct", 0.5)))
+        self.config["risk_pct"] = float(cfg.get("risk_pct", self.config["risk_pct"]))
         self.generate_signal = load_signal(cfg["strategy"])
         self.symbols = list(cfg["symbols"])
         self.timeframe = cfg["timeframes"][0]
@@ -126,11 +137,9 @@ class Orchestrator:
 
     # ---------------- run ----------------
     async def run(self):
-        # notifier/commands si pas fournis
         if not self.notifier or not self.command_stream:
             self.notifier, self.command_stream = await build_notifier_and_stream()
 
-        # signaux OS
         loop = asyncio.get_running_loop()
         for sig in (signal.SIGINT, signal.SIGTERM):
             try: loop.add_signal_handler(sig, lambda s=sig: asyncio.create_task(self.stop(f"os:{s.name}")))
@@ -167,13 +176,11 @@ class Orchestrator:
             on_setup_apply=self._apply_setup_cfg
         )))
 
-        # trade loops (créées à partir des symboles courants)
+        # trade loops (spawn + respawn si modifs)
         trade_tasks: Dict[str, asyncio.Task] = {}
         async def spawn_loops():
-            # (re)spawn en fonction de self.symbols
             for s in list(self.symbols):
-                if s in trade_tasks and not trade_tasks[s].done():
-                    continue
+                if s in trade_tasks and not trade_tasks[s].done(): continue
                 loop_obj = TradeLoop(
                     symbol=s,
                     timeframe=self.timeframe,
@@ -188,15 +195,12 @@ class Orchestrator:
                 trade_tasks[s] = asyncio.create_task(loop_obj.run(self.get_running))
         await spawn_loops()
 
-        # boucle légère de supervision (détecte modifs symboles/timeframe)
         async def supervisor():
             prev_sig = (tuple(self.symbols), self.timeframe, self.generate_signal.__name__)
             while self.get_running():
                 cur_sig = (tuple(self.symbols), self.timeframe, self.generate_signal.__name__)
                 if cur_sig != prev_sig:
-                    # respawn simplifié : annule et relance
-                    for t in trade_tasks.values():
-                        t.cancel()
+                    for t in trade_tasks.values(): t.cancel()
                     trade_tasks.clear()
                     await spawn_loops()
                     prev_sig = cur_sig
