@@ -12,7 +12,6 @@ from scalper.services.utils import safe_call, heartbeat_task, log_stats_task
 from scalper.live.notify import Notifier, CommandStream
 from scalper.live.backtest_telegram import handle_backtest_command
 
-# Watchlist provider (fallback simple si module absent)
 try:
     from scalper.live.watchlist import get_boot_watchlist  # type: ignore
 except Exception:
@@ -27,9 +26,6 @@ LOGS_DIR = Path("scalper/live/logs")
 LOGS_DIR.mkdir(parents=True, exist_ok=True)
 
 
-# ---------------------------------------------------------------------
-# CSV utils — minimalistes
-# ---------------------------------------------------------------------
 def _csv_writer(path: Path, headers: Iterable[str]):
     path.parent.mkdir(parents=True, exist_ok=True)
     if not path.exists():
@@ -39,13 +35,9 @@ def _csv_writer(path: Path, headers: Iterable[str]):
     def append(row: Iterable[Any]):
         with path.open("a", newline="") as f:
             csv.writer(f).writerow(row)
-
     return append
 
 
-# ---------------------------------------------------------------------
-# Orchestrateur affûté (léger mais complet)
-# ---------------------------------------------------------------------
 @dataclass
 class Orchestrator:
     exchange: Any
@@ -60,46 +52,37 @@ class Orchestrator:
     _bg_tasks: List[asyncio.Task] = field(default_factory=list, init=False)
     _per_symbol_tasks: Dict[str, asyncio.Task] = field(default_factory=dict, init=False)
 
-    # CSV writers (créés au boot)
     _w_signals: Any = field(default=None, init=False)
     _w_orders: Any = field(default=None, init=False)
     _w_fills: Any = field(default=None, init=False)
     _w_positions: Any = field(default=None, init=False)
     _w_watchlist: Any = field(default=None, init=False)
 
-    # ---------------- Boot / Stop ----------------
     async def start(self) -> None:
         if self.running:
             return
         self.running = True
 
-        # Watchlist initiale
         if not self.symbols:
             self.symbols = get_boot_watchlist()
         if not QUIET:
             await self.notifier.send(f"[watchlist] boot got: {self.symbols}")
 
-        # Writers CSV
         self._w_signals   = _csv_writer(LOGS_DIR / "signals.csv",   ["ts","symbol","signal","price"])
         self._w_orders    = _csv_writer(LOGS_DIR / "orders.csv",    ["ts","symbol","side","qty","price","status"])
         self._w_fills     = _csv_writer(LOGS_DIR / "fills.csv",     ["ts","symbol","side","qty","price","fee"])
         self._w_positions = _csv_writer(LOGS_DIR / "positions.csv", ["ts","symbol","qty","avg_price","pnl"])
         self._w_watchlist = _csv_writer(LOGS_DIR / "watchlist.csv", ["ts","symbols"])
 
-        # Tâches background (signatures MINIMALES confirmées)
+        # Background tasks — signatures minimales confirmées
+        self._bg_tasks.append(asyncio.create_task(heartbeat_task(lambda: self.running)))
         self._bg_tasks.append(asyncio.create_task(
-            heartbeat_task(lambda: self.running)                # ✅ 1 arg: getter running
-        ))
-        self._bg_tasks.append(asyncio.create_task(
-            log_stats_task(lambda: self.ticks_total,            # ✅ 1er getter: ticks_total
-                           lambda: self.symbols)                # ✅ 2e getter: symbols
+            log_stats_task(lambda: self.ticks_total, lambda: self.symbols)
         ))
 
-        # Boucles par symbole
         for sym in self.symbols:
             self._per_symbol_tasks[sym] = asyncio.create_task(self._symbol_loop(sym))
 
-        # Commandes (Telegram)
         asyncio.create_task(self._commands_loop())
 
         if not QUIET:
@@ -123,7 +106,6 @@ class Orchestrator:
         if not QUIET:
             await self.notifier.send("🔴 Orchestrator stopped.")
 
-    # ---------------- Commandes ----------------
     async def _commands_loop(self) -> None:
         async for cmd in self.cmd_stream:
             try:
@@ -136,7 +118,6 @@ class Orchestrator:
                 elif cmd == "/stop":
                     await self._handle_stop()
                 elif cmd.startswith("/backtest"):
-                    # Déclenche le runner unifié (mono/multi) via handler Telegram
                     await handle_backtest_command(cmd, self, self.notifier)
                 else:
                     await self.notifier.send(f"Commande inconnue: {cmd}")
@@ -163,7 +144,6 @@ class Orchestrator:
         await self.notifier.send("🛑 Stopping…")
         await self.stop()
 
-    # ---------------- Boucle par symbole ----------------
     async def _symbol_loop(self, symbol: str) -> None:
         timeframe = os.getenv("LIVE_TIMEFRAME", "5m")
         limit = int(os.getenv("LIVE_LIMIT", "200"))
@@ -192,7 +172,7 @@ class Orchestrator:
                 self.ticks_total += 1
 
                 await self._maybe_place_order(symbol, sig, last_close)
-                await asyncio.sleep(0)  # yield
+                await asyncio.sleep(0)
             except asyncio.CancelledError:
                 break
             except Exception as e:
@@ -200,7 +180,6 @@ class Orchestrator:
                     await self.notifier.send(f"[{symbol}] loop error: {e}")
                 await asyncio.sleep(0.5)
 
-    # ---------------- Hooks trading (stubs) ----------------
     def _generate_signal(self, symbol: str, ohlcv: List[List[float]]) -> str:
         closes = [r[4] for r in (ohlcv[-10:] if len(ohlcv) >= 10 else ohlcv)]
         if not closes:
@@ -220,7 +199,6 @@ class Orchestrator:
         elif signal == "SELL":
             self._w_orders([ts, symbol, "sell", 0, price, "skipped"])
 
-    # ---------------- Stats / misc ----------------
     def _stats_snapshot(self) -> Dict[str, Any]:
         return {
             "ticks_total": self.ticks_total,
@@ -234,12 +212,9 @@ class Orchestrator:
         return int(asyncio.get_event_loop().time() * 1000)
 
 
-# ---------------------------------------------------------------------
-# Wrapper de compatibilité pour bot.py
-# ---------------------------------------------------------------------
 async def run_orchestrator(
     exchange,
-    config=None,                   # gardé pour compat (non utilisé ici)
+    config=None,
     symbols=None,
     notifier: Notifier | None = None,
     command_stream: CommandStream | None = None,
