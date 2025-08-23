@@ -7,15 +7,19 @@ from ..risk.manager import compute_size
 
 class BacktestEngine:
     def __init__(self, loader, strategy_fn, cfg: Dict[str, Any], out_dir: str, cash: float, risk_pct: float=0.5):
-        self.loader = loader              # sync: fetch_ohlcv(symbol, tf, start, end) -> List[[ts,o,h,l,c,v]]
+        self.loader = loader
         self.strategy_fn = strategy_fn
         self.cfg = dict(cfg)
         self.out_dir = out_dir
         self.cash0 = float(cash)
         self.risk_pct = float(risk_pct)
-        self.caps_by_symbol = self.cfg.get("caps", {})            # mêmes clés que live
-        self.fees_bps = float(self.cfg.get("fees_bps", 0.0))      # optionnel
+        self.caps_by_symbol = self.cfg.get("caps", {})
+        self.fees_by_symbol = self.cfg.get("fees_by_symbol", {})  # << ici
         self.slippage_bps = float(self.cfg.get("slippage_bps", 0.0))
+
+    def _taker_bps(self, symbol: str) -> float:
+        f = self.fees_by_symbol.get(symbol, {})
+        return float(f.get("taker_bps", 0.0))
 
     def run_pair(self, symbol: str, timeframe: str, start: int, end: int, lookback: int=200) -> Dict[str, Any]:
         ohlcv = self.loader(symbol, timeframe, start, end)
@@ -44,12 +48,12 @@ class BacktestEngine:
 
                 # sortie
                 if pos_side != "flat" and (side == "flat" or (side != pos_side and side in ("long","short"))):
-                    # slippage + fees simples
                     exit_price = float(c)
                     exit_price *= (1 + (self.slippage_bps/10000.0)) if pos_side=="short" else (1 - (self.slippage_bps/10000.0))
                     pnl_abs = (exit_price - pos_entry) * pos_qty if pos_side=="long" else (pos_entry - exit_price) * pos_qty
-                    # frais sur round-trip approx (2 legs)
-                    fees = (abs(pos_entry) + abs(exit_price)) * pos_qty * (self.fees_bps/10000.0)
+                    # frais taker sur 2 jambes (entrée+sortie) — approximation réaliste pour market orders
+                    taker_bps = self._taker_bps(symbol)
+                    fees = (abs(pos_entry) + abs(exit_price)) * pos_qty * (taker_bps/10000.0)
                     pnl_abs -= fees
                     pnl_pct = pnl_abs / max(equity[-1],1e-9)
                     equity.append(equity[-1] + pnl_abs)
