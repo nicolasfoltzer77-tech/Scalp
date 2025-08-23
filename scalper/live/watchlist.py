@@ -1,178 +1,158 @@
-# scalp/live/watchlist.py
+# scalper/live/watchlist.py
 from __future__ import annotations
 
 import asyncio
 import os
-from typing import Any, Callable, Awaitable, List, Optional, Sequence, Tuple
+import statistics
+from dataclasses import dataclass
+from typing import Awaitable, Callable, Iterable, List, Optional, Sequence
 
-DBG = os.getenv("WATCHLIST_DEBUG", "0") == "1"
-def _dprint(msg: str):
-    if DBG:
-        print(f"[watchlist:debug] {msg}")
+# Types
+OHLCVFetcher = Callable[[str, str], Awaitable[Sequence[Sequence[float]]]]
+# attendu: fetch(symbol, timeframe="5m", limit=?), renvoie [[ts,o,h,l,c,v], ...]
 
+QUIET = int(os.getenv("QUIET", "0") or "0")
 
+DEFAULT_SHORTLIST = [
+    # shortlist liquides futures USDT (à ajuster)
+    "BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "DOGEUSDT",
+    "ADAUSDT", "LTCUSDT", "AVAXUSDT", "LINKUSDT", "TRXUSDT", "UNIUSDT",
+    "SHIBUSDT", "OPUSDT", "APTUSDT", "ETCUSDT", "NEARUSDT", "FILUSDT",
+    "SUIUSDT", "TONUSDT",
+]
+
+def _parse_csv_env(name: str, default: List[str]) -> List[str]:
+    raw = os.getenv(name, "")
+    if not raw:
+        return list(default)
+    return [s.strip().upper() for s in raw.split(",") if s.strip()]
+
+def _log(msg: str) -> None:
+    if not QUIET:
+        print(f"[watchlist] {msg}", flush=True)
+
+@dataclass
 class WatchlistManager:
-    """
-    Génération de watchlist TOP N :
-      - mode='local'  : calcule TOPN via OHLCV (volume quote ~ 24h)
-      - mode='api'    : utilise un endpoint bulk (si disponible)
-      - mode='static' : valeurs fixes (TOP_SYMBOLS ou défaut)
-    """
+    # Public API compatible avec orchestrator
+    mode: str
+    top_candidates: List[str]
+    local_conc: int
+    ohlcv_fetch: OHLCVFetcher
+    timeframe: str = "5m"
+    refresh_sec: int = int(os.getenv("WATCHLIST_REFRESH_SEC", "300") or "300")
+    topn: int = int(os.getenv("TOPN", "10") or "10")
 
+    # NOTE: le constructeur accepte **watchlist_mode** pour compatibilité
     def __init__(
         self,
-        exchange,
         *,
-        only_suffix: str = "USDT",
-        top_n: int = 10,
-        period_s: float = 120.0,
-        on_update: Optional[Callable[[Sequence[str]], None]] = None,
-        safe_call: Optional[Callable[[Callable[[], Any], str], Any]] = None,
-        ohlcv_fetch: Optional[Callable[[str, str, int], Awaitable[List[Any]]]] = None,
-    ) -> None:
-        self.exchange = exchange
-        self.only_suffix = only_suffix.upper() if only_suffix else ""
-        self.top_n = top_n
-        self.period_s = period_s
-        self.on_update = on_update
-        self._safe = safe_call or (lambda f, _label: f())
-        self._running = False
-        self._ohlcv_fetch = ohlcv_fetch
-        self.mode = (os.getenv("WATCHLIST_MODE") or "static").lower()  # static | api | local
-
-    # ---------- extraction API générique ----------
-    @staticmethod
-    def _extract_items(payload: Any) -> List[Any]:
-        if payload is None:
-            return []
-        if isinstance(payload, dict):
-            for k in ("data", "result", "tickers", "items", "list", "tickerList", "records"):
-                v = payload.get(k)
-                if isinstance(v, list):
-                    return v
-                if isinstance(v, dict):
-                    # un niveau de plus
-                    for kk in ("data", "result", "tickers", "items", "list", "tickerList", "records"):
-                        vv = v.get(kk)
-                        if isinstance(vv, list):
-                            return vv
-            return []
-        if isinstance(payload, (list, tuple)):
-            return list(payload)
-        return []
-
-    @staticmethod
-    def _norm_symbol_and_volume(item: Any) -> Tuple[str, float]:
-        if isinstance(item, dict):
-            s = (item.get("symbol") or item.get("instId") or "").replace("_", "").upper()
-            vol = item.get("volume", item.get("usdtVolume", item.get("quoteVolume", 0.0)))
-            try:
-                v = float(vol or 0.0)
-            except Exception:
-                v = 0.0
-            return s, v
-        try:
-            seq = list(item)
-            s = str(seq[0]).replace("_", "").upper() if seq else ""
-            v = float(seq[1]) if len(seq) > 1 else 0.0
-            return s, v
-        except Exception:
-            return "", 0.0
-
-    def _pick_top(self, payload: Any) -> List[str]:
-        items = self._extract_items(payload)
-        pairs: List[Tuple[str, float]] = []
-        for it in items:
-            s, v = self._norm_symbol_and_volume(it)
-            if not s:
-                continue
-            if self.only_suffix and not s.endswith(self.only_suffix):
-                continue
-            pairs.append((s, v))
-        pairs.sort(key=lambda x: x[1], reverse=True)
-        return [s for s, _ in pairs[: self.top_n]]
-
-    # ---------- TOPN local via OHLCV ----------
-    async def _build_top_local(self) -> List[str]:
-        if not self._ohlcv_fetch:
-            return []
-        # candidates : env ou liste par défaut (~40 liquides)
-        raw = (os.getenv("TOP_CANDIDATES") or "")
-        if raw:
-            candidates = [s.strip().upper().replace("_", "") for s in raw.split(",") if s.strip()]
+        watchlist_mode: str = "static",
+        top_candidates: str | Iterable[str] | None = None,
+        local_conc: int = int(os.getenv("WATCHLIST_LOCAL_CONC", "5") or "5"),
+        ohlcv_fetch: OHLCVFetcher | None = None,
+        timeframe: str = os.getenv("WATCHLIST_TIMEFRAME", "5m"),
+        refresh_sec: int = int(os.getenv("WATCHLIST_REFRESH_SEC", "300") or "300"),
+        topn: int = int(os.getenv("TOPN", "10") or "10"),
+    ):
+        self.mode = (watchlist_mode or "static").lower()
+        if isinstance(top_candidates, str):
+            self.top_candidates = _parse_csv_env("", []) if top_candidates == "" else (
+                [s.strip().upper() for s in top_candidates.split(",") if s.strip()]
+            )
+        elif top_candidates is None:
+            self.top_candidates = _parse_csv_env("TOP_CANDIDATES", DEFAULT_SHORTLIST)
         else:
-            candidates = [
-                "BTCUSDT","ETHUSDT","SOLUSDT","BNBUSDT","XRPUSDT","DOGEUSDT","ADAUSDT","TRXUSDT","TONUSDT","LTCUSDT",
-                "LINKUSDT","ARBUSDT","OPUSDT","APTUSDT","SUIUSDT","PEPEUSDT","AVAXUSDT","DOTUSDT","MATICUSDT","ATOMUSDT",
-                "NEARUSDT","SEIUSDT","RUNEUSDT","TIAUSDT","WIFUSDT","JUPUSDT","ICPUSDT","FILUSDT","ETCUSDT","BCHUSDT",
-                "XLMUSDT","HBARUSDT","EOSUSDT","TRBUSDT","AAVEUSDT","UNIUSDT","FLOWUSDT","RNDRUSDT","ORDIUSDT","SEIUSDT",
-            ]
-        sem = asyncio.Semaphore(int(os.getenv("WATCHLIST_LOCAL_CONC", "5")))
+            self.top_candidates = [s.strip().upper() for s in top_candidates]
 
-        async def score(sym: str) -> Tuple[str, float]:
-            async with sem:
-                try:
-                    rows = await self._ohlcv_fetch(sym, "1m", 1440)
-                    tot = 0.0
-                    for r in rows or []:
-                        if isinstance(r, dict):
-                            tot += float(r.get("close", 0.0)) * float(r.get("volume", 0.0))
-                        else:
-                            tot += float(r[4]) * float(r[5])  # [.., close, volume]
-                    return sym, tot
-                except Exception:
-                    return sym, 0.0
+        self.local_conc = int(local_conc)
+        self.ohlcv_fetch = ohlcv_fetch or (lambda sym, timeframe="5m", limit=150: asyncio.sleep(0.0))  # type: ignore
+        self.timeframe = timeframe
+        self.refresh_sec = int(refresh_sec)
+        self.topn = int(topn)
 
-        scores = await asyncio.gather(*(score(s) for s in candidates))
-        scores.sort(key=lambda x: x[1], reverse=True)
-        top = [s for s, v in scores if s.endswith(self.only_suffix)][: self.top_n]
-        if DBG:
-            _dprint(f"local scores top={top[:5]}")
-        return top
+        if self.mode not in ("static", "local", "api"):
+            _log(f"mode inconnu '{self.mode}', fallback -> static")
+            self.mode = "static"
 
-    # ---------- public ----------
+        _log(f"init: mode={self.mode} topn={self.topn} timeframe={self.timeframe} refresh={self.refresh_sec}s")
+
+    # ----------------------------- PUBLIC ---------------------------------
+
     async def boot_topN(self) -> List[str]:
-        # 1) local (réel) si demandé
-        if self.mode == "local":
-            try:
-                top = await self._build_top_local()
-                if top:
-                    if self.on_update: self.on_update(top)
-                    return top
-            except Exception as e:
-                _dprint(f"local mode error: {e!r}")
-
-        # 2) api (si un bulk existe un jour)
-        if self.mode in ("api", "local"):
-            try:
-                payload = await self._safe(lambda: self.exchange.get_ticker(None), "get_ticker(None)")
-                _dprint(f"payload via get_ticker(None): type={type(payload).__name__}")
-                top = self._pick_top(payload)
-                if top:
-                    if self.on_update: self.on_update(top)
-                    return top
-            except Exception as e:
-                _dprint(f"api mode error: {e!r}")
-
-        # 3) fallback statique
-        env_syms = (os.getenv("TOP_SYMBOLS") or "").replace(" ", "")
-        top = [s for s in env_syms.split(",") if s] if env_syms else \
-              ["BTCUSDT","ETHUSDT","SOLUSDT","BNBUSDT","XRPUSDT","DOGEUSDT","ADAUSDT","TRXUSDT","TONUSDT","LTCUSDT"]
-        top = [s.replace("_", "").upper() for s in top][: self.top_n]
-        if DBG:
-            _dprint(f"using static TOP{len(top)} = {top}")
-        if self.on_update: self.on_update(top)
-        return top
+        """Calcul initial de la watchlist TOPN."""
+        if self.mode == "static":
+            syms = self._static_symbols()
+            _log(f"boot got (static): {syms[:self.topn]}")
+            return syms[:self.topn]
+        elif self.mode == "local":
+            syms = await self._local_topN()
+            _log(f"boot got (local): {syms}")
+            return syms
+        else:
+            # placeholder API -> pour l’instant même comportement que static
+            syms = self._static_symbols()
+            _log(f"boot got (api placeholder->static): {syms[:self.topn]}")
+            return syms[:self.topn]
 
     async def task_auto_refresh(self):
-        self._running = True
-        while self._running:
+        """
+        Async generator: recalcule périodiquement la watchlist et la renvoie.
+        Usage:
+            async for top in watchlist.task_auto_refresh():
+                ...
+        """
+        while True:
             try:
-                top = await self.boot_topN()
-                _dprint(f"refresh -> {top}")
+                if self.mode == "local":
+                    syms = await self._local_topN()
+                elif self.mode == "static":
+                    syms = self._static_symbols()[:self.topn]
+                else:
+                    syms = self._static_symbols()[:self.topn]  # placeholder
+                yield syms
             except Exception as e:
-                print(f"[watchlist] refresh error: {e!r}")
-            await asyncio.sleep(self.period_s)
+                _log(f"refresh error: {e}")
+            await asyncio.sleep(max(15, self.refresh_sec))
 
-    def stop(self):
-        self._running = False
+    # ----------------------------- MODES ----------------------------------
+
+    def _static_symbols(self) -> List[str]:
+        # priorise TOP_SYMBOLS si défini, sinon shortlist/candidats
+        top_symbols_env = _parse_csv_env("TOP_SYMBOLS", [])
+        if top_symbols_env:
+            return top_symbols_env
+        return list(self.top_candidates or DEFAULT_SHORTLIST)
+
+    async def _local_topN(self) -> List[str]:
+        """
+        Classement local via 'somme(close*volume)' sur ~24h pour la shortlist.
+        """
+        shortlist = self._static_symbols()
+        if not shortlist:
+            shortlist = list(DEFAULT_SHORTLIST)
+
+        async def score_symbol(sym: str) -> tuple[str, float]:
+            try:
+                # on récupère ~24h pour 5m -> ~288 bougies (on prend 300 pour marge)
+                raw = await self.ohlcv_fetch(sym, self.timeframe, limit=300)  # type: ignore[arg-type]
+                total = 0.0
+                for r in raw or []:
+                    # r: [ts, o, h, l, c, v]
+                    c = float(r[4]); v = float(r[5])
+                    total += c * v
+                return sym, total
+            except Exception:
+                return sym, 0.0
+
+        # Concurrence limitée
+        sem = asyncio.Semaphore(max(1, self.local_conc))
+        results: list[tuple[str, float]] = []
+
+        async def worker(s: str):
+            async with sem:
+                results.append(await score_symbol(s))
+
+        await asyncio.gather(*(worker(s) for s in shortlist))
+        results.sort(key=lambda kv: kv[1], reverse=True)
+        top = [s for s, _ in results[: self.topn]]
+        return top
