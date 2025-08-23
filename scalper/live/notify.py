@@ -3,37 +3,40 @@ from __future__ import annotations
 
 import asyncio
 import os
-from typing import Any, AsyncGenerator, Callable, Optional, Tuple
+from typing import Any, AsyncGenerator, Callable, Optional, Protocol, Tuple
 
 try:
     import aiohttp
 except Exception as e:  # noqa: BLE001
-    raise RuntimeError("Le module 'aiohttp' est requis pour Telegram. Installe-le via 'pip install aiohttp'.") from e
+    raise RuntimeError(
+        "Le module 'aiohttp' est requis pour Telegram. Installe-le via 'pip install aiohttp'."
+    ) from e
 
 
-# -----------------------------------------------------------
-# Null Notifier (fallback quand Telegram n'est pas configuré)
-# -----------------------------------------------------------
+# ===== Types exportés pour l'orchestrateur =====
+class BaseNotifier(Protocol):
+    name: str
+    async def send(self, text: str) -> None: ...
+    async def close(self) -> None: ...
+
+# Fabrique de flux de commandes asynchrones (sans argument)
+CommandStream = Callable[[], AsyncGenerator[str, None]]
+
+
+# ===== Fallback "Null" =====
 class NullNotifier:
     name = "null"
-
     async def send(self, text: str) -> None:
-        # Pas d’IO : juste un print pour la trace
         print(f"[notify:null] {text}")
-
     async def close(self) -> None:
         pass
 
-
 async def null_command_stream() -> AsyncGenerator[str, None]:
-    # Générateur vide (aucune commande)
     if False:  # pragma: no cover
         yield ""
 
 
-# -----------------------------------------------------------
-# Telegram Notifier + Commandes (polling simple)
-# -----------------------------------------------------------
+# ===== Telegram notifier + polling léger =====
 class TelegramNotifier:
     name = "telegram"
 
@@ -60,9 +63,6 @@ class TelegramNotifier:
                     await asyncio.sleep(1.5 * (attempt + 1))
 
     async def commands(self, *, allowed: Optional[set[str]] = None) -> AsyncGenerator[str, None]:
-        """
-        Polling léger getUpdates. Émet des chaînes "/setup", "/backtest", "/resume", "/stop", …
-        """
         url = f"{self.base}/getUpdates"
         offset = None
         allowed_set = allowed or {"/setup", "/backtest", "/resume", "/stop"}
@@ -84,10 +84,7 @@ class TelegramNotifier:
                     if str(msg.get("chat", {}).get("id")) != str(self.chat_id):
                         continue
                     text = (msg.get("text") or "").strip()
-                    if not text:
-                        continue
-                    # commande reconnue ?
-                    if text.split()[0] in allowed_set:
+                    if text and text.split()[0] in allowed_set:
                         yield text
             except asyncio.CancelledError:
                 break
@@ -102,20 +99,15 @@ class TelegramNotifier:
                 pass
 
 
-# -----------------------------------------------------------
-# Fabrique : choisit Telegram si configuré, sinon Null
-# -----------------------------------------------------------
+# ===== Fabrique : Telegram si possible, sinon Null =====
 def _env(name: str, default: Optional[str] = None) -> Optional[str]:
     v = os.environ.get(name, default)
     return v if (v is not None and str(v).strip() != "") else None
 
 
-async def build_notifier_and_commands(config: dict[str, Any]) -> Tuple[Any, Callable[[], AsyncGenerator[str, None]]]:
-    """
-    Retourne (notifier, command_stream_factory)
-    - notifier: objet avec .send(str) et .close()
-    - command_stream_factory: function sans arg -> async generator des commandes
-    """
+async def build_notifier_and_commands(
+    config: dict[str, Any]
+) -> Tuple[BaseNotifier, CommandStream]:
     token = _env("TELEGRAM_TOKEN") or config.get("TELEGRAM_TOKEN")
     chat = _env("TELEGRAM_CHAT_ID") or config.get("TELEGRAM_CHAT_ID")
 
@@ -125,8 +117,9 @@ async def build_notifier_and_commands(config: dict[str, Any]) -> Tuple[Any, Call
             async def factory() -> AsyncGenerator[str, None]:
                 async for cmd in notifier.commands():
                     yield cmd
-            # Premier ping amical (non bloquant)
-            asyncio.create_task(notifier.send("🟢 Orchestrator PRELAUNCH. Utilise /setup ou /backtest. /resume pour démarrer le live."))
+            asyncio.create_task(
+                notifier.send("🟢 Orchestrator PRELAUNCH. Utilise /setup ou /backtest. /resume pour démarrer le live.")
+            )
             print("[notify] Using Telegram notifier/commands")
             return notifier, factory
         except Exception as e:  # noqa: BLE001
