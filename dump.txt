@@ -1,4 +1,4 @@
-Dump created: 2025-08-22 13:37:02
+Dump created: 2025-08-23 08:28:27
 Repository tree:
 Scalp/
     CHANGELOG.md
@@ -9,13 +9,69 @@ Scalp/
     bitget_futures_pairs.py
     bot.py
     cli.py
+    dashboard.py
     dump_repo.py
     init.py
     pytest.ini
     quick_order.py
     requirements-dev.txt
     requirements.txt
+    run_backtest.py
     short_one_way.py
+    notebooks/
+        spot/
+            bitget_bot.py
+    backtest/
+        __init__.py
+        engine.py
+        grid_search.py
+        optimize.py
+        run_multi.py
+    scalp/
+        VERSION
+        __init__.py
+        bitget_client.py
+        bot_config.py
+        client.py
+        config.py
+        logging_utils.py
+        metrics.py
+        notifier.py
+        pairs.py
+        strategy.py
+        telegram_bot.py
+        trade_utils.py
+        version.py
+        ws.py
+        risk/
+            __init__.py
+            manager.py
+        services/
+            __init__.py
+            order_service.py
+            utils.py
+        backtest/
+            __init__.py
+            walkforward.py
+        positions/
+            __init__.py
+            state.py
+        selection/
+            __init__.py
+            momentum.py
+            scanner.py
+        adapters/
+            __init__.py
+            bitget.py
+            market_data.py
+    result/
+    signals/
+        __init__.py
+        generator.py
+    data/
+        BTCUSDT-1m.csv
+        __init__.py
+        indicators.py
     tests/
         conftest.py
         test_analyse_risque.py
@@ -53,64 +109,19 @@ Scalp/
         test_version.py
         test_walk_forward.py
         test_ws.py
-    backtest/
-        __init__.py
-        engine.py
-        grid_search.py
-        optimize.py
-        run_multi.py
-    result/
     live/
         __init__.py
+        journal.py
+        notify.py
+        ohlcv_service.py
         orchestrator.py
+        orders.py
+        position_fsm.py
+        state_store.py
         telegram_async.py
-    scalp/
-        VERSION
-        __init__.py
-        bitget_client.py
-        bot_config.py
-        client.py
-        config.py
-        logging_utils.py
-        metrics.py
-        notifier.py
-        pairs.py
-        strategy.py
-        telegram_bot.py
-        trade_utils.py
-        version.py
-        ws.py
-        backtest/
-            __init__.py
-            walkforward.py
-        selection/
-            __init__.py
-            momentum.py
-            scanner.py
-        positions/
-            __init__.py
-            state.py
-        risk/
-            __init__.py
-            manager.py
-        adapters/
-            __init__.py
-            bitget.py
-            market_data.py
-        services/
-            __init__.py
-            order_service.py
-    signals/
-        __init__.py
-        generator.py
-    data/
-        __init__.py
-        indicators.py
-    notebooks/
-        spot/
-            bitget_bot.py
+        watchlist.py
 
-## CHANGELOG.md (last modified: 2025-08-22 13:03:01)
+## CHANGELOG.md (last modified: 2025-08-23 08:27:41)
      1: # Changelog
      2: 
      3: ## Unreleased
@@ -125,14 +136,14 @@ Scalp/
     12:   Telegram.
 
 
-## Makefile (last modified: 2025-08-22 13:03:01)
+## Makefile (last modified: 2025-08-23 08:27:41)
      1: .PHONY: test
      2: 
      3: test:
      4: 	pytest
 
 
-## PROMPT.md (last modified: 2025-08-22 13:03:01)
+## PROMPT.md (last modified: 2025-08-23 08:27:41)
      1: # Prompt de re-création du bot Scalp (version spot)
      2: 
      3: Ce fichier résume les modules et fonctions essentiels afin de recréer le bot de trading **spot** Bitget (paires USDT) à partir de zéro. Chaque fonction liste son rôle principal et les paramètres indispensables. Le fichier `.env` contenant les clés API se trouve dans le dossier parent du bot.
@@ -242,7 +253,7 @@ Scalp/
    107: 
 
 
-## README.md (last modified: 2025-08-22 13:03:01)
+## README.md (last modified: 2025-08-23 08:27:41)
      1: # Scalp
      2: 
      3: Bot de trading pour les futures USDT-M de Bitget. Ce projet est **expérimental** et fourni à des fins éducatives.
@@ -377,7 +388,7 @@ Scalp/
    132: © 2025 — Usage à vos risques. Ceci n'est pas un conseil financier.
 
 
-## STRATEGY.md (last modified: 2025-08-22 13:03:01)
+## STRATEGY.md (last modified: 2025-08-23 08:27:41)
      1: # Stratégie de trading
      2: 
      3: Ce document décrit la logique de trading utilisée par le bot **Scalp**. Elle vise un scalping court terme sur les futures USDT‑M de Bitget.
@@ -422,7 +433,7 @@ Scalp/
     42: Ces règles combinées visent à protéger le capital tout en conservant une exposition opportuniste au marché.
 
 
-## backtest/__init__.py (last modified: 2025-08-22 13:03:01)
+## backtest/__init__.py (last modified: 2025-08-23 08:27:41)
      1: """Backtesting helpers and optimisation utilities."""
      2: 
      3: from .optimize import (
@@ -440,7 +451,7 @@ Scalp/
     15: ]
 
 
-## backtest/engine.py (last modified: 2025-08-22 13:03:01)
+## backtest/engine.py (last modified: 2025-08-23 08:27:41)
      1: """Simple backtest engine with dynamic risk and trailing stops.
      2: 
      3: This module provides two helpers:
@@ -725,7 +736,7 @@ Scalp/
    282:     return trades, equity_curve
 
 
-## backtest/grid_search.py (last modified: 2025-08-22 13:03:01)
+## backtest/grid_search.py (last modified: 2025-08-23 08:27:41)
      1: """Grid-search express module to evaluate hyperparameter combinations.
      2: 
      3: This module builds combinations of strategy and engine parameters, runs the
@@ -1033,7 +1044,7 @@ Scalp/
    305: __all__ = ["run_grid_search", "build_param_grid", "parse_hours", "GridResult"]
 
 
-## backtest/optimize.py (last modified: 2025-08-22 13:03:01)
+## backtest/optimize.py (last modified: 2025-08-23 08:27:41)
      1: from __future__ import annotations
      2: 
      3: """Parameter sweep utilities for strategy optimisation.
@@ -1153,7 +1164,7 @@ Scalp/
    117:     main()
 
 
-## backtest/run_multi.py (last modified: 2025-08-22 13:03:01)
+## backtest/run_multi.py (last modified: 2025-08-23 08:27:41)
      1: """Run multi-symbol backtests from the command line.
      2: 
      3: Example:
@@ -1507,7 +1518,7 @@ Scalp/
    351:     main()
 
 
-## bitget_futures_pairs.py (last modified: 2025-08-22 13:03:01)
+## bitget_futures_pairs.py (last modified: 2025-08-23 08:27:41)
      1: #!/usr/bin/env python3
      2: """Fetch the list of Bitget futures contracts.
      3: 
@@ -1663,7 +1674,7 @@ Scalp/
    153:     raise SystemExit(main())
 
 
-## bot.py (last modified: 2025-08-22 13:35:44)
+## bot.py (last modified: 2025-08-23 08:27:41)
      1: #!/usr/bin/env python3
      2: from __future__ import annotations
      3: 
@@ -1733,7 +1744,7 @@ Scalp/
     67:     main()
 
 
-## cli.py (last modified: 2025-08-22 13:03:01)
+## cli.py (last modified: 2025-08-23 08:27:41)
      1: """Command line utilities for the Scalp project.
      2: 
      3: This module exposes a small command line interface used throughout the
@@ -1856,7 +1867,231 @@ Scalp/
    120: 
 
 
-## data/__init__.py (last modified: 2025-08-22 13:03:01)
+## dashboard.py (last modified: 2025-08-23 08:27:41)
+     1: # dashboard.py
+     2: from __future__ import annotations
+     3: 
+     4: import os
+     5: import time
+     6: from pathlib import Path
+     7: from typing import Dict, Tuple
+     8: 
+     9: import pandas as pd
+    10: import streamlit as st
+    11: 
+    12: # ------------------------------------------------------------
+    13: # Réglages
+    14: # ------------------------------------------------------------
+    15: LOG_DIR = Path("scalp/live/logs")  # emplacement des CSV créés par l'orchestrateur
+    16: REFRESH_SECS = 5                   # auto-refresh UI
+    17: MAX_ROWS_SHOW = 2000               # clamp mémoire
+    18: 
+    19: 
+    20: # ------------------------------------------------------------
+    21: # Utilitaires lecture robuste CSV
+    22: # ------------------------------------------------------------
+    23: def _safe_read_csv(path: Path) -> pd.DataFrame:
+    24:     if not path.exists():
+    25:         return pd.DataFrame()
+    26:     try:
+    27:         df = pd.read_csv(path)
+    28:         # clamp pour éviter d’exploser en RAM si les logs deviennent énormes
+    29:         if len(df) > MAX_ROWS_SHOW:
+    30:             df = df.tail(MAX_ROWS_SHOW).reset_index(drop=True)
+    31:         return df
+    32:     except Exception:
+    33:         # fichier en cours d’écriture → on réessaiera au prochain tick
+    34:         return pd.DataFrame()
+    35: 
+    36: 
+    37: def load_logs() -> Dict[str, pd.DataFrame]:
+    38:     return {
+    39:         "signals": _safe_read_csv(LOG_DIR / "signals.csv"),
+    40:         "orders": _safe_read_csv(LOG_DIR / "orders.csv"),
+    41:         "fills": _safe_read_csv(LOG_DIR / "fills.csv"),
+    42:         "positions": _safe_read_csv(LOG_DIR / "positions.csv"),
+    43:     }
+    44: 
+    45: 
+    46: def _format_ts_ms_to_str(df: pd.DataFrame, col: str = "ts") -> pd.DataFrame:
+    47:     if col in df.columns:
+    48:         try:
+    49:             df[col] = pd.to_datetime(df[col], unit="ms")
+    50:         except Exception:
+    51:             try:
+    52:                 df[col] = pd.to_datetime(df[col])
+    53:             except Exception:
+    54:                 pass
+    55:     return df
+    56: 
+    57: 
+    58: # ------------------------------------------------------------
+    59: # Métriques & agrégats simples
+    60: # ------------------------------------------------------------
+    61: def compute_activity_metrics(df_orders: pd.DataFrame, df_fills: pd.DataFrame) -> Tuple[float, float, int]:
+    62:     """
+    63:     Retourne: (volume notionnel approx, fees cumulés, nb fills)
+    64:     - notionnel approx = somme(|price * qty|) sur les fills (indépendant du sens)
+    65:     - fees = somme(fee) si dispo
+    66:     """
+    67:     notional = 0.0
+    68:     fees = 0.0
+    69:     n_fills = 0
+    70: 
+    71:     if not df_fills.empty:
+    72:         # normalisation colonnes
+    73:         price_col = next((c for c in ["price", "fillPrice", "fill_px"] if c in df_fills.columns), None)
+    74:         qty_col = next((c for c in ["qty", "size", "fillQty", "fill_sz"] if c in df_fills.columns), None)
+    75:         fee_col = next((c for c in ["fee", "fillFee"] if c in df_fills.columns), None)
+    76: 
+    77:         if price_col and qty_col:
+    78:             notional = float((df_fills[price_col].abs() * df_fills[qty_col].abs()).sum())
+    79:             n_fills = int(len(df_fills))
+    80:         if fee_col:
+    81:             fees = float(df_fills[fee_col].fillna(0).sum())
+    82: 
+    83:     return notional, fees, n_fills
+    84: 
+    85: 
+    86: def last_positions_snapshot(df_positions: pd.DataFrame) -> pd.DataFrame:
+    87:     """Dernier état par symbole (state/qty/entry)."""
+    88:     if df_positions.empty:
+    89:         return df_positions
+    90:     df = df_positions.copy()
+    91:     df = _format_ts_ms_to_str(df, "ts")
+    92:     # on prend le dernier enregistrement par symbol
+    93:     last = df.sort_values("ts").groupby("symbol", as_index=False).tail(1)
+    94:     return last.sort_values("symbol").reset_index(drop=True)
+    95: 
+    96: 
+    97: def recent_signals(df_signals: pd.DataFrame, limit: int = 30) -> pd.DataFrame:
+    98:     if df_signals.empty:
+    99:         return df_signals
+   100:     df = df_signals.copy()
+   101:     df = _format_ts_ms_to_str(df, "ts")
+   102:     df = df.sort_values("ts", ascending=False).head(limit)
+   103:     return df.reset_index(drop=True)
+   104: 
+   105: 
+   106: def recent_orders(df_orders: pd.DataFrame, limit: int = 30) -> pd.DataFrame:
+   107:     if df_orders.empty:
+   108:         return df_orders
+   109:     df = df_orders.copy()
+   110:     df = _format_ts_ms_to_str(df, "ts")
+   111:     df = df.sort_values("ts", ascending=False).head(limit)
+   112:     # petites colonnes utiles en premier
+   113:     cols = [c for c in ["ts", "symbol", "side", "status", "price", "sl", "tp", "risk_pct", "order_id"] if c in df.columns]
+   114:     other = [c for c in df.columns if c not in cols]
+   115:     return df[cols + other]
+   116: 
+   117: 
+   118: def recent_fills(df_fills: pd.DataFrame, limit: int = 50) -> pd.DataFrame:
+   119:     if df_fills.empty:
+   120:         return df_fills
+   121:     df = df_fills.copy()
+   122:     df = _format_ts_ms_to_str(df, "ts")
+   123:     df = df.sort_values("ts", ascending=False).head(limit)
+   124:     cols = [c for c in ["ts", "symbol", "order_id", "trade_id", "price", "qty", "fee"] if c in df.columns]
+   125:     other = [c for c in df.columns if c not in cols]
+   126:     return df[cols + other]
+   127: 
+   128: 
+   129: # ------------------------------------------------------------
+   130: # UI
+   131: # ------------------------------------------------------------
+   132: st.set_page_config(page_title="ScalpBot Dashboard", layout="wide")
+   133: st.title("📊 ScalpBot — Dashboard Live")
+   134: 
+   135: # auto-refresh
+   136: st.caption("Auto-refresh toutes les {}s".format(REFRESH_SECS))
+   137: st_autorefresh = st.experimental_rerun if False else None  # placeholder to keep code readable
+   138: # Streamlit v1.32+ propose st.autorefresh :
+   139: try:
+   140:     st_autorefresh = st.experimental_rerun  # fallback compat
+   141:     from streamlit.runtime.scriptrunner import add_script_run_ctx  # noqa: F401
+   142:     st_autorefresh = None
+   143: except Exception:
+   144:     pass
+   145: 
+   146: try:
+   147:     st_autorefresh = st.autorefresh(interval=REFRESH_SECS * 1000, key="autorf")
+   148: except Exception:
+   149:     pass
+   150: 
+   151: # Choix du dossier de logs (utile si on lance le dashboard depuis un autre cwd)
+   152: default_dir = str(LOG_DIR.resolve())
+   153: custom_dir = st.sidebar.text_input("Dossier de logs", value=default_dir)
+   154: LOG_DIR = Path(custom_dir) if custom_dir else LOG_DIR
+   155: 
+   156: if not LOG_DIR.exists():
+   157:     st.error(f"Dossier introuvable : {LOG_DIR}")
+   158:     st.stop()
+   159: 
+   160: data = load_logs()
+   161: df_sig, df_ord, df_fill, df_pos = data["signals"], data["orders"], data["fills"], data["positions"]
+   162: 
+   163: # KPIs rapides
+   164: notional, fees, n_fills = compute_activity_metrics(df_ord, df_fill)
+   165: col_a, col_b, col_c, col_d = st.columns(4)
+   166: col_a.metric("Paires actives (Top 10)", "10")
+   167: col_b.metric("Fills (total)", f"{n_fills}")
+   168: col_c.metric("Notionnel cumulé (approx)", f"{notional:,.0f} USDT")
+   169: col_d.metric("Frais cumulés", f"{fees:,.2f} USDT")
+   170: 
+   171: st.divider()
+   172: 
+   173: # 1) Positions snapshot
+   174: st.subheader("📌 Positions (snapshot courant par symbole)")
+   175: pos_snapshot = last_positions_snapshot(df_pos)
+   176: if pos_snapshot.empty:
+   177:     st.info("Aucune position pour l’instant.")
+   178: else:
+   179:     # Met un peu d'ordre dans les colonnes
+   180:     order_cols = [c for c in ["symbol", "state", "qty", "entry", "ts"] if c in pos_snapshot.columns]
+   181:     pos_snapshot = pos_snapshot[order_cols + [c for c in pos_snapshot.columns if c not in order_cols]]
+   182:     st.dataframe(pos_snapshot, use_container_width=True, height=260)
+   183: 
+   184: # 2) Derniers signaux
+   185: st.subheader("📣 Derniers signaux")
+   186: sig_tbl = recent_signals(df_sig, limit=40)
+   187: if sig_tbl.empty:
+   188:     st.info("Pas encore de signaux.")
+   189: else:
+   190:     # comptage LONG/SHORT
+   191:     try:
+   192:         by_side = sig_tbl.assign(side_norm=sig_tbl["side"].astype(str).str.upper()).groupby("side_norm").size()
+   193:         st.bar_chart(by_side)
+   194:     except Exception:
+   195:         pass
+   196:     st.dataframe(sig_tbl, use_container_width=True, height=300)
+   197: 
+   198: # 3) Ordres récents
+   199: st.subheader("🧾 Ordres récents")
+   200: ord_tbl = recent_orders(df_ord, limit=40)
+   201: if ord_tbl.empty:
+   202:     st.info("Pas encore d’ordres.")
+   203: else:
+   204:     st.dataframe(ord_tbl, use_container_width=True, height=280)
+   205: 
+   206: # 4) Fills récents
+   207: st.subheader("✅ Fills récents")
+   208: fills_tbl = recent_fills(df_fill, limit=80)
+   209: if fills_tbl.empty:
+   210:     st.info("Pas encore d’exécutions (fills).")
+   211: else:
+   212:     st.dataframe(fills_tbl, use_container_width=True, height=320)
+   213: 
+   214: st.caption(f"Logs: {LOG_DIR}")
+
+## data/BTCUSDT-1m.csv (last modified: 2025-08-23 08:27:41)
+     1: ts,open,high,low,close,volume
+     2: 1625097600000,34000,34100,33950,34050,123.4
+     3: 1625097660000,34050,34200,34000,34150,150.7
+     4: 1625097720000,34150,34300,34100,34250,180.3
+     5: 1625097780000,34250,34400,34200,34350,200.1
+     6: 1625097840000,34350,34500,34300,34450,220.8
+
+## data/__init__.py (last modified: 2025-08-23 08:27:41)
      1: """Indicator computation helpers."""
      2: 
      3: from .indicators import compute_all
@@ -1864,7 +2099,7 @@ Scalp/
      5: __all__ = ["compute_all"]
 
 
-## data/indicators.py (last modified: 2025-08-22 13:03:01)
+## data/indicators.py (last modified: 2025-08-23 08:27:41)
      1: import pandas as pd
      2: 
      3: __all__ = ["compute_all"]
@@ -1955,7 +2190,7 @@ Scalp/
     88:     return df
 
 
-## dump_repo.py (last modified: 2025-08-22 13:36:57)
+## dump_repo.py (last modified: 2025-08-23 08:27:41)
      1: import os
      2: from datetime import datetime
      3: from pathlib import Path
@@ -2026,7 +2261,7 @@ Scalp/
     68:     create_dump_file()
 
 
-## init.py (last modified: 2025-08-22 13:03:01)
+## init.py (last modified: 2025-08-23 08:27:41)
      1: #!/usr/bin/env python3
      2: """Install all project dependencies.
      3: 
@@ -2065,7 +2300,7 @@ Scalp/
     36:     main()
 
 
-## live/__init__.py (last modified: 2025-08-22 13:03:01)
+## live/__init__.py (last modified: 2025-08-23 08:27:41)
      1: """Live trading helpers."""
      2: 
      3: from .orchestrator import Orchestrator, run_orchestrator
@@ -2073,425 +2308,854 @@ Scalp/
      5: __all__ = ["Orchestrator", "run_orchestrator"]
 
 
-## live/orchestrator.py (last modified: 2025-08-22 13:35:44)
+## live/journal.py (last modified: 2025-08-23 08:27:41)
      1: from __future__ import annotations
-     2: import asyncio
-     3: import signal
-     4: import time
-     5: from dataclasses import dataclass
-     6: from typing import Dict, Iterable, List, Optional, Sequence, Tuple
-     7: 
-     8: from scalp.adapters.bitget import BitgetFuturesClient
-     9: from scalp.adapters.market_data import MarketData
-    10: from scalp.services.order_service import OrderService, OrderRequest
-    11: from scalp.strategy import generate_signal, Signal
-    12: from live.telegram_async import TelegramAsync
-    13: from scalp.positions.state import PositionState, PositionStatus, PositionSide, Fill
+     2: import os, csv
+     3: from typing import Any, Dict, List
+     4: 
+     5: class LogWriter:
+     6:     """Gestion simple des CSV (création à la volée + append)."""
+     7:     def __init__(self, dirpath: str) -> None:
+     8:         self.dir = dirpath
+     9:         os.makedirs(self.dir, exist_ok=True)
+    10: 
+    11:     def init(self, fname: str, headers: List[str]) -> None:
+    12:         p = os.path.join(self.dir, fname)
+    13:         if not os.path.exists(p):
+    14:             with open(p, "w", newline="", encoding="utf-8") as f:
+    15:                 csv.DictWriter(f, fieldnames=headers).writeheader()
+    16: 
+    17:     def row(self, fname: str, row: Dict[str, Any]) -> None:
+    18:         p = os.path.join(self.dir, fname)
+    19:         with open(p, "a", newline="", encoding="utf-8") as f:
+    20:             csv.DictWriter(f, fieldnames=list(row.keys())).writerow(row)
+
+## live/notify.py (last modified: 2025-08-23 08:27:41)
+     1: # scalp/live/notify.py
+     2: from __future__ import annotations
+     3: import asyncio
+     4: from typing import AsyncIterator, Optional
+     5: 
+     6: # on réutilise ton client existant (déjà présent dans le repo)
+     7: from live.telegram_async import TelegramAsync  # type: ignore
+     8: 
+     9: 
+    10: class Notifier:
+    11:     async def start(self) -> None: ...
+    12:     async def stop(self) -> None: ...
+    13:     async def send(self, text: str) -> None: ...
     14: 
     15: 
-    16: @dataclass
-    17: class SymbolContext:
-    18:     symbol: str
-    19:     ohlcv: List[Dict]
-    20:     position_open: bool = False
-    21:     last_signal_ts: float = 0.0
+    16: class NullNotifier(Notifier):
+    17:     async def start(self) -> None:  # pragma: no cover
+    18:         pass
+    19: 
+    20:     async def stop(self) -> None:  # pragma: no cover
+    21:         pass
     22: 
-    23: 
-    24: class Orchestrator:
-    25:     """
-    26:     Orchestrateur asyncio: gère plusieurs tâches concurrentes.
-    27:     """
-    28: 
-    29:     def __init__(self, exchange: BitgetFuturesClient, order_service: OrderService, config, symbols: Sequence[str]):
-    30:         self.exchange = exchange
-    31:         self.order_service = order_service
-    32:         self.config = config
-    33:         self.symbols = list(symbols)
-    34:         self.ctx: Dict[str, SymbolContext] = {s: SymbolContext(s, []) for s in self.symbols}
-    35:         self._running = False
-    36:         self._tasks: List[asyncio.Task] = []
-    37:         self._heartbeat_ts = 0.0
-    38:         # util de normalisation utilisé partout
-    39:         self._row_keys = ("ts", "open", "high", "low", "close", "volume")
-    40:         # état positions par symbole
-    41:         self.pos: Dict[str, PositionState] = {s: PositionState(s, PositionSide.LONG) for s in self.symbols}
-    42:         self._paused = False
-    43:         self._tg = TelegramAsync(
-    44:             token=getattr(config, "TELEGRAM_BOT_TOKEN", None),
-    45:             chat_id=getattr(config, "TELEGRAM_CHAT_ID", None)
-    46:         )
-    47: 
-    48:     # ---------- normalisation OHLCV ----------
-    49:     def _normalize_rows(self, rows):
-    50:         """
-    51:         Garantit une liste de dicts {"ts","open","high","low","close","volume"}.
-    52:         Accepte: list[dict] OU list[list/tuple].
-    53:         """
-    54:         out = []
-    55:         if not rows:
-    56:             return out
-    57:         for r in rows:
-    58:             if isinstance(r, dict):
-    59:                 d = {
-    60:                     "ts": int(r.get("ts") or r.get("time") or r.get("timestamp") or 0),
-    61:                     "open": float(r.get("open", 0.0)),
-    62:                     "high": float(r.get("high", r.get("open", 0.0))),
-    63:                     "low": float(r.get("low", r.get("open", 0.0))),
-    64:                     "close": float(r.get("close", r.get("open", 0.0))),
-    65:                     "volume": float(r.get("volume", r.get("vol", 0.0))),
-    66:                 }
-    67:             else:
-    68:                 rr = list(r)
-    69:                 # tolérance longueurs partielles
-    70:                 ts = int(rr[0]) if len(rr) > 0 and isinstance(rr[0], (int, float)) and rr[0] > 10**10 else 0
-    71:                 if ts > 0:
-    72:                     o = float(rr[1]) if len(rr) > 1 else 0.0
-    73:                     h = float(rr[2]) if len(rr) > 2 else o
-    74:                     l = float(rr[3]) if len(rr) > 3 else o
-    75:                     c = float(rr[4]) if len(rr) > 4 else o
-    76:                     v = float(rr[5]) if len(rr) > 5 else 0.0
-    77:                 else:
-    78:                     # format [o,h,l,c,v,(ts)]
-    79:                     o = float(rr[0]) if len(rr) > 0 else 0.0
-    80:                     h = float(rr[1]) if len(rr) > 1 else o
-    81:                     l = float(rr[2]) if len(rr) > 2 else o
-    82:                     c = float(rr[3]) if len(rr) > 3 else o
-    83:                     v = float(rr[4]) if len(rr) > 4 else 0.0
-    84:                     ts = int(rr[5]) if len(rr) > 5 else 0
-    85:                 d = {"ts": ts, "open": o, "high": h, "low": l, "close": c, "volume": v}
-    86:             out.append(d)
-    87:         return out
-    88: 
-    89:     # ---------- UTILITAIRES ----------
-    90:     async def _sleep(self, secs: float) -> None:
-    91:         try:
-    92:             await asyncio.sleep(secs)
-    93:         except asyncio.CancelledError:
-    94:             pass
-    95: 
-    96:     async def _safe(self, coro_factory, *, label: str, backoff: float = 1.0, backoff_max: float = 30.0):
-    97:         """
-    98:         Exécute de façon sûre **une fabrique de coroutine**.
-    99:         But: éviter « cannot reuse already awaited coroutine » en créant une nouvelle coroutine à chaque appel.
-   100:         """
-   101:         delay = backoff
-   102:         while self._running:
-   103:             try:
-   104:                 coro = coro_factory()
-   105:                 return await coro
-   106:             except asyncio.CancelledError:
-   107:                 raise
-   108:             except Exception as e:
-   109:                 print(f"[orchestrator] {label} failed: {e!r}, retry in {delay:.1f}s")
-   110:                 await self._sleep(delay)
-   111:                 delay = min(backoff_max, delay * 1.7)
-   112: 
-   113:     def _status_text(self) -> str:
-   114:         alive = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(self._heartbeat_ts)) if self._heartbeat_ts else "n/a"
-   115:         syms = ",".join(self.symbols) or "-"
-   116:         return (
-   117:             f"Scalp bot\n"
-   118:             f"running: {self._running}\n"
-   119:             f"paused: {self._paused}\n"
-   120:             f"heartbeat: {alive}\n"
-   121:             f"symbols: {syms}"
-   122:         )
-   123: 
-   124:     # ---------- TACHES ----------
-   125:     async def _task_heartbeat(self):
-   126:         while self._running:
-   127:             self._heartbeat_ts = time.time()
-   128:             print("[heartbeat] alive")
-   129:             await self._sleep(15)
+    23:     async def send(self, text: str) -> None:  # pragma: no cover
+    24:         pass
+    25: 
+    26: 
+    27: class TelegramNotifier(Notifier):
+    28:     """Adaptateur minimal Telegram → Notifier."""
+    29:     def __init__(self, token: Optional[str], chat_id: Optional[str]) -> None:
+    30:         self._tg = TelegramAsync(token=token, chat_id=chat_id) if token and chat_id else None
+    31:         self._enabled = False
+    32: 
+    33:     async def start(self) -> None:
+    34:         self._enabled = bool(self._tg and self._tg.enabled())
+    35: 
+    36:     async def stop(self) -> None:
+    37:         self._enabled = False
+    38: 
+    39:     async def send(self, text: str) -> None:
+    40:         if self._enabled and self._tg:
+    41:             await self._tg.send_message(text)
+    42: 
+    43: 
+    44: class CommandStream:
+    45:     """
+    46:     Expose un flux asynchrone de commandes Telegram (texte brut).
+    47:     Usage:
+    48:         stream = CommandStream(token, chat_id)
+    49:         async for cmd in stream: ...
+    50:     """
+    51:     def __init__(self, token: Optional[str], chat_id: Optional[str]) -> None:
+    52:         self._tg = TelegramAsync(token=token, chat_id=chat_id) if token and chat_id else None
+    53:         self._run = False
+    54: 
+    55:     async def __aiter__(self) -> AsyncIterator[str]:
+    56:         self._run = bool(self._tg and self._tg.enabled())
+    57:         while self._run:
+    58:             try:
+    59:                 updates = await self._tg.poll_commands(timeout_s=20) if self._tg else []  # type: ignore
+    60:                 for u in updates:
+    61:                     t = (u.get("text") or "").strip()
+    62:                     if t:
+    63:                         yield t
+    64:             except asyncio.CancelledError:
+    65:                 break
+    66:             except Exception:
+    67:                 await asyncio.sleep(2.0)
+    68: 
+    69:     async def stop(self) -> None:
+    70:         self._run = False
+
+## live/ohlcv_service.py (last modified: 2025-08-23 08:27:41)
+     1: from __future__ import annotations
+     2: import time
+     3: from typing import Any, Dict, List, Optional
+     4: 
+     5: try:
+     6:     from scalp.adapters.market_data import MarketData
+     7: except Exception:
+     8:     MarketData = None  # type: ignore
+     9: 
+    10: class OhlcvService:
+    11:     """Lecture/normalisation OHLCV avec fallback agressifs."""
+    12:     def __init__(self, exchange) -> None:
+    13:         self.exchange = exchange
+    14:         self.md = MarketData(exchange) if MarketData is not None else None
+    15: 
+    16:     @staticmethod
+    17:     def normalize_rows(rows: Any) -> List[Dict[str, float]]:
+    18:         out: List[Dict[str, float]] = []
+    19:         if not rows: return out
+    20:         for r in rows:
+    21:             if isinstance(r, dict):
+    22:                 ts = int(r.get("ts") or r.get("time") or r.get("timestamp") or 0)
+    23:                 o = float(r.get("open", 0.0)); h = float(r.get("high", o)); l = float(r.get("low", o)); c = float(r.get("close", o))
+    24:                 v = float(r.get("volume", r.get("vol", 0.0)))
+    25:             else:
+    26:                 rr = list(r)
+    27:                 if len(rr) >= 6 and isinstance(rr[0], (int, float)) and rr[0] > 10**10:
+    28:                     ts, o, h, l, c = int(rr[0]), float(rr[1]), float(rr[2]), float(rr[3]), float(rr[4]); v = float(rr[5])
+    29:                 else:
+    30:                     o = float(rr[0]) if len(rr) > 0 else 0.0
+    31:                     h = float(rr[1]) if len(rr) > 1 else o
+    32:                     l = float(rr[2]) if len(rr) > 2 else o
+    33:                     c = float(rr[3]) if len(rr) > 3 else o
+    34:                     v = float(rr[4]) if len(rr) > 4 else 0.0
+    35:                     ts = int(rr[5]) if len(rr) > 5 else 0
+    36:             out.append({"ts": ts, "open": o, "high": h, "low": l, "close": c, "volume": v})
+    37:         return out
+    38: 
+    39:     async def fetch_once(self, symbol: str, interval: str = "1m", limit: int = 100) -> List[Dict[str, float]]:
+    40:         # 1) MarketData (si dispo)
+    41:         if self.md is not None:
+    42:             try:
+    43:                 d = self.md.get_ohlcv(symbol, interval, limit)
+    44:                 if isinstance(d, dict) and d.get("success") and d.get("data"):
+    45:                     return self.normalize_rows(d["data"])
+    46:             except Exception:
+    47:                 pass
+    48: 
+    49:         # 2) Exchange natif
+    50:         rows: List[Any] = []
+    51:         try:
+    52:             data = self.exchange.get_kline(symbol, interval=interval)
+    53:         except Exception:
+    54:             data = None
+    55: 
+    56:         if isinstance(data, dict):
+    57:             rows = (
+    58:                 data.get("data") or data.get("result") or data.get("records") or
+    59:                 data.get("list") or data.get("items") or data.get("candles") or []
+    60:             )
+    61:             guard = 0
+    62:             while isinstance(rows, dict) and guard < 3:
+    63:                 rows = (
+    64:                     rows.get("data") or rows.get("result") or rows.get("records") or
+    65:                     rows.get("list") or rows.get("items") or rows.get("candles") or rows.get("klines") or rows.get("bars") or []
+    66:                 )
+    67:                 guard += 1
+    68:         elif isinstance(data, (list, tuple)):
+    69:             rows = list(data)
+    70: 
+    71:         out = self.normalize_rows(rows)[-limit:]
+    72:         if out: return out
+    73: 
+    74:         # 3) Fallback strict via ticker -> bougie synthétique
+    75:         try:
+    76:             tkr = self.exchange.get_ticker(symbol)
+    77:             items = []
+    78:             if isinstance(tkr, dict): items = tkr.get("data") or tkr.get("result") or tkr.get("tickers") or []
+    79:             elif isinstance(tkr, (list, tuple)): items = list(tkr)
+    80:             if items:
+    81:                 last = items[0]
+    82:                 if isinstance(last, dict):
+    83:                     p = float(last.get("lastPrice", last.get("close", last.get("markPrice", 0.0))))
+    84:                     v = float(last.get("volume", last.get("usdtVolume", last.get("quoteVolume", 0.0))))
+    85:                 else:
+    86:                     seq = list(last); p = float(seq[3] if len(seq) > 3 else seq[-2]); v = float(seq[4] if len(seq) > 4 else seq[-1])
+    87:                 ts = int(time.time()*1000)
+    88:                 return [{"ts": ts, "open": p, "high": p, "low": p, "close": p, "volume": v}]
+    89:         except Exception:
+    90:             pass
+    91:         return []
+
+## live/orchestrator.py (last modified: 2025-08-23 08:27:41)
+     1: # scalp/live/orchestrator.py
+     2: from __future__ import annotations
+     3: 
+     4: import asyncio
+     5: import os
+     6: import signal
+     7: import time
+     8: from dataclasses import dataclass
+     9: from typing import Any, Dict, List, Optional, Sequence
+    10: 
+    11: from scalp.adapters.bitget import BitgetFuturesClient
+    12: from scalp.services.order_service import OrderService
+    13: from scalp.services.utils import safe_call, heartbeat_task, log_stats_task
+    14: 
+    15: from scalp.strategy import generate_signal, Signal  # noqa: F401
+    16: 
+    17: from live.watchlist import WatchlistManager
+    18: from live.ohlcv_service import OhlcvService
+    19: from live.journal import LogWriter
+    20: from live.orders import OrderExecutor
+    21: from live.state_store import StateStore
+    22: 
+    23: from live.position_fsm import (
+    24:     PositionFSM,
+    25:     STATE_FLAT,
+    26:     STATE_OPEN,
+    27:     STATE_PENDING_ENTRY,
+    28:     STATE_PENDING_EXIT,
+    29: )
+    30: 
+    31: from live.notify import Notifier, NullNotifier, TelegramNotifier, CommandStream
+    32: 
+    33: QUIET = os.getenv("QUIET", "0") == "1"
+    34: PRINT_OHLCV_SAMPLE = os.getenv("PRINT_OHLCV_SAMPLE", "0") == "1"
+    35: 
+    36: 
+    37: @dataclass
+    38: class SymbolContext:
+    39:     symbol: str
+    40:     ohlcv: List[Dict[str, float]]
+    41:     position_open: bool = False
+    42:     last_signal_ts: float = 0.0
+    43:     ticks: int = 0
+    44: 
+    45: 
+    46: class Orchestrator:
+    47:     def __init__(
+    48:         self,
+    49:         exchange: BitgetFuturesClient,
+    50:         order_service: OrderService,
+    51:         config: Any,
+    52:         symbols: Sequence[str],
+    53:     ) -> None:
+    54:         self.exchange = exchange
+    55:         self.config = config
+    56: 
+    57:         self.symbols = [s.replace("_", "").upper() for s in symbols] or ["BTCUSDT", "ETHUSDT"]
+    58:         self.ctx: Dict[str, SymbolContext] = {s: SymbolContext(s, []) for s in self.symbols}
+    59: 
+    60:         self._running = False
+    61:         self._paused = False
+    62:         self._tasks: List[asyncio.Task] = []
+    63:         self._heartbeat_ts = 0.0
+    64: 
+    65:         self.ohlcv = OhlcvService(self.exchange)
+    66: 
+    67:         log_dir = os.path.join(os.path.dirname(__file__), "logs")
+    68:         self.logs = LogWriter(log_dir)
+    69:         self.logs.init("signals.csv",   ["ts", "symbol", "side", "entry", "sl", "tp1", "tp2", "last"])
+    70:         self.logs.init("orders.csv",    ["ts", "symbol", "side", "price", "sl", "tp", "risk_pct", "status", "order_id"])
+    71:         self.logs.init("fills.csv",     ["ts", "symbol", "order_id", "trade_id", "price", "qty", "fee"])
+    72:         self.logs.init("positions.csv", ["ts", "symbol", "state", "qty", "entry"])
+    73:         self.logs.init("watchlist.csv", ["ts", "symbols"])
+    74: 
+    75:         self.orders = OrderExecutor(order_service=order_service, exchange=self.exchange, config=self.config)
+    76: 
+    77:         self._fsm = PositionFSM(self.symbols)
+    78:         self.state = StateStore(os.path.join(log_dir, "state.json"), period_s=10.0)
+    79: 
+    80:         self._watch = WatchlistManager(
+    81:             exchange=self.exchange,
+    82:             only_suffix="USDT",
+    83:             top_n=10,
+    84:             period_s=120.0,
+    85:             on_update=self._apply_symbols_update,
+    86:             safe_call=lambda f, label: safe_call(f, label=label, running_flag=lambda: self._running),
+    87:             ohlcv_fetch=lambda s, tf, n: self.ohlcv.fetch_once(s, tf, n),  # pour WATCHLIST_MODE=local
+    88:         )
+    89: 
+    90:         self._debug_noop = str(os.getenv("DEBUG_LOG_NOOP", "0")) == "1"
+    91:         self._last_noop_ts = 0.0
+    92: 
+    93:         token = getattr(config, "TELEGRAM_BOT_TOKEN", None)
+    94:         chat  = getattr(config, "TELEGRAM_CHAT_ID", None)
+    95:         self.notifier: Notifier = TelegramNotifier(token, chat) if (token and chat) else NullNotifier()
+    96:         self._cmd_stream: Optional[CommandStream] = CommandStream(token, chat) if (token and chat) else None
+    97: 
+    98:         snap = self.state.load_state()
+    99:         for sym, ts in (snap.get("last_signal_ts") or {}).items():
+   100:             if sym in self.ctx:
+   101:                 try:
+   102:                     self.ctx[sym].last_signal_ts = float(ts)
+   103:                 except Exception:
+   104:                     pass
+   105:         for sym, st in (snap.get("fsm") or {}).items():
+   106:             try:
+   107:                 itm = self._fsm.get(sym)
+   108:                 itm.state = st.get("state", itm.state)
+   109:                 itm.side = st.get("side", itm.side)
+   110:                 itm.qty = float(st.get("qty", itm.qty))
+   111:                 itm.entry = float(st.get("entry", itm.entry))
+   112:                 itm.order_id = st.get("order_id", itm.order_id)
+   113:             except Exception:
+   114:                 pass
+   115: 
+   116:     # ---- watchlist hook ----
+   117:     def _apply_symbols_update(self, new_syms: Sequence[str]) -> None:
+   118:         ns = [s.replace("_", "").upper() for s in new_syms]
+   119:         if not ns or ns == self.symbols:
+   120:             return
+   121: 
+   122:         self.symbols = list(ns)
+   123:         for s in self.symbols:
+   124:             if s not in self.ctx:
+   125:                 self.ctx[s] = SymbolContext(s, [])
+   126:             self._fsm.ensure_symbol(s)
+   127:         for s in list(self.ctx.keys()):
+   128:             if s not in self.symbols:
+   129:                 del self.ctx[s]
    130: 
-   131:     async def _task_refresh_watchlist(self):
-   132:         # Placeholder: à relier à ta logique de sélection dynamique de paires
-   133:         while self._running:
-   134:             # Ici on pourrait filtrer par volume via exchange.get_ticker()
-   135:             await self._sleep(60)
-   136: 
-   137:     async def _fetch_ohlcv_once(self, symbol: str, limit: int = 100) -> List[Dict]:
-   138:         """
-   139:         Récupère une petite fenêtre OHLCV via l’adaptateur MarketData (normalisé).
-   140:         """
-   141:         md = MarketData(self.exchange)
-   142:         data = md.get_ohlcv(symbol, interval="1m", limit=limit)
-   143:         return data.get("data", []) if isinstance(data, dict) else []
-   144: 
-   145:     async def _task_trade_loop(self, symbol: str):
-   146:         ctx = self.ctx[symbol]
-   147:         print(f"[trade-loop] start {symbol}")
-   148:         # Pré-chargement fenêtre
-   149:         boot_rows = await self._safe(lambda: self._fetch_ohlcv_once(symbol, limit=200),
-   150:                                      label=f"fetch_ohlcv_boot:{symbol}")
-   151:         ctx.ohlcv = self._normalize_rows(boot_rows or [])
-   152:         while self._running:
-   153:             if self._paused:
-   154:                 await self._sleep(1.0)
-   155:                 continue
-   156:             # 1) rafraîchir dernière bougie
-   157:             new_rows = await self._safe(lambda: self._fetch_ohlcv_once(symbol, limit=2),
-   158:                                         label=f"fetch_ohlcv_tail:{symbol}")
-   159:             if new_rows:
-   160:                 # maintenir une fenêtre glissante
-   161:                 ctx.ohlcv = (ctx.ohlcv + self._normalize_rows(new_rows))[-400:]
-   162:             # 2) générer signal
-   163:             try:
-   164:                 # on envoie toujours une liste de dicts normalisés
-   165:                 sig: Optional[Signal] = generate_signal(ohlcv=ctx.ohlcv, config=self.config)
-   166:             except Exception as e:
-   167:                 print(f"[trade-loop:{symbol}] generate_signal error: {e!r}")
-   168:                 sig = None
-   169:             # 3) exécuter
-   170:             if sig and not ctx.position_open:
-   171:                 try:
-   172:                     assets = self.exchange.get_assets()
-   173:                     equity_usdt = 0.0
-   174:                     for a in (assets.get("data") or []):
-   175:                         if a.get("currency") == "USDT":
-   176:                             equity_usdt = float(a.get("equity", 0))
-   177:                             break
-   178:                     req = OrderRequest(
-   179:                         symbol=sig.symbol or symbol,
-   180:                         side="long" if sig.side > 0 else "short",
-   181:                         price=float(sig.entry),
-   182:                         sl=float(sig.sl),
-   183:                         tp=float(sig.tp1) if getattr(sig, "tp1", None) else (float(sig.tp2) if getattr(sig, "tp2", None) else None),
-   184:                         risk_pct=float(getattr(self.config, "RISK_PCT", 0.01)),
-   185:                     )
-   186:                     res = self.order_service.prepare_and_place(equity_usdt, req)
-   187:                     if res.accepted:
-   188:                         ctx.position_open = True
-   189:                         ctx.last_signal_ts = time.time()
-   190:                         # alimente FSM
-   191:                         side_enum = PositionSide.LONG if req.side == "long" else PositionSide.SHORT
-   192:                         st = self.pos.get(symbol) or PositionState(symbol, side_enum)
-   193:                         st.side = side_enum
-   194:                         st.status = PositionStatus.PENDING_ENTRY
-   195:                         st.entry_order_id = res.order_id or st.entry_order_id
-   196:                         st.req_qty = st.req_qty or (res.filled_qty or 0.0) or 0.0
-   197:                         st.sl = req.sl
-   198:                         st.tp = req.tp
-   199:                         self.pos[symbol] = st
-   200:                         print(f"[order] {symbol} accepted")
-   201:                         if self._tg.enabled():
-   202:                             await self._tg.send_message(f"Order accepted: {symbol} {req.side} @ {req.price}")
-   203:                     else:
-   204:                         print(f"[order] {symbol} rejected: {res.reason}")
-   205:                         if self._tg.enabled():
-   206:                             await self._tg.send_message(f"Order rejected: {symbol} reason={res.reason}")
-   207:                 except Exception as e:
-   208:                     print(f"[trade-loop:{symbol}] order error: {e!r}")
-   209:             # 4) tempo
-   210:             await self._sleep(1.0)
-   211: 
-   212:     async def _task_sync_positions(self):
-   213:         print("[sync] start")
-   214:         while self._running:
-   215:             try:
-   216:                 for symbol, st in list(self.pos.items()):
-   217:                     # PENDING_ENTRY -> consommer fills
-   218:                     if st.status == PositionStatus.PENDING_ENTRY and st.entry_order_id:
-   219:                         data = self.exchange.get_fills(symbol, order_id=st.entry_order_id)
-   220:                         for f in (data.get("data") or []):
-   221:                             fill = Fill(
-   222:                                 order_id=str(f.get("orderId") or f.get("ordId") or ""),
-   223:                                 trade_id=str(f.get("tradeId") or f.get("fillId") or f.get("execId") or ""),
-   224:                                 price=float(f.get("price", f.get("fillPx", 0))),
-   225:                                 qty=float(f.get("qty", f.get("fillSz", 0))),
-   226:                                 fee=float(f.get("fee", f.get("fillFee", 0))),
-   227:                                 ts=int(f.get("ts", f.get("time", 0))),
-   228:                             )
-   229:                             st.apply_fill_entry(fill)
-   230:                         # si toujours pas OPEN, vérifier positions visibles côté exchange
-   231:                         if st.status != PositionStatus.OPEN:
-   232:                             opens = self.exchange.get_open_positions(symbol).get("data", [])
-   233:                             for p in opens:
-   234:                                 if p.get("symbol") == symbol and ((p.get("side") == "long") == (st.side == PositionSide.LONG)):
-   235:                                     st.status = PositionStatus.OPEN
-   236:                                     st.filled_qty = float(p.get("qty", st.filled_qty))
-   237:                                     st.avg_entry_price = float(p.get("avgEntryPrice", st.avg_entry_price))
-   238:                                     break
-   239:                         self.pos[symbol] = st
-   240:                     # OPEN -> vérifier si qty retombe à 0 (fermeture externe ou SL/TP)
-   241:                     elif st.status == PositionStatus.OPEN:
-   242:                         opens = self.exchange.get_open_positions(symbol).get("data", [])
-   243:                         qty_open = 0.0
-   244:                         for p in opens:
-   245:                             if p.get("symbol") == symbol and ((p.get("side") == "long") == (st.side == PositionSide.LONG)):
-   246:                                 qty_open = float(p.get("qty", 0.0))
-   247:                                 break
-   248:                         if qty_open <= 1e-12:
-   249:                             # regarder fills récents (sortie)
-   250:                             fills = self.exchange.get_fills(symbol).get("data", [])
-   251:                             for f in fills:
-   252:                                 ts = int(f.get("ts", 0))
-   253:                                 if st.opened_ts and ts >= st.opened_ts:
-   254:                                     fill = Fill(
-   255:                                         order_id=str(f.get("orderId") or ""),
-   256:                                         trade_id=str(f.get("tradeId") or f.get("fillId") or ""),
-   257:                                         price=float(f.get("price", 0)),
-   258:                                         qty=float(f.get("qty", 0)),
-   259:                                         fee=float(f.get("fee", 0)),
-   260:                                         ts=ts,
-   261:                                     )
-   262:                                     st.apply_fill_exit(fill)
-   263:                             if st.status != PositionStatus.CLOSED:
-   264:                                 st.status = PositionStatus.CLOSED
-   265:                                 st.closed_ts = int(time.time()*1000)
-   266:                             self.pos[symbol] = st
-   267:                     # PENDING_EXIT -> consommer fills de sortie
-   268:                     elif st.status == PositionStatus.PENDING_EXIT and st.exit_order_id:
-   269:                         data = self.exchange.get_fills(symbol, order_id=st.exit_order_id)
-   270:                         for f in (data.get("data") or []):
-   271:                             fill = Fill(
-   272:                                 order_id=str(f.get("orderId") or ""),
-   273:                                 trade_id=str(f.get("tradeId") or f.get("fillId") or ""),
-   274:                                 price=float(f.get("price", 0)),
-   275:                                 qty=float(f.get("qty", 0)),
-   276:                                 fee=float(f.get("fee", 0)),
-   277:                                 ts=int(f.get("ts", 0)),
-   278:                             )
-   279:                             st.apply_fill_exit(fill)
-   280:                         self.pos[symbol] = st
-   281:             except Exception as e:
-   282:                 print(f"[sync] error: {e!r}")
-   283:             await self._sleep(2.0)
-   284: 
-   285:     # ---------- Helpers ops ----------
-   286:     def _equity_usdt(self) -> float:
-   287:         try:
-   288:             assets = self.exchange.get_assets()
-   289:             for a in (assets.get("data") or []):
-   290:                 if a.get("currency") == "USDT":
-   291:                     return float(a.get("equity", 0))
-   292:         except Exception:
-   293:             pass
-   294:         return 0.0
-   295: 
-   296:     async def _flat_symbol(self, symbol: str):
-   297:         st = self.pos.get(symbol)
-   298:         if not st or st.status not in (PositionStatus.OPEN, PositionStatus.PENDING_ENTRY):
-   299:             return False, "no open position"
-   300:         side = "SELL" if st.side == PositionSide.LONG else "BUY"
-   301:         try:
-   302:             out = self.exchange.place_order(symbol=symbol, side=side, quantity=max(st.filled_qty, st.req_qty) or 0.0, order_type="market")
-   303:             st.exit_order_id = str((out.get("data") or {}).get("orderId", "")) if isinstance(out, dict) else st.exit_order_id
-   304:             st.status = PositionStatus.PENDING_EXIT
-   305:             self.pos[symbol] = st
-   306:             return True, "exit submitted"
-   307:         except Exception as e:
-   308:             return False, repr(e)
-   309: 
-   310:     async def _task_telegram(self):
-   311:         if not self._tg.enabled():
-   312:             while self._running:
-   313:                 await self._sleep(2.0)
-   314:             return
-   315:         await self._tg.send_message(self._status_text())
-   316:         while self._running:
-   317:             try:
-   318:                 updates = await self._tg.poll_commands(timeout_s=20)
-   319:                 for u in updates:
-   320:                     text = u["text"].strip()
-   321:                     low = text.lower()
-   322:                     if low.startswith("/status"):
-   323:                         await self._tg.send_message(self._status_text())
-   324:                     elif low.startswith("/equity"):
-   325:                         await self._tg.send_message(f"Equity USDT: {self._equity_usdt():.2f}")
-   326:                     elif low.startswith("/pause"):
-   327:                         self._paused = True
-   328:                         await self._tg.send_message("Paused ✅ (no new entries)")
-   329:                     elif low.startswith("/resume"):
-   330:                         self._paused = False
-   331:                         await self._tg.send_message("Resumed ▶️")
-   332:                     elif low.startswith("/flat_all"):
-   333:                         oks = []
-   334:                         for s in list(self.pos.keys()):
-   335:                             ok, _ = await self._flat_symbol(s)
-   336:                             oks.append(f"{s}:{'ok' if ok else 'err'}")
-   337:                         await self._tg.send_message(" ".join(oks) or "none")
-   338:                     elif low.startswith("/flat"):
-   339:                         parts = text.split()
-   340:                         if len(parts) >= 2:
-   341:                             sym = parts[1].replace("_", "").upper()
-   342:                             ok, msg = await self._flat_symbol(sym)
-   343:                             await self._tg.send_message(f"{sym}: {msg}")
-   344:                         else:
-   345:                             await self._tg.send_message("Usage: /flat SYMBOL")
-   346:                     elif low.startswith("/symbols"):
-   347:                         parts = text.split(None, 1)
-   348:                         if len(parts) == 2:
-   349:                             new_syms = [s.strip().replace("_", "") for s in parts[1].split(",") if s.strip()]
-   350:                             if new_syms:
-   351:                                 self.symbols = new_syms
-   352:                                 for s in new_syms:
-   353:                                     if s not in self.ctx:
-   354:                                         self.ctx[s] = SymbolContext(s, [])
-   355:                                     if s not in self.pos:
-   356:                                         self.pos[s] = PositionState(s, PositionSide.LONG)
-   357:                                 await self._tg.send_message(f"Symbols updated: {','.join(self.symbols)}")
-   358:                             else:
-   359:                                 await self._tg.send_message("Usage: /symbols BTCUSDT,ETHUSDT")
-   360:                         else:
-   361:                             await self._tg.send_message("Usage: /symbols BTCUSDT,ETHUSDT")
-   362:                     elif low.startswith("/close"):
-   363:                         await self._tg.send_message("Closing…")
-   364:                         await self.stop(reason="telegram:/close")
-   365:                     else:
-   366:                         await self._tg.send_message(
-   367:                             "Commands: /status, /equity, /pause, /resume, /flat SYMBOL, /flat_all, /symbols SYM1,SYM2, /close")
-   368:             except asyncio.CancelledError:
-   369:                 break
-   370:             except Exception:
-   371:                 await self._sleep(2.0)
-   372: 
-   373:     # ---------- BOOT/RUN ----------
-   374:     async def run(self):
-   375:         if self._running:
-   376:             return
-   377:         self._running = True
-   378:         loop = asyncio.get_running_loop()
-   379:         for sig in (signal.SIGINT, signal.SIGTERM):
-   380:             try:
-   381:                 loop.add_signal_handler(sig, lambda s=sig: asyncio.create_task(self.stop(reason=f"signal:{s.name}")))
-   382:             except NotImplementedError:
-   383:                 pass  # Windows
-   384:         self._tasks = [
-   385:             asyncio.create_task(self._task_heartbeat(), name="heartbeat"),
-   386:             asyncio.create_task(self._task_refresh_watchlist(), name="watchlist"),
-   387:             asyncio.create_task(self._task_telegram(), name="telegram"),
-   388:             asyncio.create_task(self._task_sync_positions(), name="sync"),
-   389:         ] + [asyncio.create_task(self._task_trade_loop(s), name=f"trade:{s}") for s in self.symbols]
-   390:         print("[orchestrator] running")
-   391:         if self._tg.enabled():
-   392:             await self._tg.send_message("Orchestrator started ✅")
-   393:         try:
-   394:             await asyncio.gather(*self._tasks)
-   395:         except asyncio.CancelledError:
-   396:             pass
-   397:         finally:
-   398:             print("[orchestrator] stopped")
-   399: 
-   400:     async def stop(self, reason: str = "unknown"):
-   401:         if not self._running:
-   402:             return
-   403:         print(f"[orchestrator] stopping: {reason}")
-   404:         self._running = False
-   405:         for t in self._tasks:
-   406:             t.cancel()
-   407:         await asyncio.sleep(0)  # yield to cancellations
-   408:         if self._tg.enabled():
-   409:             await self._tg.send_message(f"Orchestrator stopping: {reason}")
-   410: 
-   411: 
-   412: # Helper de lancement depuis bot.py
-   413: async def run_orchestrator(exchange: BitgetFuturesClient, order_service: OrderService, config, symbols: Sequence[str]):
-   414:     orch = Orchestrator(exchange, order_service, config, symbols)
-   415:     await orch.run()
+   131:         joined = ",".join(self.symbols)
+   132:         print(f"[watchlist] TOP{len(self.symbols)} = {joined}")
+   133:         self.logs.row("watchlist.csv", {"ts": int(time.time() * 1000), "symbols": joined})
+   134:         asyncio.create_task(self.notifier.send(f"🔝 Watchlist: {joined}"))
+   135: 
+   136:     # ---- positions sync ----
+   137:     async def _task_positions_sync(self):
+   138:         while self._running:
+   139:             try:
+   140:                 pos = await safe_call(
+   141:                     lambda: self.exchange.get_open_positions(None),
+   142:                     label="get_open_positions",
+   143:                     running_flag=lambda: self._running,
+   144:                 )
+   145:                 pos_list = pos.get("data") if isinstance(pos, dict) else []
+   146: 
+   147:                 fills_by_sym: Dict[str, List[Dict[str, Any]]] = {}
+   148:                 for sym, st in self._fsm.all().items():
+   149:                     if st.state in (STATE_PENDING_ENTRY, STATE_OPEN):
+   150:                         fl = self.orders.fetch_fills(sym, st.order_id, 50)
+   151:                         fills_by_sym[sym] = fl
+   152:                         for f in fl:
+   153:                             self.logs.row(
+   154:                                 "fills.csv",
+   155:                                 {
+   156:                                     "ts": int(time.time() * 1000),
+   157:                                     "symbol": sym,
+   158:                                     "order_id": f.get("orderId", ""),
+   159:                                     "trade_id": f.get("tradeId", ""),
+   160:                                     "price": float(f.get("price", 0.0)),
+   161:                                     "qty": float(f.get("qty", 0.0)),
+   162:                                     "fee": float(f.get("fee", 0.0)),
+   163:                                 },
+   164:                             )
+   165: 
+   166:                 self._fsm.reconcile(pos_list, fills_by_sym)
+   167: 
+   168:                 now = int(time.time() * 1000)
+   169:                 for sym, st in self._fsm.all().items():
+   170:                     if sym in self.ctx:
+   171:                         self.ctx[sym].position_open = st.state in (STATE_OPEN, STATE_PENDING_EXIT)
+   172:                     self.logs.row(
+   173:                         "positions.csv",
+   174:                         {"ts": now, "symbol": sym, "state": st.state, "qty": st.qty, "entry": st.entry},
+   175:                     )
+   176:             except Exception as e:
+   177:                 if not QUIET:
+   178:                     print(f"[positions] sync error: {e!r}")
+   179: 
+   180:             await asyncio.sleep(5.0)
+   181: 
+   182:     # ---- trade loop ----
+   183:     async def _task_trade_loop(self, symbol: str):
+   184:         ctx = self.ctx[symbol]
+   185:         if not QUIET:
+   186:             print(f"[trade-loop] start {symbol}")
+   187: 
+   188:         boot = await safe_call(
+   189:             lambda: self.ohlcv.fetch_once(symbol, "1m", 200),
+   190:             label=f"ohlcv_boot:{symbol}",
+   191:             running_flag=lambda: self._running,
+   192:         )
+   193:         ctx.ohlcv = self.ohlcv.normalize_rows(boot or [])
+   194:         if PRINT_OHLCV_SAMPLE and ctx.ohlcv:
+   195:             print(f"[debug:{symbol}] ohlcv sample -> dict={list(ctx.ohlcv[0].keys())}")
+   196: 
+   197:         while self._running:
+   198:             if self._paused:
+   199:                 await asyncio.sleep(1.0)
+   200:                 continue
+   201: 
+   202:             tail = await safe_call(
+   203:                 lambda: self.ohlcv.fetch_once(symbol, "1m", 2),
+   204:                 label=f"ohlcv_tail:{symbol}",
+   205:                 running_flag=lambda: self._running,
+   206:             )
+   207:             if tail:
+   208:                 ctx.ohlcv = (self.ohlcv.normalize_rows(ctx.ohlcv) + self.ohlcv.normalize_rows(tail))[-400:]
+   209:                 ctx.ticks += 1
+   210: 
+   211:             # stratégie : tolère dict/list/cols
+   212:             sig: Optional[Signal] = None
+   213:             try:
+   214:                 rd = ctx.ohlcv
+   215:                 seq = [[r["ts"], r["open"], r["high"], r["low"], r["close"], r["volume"]] for r in rd]
+   216:                 cols = {
+   217:                     "ts": [r["ts"] for r in rd],
+   218:                     "open": [r["open"] for r in rd],
+   219:                     "high": [r["high"] for r in rd],
+   220:                     "low": [r["low"] for r in rd],
+   221:                     "close": [r["close"] for r in rd],
+   222:                     "volume": [r["volume"] for r in rd],
+   223:                 }
+   224:                 try:
+   225:                     sig = generate_signal(ohlcv=rd, config=self.config)
+   226:                 except Exception:
+   227:                     try:
+   228:                         sig = generate_signal(ohlcv=seq, config=self.config)
+   229:                     except Exception:
+   230:                         sig = generate_signal(ohlcv=cols, config=self.config)
+   231:             except Exception as e:
+   232:                 if not QUIET:
+   233:                     print(f"[trade-loop:{symbol}] signal error: {e!r}")
+   234: 
+   235:             if sig:
+   236:                 last_close = ctx.ohlcv[-1]["close"] if ctx.ohlcv else float("nan")
+   237:                 self.logs.row(
+   238:                     "signals.csv",
+   239:                     {
+   240:                         "ts": int(time.time() * 1000),
+   241:                         "symbol": symbol,
+   242:                         "side": "LONG" if sig.side > 0 else "SHORT",
+   243:                         "entry": float(getattr(sig, "entry", last_close) or last_close),
+   244:                         "sl": float(getattr(sig, "sl", 0) or 0),
+   245:                         "tp1": float(getattr(sig, "tp1", 0) or 0),
+   246:                         "tp2": float(getattr(sig, "tp2", 0) or 0),
+   247:                         "last": float(last_close),
+   248:                     },
+   249:                 )
+   250:                 if not QUIET:
+   251:                     side_str = "LONG" if sig.side > 0 else "SHORT"
+   252:                     print(f"[signal] {symbol} -> {side_str} entry={last_close}")
+   253: 
+   254:             # no-op debug
+   255:             if not sig and self._debug_noop:
+   256:                 now = time.time()
+   257:                 if now - self._last_noop_ts > 20.0 and ctx.ohlcv:
+   258:                     last_close = ctx.ohlcv[-1]["close"]
+   259:                     self.logs.row(
+   260:                         "signals.csv",
+   261:                         {"ts": int(now * 1000), "symbol": symbol, "side": "NONE", "entry": float(last_close),
+   262:                          "sl": 0.0, "tp1": 0.0, "tp2": 0.0, "last": float(last_close)},
+   263:                     )
+   264:                     self._last_noop_ts = now
+   265: 
+   266:             # ouverture
+   267:             st = self._fsm.get(symbol)
+   268:             if sig and st.state == STATE_FLAT:
+   269:                 try:
+   270:                     risk_pct = float(getattr(self.config, "RISK_PCT", 0.01) or 0.01)
+   271:                     min_notional = float(getattr(self.config, "MIN_TRADE_USDT", 5) or 5)
+   272:                     if self.orders.get_equity_usdt() * risk_pct < min_notional:
+   273:                         await asyncio.sleep(1.0); continue
+   274:                     if time.time() - ctx.last_signal_ts < 5.0:
+   275:                         continue
+   276:                     entry_price = float(getattr(sig, "entry", ctx.ohlcv[-1]["close"]))
+   277:                     res = self.orders.place_entry(
+   278:                         symbol=symbol,
+   279:                         side=("long" if sig.side > 0 else "short"),
+   280:                         price=entry_price,
+   281:                         sl=float(getattr(sig, "sl", 0) or 0) or None,
+   282:                         tp=float(getattr(sig, "tp1", 0) or 0) or None,
+   283:                         risk_pct=risk_pct,
+   284:                     )
+   285:                     if res.accepted:
+   286:                         ctx.last_signal_ts = time.time()
+   287:                         self.logs.row(
+   288:                             "orders.csv",
+   289:                             {"ts": int(time.time() * 1000), "symbol": symbol,
+   290:                              "side": "long" if sig.side > 0 else "short",
+   291:                              "price": entry_price, "sl": float(getattr(sig, "sl", 0) or 0),
+   292:                              "tp": float(getattr(sig, "tp1", 0) or 0), "risk_pct": risk_pct,
+   293:                              "status": res.status or "accepted", "order_id": res.order_id or ""},
+   294:                         )
+   295:                 except Exception as e:
+   296:                     if not QUIET:
+   297:                         print(f"[trade-loop:{symbol}] order error: {e!r}")
+   298: 
+   299:             await asyncio.sleep(1.0)
+   300: 
+   301:     # ---- commandes ----
+   302:     async def _task_commands(self):
+   303:         await self.notifier.send("Orchestrator started ✅\nCommands: /status • /pause • /resume • /stop")
+   304:         assert self._cmd_stream is not None
+   305:         async for text in self._cmd_stream:
+   306:             t = (text or "").strip().lower()
+   307:             if t.startswith("/status"):
+   308:                 alive = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(self._heartbeat_ts)) if self._heartbeat_ts else "n/a"
+   309:                 await self.notifier.send(
+   310:                     f"running:{self._running} paused:{self._paused}\n"
+   311:                     f"heartbeat:{alive}\n"
+   312:                     f"symbols:{','.join(self.symbols)}"
+   313:                 )
+   314:             elif t.startswith("/pause"):
+   315:                 self._paused = True; await self.notifier.send("Paused ✅")
+   316:             elif t.startswith("/resume"):
+   317:                 self._paused = False; await self.notifier.send("Resumed ▶️")
+   318:             elif t.startswith("/stop"):
+   319:                 await self.notifier.send("🛑 Stop demandé. Arrêt en cours…")
+   320:                 await self.stop("telegram:/stop")
+   321:                 break
+   322: 
+   323:     # ---- snapshot / run / stop ----
+   324:     def _snapshot_state(self) -> dict:
+   325:         return {
+   326:             "last_signal_ts": {s: ctx.last_signal_ts for s, ctx in self.ctx.items()},
+   327:             "fsm": {
+   328:                 s: {"state": st.state, "side": st.side, "qty": st.qty, "entry": st.entry, "order_id": st.order_id}
+   329:                 for s, st in self._fsm.all().items()
+   330:             },
+   331:         }
+   332: 
+   333:     async def run(self):
+   334:         if self._running: return
+   335:         self._running = True
+   336: 
+   337:         loop = asyncio.get_running_loop()
+   338:         for sig in (signal.SIGINT, signal.SIGTERM):
+   339:             try:
+   340:                 loop.add_signal_handler(sig, lambda s=sig: asyncio.create_task(self.stop(reason=f"signal:{s.name}")))
+   341:             except NotImplementedError:
+   342:                 pass
+   343: 
+   344:         try:
+   345:             top = await self._watch.boot_topN()
+   346:             print(f"[watchlist] boot got: {top}")
+   347:             if top: self._apply_symbols_update(top)
+   348:         except Exception as e:
+   349:             if not QUIET:
+   350:                 print(f"[watchlist] boot error: {e!r}")
+   351: 
+   352:         await self.notifier.start()
+   353: 
+   354:         self._tasks = [
+   355:             asyncio.create_task(heartbeat_task(lambda: self._running), name="heartbeat"),
+   356:             asyncio.create_task(
+   357:                 log_stats_task(lambda: self._running,
+   358:                                get_ticks=lambda: sum(c.ticks for c in self.ctx.values()),
+   359:                                get_pairs=lambda: len(self.symbols)),
+   360:                 name="stats"),
+   361:             asyncio.create_task(self._watch.task_auto_refresh(), name="watchlist"),
+   362:             asyncio.create_task(self._task_positions_sync(), name="positions"),
+   363:             asyncio.create_task(self.state.task_autosave(self._snapshot_state), name="state-save"),
+   364:             *[asyncio.create_task(self._task_trade_loop(s), name=f"trade:{s}") for s in self.symbols],
+   365:         ]
+   366:         if self._cmd_stream:
+   367:             self._tasks.append(asyncio.create_task(self._task_commands(), name="commands"))
+   368: 
+   369:         print("[orchestrator] running")
+   370:         try:
+   371:             await asyncio.gather(*self._tasks)
+   372:         except asyncio.CancelledError:
+   373:             pass
+   374:         finally:
+   375:             print("[orchestrator] stopped")
+   376: 
+   377:     async def stop(self, reason: str = "unknown"):
+   378:         if not self._running: return
+   379:         print(f"[orchestrator] stopping: {reason}")
+   380:         self._running = False
+   381:         for t in self._tasks:
+   382:             try: t.cancel()
+   383:             except Exception: pass
+   384:         try:
+   385:             if self._cmd_stream: await self._cmd_stream.stop()
+   386:             await self.notifier.stop()
+   387:         except Exception:
+   388:             pass
+   389:         await asyncio.sleep(0)
+   390: 
+   391: 
+   392: async def run_orchestrator(exchange: BitgetFuturesClient, order_service: OrderService, config: Any, symbols: Sequence[str]):
+   393:     orch = Orchestrator(exchange, order_service, config, symbols)
+   394:     await orch.run()
 
 
-## live/telegram_async.py (last modified: 2025-08-22 13:03:01)
+## live/orders.py (last modified: 2025-08-23 08:27:41)
+     1: # live/orders.py
+     2: from __future__ import annotations
+     3: from dataclasses import dataclass
+     4: from typing import Any, Optional
+     5: 
+     6: from scalp.services.order_service import OrderService, OrderRequest
+     7: 
+     8: @dataclass
+     9: class OrderResult:
+    10:     accepted: bool
+    11:     order_id: str | None = None
+    12:     status: str | None = None
+    13:     reason: str | None = None
+    14: 
+    15: class OrderExecutor:
+    16:     """
+    17:     Fine couche autour d'OrderService + exchange :
+    18:       - calcule l'équité USDT
+    19:       - place une entrée (risk_pct)
+    20:       - récupère les fills (normalisés)
+    21:     L'orchestrateur n’appelle plus OrderService directement.
+    22:     """
+    23: 
+    24:     def __init__(self, order_service: OrderService, exchange: Any, config: Any) -> None:
+    25:         self.order_service = order_service
+    26:         self.exchange = exchange
+    27:         self.config = config
+    28: 
+    29:     # ---------- Equity ----------
+    30:     def get_equity_usdt(self) -> float:
+    31:         equity = 0.0
+    32:         try:
+    33:             assets = self.exchange.get_assets()
+    34:             if isinstance(assets, dict):
+    35:                 for a in (assets.get("data") or []):
+    36:                     if str(a.get("currency")).upper() == "USDT":
+    37:                         equity = float(a.get("equity", 0.0))
+    38:                         break
+    39:         except Exception:
+    40:             pass
+    41:         return equity
+    42: 
+    43:     # ---------- Entrée ----------
+    44:     def place_entry(self, *, symbol: str, side: str, price: float,
+    45:                     sl: float | None, tp: float | None, risk_pct: float) -> OrderResult:
+    46:         """
+    47:         side: 'long' | 'short'
+    48:         Retourne OrderResult(accepted, order_id, status, reason)
+    49:         """
+    50:         equity = self.get_equity_usdt()
+    51:         req = OrderRequest(symbol=symbol, side=side, price=float(price),
+    52:                            sl=(float(sl) if sl else None), tp=(float(tp) if tp else None),
+    53:                            risk_pct=float(risk_pct))
+    54:         try:
+    55:             res = self.order_service.prepare_and_place(equity, req)
+    56:             return OrderResult(accepted=bool(getattr(res, "accepted", False)),
+    57:                                order_id=getattr(res, "order_id", None),
+    58:                                status=getattr(res, "status", None),
+    59:                                reason=getattr(res, "reason", None))
+    60:         except Exception as e:
+    61:             return OrderResult(accepted=False, reason=str(e))
+    62: 
+    63:     # ---------- Fills ----------
+    64:     def fetch_fills(self, symbol: str, order_id: str | None, limit: int = 50) -> list[dict]:
+    65:         """
+    66:         Normalise le format en liste de dicts {orderId, tradeId, price, qty, fee}
+    67:         """
+    68:         try:
+    69:             raw = self.exchange.get_fills(symbol, order_id, limit)
+    70:         except Exception:
+    71:             return []
+    72: 
+    73:         items: list = []
+    74:         if isinstance(raw, dict):
+    75:             items = raw.get("data") or raw.get("result") or raw.get("fills") or []
+    76:         elif isinstance(raw, (list, tuple)):
+    77:             items = list(raw)
+    78: 
+    79:         out: list[dict] = []
+    80:         for f in items:
+    81:             if isinstance(f, dict):
+    82:                 out.append({
+    83:                     "orderId": f.get("orderId") or f.get("order_id") or "",
+    84:                     "tradeId": f.get("tradeId") or f.get("trade_id") or "",
+    85:                     "price": float(f.get("price", f.get("fillPrice", 0.0)) or 0.0),
+    86:                     "qty": float(f.get("qty", f.get("size", f.get("fillQty", 0.0))) or 0.0),
+    87:                     "fee": float(f.get("fee", f.get("fillFee", 0.0)) or 0.0),
+    88:                 })
+    89:             else:
+    90:                 try:
+    91:                     seq = list(f)
+    92:                     out.append({
+    93:                         "orderId": str(seq[0]) if seq else "",
+    94:                         "tradeId": str(seq[1]) if len(seq) > 1 else "",
+    95:                         "price": float(seq[2]) if len(seq) > 2 else 0.0,
+    96:                         "qty": float(seq[3]) if len(seq) > 3 else 0.0,
+    97:                         "fee": float(seq[4]) if len(seq) > 4 else 0.0,
+    98:                     })
+    99:                 except Exception:
+   100:                     continue
+   101:         return out
+
+## live/position_fsm.py (last modified: 2025-08-23 08:27:41)
+     1: # live/position_fsm.py
+     2: from __future__ import annotations
+     3: from dataclasses import dataclass
+     4: from typing import Optional, Dict, Any, List
+     5: 
+     6: 
+     7: STATE_FLAT = "FLAT"
+     8: STATE_PENDING_ENTRY = "PENDING_ENTRY"
+     9: STATE_OPEN = "OPEN"
+    10: STATE_PENDING_EXIT = "PENDING_EXIT"
+    11: 
+    12: 
+    13: @dataclass
+    14: class PositionState:
+    15:     symbol: str
+    16:     state: str = STATE_FLAT
+    17:     order_id: Optional[str] = None
+    18:     side: Optional[str] = None   # "long" | "short"
+    19:     qty: float = 0.0
+    20:     entry: float = 0.0
+    21: 
+    22: 
+    23: class PositionFSM:
+    24:     """
+    25:     FSM ultra-simple par symbole.
+    26:     - set_pending_entry(order_id, side)
+    27:     - reconcile(open_positions, fills) -> met à jour l'état à partir des données Bitget
+    28:     """
+    29: 
+    30:     def __init__(self, symbols: List[str]) -> None:
+    31:         self._by_symbol: Dict[str, PositionState] = {s: PositionState(s) for s in symbols}
+    32: 
+    33:     # -------- API utilisateur --------
+    34:     def ensure_symbol(self, symbol: str) -> None:
+    35:         if symbol not in self._by_symbol:
+    36:             self._by_symbol[symbol] = PositionState(symbol)
+    37: 
+    38:     def set_pending_entry(self, symbol: str, order_id: str, side: str) -> None:
+    39:         self.ensure_symbol(symbol)
+    40:         st = self._by_symbol[symbol]
+    41:         st.state = STATE_PENDING_ENTRY
+    42:         st.order_id = order_id
+    43:         st.side = side
+    44: 
+    45:     def mark_pending_exit(self, symbol: str) -> None:
+    46:         self.ensure_symbol(symbol)
+    47:         st = self._by_symbol[symbol]
+    48:         st.state = STATE_PENDING_EXIT
+    49: 
+    50:     def force_flat(self, symbol: str) -> None:
+    51:         self._by_symbol[symbol] = PositionState(symbol)
+    52: 
+    53:     # -------- Lecture --------
+    54:     def get(self, symbol: str) -> PositionState:
+    55:         self.ensure_symbol(symbol)
+    56:         return self._by_symbol[symbol]
+    57: 
+    58:     def all(self) -> Dict[str, PositionState]:
+    59:         return self._by_symbol
+    60: 
+    61:     # -------- Réconciliation --------
+    62:     def reconcile(self, open_positions: List[Dict[str, Any]], fills: Dict[str, List[Dict[str, Any]]]) -> None:
+    63:         """
+    64:         open_positions: liste [{symbol, side, qty, avgEntryPrice}]
+    65:         fills: dict symbol -> liste de fills [{orderId, price, qty, ...}]
+    66:         """
+    67:         # indexer positions ouvertes
+    68:         idx_open = {p["symbol"]: p for p in open_positions if float(p.get("qty", 0.0)) > 0.0}
+    69: 
+    70:         for sym, st in self._by_symbol.items():
+    71:             p = idx_open.get(sym)
+    72: 
+    73:             if st.state == STATE_PENDING_ENTRY:
+    74:                 # si on voit des fills de l'ordre en attente -> OPEN
+    75:                 f_list = fills.get(sym) or []
+    76:                 qty_filled = sum(float(f.get("qty", 0.0)) for f in f_list if not st.order_id or str(f.get("orderId")) == str(st.order_id))
+    77:                 if qty_filled > 0.0 or p:
+    78:                     st.state = STATE_OPEN
+    79:                     st.qty = float(p.get("qty", qty_filled)) if p else qty_filled
+    80:                     st.entry = float(p.get("avgEntryPrice", f_list[0].get("price", 0.0) if f_list else 0.0)) if p else \
+    81:                                float(f_list[0].get("price", 0.0)) if f_list else 0.0
+    82:             elif st.state == STATE_OPEN:
+    83:                 # si plus de position ouverte -> FLAT
+    84:                 if not p:
+    85:                     st.state = STATE_FLAT
+    86:                     st.order_id = None
+    87:                     st.side = None
+    88:                     st.qty = 0.0
+    89:                     st.entry = 0.0
+    90:                 else:
+    91:                     st.qty = float(p.get("qty", st.qty))
+    92:                     st.entry = float(p.get("avgEntryPrice", st.entry))
+    93:             elif st.state == STATE_PENDING_EXIT:
+    94:                 # si plus de position -> FLAT ; sinon reste OPEN
+    95:                 if not p:
+    96:                     st.state = STATE_FLAT
+    97:                     st.order_id = None
+    98:                     st.side = None
+    99:                     st.qty = 0.0
+   100:                     st.entry = 0.0
+   101:                 else:
+   102:                     st.state = STATE_OPEN  # pas encore clos
+   103:             else:
+   104:                 # FLAT: si une position apparaît (cas reboot) -> OPEN
+   105:                 if p:
+   106:                     st.state = STATE_OPEN
+   107:                     st.qty = float(p.get("qty", 0.0))
+   108:                     st.entry = float(p.get("avgEntryPrice", 0.0))
+
+## live/state_store.py (last modified: 2025-08-23 08:27:41)
+     1: # live/state_store.py
+     2: from __future__ import annotations
+     3: import json, os, time, asyncio
+     4: from typing import Callable, Dict, Any
+     5: 
+     6: class StateStore:
+     7:     """
+     8:     Persistance légère de l'état (FSM + horodatages) dans un JSON.
+     9:     - save_state(snapshot: dict) -> écrit sur disque
+    10:     - load_state() -> dict
+    11:     - task_autosave(get_snapshot: callable) -> boucle d’auto‑save
+    12:     """
+    13: 
+    14:     def __init__(self, filepath: str, period_s: float = 10.0) -> None:
+    15:         self.filepath = filepath
+    16:         self.period_s = period_s
+    17:         os.makedirs(os.path.dirname(self.filepath), exist_ok=True)
+    18:         self._running = False
+    19: 
+    20:     # -------- I/O --------
+    21:     def save_state(self, snapshot: Dict[str, Any]) -> None:
+    22:         tmp = self.filepath + ".tmp"
+    23:         with open(tmp, "w", encoding="utf-8") as f:
+    24:             json.dump(snapshot, f, ensure_ascii=False, indent=2)
+    25:         os.replace(tmp, self.filepath)
+    26: 
+    27:     def load_state(self) -> Dict[str, Any]:
+    28:         if not os.path.exists(self.filepath):
+    29:             return {}
+    30:         try:
+    31:             with open(self.filepath, "r", encoding="utf-8") as f:
+    32:                 return json.load(f)
+    33:         except Exception:
+    34:             return {}
+    35: 
+    36:     # -------- Autosave --------
+    37:     async def task_autosave(self, get_snapshot: Callable[[], Dict[str, Any]]):
+    38:         self._running = True
+    39:         while self._running:
+    40:             try:
+    41:                 snap = get_snapshot()
+    42:                 snap["saved_at"] = int(time.time() * 1000)
+    43:                 self.save_state(snap)
+    44:             except Exception:
+    45:                 pass
+    46:             await asyncio.sleep(self.period_s)
+    47: 
+    48:     def stop(self): self._running = False
+
+## live/telegram_async.py (last modified: 2025-08-23 08:27:41)
      1: from __future__ import annotations
      2: import time
      3: import requests
@@ -2561,7 +3225,187 @@ Scalp/
     67:         return out
 
 
-## notebooks/spot/bitget_bot.py (last modified: 2025-08-22 13:03:01)
+## live/watchlist.py (last modified: 2025-08-23 08:27:41)
+     1: # scalp/live/watchlist.py
+     2: from __future__ import annotations
+     3: 
+     4: import asyncio
+     5: import os
+     6: from typing import Any, Callable, Awaitable, List, Optional, Sequence, Tuple
+     7: 
+     8: DBG = os.getenv("WATCHLIST_DEBUG", "0") == "1"
+     9: def _dprint(msg: str):
+    10:     if DBG:
+    11:         print(f"[watchlist:debug] {msg}")
+    12: 
+    13: 
+    14: class WatchlistManager:
+    15:     """
+    16:     Génération de watchlist TOP N :
+    17:       - mode='local'  : calcule TOPN via OHLCV (volume quote ~ 24h)
+    18:       - mode='api'    : utilise un endpoint bulk (si disponible)
+    19:       - mode='static' : valeurs fixes (TOP_SYMBOLS ou défaut)
+    20:     """
+    21: 
+    22:     def __init__(
+    23:         self,
+    24:         exchange,
+    25:         *,
+    26:         only_suffix: str = "USDT",
+    27:         top_n: int = 10,
+    28:         period_s: float = 120.0,
+    29:         on_update: Optional[Callable[[Sequence[str]], None]] = None,
+    30:         safe_call: Optional[Callable[[Callable[[], Any], str], Any]] = None,
+    31:         ohlcv_fetch: Optional[Callable[[str, str, int], Awaitable[List[Any]]]] = None,
+    32:     ) -> None:
+    33:         self.exchange = exchange
+    34:         self.only_suffix = only_suffix.upper() if only_suffix else ""
+    35:         self.top_n = top_n
+    36:         self.period_s = period_s
+    37:         self.on_update = on_update
+    38:         self._safe = safe_call or (lambda f, _label: f())
+    39:         self._running = False
+    40:         self._ohlcv_fetch = ohlcv_fetch
+    41:         self.mode = (os.getenv("WATCHLIST_MODE") or "static").lower()  # static | api | local
+    42: 
+    43:     # ---------- extraction API générique ----------
+    44:     @staticmethod
+    45:     def _extract_items(payload: Any) -> List[Any]:
+    46:         if payload is None:
+    47:             return []
+    48:         if isinstance(payload, dict):
+    49:             for k in ("data", "result", "tickers", "items", "list", "tickerList", "records"):
+    50:                 v = payload.get(k)
+    51:                 if isinstance(v, list):
+    52:                     return v
+    53:                 if isinstance(v, dict):
+    54:                     # un niveau de plus
+    55:                     for kk in ("data", "result", "tickers", "items", "list", "tickerList", "records"):
+    56:                         vv = v.get(kk)
+    57:                         if isinstance(vv, list):
+    58:                             return vv
+    59:             return []
+    60:         if isinstance(payload, (list, tuple)):
+    61:             return list(payload)
+    62:         return []
+    63: 
+    64:     @staticmethod
+    65:     def _norm_symbol_and_volume(item: Any) -> Tuple[str, float]:
+    66:         if isinstance(item, dict):
+    67:             s = (item.get("symbol") or item.get("instId") or "").replace("_", "").upper()
+    68:             vol = item.get("volume", item.get("usdtVolume", item.get("quoteVolume", 0.0)))
+    69:             try:
+    70:                 v = float(vol or 0.0)
+    71:             except Exception:
+    72:                 v = 0.0
+    73:             return s, v
+    74:         try:
+    75:             seq = list(item)
+    76:             s = str(seq[0]).replace("_", "").upper() if seq else ""
+    77:             v = float(seq[1]) if len(seq) > 1 else 0.0
+    78:             return s, v
+    79:         except Exception:
+    80:             return "", 0.0
+    81: 
+    82:     def _pick_top(self, payload: Any) -> List[str]:
+    83:         items = self._extract_items(payload)
+    84:         pairs: List[Tuple[str, float]] = []
+    85:         for it in items:
+    86:             s, v = self._norm_symbol_and_volume(it)
+    87:             if not s:
+    88:                 continue
+    89:             if self.only_suffix and not s.endswith(self.only_suffix):
+    90:                 continue
+    91:             pairs.append((s, v))
+    92:         pairs.sort(key=lambda x: x[1], reverse=True)
+    93:         return [s for s, _ in pairs[: self.top_n]]
+    94: 
+    95:     # ---------- TOPN local via OHLCV ----------
+    96:     async def _build_top_local(self) -> List[str]:
+    97:         if not self._ohlcv_fetch:
+    98:             return []
+    99:         # candidates : env ou liste par défaut (~40 liquides)
+   100:         raw = (os.getenv("TOP_CANDIDATES") or "")
+   101:         if raw:
+   102:             candidates = [s.strip().upper().replace("_", "") for s in raw.split(",") if s.strip()]
+   103:         else:
+   104:             candidates = [
+   105:                 "BTCUSDT","ETHUSDT","SOLUSDT","BNBUSDT","XRPUSDT","DOGEUSDT","ADAUSDT","TRXUSDT","TONUSDT","LTCUSDT",
+   106:                 "LINKUSDT","ARBUSDT","OPUSDT","APTUSDT","SUIUSDT","PEPEUSDT","AVAXUSDT","DOTUSDT","MATICUSDT","ATOMUSDT",
+   107:                 "NEARUSDT","SEIUSDT","RUNEUSDT","TIAUSDT","WIFUSDT","JUPUSDT","ICPUSDT","FILUSDT","ETCUSDT","BCHUSDT",
+   108:                 "XLMUSDT","HBARUSDT","EOSUSDT","TRBUSDT","AAVEUSDT","UNIUSDT","FLOWUSDT","RNDRUSDT","ORDIUSDT","SEIUSDT",
+   109:             ]
+   110:         sem = asyncio.Semaphore(int(os.getenv("WATCHLIST_LOCAL_CONC", "5")))
+   111: 
+   112:         async def score(sym: str) -> Tuple[str, float]:
+   113:             async with sem:
+   114:                 try:
+   115:                     rows = await self._ohlcv_fetch(sym, "1m", 1440)
+   116:                     tot = 0.0
+   117:                     for r in rows or []:
+   118:                         if isinstance(r, dict):
+   119:                             tot += float(r.get("close", 0.0)) * float(r.get("volume", 0.0))
+   120:                         else:
+   121:                             tot += float(r[4]) * float(r[5])  # [.., close, volume]
+   122:                     return sym, tot
+   123:                 except Exception:
+   124:                     return sym, 0.0
+   125: 
+   126:         scores = await asyncio.gather(*(score(s) for s in candidates))
+   127:         scores.sort(key=lambda x: x[1], reverse=True)
+   128:         top = [s for s, v in scores if s.endswith(self.only_suffix)][: self.top_n]
+   129:         if DBG:
+   130:             _dprint(f"local scores top={top[:5]}")
+   131:         return top
+   132: 
+   133:     # ---------- public ----------
+   134:     async def boot_topN(self) -> List[str]:
+   135:         # 1) local (réel) si demandé
+   136:         if self.mode == "local":
+   137:             try:
+   138:                 top = await self._build_top_local()
+   139:                 if top:
+   140:                     if self.on_update: self.on_update(top)
+   141:                     return top
+   142:             except Exception as e:
+   143:                 _dprint(f"local mode error: {e!r}")
+   144: 
+   145:         # 2) api (si un bulk existe un jour)
+   146:         if self.mode in ("api", "local"):
+   147:             try:
+   148:                 payload = await self._safe(lambda: self.exchange.get_ticker(None), "get_ticker(None)")
+   149:                 _dprint(f"payload via get_ticker(None): type={type(payload).__name__}")
+   150:                 top = self._pick_top(payload)
+   151:                 if top:
+   152:                     if self.on_update: self.on_update(top)
+   153:                     return top
+   154:             except Exception as e:
+   155:                 _dprint(f"api mode error: {e!r}")
+   156: 
+   157:         # 3) fallback statique
+   158:         env_syms = (os.getenv("TOP_SYMBOLS") or "").replace(" ", "")
+   159:         top = [s for s in env_syms.split(",") if s] if env_syms else \
+   160:               ["BTCUSDT","ETHUSDT","SOLUSDT","BNBUSDT","XRPUSDT","DOGEUSDT","ADAUSDT","TRXUSDT","TONUSDT","LTCUSDT"]
+   161:         top = [s.replace("_", "").upper() for s in top][: self.top_n]
+   162:         if DBG:
+   163:             _dprint(f"using static TOP{len(top)} = {top}")
+   164:         if self.on_update: self.on_update(top)
+   165:         return top
+   166: 
+   167:     async def task_auto_refresh(self):
+   168:         self._running = True
+   169:         while self._running:
+   170:             try:
+   171:                 top = await self.boot_topN()
+   172:                 _dprint(f"refresh -> {top}")
+   173:             except Exception as e:
+   174:                 print(f"[watchlist] refresh error: {e!r}")
+   175:             await asyncio.sleep(self.period_s)
+   176: 
+   177:     def stop(self):
+   178:         self._running = False
+
+## notebooks/spot/bitget_bot.py (last modified: 2025-08-23 08:27:41)
      1: import os
      2: import time
      3: import hmac
@@ -2757,12 +3601,12 @@ Scalp/
    193:     main()
 
 
-## pytest.ini (last modified: 2025-08-22 13:03:01)
+## pytest.ini (last modified: 2025-08-23 08:27:41)
      1: [pytest]
      2: addopts = -q
 
 
-## quick_order.py (last modified: 2025-08-22 13:03:01)
+## quick_order.py (last modified: 2025-08-23 08:27:41)
      1: #!/usr/bin/env python3
      2: """Submit a simple market order on Bitget futures.
      3: 
@@ -2849,11 +3693,11 @@ Scalp/
     84: print(resp)
 
 
-## requirements-dev.txt (last modified: 2025-08-22 13:03:01)
+## requirements-dev.txt (last modified: 2025-08-23 08:27:41)
      1: pytest
 
 
-## requirements.txt (last modified: 2025-08-22 13:35:44)
+## requirements.txt (last modified: 2025-08-23 08:27:41)
      1: requests
      2: python-dotenv
      3: pydantic==1.10.15 ; python_version < "3.11"
@@ -2862,12 +3706,45 @@ Scalp/
      6: # rien à ajouter ici pour market_data (pas de nouvelle dépendance)
 
 
-## scalp/VERSION (last modified: 2025-08-22 13:03:01)
+## run_backtest.py (last modified: 2025-08-23 08:27:41)
+     1: #!/usr/bin/env python3
+     2: import os
+     3: from scalp.backtest.engine import BacktestEngine
+     4: 
+     5: def main():
+     6:     print("[*] Lancement du backtest...")
+     7:     
+     8:     # ⚡ Tu pourras changer ces paramètres
+     9:     pairs = ["BTCUSDT", "ETHUSDT"]  # pour commencer simple
+    10:     start_date = "2024-01-01"
+    11:     end_date = "2024-02-01"
+    12: 
+    13:     # Dossier résultat
+    14:     result_dir = os.path.join(os.path.dirname(__file__), "result")
+    15:     os.makedirs(result_dir, exist_ok=True)
+    16: 
+    17:     # Création du moteur
+    18:     engine = BacktestEngine(
+    19:         pairs=pairs,
+    20:         start_date=start_date,
+    21:         end_date=end_date,
+    22:         result_dir=result_dir
+    23:     )
+    24: 
+    25:     # Lancer le backtest
+    26:     engine.run()
+    27: 
+    28:     print("[✅] Backtest terminé ! Résultats disponibles dans /result/")
+    29: 
+    30: if __name__ == "__main__":
+    31:     main()
+
+## scalp/VERSION (last modified: 2025-08-23 08:27:41)
      1: 0.3.0
      2: 
 
 
-## scalp/__init__.py (last modified: 2025-08-22 13:03:01)
+## scalp/__init__.py (last modified: 2025-08-23 08:27:41)
      1: """Utilities and helpers for Scalp bot.
      2: 
      3: When the bot is executed from ``notebook/spot/bitget_bot.py`` it expects secret
@@ -2939,133 +3816,230 @@ Scalp/
     69: __version__ = get_version()
 
 
-## scalp/adapters/__init__.py (last modified: 2025-08-22 13:03:01)
+## scalp/adapters/__init__.py (last modified: 2025-08-23 08:27:41)
 
 
-## scalp/adapters/bitget.py (last modified: 2025-08-22 13:35:44)
-     1: from __future__ import annotations
-     2: from typing import Any, Dict, List, Optional
-     3: import requests
-     4: from scalp.bitget_client import BitgetFuturesClient as _Base
-     5: 
+## scalp/adapters/bitget.py (last modified: 2025-08-23 08:27:41)
+     1: # scalp/adapters/bitget.py
+     2: from __future__ import annotations
+     3: from typing import Any, Dict, List, Optional
+     4: import inspect, os
+     5: import requests
      6: 
-     7: def _to_float(x, default=0.0) -> float:
-     8:     try:
-     9:         return float(x)
-    10:     except Exception:
-    11:         return default
-    12: 
-    13: 
-    14: class BitgetFuturesClient(_Base):
-    15:     def __init__(self, *args: Any, **kwargs: Any) -> None:
-    16:         kwargs.setdefault("requests_module", requests)
-    17:         # Map friendly aliases to the base client's parameter names
-    18:         if "api_key" in kwargs and "access_key" not in kwargs:
-    19:             kwargs["access_key"] = kwargs.pop("api_key")
-    20:         if "secret" in kwargs and "secret_key" not in kwargs:
-    21:             kwargs["secret_key"] = kwargs.pop("secret")
-    22:         kwargs.setdefault("base_url", "https://api.bitget.com")
-    23:         super().__init__(*args, **kwargs)
+     7: # Client bas-niveau fourni par le repo
+     8: from scalp.bitget_client import BitgetFuturesClient as _Base
+     9: 
+    10: 
+    11: def _to_float(x, default: float = 0.0) -> float:
+    12:     try:
+    13:         return float(x)
+    14:     except Exception:
+    15:         return default
+    16: 
+    17: 
+    18: def _select_base_url() -> str:
+    19:     env = os.environ.get("BITGET_BASE_URL")
+    20:     if env:
+    21:         return env
+    22:     paper = os.environ.get("PAPER_TRADE", "true").lower() in ("1", "true", "yes", "on")
+    23:     return "https://api-testnet.bitget.com" if paper else "https://api.bitget.com"
     24: 
-    25:     def get_assets(self) -> Dict[str, Any]:
-    26:         raw = super().get_assets()
-    27:         data = raw.get("data") or raw.get("result") or raw.get("assets") or []
-    28:         norm: List[Dict[str, Any]] = []
-    29:         for a in data:
-    30:             currency = a.get("currency") or a.get("marginCoin") or a.get("coin") or "USDT"
-    31:             equity = _to_float(a.get("equity", a.get("usdtEquity", a.get("totalEquity", 0))))
-    32:             available = _to_float(a.get("available", a.get("availableBalance", a.get("availableUSDT", 0))))
-    33:             norm.append({"currency": currency, "equity": equity, "available": available, **a})
-    34:         return {"success": True, "data": norm}
-    35: 
-    36:     def get_ticker(self, symbol: Optional[str] = None) -> Dict[str, Any]:
-    37:         if symbol:
-    38:             raw = super().get_ticker(symbol)
-    39:             items = [raw.get("data") or raw]
-    40:         else:
-    41:             raw = super().get_tickers()
-    42:             items = raw.get("data") or raw.get("result") or raw.get("tickers") or []
-    43:         norm: List[Dict[str, Any]] = []
-    44:         for t in items:
-    45:             s = t.get("symbol") or t.get("instId") or t.get("instrumentId") or ""
-    46:             s = s.replace("_", "")
-    47:             last_ = t.get("lastPrice") or t.get("last", t.get("close", t.get("markPrice", 0)))
-    48:             bid_ = t.get("bidPrice") or t.get("bestBidPrice") or t.get("bestBid", t.get("buyOne", 0))
-    49:             ask_ = t.get("askPrice") or t.get("bestAskPrice") or t.get("bestAsk", t.get("sellOne", 0))
-    50:             vol_usdt = t.get("usdtVolume") or t.get("quoteVolume") or t.get("turnover24h")
-    51:             vol_base = t.get("baseVolume") or t.get("volume") or t.get("size24h")
-    52:             volume = _to_float(vol_usdt if vol_usdt is not None else vol_base)
-    53:             norm.append({
-    54:                 "symbol": s,
-    55:                 "lastPrice": _to_float(last_),
-    56:                 "bidPrice": _to_float(bid_),
-    57:                 "askPrice": _to_float(ask_),
-    58:                 "volume": volume,
-    59:                 **t,
-    60:             })
-    61:         return {"success": True, "data": norm}
-    62:     # --- Normalisations position/ordres/fills ---
-    63:     def get_open_positions(self, symbol: Optional[str] = None):
-    64:         raw = super().get_positions() if hasattr(super(), "get_positions") else {}
-    65:         items = raw.get("data") or raw.get("result") or raw.get("positions") or []
-    66:         out = []
-    67:         for p in items:
-    68:             s = (p.get("symbol") or p.get("instId") or "").replace("_", "")
-    69:             if symbol and s != symbol:
-    70:                 continue
-    71:             side = (p.get("holdSide") or p.get("posSide") or p.get("side") or "").lower()
-    72:             qty = _to_float(p.get("size", p.get("holdAmount", p.get("total", 0))))
-    73:             avg = _to_float(p.get("avgOpenPrice", p.get("avgPrice", p.get("entryPrice", 0))))
-    74:             out.append({"symbol": s, "side": side, "qty": qty, "avgEntryPrice": avg})
-    75:         return {"success": True, "data": out}
-    76: 
-    77:     def get_recent_orders(self, symbol: str, limit: int = 50):
-    78:         raw = super().get_orders_history(symbol=symbol) if hasattr(super(), "get_orders_history") else {}
-    79:         items = raw.get("data") or raw.get("result") or []
-    80:         out = []
-    81:         for o in items[:limit]:
-    82:             oid = str(o.get("orderId") or o.get("id") or o.get("ordId") or "")
-    83:             s = (o.get("symbol") or o.get("instId") or "").replace("_","")
-    84:             if s != symbol:
-    85:                 continue
-    86:             side = (o.get("side") or o.get("posSide") or "").lower()
-    87:             status = (o.get("status") or o.get("state") or "").lower()
-    88:             price = float(o.get("price", o.get("px", o.get("avgPrice", 0))))
-    89:             qty = float(o.get("size", o.get("qty", o.get("accFillSz", 0))))
-    90:             filled = float(o.get("filledQty", o.get("fillSz", 0)))
-    91:             avg = float(o.get("avgPrice", o.get("avgPx", 0)))
-    92:             ts = int(o.get("cTime", o.get("uTime", o.get("ts", 0))))
-    93:             out.append({"orderId": oid, "symbol": s, "side": side, "status": status, "price": price, "qty": qty, "filled": filled, "avgPrice": avg, "ts": ts})
-    94:         return {"success": True, "data": out}
-    95: 
-    96:     def get_fills(self, symbol: str, order_id: Optional[str] = None, limit: int = 100):
-    97:         raw = super().get_fills(symbol=symbol) if hasattr(super(), "get_fills") else {}
-    98:         items = raw.get("data") or raw.get("result") or []
-    99:         out = []
-   100:         for f in items[:limit]:
-   101:             s = (f.get("symbol") or f.get("instId") or "").replace("_", "")
-   102:             if s != symbol:
-   103:                 continue
-   104:             if order_id:
-   105:                 if str(f.get("orderId") or f.get("ordId") or "") != str(order_id):
-   106:                     continue
-   107:             out.append({
-   108:                 "orderId": str(f.get("orderId") or f.get("ordId") or ""),
-   109:                 "tradeId": str(f.get("tradeId") or f.get("fillId") or f.get("execId") or ""),
-   110:                 "price": _to_float(f.get("price", f.get("fillPx", 0))),
-   111:                 "qty": _to_float(f.get("size", f.get("fillSz", 0))),
-   112:                 "fee": _to_float(f.get("fee", f.get("fillFee", 0))),
-   113:                 "ts": int(f.get("ts", f.get("time", 0))),
-   114:             })
-   115:         return {"success": True, "data": out}
-   116: 
-   117:     def cancel_order(self, symbol: str, order_id: str):
-   118:         raw = super().cancel_order(symbol=symbol, orderId=order_id) if hasattr(super(), "cancel_order") else {}
-   119:         ok = raw.get("success", True)
-   120:         return {"success": ok, "data": {"orderId": order_id}}
+    25: 
+    26: class BitgetFuturesClient(_Base):
+    27:     """
+    28:     Adaptateur Bitget:
+    29:       - __init__ dynamique (passe seulement les kwargs que le client accepte)
+    30:       - Normalisations robustes: assets, ticker(s), positions, fills
+    31:     """
+    32: 
+    33:     # --------------------- INIT dynamique ---------------------
+    34:     def __init__(self, *args: Any, **kwargs: Any) -> None:
+    35:         """
+    36:         Accepte indifféremment:
+    37:           api_key/apiKey/access_key/accessKey/key
+    38:           api_secret/apiSecret/secret/secret_key/secretKey
+    39:           passphrase/password/api_passphrase/apiPassphrase
+    40:           base_url/baseUrl/host/endpoint (ou auto)
+    41:         On n'envoie au client de base que les noms présents dans sa signature.
+    42:         """
+    43:         user_kwargs = dict(kwargs)
+    44: 
+    45:         # Collecte des valeurs possibles (tous alias)
+    46:         incoming_key = (
+    47:             user_kwargs.pop("api_key", None)
+    48:             or user_kwargs.pop("apiKey", None)
+    49:             or user_kwargs.pop("access_key", None)
+    50:             or user_kwargs.pop("accessKey", None)
+    51:             or user_kwargs.pop("key", None)
+    52:             or user_kwargs.pop("API_KEY", None)
+    53:         )
+    54:         incoming_secret = (
+    55:             user_kwargs.pop("api_secret", None)
+    56:             or user_kwargs.pop("apiSecret", None)
+    57:             or user_kwargs.pop("secret_key", None)
+    58:             or user_kwargs.pop("secretKey", None)
+    59:             or user_kwargs.pop("secret", None)
+    60:             or user_kwargs.pop("API_SECRET", None)
+    61:         )
+    62:         incoming_pass = (
+    63:             user_kwargs.pop("passphrase", None)
+    64:             or user_kwargs.pop("password", None)
+    65:             or user_kwargs.pop("api_passphrase", None)
+    66:             or user_kwargs.pop("apiPassphrase", None)
+    67:         )
+    68:         incoming_base = (
+    69:             user_kwargs.pop("base_url", None)
+    70:             or user_kwargs.pop("baseUrl", None)
+    71:             or user_kwargs.pop("host", None)
+    72:             or user_kwargs.pop("endpoint", None)
+    73:             or _select_base_url()
+    74:         )
+    75: 
+    76:         # Signature réelle du client bas-niveau
+    77:         sig = inspect.signature(_Base.__init__)
+    78:         param_names = set(sig.parameters.keys())  # ex: {'self','access_key','secret_key','passphrase','base_url',...}
+    79: 
+    80:         def pick_name(cands: List[str]) -> Optional[str]:
+    81:             for c in cands:
+    82:                 if c in param_names:
+    83:                     return c
+    84:             return None
+    85: 
+    86:         # Noms réellement supportés
+    87:         key_name = pick_name(["api_key", "apiKey", "access_key", "accessKey", "key"])
+    88:         sec_name = pick_name(["api_secret", "apiSecret", "secret_key", "secretKey", "secret"])
+    89:         pas_name = pick_name(["passphrase", "password", "api_passphrase", "apiPassphrase"])
+    90:         base_name = pick_name(["base_url", "baseUrl", "host", "endpoint"])
+    91:         req_mod_name = "requests_module" if "requests_module" in param_names else None
+    92: 
+    93:         # Construire kwargs à transmettre (une seule fois par nom)
+    94:         base_kwargs: Dict[str, Any] = {}
+    95:         if key_name and incoming_key is not None:
+    96:             base_kwargs[key_name] = incoming_key
+    97:         if sec_name and incoming_secret is not None:
+    98:             base_kwargs[sec_name] = incoming_secret
+    99:         if pas_name and incoming_pass is not None:
+   100:             base_kwargs[pas_name] = incoming_pass
+   101:         if base_name:
+   102:             base_kwargs[base_name] = incoming_base
+   103:         if req_mod_name:
+   104:             base_kwargs[req_mod_name] = requests
+   105: 
+   106:         # Ne transmettre aucun doublon : si user_kwargs contient un nom supporté
+   107:         # qui n'a pas été défini ci-dessus, on le relaie.
+   108:         for k, v in list(user_kwargs.items()):
+   109:             if k in param_names and k not in base_kwargs:
+   110:                 base_kwargs[k] = v
+   111: 
+   112:         # Appel propre, 100% mots-clés (évite “missing positional arg” et “multiple values”)
+   113:         super().__init__(**base_kwargs)
+   114: 
+   115:     # --------------------- COMPTES / ASSETS ---------------------
+   116:     def get_assets(self) -> Dict[str, Any]:
+   117:         raw = super().get_assets()
+   118:         data = raw.get("data") or raw.get("result") or raw.get("assets") or []
+   119:         norm: List[Dict[str, Any]] = []
+   120:         for a in data:
+   121:             currency = a.get("currency") or a.get("marginCoin") or a.get("coin") or "USDT"
+   122:             equity = _to_float(a.get("equity", a.get("usdtEquity", a.get("totalEquity", 0))))
+   123:             available = _to_float(a.get("available", a.get("availableBalance", a.get("availableUSDT", 0))))
+   124:             norm.append({"currency": currency, "equity": equity, "available": available, **a})
+   125:         return {"success": True, "data": norm}
+   126: 
+   127:     # ------------------------ TICKER(S) -------------------------
+   128:     def get_ticker(self, symbol: Optional[str] = None) -> Dict[str, Any]:
+   129:         """
+   130:         Normalise vers liste d'objets: {symbol,lastPrice,bidPrice,askPrice,volume}
+   131:         Tolère top-level dict/list et items dict/list.
+   132:         """
+   133:         try:
+   134:             raw: Any = super().get_ticker(symbol) if symbol else super().get_tickers()
+   135:         except Exception as e:
+   136:             return {"success": False, "error": repr(e), "data": []}
+   137: 
+   138:         items: List[Any] = []
+   139:         if isinstance(raw, dict):
+   140:             d = raw.get("data")
+   141:             if symbol and isinstance(d, dict):
+   142:                 items = [d]
+   143:             else:
+   144:                 items = d or raw.get("result") or raw.get("tickers") or []
+   145:         elif isinstance(raw, (list, tuple)):
+   146:             items = list(raw)
+   147: 
+   148:         norm: List[Dict[str, Any]] = []
+   149:         for t in items:
+   150:             if isinstance(t, dict):
+   151:                 s = (t.get("symbol") or t.get("instId") or t.get("instrumentId") or "").replace("_", "")
+   152:                 last_ = t.get("lastPrice", t.get("last", t.get("close", t.get("markPrice", 0))))
+   153:                 bid_ = t.get("bidPrice", t.get("bestBidPrice", t.get("bestBid", t.get("buyOne", last_))))
+   154:                 ask_ = t.get("askPrice", t.get("bestAskPrice", t.get("bestAsk", t.get("sellOne", last_))))
+   155:                 vol_usdt = t.get("usdtVolume", t.get("quoteVolume", t.get("turnover24h", None)))
+   156:                 vol_base = t.get("baseVolume", t.get("volume", t.get("size24h", 0)))
+   157:                 volume = _to_float(vol_usdt if vol_usdt is not None else vol_base)
+   158:                 norm.append({
+   159:                     "symbol": s,
+   160:                     "lastPrice": _to_float(last_),
+   161:                     "bidPrice": _to_float(bid_),
+   162:                     "askPrice": _to_float(ask_),
+   163:                     "volume": volume
+   164:                 })
+   165:             else:
+   166:                 seq = list(t)
+   167:                 if len(seq) >= 5:
+   168:                     first_ts = isinstance(seq[0], (int, float)) and seq[0] > 10**10
+   169:                     if first_ts:
+   170:                         close = _to_float(seq[4]); vol = _to_float(seq[5] if len(seq) > 5 else 0.0)
+   171:                     else:
+   172:                         close = _to_float(seq[3]); vol = _to_float(seq[4] if len(seq) > 4 else 0.0)
+   173:                 else:
+   174:                     close = _to_float(seq[-1] if seq else 0.0); vol = 0.0
+   175:                 s = (symbol or "").replace("_", "")
+   176:                 norm.append({"symbol": s, "lastPrice": close, "bidPrice": close, "askPrice": close, "volume": vol})
+   177: 
+   178:         return {"success": True, "data": norm}
+   179: 
+   180:     # --------------- POSITIONS / ORDRES / FILLS -----------------
+   181:     def get_open_positions(self, symbol: Optional[str] = None) -> Dict[str, Any]:
+   182:         raw: Dict[str, Any] = super().get_positions() if hasattr(super(), "get_positions") else {}
+   183:         items = raw.get("data") or raw.get("result") or raw.get("positions") or []
+   184:         out: List[Dict[str, Any]] = []
+   185:         for p in items:
+   186:             s = (p.get("symbol") or p.get("instId") or "").replace("_", "")
+   187:             if symbol and s != symbol:
+   188:                 continue
+   189:             side = (p.get("holdSide") or p.get("posSide") or p.get("side") or "").lower()
+   190:             qty = _to_float(p.get("size", p.get("holdAmount", p.get("total", 0))))
+   191:             avg = _to_float(p.get("avgOpenPrice", p.get("avgPrice", p.get("entryPrice", 0))))
+   192:             out.append({"symbol": s, "side": side, "qty": qty, "avgEntryPrice": avg})
+   193:         return {"success": True, "data": out}
+   194: 
+   195:     def get_fills(self, symbol: str, order_id: Optional[str] = None, limit: int = 100) -> Dict[str, Any]:
+   196:         raw: Dict[str, Any] = super().get_fills(symbol=symbol) if hasattr(super(), "get_fills") else {}
+   197:         items = raw.get("data") or raw.get("result") or []
+   198:         out: List[Dict[str, Any]] = []
+   199:         for f in items[:limit]:
+   200:             s = (f.get("symbol") or f.get("instId") or "").replace("_", "")
+   201:             if s != symbol:
+   202:                 continue
+   203:             if order_id and str(f.get("orderId") or f.get("ordId") or "") != str(order_id):
+   204:                 continue
+   205:             out.append({
+   206:                 "orderId": str(f.get("orderId") or f.get("ordId") or ""),
+   207:                 "tradeId": str(f.get("tradeId") or f.get("fillId") or f.get("execId") or ""),
+   208:                 "price": _to_float(f.get("price", f.get("fillPx", 0))),
+   209:                 "qty": _to_float(f.get("size", f.get("fillSz", 0))),
+   210:                 "fee": _to_float(f.get("fee", f.get("fillFee", 0))),
+   211:                 "ts": int(f.get("ts", f.get("time", 0))),
+   212:             })
+   213:         return {"success": True, "data": out}
+   214: 
+   215:     def cancel_order(self, symbol: str, order_id: str) -> Dict[str, Any]:
+   216:         raw = super().cancel_order(symbol=symbol, orderId=order_id) if hasattr(super(), "cancel_order") else {}
+   217:         ok = bool(raw.get("success", True)) if isinstance(raw, dict) else True
+   218:         return {"success": ok, "data": {"orderId": order_id}}
 
-
-## scalp/adapters/market_data.py (last modified: 2025-08-22 13:35:44)
+## scalp/adapters/market_data.py (last modified: 2025-08-23 08:27:41)
      1: from __future__ import annotations
      2: from typing import List, Dict, Any
      3: 
@@ -3136,7 +4110,7 @@ Scalp/
     68:         return self.exchange.get_ticker(symbol)
     69:                        
 
-## scalp/backtest/__init__.py (last modified: 2025-08-22 13:03:01)
+## scalp/backtest/__init__.py (last modified: 2025-08-23 08:27:41)
      1: """Simple backtesting helpers."""
      2: from __future__ import annotations
      3: 
@@ -3228,7 +4202,7 @@ Scalp/
     89:         yield train_slice, test_slice
 
 
-## scalp/backtest/walkforward.py (last modified: 2025-08-22 13:03:01)
+## scalp/backtest/walkforward.py (last modified: 2025-08-23 08:27:41)
      1: from __future__ import annotations
      2: 
      3: from itertools import product
@@ -3351,7 +4325,7 @@ Scalp/
    120:     }
 
 
-## scalp/bitget_client.py (last modified: 2025-08-22 13:03:01)
+## scalp/bitget_client.py (last modified: 2025-08-23 08:27:41)
      1: import json
      2: import logging
      3: import time
@@ -4011,7 +4985,7 @@ Scalp/
    657:         return {"success": True, "data": results}
 
 
-## scalp/bot_config.py (last modified: 2025-08-22 13:03:01)
+## scalp/bot_config.py (last modified: 2025-08-23 08:27:41)
      1: import os
      2: 
      3: 
@@ -4068,7 +5042,7 @@ Scalp/
     54: 
 
 
-## scalp/client.py (last modified: 2025-08-22 13:03:01)
+## scalp/client.py (last modified: 2025-08-23 08:27:41)
      1: import logging
      2: from typing import Any, Dict, Optional
      3: 
@@ -4170,123 +5144,151 @@ Scalp/
     99:             return {"success": False, "error": msg, "text": resp.text}
 
 
-## scalp/config.py (last modified: 2025-08-22 13:03:01)
-     1: """Configuration loading with optional Pydantic validation.
-     2: 
-     3: This module tries to use :mod:`pydantic` for robust validation of
-     4: environment variables, but gracefully falls back to a simple ``dataclass``
-     5: based approach when Pydantic is not available.  The public API mirrors the
-     6: previous design – callers simply import :func:`load_or_exit` and receive an
-     7: ``AppConfig`` instance or the process exits with an error message.
-     8: """
-     9: 
-    10: from __future__ import annotations
-    11: 
-    12: import os
-    13: import sys
-    14: 
-    15: # ---------------------------------------------------------------------------
-    16: # Optional Pydantic import.  Some execution environments might not provide
-    17: # Pydantic (e.g. minimal interpreters or restricted sandboxes).  In that case
-    18: # we continue with a light‑weight ``dataclass`` implementation.
-    19: # ---------------------------------------------------------------------------
-    20: try:  # pragma: no cover - behaviour depends on environment
-    21:     from pydantic import BaseModel, Field, ValidationError  # type: ignore
-    22: 
-    23:     _HAVE_PYDANTIC = True
-    24: except Exception:  # ImportError / environment restrictions
-    25:     _HAVE_PYDANTIC = False
-    26: 
+## scalp/config.py (last modified: 2025-08-23 08:27:41)
+     1: # scalp/config.py
+     2: from __future__ import annotations
+     3: import os, sys
+     4: from typing import Optional
+     5: 
+     6: # ---------------------------
+     7: #  Chargement .env (sans dep)
+     8: # ---------------------------
+     9: def _load_dotenv_if_present(path: str = ".env") -> None:
+    10:     try:
+    11:         if not os.path.isfile(path):
+    12:             return
+    13:         with open(path, "r", encoding="utf-8") as f:
+    14:             for line in f:
+    15:                 s = line.strip()
+    16:                 if not s or s.startswith("#") or "=" not in s:
+    17:                     continue
+    18:                 k, v = s.split("=", 1)
+    19:                 k = k.strip()
+    20:                 v = v.strip().strip('"').strip("'")
+    21:                 # ne pas écraser une var déjà définie par l'env
+    22:                 os.environ.setdefault(k, v)
+    23:     except Exception:
+    24:         pass
+    25: 
+    26: _load_dotenv_if_present()
     27: 
-    28: if _HAVE_PYDANTIC:
-    29:     class AppConfig(BaseModel):
-    30:         BITGET_API_KEY: str = Field(..., min_length=10)
-    31:         BITGET_API_SECRET: str = Field(..., min_length=10)
-    32:         BITGET_PASSPHRASE: str = Field(..., min_length=3)
-    33:         RISK_PCT: float = Field(0.01, ge=0.0, le=0.05)
-    34:         MIN_TRADE_USDT: float = Field(5.0, ge=0.0)
-    35:         LEVERAGE: float = Field(1.0, ge=1.0, le=125.0)
-    36:         PAPER_TRADE: bool = Field(True)
-    37:         TELEGRAM_BOT_TOKEN: str | None = None
-    38:         TELEGRAM_CHAT_ID: str | None = None
-    39: 
+    28: # ---------------------------
+    29: #  Aliases variables d'env
+    30: # ---------------------------
+    31: def _env_alias(name: str, *aliases: str) -> Optional[str]:
+    32:     """Retourne la première valeur non nulle parmi name et ses alias."""
+    33:     if name in os.environ and os.environ[name]:
+    34:         return os.environ[name]
+    35:     for a in aliases:
+    36:         v = os.environ.get(a)
+    37:         if v:
+    38:             return v
+    39:     return None
     40: 
-    41:     def load_or_exit() -> "AppConfig":
-    42:         """Load configuration from ``os.environ`` and validate.
-    43: 
-    44:         Exits the program with status code ``2`` when validation fails.
-    45:         """
+    41: def _env_bool(name: str, default: bool) -> bool:
+    42:     raw = os.environ.get(name)
+    43:     if raw is None:
+    44:         return default
+    45:     return raw.lower() in ("1", "true", "yes", "on")
     46: 
-    47:         try:
-    48:             return AppConfig(
-    49:                 BITGET_API_KEY=os.environ.get("BITGET_API_KEY"),
-    50:                 BITGET_API_SECRET=os.environ.get("BITGET_API_SECRET"),
-    51:                 BITGET_PASSPHRASE=os.environ.get("BITGET_PASSPHRASE"),
-    52:                 RISK_PCT=float(os.environ.get("RISK_PCT", "0.01")),
-    53:                 MIN_TRADE_USDT=float(os.environ.get("MIN_TRADE_USDT", "5")),
-    54:                 LEVERAGE=float(os.environ.get("LEVERAGE", "1")),
-    55:                 PAPER_TRADE=os.environ.get("PAPER_TRADE", "true").lower()
-    56:                 in ("1", "true", "yes"),
-    57:                 TELEGRAM_BOT_TOKEN=os.environ.get("TELEGRAM_BOT_TOKEN"),
-    58:                 TELEGRAM_CHAT_ID=os.environ.get("TELEGRAM_CHAT_ID"),
-    59:             )
-    60:         except ValidationError as e:  # pragma: no cover - simple pass through
-    61:             print("[CONFIG] Invalid configuration:", e, file=sys.stderr)
-    62:             sys.exit(2)
+    47: # ---------------------------
+    48: #  Pydantic v1 si dispo
+    49: # ---------------------------
+    50: try:
+    51:     from pydantic import BaseModel, Field, ValidationError  # type: ignore
+    52:     _HAVE_PYDANTIC = True
+    53: except Exception:
+    54:     _HAVE_PYDANTIC = False
+    55: 
+    56: if _HAVE_PYDANTIC:
+    57: 
+    58:     class AppConfig(BaseModel):
+    59:         # Clés Bitget
+    60:         BITGET_API_KEY: str = Field(..., min_length=3)
+    61:         BITGET_API_SECRET: str = Field(..., min_length=3)
+    62:         BITGET_PASSPHRASE: str = Field(..., min_length=1)
     63: 
-    64: 
-    65: else:  # -- Simple dataclass fallback ---------------------------------------
-    66:     from dataclasses import dataclass
-    67: 
-    68:     @dataclass
-    69:     class AppConfig:
-    70:         BITGET_API_KEY: str
-    71:         BITGET_API_SECRET: str
-    72:         BITGET_PASSPHRASE: str
-    73:         RISK_PCT: float = 0.01
-    74:         MIN_TRADE_USDT: float = 5.0
-    75:         LEVERAGE: float = 1.0
-    76:         PAPER_TRADE: bool = True
-    77:         TELEGRAM_BOT_TOKEN: str | None = None
-    78:         TELEGRAM_CHAT_ID: str | None = None
-    79: 
+    64:         # Trading
+    65:         RISK_PCT: float = Field(0.01, ge=0.0, le=0.2)
+    66:         MIN_TRADE_USDT: float = Field(5.0, ge=0.0)
+    67:         LEVERAGE: float = Field(1.0, ge=1.0, le=125.0)
+    68:         PAPER_TRADE: bool = Field(True)
+    69: 
+    70:         # Telegram (facultatif)
+    71:         TELEGRAM_BOT_TOKEN: Optional[str] = None
+    72:         TELEGRAM_CHAT_ID: Optional[str] = None
+    73: 
+    74:     def load_or_exit() -> "AppConfig":
+    75:         try:
+    76:             # supporte aussi ACCESS_KEY/SECRET_KEY (alias)
+    77:             api_key = _env_alias("BITGET_API_KEY", "BITGET_ACCESS_KEY")
+    78:             api_sec = _env_alias("BITGET_API_SECRET", "BITGET_SECRET_KEY")
+    79:             api_pass = _env_alias("BITGET_PASSPHRASE", "BITGET_PASSWORD", "API_PASSPHRASE")
     80: 
-    81:     def _env_bool(name: str, default: bool) -> bool:
-    82:         raw = os.environ.get(name)
-    83:         if raw is None:
-    84:             return default
-    85:         return raw.lower() in ("1", "true", "yes", "on")
-    86: 
-    87: 
-    88:     def load_or_exit() -> "AppConfig":
-    89:         """Minimal configuration loader used when Pydantic is unavailable."""
-    90: 
-    91:         key = os.environ.get("BITGET_API_KEY")
-    92:         sec = os.environ.get("BITGET_API_SECRET")
-    93:         pas = os.environ.get("BITGET_PASSPHRASE")
-    94:         if not key or not sec or not pas:
-    95:             print("[CONFIG] Missing BITGET_* credentials in env", file=sys.stderr)
-    96:             sys.exit(2)
-    97: 
-    98:         try:
-    99:             return AppConfig(
-   100:                 BITGET_API_KEY=key,
-   101:                 BITGET_API_SECRET=sec,
-   102:                 BITGET_PASSPHRASE=pas,
-   103:                 RISK_PCT=float(os.environ.get("RISK_PCT", "0.01")),
-   104:                 MIN_TRADE_USDT=float(os.environ.get("MIN_TRADE_USDT", "5")),
-   105:                 LEVERAGE=float(os.environ.get("LEVERAGE", "1")),
-   106:                 PAPER_TRADE=_env_bool("PAPER_TRADE", True),
-   107:                 TELEGRAM_BOT_TOKEN=os.environ.get("TELEGRAM_BOT_TOKEN"),
-   108:                 TELEGRAM_CHAT_ID=os.environ.get("TELEGRAM_CHAT_ID"),
-   109:             )
-   110:         except Exception as e:  # pragma: no cover - defensive programming
-   111:             print(f"[CONFIG] Invalid configuration values: {e!r}", file=sys.stderr)
-   112:             sys.exit(2)
-   113: 
+    81:             return AppConfig(
+    82:                 BITGET_API_KEY=api_key,
+    83:                 BITGET_API_SECRET=api_sec,
+    84:                 BITGET_PASSPHRASE=api_pass,
+    85:                 RISK_PCT=float(os.environ.get("RISK_PCT", "0.01")),
+    86:                 MIN_TRADE_USDT=float(os.environ.get("MIN_TRADE_USDT", "5")),
+    87:                 LEVERAGE=float(os.environ.get("LEVERAGE", "1")),
+    88:                 PAPER_TRADE=_env_bool("PAPER_TRADE", True),
+    89:                 TELEGRAM_BOT_TOKEN=_env_alias("TELEGRAM_BOT_TOKEN"),
+    90:                 TELEGRAM_CHAT_ID=_env_alias("TELEGRAM_CHAT_ID"),
+    91:             )
+    92:         except ValidationError as e:
+    93:             print("[CONFIG] Invalid configuration:", e, file=sys.stderr)
+    94:             sys.exit(2)
+    95: 
+    96: else:
+    97:     # ---------------------------
+    98:     #  Fallback dataclass simple
+    99:     # ---------------------------
+   100:     from dataclasses import dataclass
+   101: 
+   102:     @dataclass
+   103:     class AppConfig:
+   104:         BITGET_API_KEY: str
+   105:         BITGET_API_SECRET: str
+   106:         BITGET_PASSPHRASE: str
+   107: 
+   108:         RISK_PCT: float = 0.01
+   109:         MIN_TRADE_USDT: float = 5.0
+   110:         LEVERAGE: float = 1.0
+   111:         PAPER_TRADE: bool = True
+   112: 
+   113:         TELEGRAM_BOT_TOKEN: Optional[str] = None
+   114:         TELEGRAM_CHAT_ID: Optional[str] = None
+   115: 
+   116:     def load_or_exit() -> "AppConfig":
+   117:         api_key = _env_alias("BITGET_API_KEY", "BITGET_ACCESS_KEY")
+   118:         api_sec = _env_alias("BITGET_API_SECRET", "BITGET_SECRET_KEY")
+   119:         api_pass = _env_alias("BITGET_PASSPHRASE", "BITGET_PASSWORD", "API_PASSPHRASE")
+   120: 
+   121:         if not api_key or not api_sec or not api_pass:
+   122:             print("[CONFIG] Missing Bitget credentials. Expected either:", file=sys.stderr)
+   123:             print("        - BITGET_API_KEY / BITGET_API_SECRET / BITGET_PASSPHRASE", file=sys.stderr)
+   124:             print("          or", file=sys.stderr)
+   125:             print("        - BITGET_ACCESS_KEY / BITGET_SECRET_KEY / BITGET_PASSPHRASE", file=sys.stderr)
+   126:             sys.exit(2)
+   127: 
+   128:         try:
+   129:             return AppConfig(
+   130:                 BITGET_API_KEY=api_key,
+   131:                 BITGET_API_SECRET=api_sec,
+   132:                 BITGET_PASSPHRASE=api_pass,
+   133:                 RISK_PCT=float(os.environ.get("RISK_PCT", "0.01")),
+   134:                 MIN_TRADE_USDT=float(os.environ.get("MIN_TRADE_USDT", "5")),
+   135:                 LEVERAGE=float(os.environ.get("LEVERAGE", "1")),
+   136:                 PAPER_TRADE=_env_bool("PAPER_TRADE", True),
+   137:                 TELEGRAM_BOT_TOKEN=_env_alias("TELEGRAM_BOT_TOKEN"),
+   138:                 TELEGRAM_CHAT_ID=_env_alias("TELEGRAM_CHAT_ID"),
+   139:             )
+   140:         except Exception as e:
+   141:             print(f"[CONFIG] Invalid configuration values: {e!r}", file=sys.stderr)
+   142:             sys.exit(2)
 
-
-## scalp/logging_utils.py (last modified: 2025-08-22 13:03:01)
+## scalp/logging_utils.py (last modified: 2025-08-23 08:27:41)
      1: """Logging helpers for the Scalp bot."""
      2: 
      3: from __future__ import annotations
@@ -4455,7 +5457,7 @@ Scalp/
    166:     _append_csv(BASE_DIR / "operations_memo.csv", fields, data)
 
 
-## scalp/metrics.py (last modified: 2025-08-22 13:03:01)
+## scalp/metrics.py (last modified: 2025-08-23 08:27:41)
      1: """Utility metrics for trading calculations."""
      2: 
      3: from __future__ import annotations
@@ -4666,7 +5668,7 @@ Scalp/
    208:     return pnl >= 0.0
 
 
-## scalp/notifier.py (last modified: 2025-08-22 13:03:01)
+## scalp/notifier.py (last modified: 2025-08-23 08:27:41)
      1: """Simple notifier for bot events."""
      2: 
      3: from __future__ import annotations
@@ -4834,7 +5836,7 @@ Scalp/
    165:             logging.error("Telegram notification error for %s: %s", event, exc)
 
 
-## scalp/pairs.py (last modified: 2025-08-22 13:03:01)
+## scalp/pairs.py (last modified: 2025-08-23 08:27:41)
      1: """Utilities to select trading pairs and detect signals."""
      2: from __future__ import annotations
      3: from typing import Any, Dict, List, Optional, Callable
@@ -5113,10 +6115,10 @@ Scalp/
    276:     return selected
 
 
-## scalp/positions/__init__.py (last modified: 2025-08-22 13:03:01)
+## scalp/positions/__init__.py (last modified: 2025-08-23 08:27:41)
 
 
-## scalp/positions/state.py (last modified: 2025-08-22 13:35:44)
+## scalp/positions/state.py (last modified: 2025-08-23 08:27:41)
      1: from __future__ import annotations
      2: from dataclasses import dataclass, field
      3: from enum import Enum, auto
@@ -5194,7 +6196,7 @@ Scalp/
     75: 
 
 
-## scalp/risk/__init__.py (last modified: 2025-08-22 13:03:01)
+## scalp/risk/__init__.py (last modified: 2025-08-23 08:27:41)
      1: """Risk management utilities for position sizing."""
      2: 
      3: from __future__ import annotations
@@ -5289,7 +6291,7 @@ Scalp/
     92: from .manager import RiskManager  # noqa: E402  (import at end to avoid cycle)
 
 
-## scalp/risk/manager.py (last modified: 2025-08-22 13:03:01)
+## scalp/risk/manager.py (last modified: 2025-08-23 08:27:41)
      1: """Advanced risk management utilities.
      2: 
      3: This module provides the :class:`RiskManager` class which tracks trading
@@ -5460,7 +6462,7 @@ Scalp/
    168:         return (not self.kill_switch) and current_positions < self.max_positions
 
 
-## scalp/selection/__init__.py (last modified: 2025-08-22 13:03:01)
+## scalp/selection/__init__.py (last modified: 2025-08-23 08:27:41)
      1: """Pair selection helpers for the Scalp bot.
      2: 
      3: This package exposes two utilities used during the preparation phase of the
@@ -5482,7 +6484,7 @@ Scalp/
     19: 
 
 
-## scalp/selection/momentum.py (last modified: 2025-08-22 13:03:01)
+## scalp/selection/momentum.py (last modified: 2025-08-23 08:27:41)
      1: """Utilities to select pairs exhibiting strong momentum."""
      2: 
      3: from __future__ import annotations
@@ -5583,7 +6585,7 @@ Scalp/
     98: 
 
 
-## scalp/selection/scanner.py (last modified: 2025-08-22 13:03:01)
+## scalp/selection/scanner.py (last modified: 2025-08-23 08:27:41)
      1: """Utilities for scanning tradable pairs on the exchange."""
      2: 
      3: from __future__ import annotations
@@ -5667,10 +6669,10 @@ Scalp/
     81: 
 
 
-## scalp/services/__init__.py (last modified: 2025-08-22 13:03:01)
+## scalp/services/__init__.py (last modified: 2025-08-23 08:27:41)
 
 
-## scalp/services/order_service.py (last modified: 2025-08-22 13:35:44)
+## scalp/services/order_service.py (last modified: 2025-08-23 08:27:41)
      1: from __future__ import annotations
      2: from dataclasses import dataclass
      3: from typing import Any, Dict, Optional, Protocol
@@ -5767,7 +6769,80 @@ Scalp/
     94:         return OrderResult(True, "", out, oid, status, avg, filled)
 
 
-## scalp/strategy.py (last modified: 2025-08-22 13:03:01)
+## scalp/services/utils.py (last modified: 2025-08-23 08:27:41)
+     1: # scalp/services/utils.py
+     2: from __future__ import annotations
+     3: 
+     4: import asyncio
+     5: import inspect
+     6: import os
+     7: import time
+     8: from typing import Any, Callable, Optional
+     9: 
+    10: QUIET = os.getenv("QUIET", "0") == "1"
+    11: 
+    12: 
+    13: async def safe_call(
+    14:     fn: Callable[[], Any],
+    15:     *,
+    16:     label: str = "call",
+    17:     backoff_start: float = 1.0,
+    18:     backoff_max: float = 30.0,
+    19:     running_flag: Optional[Callable[[], bool]] = None,
+    20: ) -> Any:
+    21:     """
+    22:     Enveloppe de sécurité commune (sync/async) avec retry exponentiel.
+    23:     - fn : lambda sans arg qui retourne un objet ou une coroutine
+    24:     - running_flag : fonction booléenne pour sortir proprement
+    25:     """
+    26:     delay = backoff_start
+    27:     while True:
+    28:         if running_flag and not running_flag():
+    29:             return None
+    30:         try:
+    31:             res = fn()
+    32:             if inspect.iscoroutine(res):
+    33:                 return await res
+    34:             return res
+    35:         except asyncio.CancelledError:
+    36:             raise
+    37:         except Exception as e:
+    38:             if not QUIET:
+    39:                 print(f"[safe:{label}] {e!r} -> retry in {delay:.1f}s")
+    40:             await asyncio.sleep(delay)
+    41:             delay = min(backoff_max, delay * 1.7)
+    42: 
+    43: 
+    44: async def heartbeat_task(get_running: Callable[[], bool], period: float = 15.0) -> None:
+    45:     """Heartbeat périodique (silencieux si QUIET=1)."""
+    46:     while get_running():
+    47:         if not QUIET:
+    48:             print("[heartbeat] alive")
+    49:         await asyncio.sleep(period)
+    50: 
+    51: 
+    52: async def log_stats_task(
+    53:     get_running: Callable[[], bool],
+    54:     *,
+    55:     get_ticks: Callable[[], int],
+    56:     get_pairs: Callable[[], int],
+    57:     period: float = 30.0,
+    58: ) -> None:
+    59:     """Stats périodiques (ralenties et/ou masquées si QUIET=1)."""
+    60:     last_t = time.time()
+    61:     last_ticks = get_ticks()
+    62:     while get_running():
+    63:         await asyncio.sleep(120.0 if QUIET else period)
+    64:         now = time.time()
+    65:         ticks = get_ticks()
+    66:         dt = max(1.0, now - last_t)
+    67:         d_ticks = max(0, ticks - last_ticks)
+    68:         rate = d_ticks / dt
+    69:         if not QUIET:
+    70:             print(f"[stats] ticks_total={ticks} (+{d_ticks}) rate={rate:.1f}/s | pairs={get_pairs()}")
+    71:         last_t, last_ticks = now, ticks
+
+## scalp/strategy.py (last modified: 2025-08-23 08:27:41)
      1: """Core trading strategy components for scalping EMA/VWAP/RSI/ATR.
      2: 
      3: This module implements a minimal but functional version of the strategy
@@ -6213,7 +7288,7 @@ Scalp/
    443:     }
 
 
-## scalp/telegram_bot.py (last modified: 2025-08-22 13:03:01)
+## scalp/telegram_bot.py (last modified: 2025-08-23 08:27:41)
      1: from __future__ import annotations
      2: 
      3: import logging
@@ -6546,7 +7621,7 @@ Scalp/
    330:     return None
 
 
-## scalp/trade_utils.py (last modified: 2025-08-22 13:03:01)
+## scalp/trade_utils.py (last modified: 2025-08-23 08:27:41)
      1: """Utilities for risk analysis and position sizing."""
      2: from __future__ import annotations
      3: 
@@ -7018,7 +8093,7 @@ Scalp/
    469:     raise ValueError("side must be 'buy' or 'sell'")
 
 
-## scalp/version.py (last modified: 2025-08-22 13:03:01)
+## scalp/version.py (last modified: 2025-08-23 08:27:41)
      1: """Utilities for managing the Scalp bot version."""
      2: 
      3: from __future__ import annotations
@@ -7116,7 +8191,7 @@ Scalp/
     95:     print(bump_version_from_git())
 
 
-## scalp/ws.py (last modified: 2025-08-22 13:03:01)
+## scalp/ws.py (last modified: 2025-08-23 08:27:41)
      1: """Minimal websocket manager with heartbeat and auto-resubscribe.
      2: 
      3: This module provides a light-weight framework to maintain a realtime
@@ -7189,7 +8264,7 @@ Scalp/
     70:         self._heartbeat_task = None
 
 
-## short_one_way.py (last modified: 2025-08-22 13:03:01)
+## short_one_way.py (last modified: 2025-08-23 08:27:41)
      1: #!/usr/bin/env python3
      2: # -*- coding: utf-8 -*-
      3: """Example script to open a one-way short on Bitget futures.
@@ -7464,7 +8539,7 @@ Scalp/
    272:     main()
 
 
-## signals/__init__.py (last modified: 2025-08-22 13:03:01)
+## signals/__init__.py (last modified: 2025-08-23 08:27:41)
      1: """Signal generation utilities."""
      2: 
      3: from .generator import generate_signal
@@ -7472,7 +8547,7 @@ Scalp/
      5: __all__ = ["generate_signal"]
 
 
-## signals/generator.py (last modified: 2025-08-22 13:03:01)
+## signals/generator.py (last modified: 2025-08-23 08:27:41)
      1: from __future__ import annotations
      2: 
      3: from typing import Any, Dict, List, Optional
@@ -7640,7 +8715,7 @@ Scalp/
    165:     return result
 
 
-## tests/conftest.py (last modified: 2025-08-22 13:03:01)
+## tests/conftest.py (last modified: 2025-08-23 08:27:41)
      1: """Test configuration and shared fixtures."""
      2: 
      3: import sys
@@ -7663,7 +8738,7 @@ Scalp/
     20: 
 
 
-## tests/test_analyse_risque.py (last modified: 2025-08-22 13:03:01)
+## tests/test_analyse_risque.py (last modified: 2025-08-23 08:27:41)
      1: import os
      2: import sys
      3: import types
@@ -7719,7 +8794,7 @@ Scalp/
     53:     assert vol == 1
 
 
-## tests/test_backtest.py (last modified: 2025-08-22 13:03:01)
+## tests/test_backtest.py (last modified: 2025-08-23 08:27:41)
      1: import pytest
      2: 
      3: import bot
@@ -7735,7 +8810,7 @@ Scalp/
     13:     assert pnl == pytest.approx(19.6)
 
 
-## tests/test_backtest_multi.py (last modified: 2025-08-22 13:03:01)
+## tests/test_backtest_multi.py (last modified: 2025-08-23 08:27:41)
      1: import csv
      2: import random
      3: from datetime import datetime, timedelta, timezone
@@ -7902,7 +8977,7 @@ Scalp/
    164:     assert s1 == s2
 
 
-## tests/test_backtest_position.py (last modified: 2025-08-22 13:03:01)
+## tests/test_backtest_position.py (last modified: 2025-08-23 08:27:41)
      1: import os
      2: import sys
      3: import pytest
@@ -7933,7 +9008,7 @@ Scalp/
     28:         backtest_position(prices, 1, 0, 1)
 
 
-## tests/test_bitget_futures_pairs.py (last modified: 2025-08-22 13:03:01)
+## tests/test_bitget_futures_pairs.py (last modified: 2025-08-23 08:27:41)
      1: import json
      2: from pathlib import Path
      3: from typing import Any, Dict
@@ -8006,7 +9081,7 @@ Scalp/
     70:     assert content[0].startswith("productType,")
 
 
-## tests/test_bot_place_order_caps.py (last modified: 2025-08-22 13:03:01)
+## tests/test_bot_place_order_caps.py (last modified: 2025-08-23 08:27:41)
      1: import os
      2: import sys
      3: import types
@@ -8138,7 +9213,7 @@ Scalp/
    129:     assert captured["order_blocked"]["reason"].startswith("volume reduced")
 
 
-## tests/test_bot_update.py (last modified: 2025-08-22 13:03:01)
+## tests/test_bot_update.py (last modified: 2025-08-23 08:27:41)
      1: import logging
      2: import bot
      3: 
@@ -8173,7 +9248,7 @@ Scalp/
     32: 
 
 
-## tests/test_break_even_stop.py (last modified: 2025-08-22 13:03:01)
+## tests/test_break_even_stop.py (last modified: 2025-08-23 08:27:41)
      1: from scalp.trade_utils import break_even_stop
      2: 
      3: 
@@ -8191,7 +9266,7 @@ Scalp/
     15:     assert sl == 105
 
 
-## tests/test_calc_pnl_pct.py (last modified: 2025-08-22 13:03:01)
+## tests/test_calc_pnl_pct.py (last modified: 2025-08-23 08:27:41)
      1: import os
      2: import sys
      3: import pytest
@@ -8212,7 +9287,7 @@ Scalp/
     18:     assert calc_pnl_pct(100.0, 110.0, 1, fee_rate=0.001) == pytest.approx(9.8)
 
 
-## tests/test_check_config.py (last modified: 2025-08-22 13:03:01)
+## tests/test_check_config.py (last modified: 2025-08-23 08:27:41)
      1: import logging
      2: from bot import check_config
      3: 
@@ -8238,7 +9313,7 @@ Scalp/
     23:     assert caplog.records == []
 
 
-## tests/test_cli.py (last modified: 2025-08-22 13:03:01)
+## tests/test_cli.py (last modified: 2025-08-23 08:27:41)
      1: """Tests for the command line interface defined in :mod:`cli`."""
      2: 
      3: from __future__ import annotations
@@ -8312,7 +9387,7 @@ Scalp/
     71: 
 
 
-## tests/test_client.py (last modified: 2025-08-22 13:03:01)
+## tests/test_client.py (last modified: 2025-08-23 08:27:41)
      1: import json
      2: import hmac
      3: import hashlib
@@ -8947,7 +10022,7 @@ Scalp/
    632:     assert kdata["quoteVolume"] == [20.0, 21.0]
 
 
-## tests/test_compute_position_size.py (last modified: 2025-08-22 13:03:01)
+## tests/test_compute_position_size.py (last modified: 2025-08-23 08:27:41)
      1: import os
      2: import sys
      3: import types
@@ -9108,7 +10183,7 @@ Scalp/
    158:     assert required <= 10
 
 
-## tests/test_compute_position_size_cap.py (last modified: 2025-08-22 13:03:01)
+## tests/test_compute_position_size_cap.py (last modified: 2025-08-23 08:27:41)
      1: import os
      2: import sys
      3: import types
@@ -9182,7 +10257,7 @@ Scalp/
     71:     assert vol % 2 == 0 and vol >= 2
 
 
-## tests/test_dynamic_allocation.py (last modified: 2025-08-22 13:03:01)
+## tests/test_dynamic_allocation.py (last modified: 2025-08-23 08:27:41)
      1: import math
      2: from scalp.risk import adjust_risk_pct
      3: 
@@ -9202,7 +10277,7 @@ Scalp/
     17:     )
 
 
-## tests/test_effective_leverage.py (last modified: 2025-08-22 13:03:01)
+## tests/test_effective_leverage.py (last modified: 2025-08-23 08:27:41)
      1: import pytest
      2: from scalp.trade_utils import effective_leverage
      3: 
@@ -9242,7 +10317,7 @@ Scalp/
     37:     assert effective_leverage(0, 0, 0, 0) == 0.0
 
 
-## tests/test_env_loading.py (last modified: 2025-08-22 13:03:01)
+## tests/test_env_loading.py (last modified: 2025-08-23 08:27:41)
      1: """Tests for loading environment variables from ``notebook/.env``."""
      2: 
      3: from __future__ import annotations
@@ -9280,7 +10355,7 @@ Scalp/
     35:             os.environ["BITGET_ACCESS_KEY"] = old
 
 
-## tests/test_grid_search.py (last modified: 2025-08-22 13:03:01)
+## tests/test_grid_search.py (last modified: 2025-08-23 08:27:41)
      1: import json
      2: import random
      3: 
@@ -9399,7 +10474,7 @@ Scalp/
    116:     assert res1[0].params == res2[0].params
 
 
-## tests/test_heat_score.py (last modified: 2025-08-22 13:03:01)
+## tests/test_heat_score.py (last modified: 2025-08-23 08:27:41)
      1: from scalp.pairs import heat_score, select_top_heat_pairs, decorrelate_pairs
      2: 
      3: 
@@ -9423,7 +10498,7 @@ Scalp/
     21:     assert not ("A" in syms and "B" in syms)
 
 
-## tests/test_indicators.py (last modified: 2025-08-22 13:03:01)
+## tests/test_indicators.py (last modified: 2025-08-23 08:27:41)
      1: 
      2: 
      3: import os
@@ -9495,7 +10570,7 @@ Scalp/
     69: 
 
 
-## tests/test_min_qty_rules.py (last modified: 2025-08-22 13:03:01)
+## tests/test_min_qty_rules.py (last modified: 2025-08-23 08:27:41)
      1: import os
      2: import sys
      3: import types
@@ -9528,7 +10603,7 @@ Scalp/
     30:     assert vol2 == 0
 
 
-## tests/test_notifier.py (last modified: 2025-08-22 13:03:01)
+## tests/test_notifier.py (last modified: 2025-08-23 08:27:41)
      1: import scalp.notifier as notifier
      2: 
      3: 
@@ -9711,7 +10786,7 @@ Scalp/
    180: 
 
 
-## tests/test_notional_and_pnl_units.py (last modified: 2025-08-22 13:03:01)
+## tests/test_notional_and_pnl_units.py (last modified: 2025-08-23 08:27:41)
      1: import os, sys, types, pytest
      2: sys.path.append(os.path.dirname(os.path.dirname(__file__)))
      3: sys.modules['requests'] = types.ModuleType('requests')
@@ -9749,7 +10824,7 @@ Scalp/
     35:     assert pct == pytest.approx(expected_pct)
 
 
-## tests/test_pair_selection.py (last modified: 2025-08-22 13:03:01)
+## tests/test_pair_selection.py (last modified: 2025-08-23 08:27:41)
      1: import bot
      2: 
      3: 
@@ -9871,7 +10946,7 @@ Scalp/
    119:     ]
 
 
-## tests/test_pairs.py (last modified: 2025-08-22 13:03:01)
+## tests/test_pairs.py (last modified: 2025-08-23 08:27:41)
      1: import bot
      2: 
      3: 
@@ -9951,7 +11026,7 @@ Scalp/
     77: 
 
 
-## tests/test_risk_manager.py (last modified: 2025-08-22 13:03:01)
+## tests/test_risk_manager.py (last modified: 2025-08-23 08:27:41)
      1: from scalp import RiskManager
      2: 
      3: 
@@ -9997,7 +11072,7 @@ Scalp/
     43:     assert rm.risk_pct < 0.01
 
 
-## tests/test_risk_utils.py (last modified: 2025-08-22 13:03:01)
+## tests/test_risk_utils.py (last modified: 2025-08-23 08:27:41)
      1: import pytest
      2: 
      3: from scalp.risk import calc_risk_amount, calc_position_size
@@ -10030,7 +11105,7 @@ Scalp/
     30:         calc_position_size(1000, 0.01, stop_distance)
 
 
-## tests/test_signal_risk.py (last modified: 2025-08-22 13:03:01)
+## tests/test_signal_risk.py (last modified: 2025-08-23 08:27:41)
      1: import types
      2: import os
      3: import sys
@@ -10100,7 +11175,7 @@ Scalp/
     67:     assert params["notional"] <= params["cap_ratio"] * available + 1e-6
 
 
-## tests/test_slippage.py (last modified: 2025-08-22 13:03:01)
+## tests/test_slippage.py (last modified: 2025-08-23 08:27:41)
      1: from scalp.trade_utils import marketable_limit_price
      2: 
      3: 
@@ -10111,7 +11186,7 @@ Scalp/
      8:     assert price_sell == 9.9 * (1 - 0.001)
 
 
-## tests/test_strategy_v2.py (last modified: 2025-08-22 13:03:01)
+## tests/test_strategy_v2.py (last modified: 2025-08-23 08:27:41)
      1: import pytest
      2: 
      3: from scalp import strategy
@@ -10263,7 +11338,7 @@ Scalp/
    149:     assert sig is None
    150:     
 
-## tests/test_telegram_bot.py (last modified: 2025-08-22 13:03:01)
+## tests/test_telegram_bot.py (last modified: 2025-08-23 08:27:41)
      1: from scalp.telegram_bot import TelegramBot
      2: 
      3: 
@@ -10485,7 +11560,7 @@ Scalp/
    219: 
 
 
-## tests/test_utils.py (last modified: 2025-08-22 13:03:01)
+## tests/test_utils.py (last modified: 2025-08-23 08:27:41)
      1: import pytest
      2: from bot import ema, cross, compute_position_size, CONFIG
      3: from scalp.trade_utils import extract_available_balance
@@ -10564,7 +11639,7 @@ Scalp/
     76:     assert extract_available_balance(assets) == 0.0
 
 
-## tests/test_version.py (last modified: 2025-08-22 13:03:01)
+## tests/test_version.py (last modified: 2025-08-23 08:27:41)
      1: import pytest
      2: from scalp import version
      3: 
@@ -10603,7 +11678,7 @@ Scalp/
     36: 
 
 
-## tests/test_walk_forward.py (last modified: 2025-08-22 13:03:01)
+## tests/test_walk_forward.py (last modified: 2025-08-23 08:27:41)
      1: from scalp.backtest import walk_forward_windows
      2: 
      3: 
@@ -10617,7 +11692,7 @@ Scalp/
     11:     ]
 
 
-## tests/test_ws.py (last modified: 2025-08-22 13:03:01)
+## tests/test_ws.py (last modified: 2025-08-23 08:27:41)
      1: import asyncio
      2: 
      3: from scalp.ws import WebsocketManager
