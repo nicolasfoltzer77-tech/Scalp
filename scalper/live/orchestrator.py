@@ -194,7 +194,6 @@ async def run_orchestrator(
     orch = Orchestrator(exchange=exchange, config=cfg, notifier=notifier, command_stream=None)
     await orch.run()
 
-
 # ---------------------------------------------------------------------
 # Petit main pour tests manuels (optionnel)
 # ---------------------------------------------------------------------
