@@ -1,6 +1,6 @@
 # scalper/backtest/__init__.py
 """
-Backtest package (API publique minimale).
+Backtest package (API publique).
 """
 from .engine import run_single
 from .runner import run_multi, csv_loader_factory
