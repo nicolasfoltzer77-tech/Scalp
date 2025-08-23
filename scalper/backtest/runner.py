@@ -3,14 +3,16 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Iterable, Dict
+from typing import Iterable, Dict, Optional
 
 import pandas as pd
 
 from .engine import run_single, OHLCVLoader
+from .market_data import fetch_ohlcv_bitget, BitgetConfig
 
 
 def csv_loader_factory(data_dir: str) -> OHLCVLoader:
+    """Ancien loader: CSV obligatoire dans data_dir."""
     root = Path(data_dir)
 
     def load(symbol: str, timeframe: str, start: str | None, end: str | None) -> pd.DataFrame:
@@ -19,14 +21,58 @@ def csv_loader_factory(data_dir: str) -> OHLCVLoader:
         if not path.exists():
             raise FileNotFoundError(f"Fichier introuvable: {path}")
         df = pd.read_csv(path)
-        # timestamp
         ts_col = next((c for c in df.columns if c.lower() in ("ts", "timestamp", "time", "date")), None)
         if ts_col is None:
             raise ValueError("Colonne temps introuvable (timestamp/time/date)")
         df = df.rename(columns={ts_col: "timestamp"})
         df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True, infer_datetime_format=True)
         df = df.set_index("timestamp").sort_index()
-        # slice temporel
+        if start:
+            df = df.loc[pd.Timestamp(start, tz="UTC") :]
+        if end:
+            df = df.loc[: pd.Timestamp(end, tz="UTC")]
+        return df
+
+    return load
+
+
+def hybrid_loader_factory(
+    data_dir: str,
+    *,
+    use_api: bool = True,
+    market: str = "mix",
+    api_limit: int = 1000,
+) -> OHLCVLoader:
+    """
+    Loader hybride :
+      1) essaie de lire `data/<SYMBOL>-<TF>.csv`
+      2) sinon, si `use_api`, télécharge depuis Bitget (public), sauvegarde le CSV, et renvoie le DF
+    """
+    root = Path(data_dir)
+    root.mkdir(parents=True, exist_ok=True)
+    cfg = BitgetConfig(market=market)
+
+    def load(symbol: str, timeframe: str, start: str | None, end: str | None) -> pd.DataFrame:
+        tf = timeframe.replace(":", "")
+        path = root / f"{symbol}-{tf}.csv"
+        if path.exists():
+            df = pd.read_csv(path)
+            ts_col = next((c for c in df.columns if c.lower() in ("ts", "timestamp", "time", "date")), None)
+            if ts_col is None:
+                raise ValueError("Colonne temps introuvable (timestamp/time/date)")
+            df = df.rename(columns={ts_col: "timestamp"})
+            df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True, infer_datetime_format=True)
+            df = df.set_index("timestamp").sort_index()
+        else:
+            if not use_api:
+                raise FileNotFoundError(f"Fichier introuvable: {path}")
+            # — API Bitget —
+            df = fetch_ohlcv_bitget(symbol, timeframe, limit=api_limit, cfg=cfg)
+            # persister en CSV pour usage ultérieur
+            tmp = df.reset_index().rename(columns={"timestamp": "timestamp"})
+            tmp.to_csv(path, index=False)
+
+        # Découpe temporelle
         if start:
             df = df.loc[pd.Timestamp(start, tz="UTC") :]
         if end:
