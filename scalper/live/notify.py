@@ -1,50 +1,73 @@
-# scalper/live/notify.py
+# -*- coding: utf-8 -*-
 from __future__ import annotations
-
-import asyncio
 import os
+import asyncio
 from dataclasses import dataclass
-from typing import Any, AsyncIterator, Optional, Tuple
-
-from scalper.live.telegram_async import TelegramNotifier, TelegramCommandStream
+from typing import AsyncIterator, Optional
 
 
 @dataclass
-class NullNotifier:
-    async def send(self, _text: str) -> None:
-        return None
+class BaseNotifier:
+    async def send(self, text: str) -> None:  # pragma: no cover
+        print(text)
 
 
-@dataclass
-class NullCommandStream:
-    async def __aiter__(self) -> AsyncIterator[Any]:  # pragma: no cover
-        if False:
-            yield None
+class NullNotifier(BaseNotifier):
+    pass
 
-    # legacy: some code accidentally calls the stream; keep it harmless
-    def __call__(self) -> "NullCommandStream":
+
+class TelegramNotifier(BaseNotifier):
+    def __init__(self, token: str, chat_id: str, session: Optional[asyncio.AbstractEventLoop]=None):
+        import aiohttp  # lazy
+        self._token = token
+        self._chat = chat_id
+        self._session: aiohttp.ClientSession | None = None
+
+    async def _ensure(self):
+        import aiohttp
+        if self._session is None or self._session.closed:
+            self._session = aiohttp.ClientSession()
+
+    async def send(self, text: str) -> None:
+        import aiohttp
+        await self._ensure()
+        # pas de markdown pour éviter les erreurs 400 de parsing
+        url = f"https://api.telegram.org/bot{self._token}/sendMessage"
+        payload = {"chat_id": self._chat, "text": text, "disable_web_page_preview": True}
+        try:
+            async with self._session.post(url, json=payload, timeout=20) as r:
+                await r.text()  # on ignore la réponse pour rester simple
+        except Exception:
+            # on fait un fallback silencieux pour ne pas casser le bot
+            print("[notify:telegram] send fail (ignored)")
+
+    async def close(self):
+        if self._session and not self._session.closed:
+            await self._session.close()
+
+
+class _NullCommands:
+    """Itérateur async vide utilisé quand Telegram n'est pas configuré."""
+    def __aiter__(self) -> AsyncIterator[str]:
         return self
+    async def __anext__(self) -> str:
+        await asyncio.sleep(3600)  # jamais
+        raise StopAsyncIteration
 
 
-async def build_notifier_and_commands(config: Optional[dict] = None) -> Tuple[Any, Any]:
+async def build_notifier_and_commands(config: dict) -> tuple[BaseNotifier, AsyncIterator[str]]:
     """
-    Returns (notifier, command_stream). Chooses Telegram if env vars are present,
-    otherwise no‑op implementations.
+    Retourne (notifier, command_stream).
 
-    Kept async because TelegramCommandStream may open a session.
+    - Si TELEGRAM_BOT_TOKEN et TELEGRAM_CHAT_ID sont présents: TelegramNotifier,
+      et un flux (vide) – l’orchestreur n’en a besoin que si on implémente des
+      commandes interactives plus tard.
+    - Sinon: NullNotifier + flux vide.
     """
     token = os.getenv("TELEGRAM_BOT_TOKEN")
-    chat_id = os.getenv("TELEGRAM_CHAT_ID")
-    if token and chat_id:
-        notifier = TelegramNotifier(token=token, chat_id=chat_id)
-        commands = TelegramCommandStream(token=token, chat_id=chat_id)
-        # tiny probe so we fail fast if token is invalid
-        try:
-            await notifier.send("🔵 Orchestrator PRELAUNCH. Utilise /setup ou /backtest. /resume pour démarrer le live.")
-        except Exception:
-            # fall back to null but don't crash the bot
-            notifier = NullNotifier()
-            commands = NullCommandStream()
-        return notifier, commands
-
-    return NullNotifier(), NullCommandStream()
+    chat = os.getenv("TELEGRAM_CHAT_ID")
+    if token and chat:
+        print("[notify] TELEGRAM configured.")
+        return TelegramNotifier(token, chat), _NullCommands()
+    print("[notify] TELEGRAM not configured -> Null notifier will be used.")
+    return NullNotifier(), _NullCommands()
