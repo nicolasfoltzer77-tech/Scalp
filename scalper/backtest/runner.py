@@ -2,193 +2,265 @@
 from __future__ import annotations
 
 import json
+import math
 import os
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple, Callable
 
-import numpy as np
-import pandas as pd
+from .cache import ensure_csv_cache, read_csv_ohlcv, csv_path, tf_to_seconds, dump_validation_report
 
-from .market_data import hybrid_loader
-
-# ------------------------------------------------------------
-@dataclass
-class BTConfig:
-    timeframe: str = "5m"
-    cash: float = 10_000.0
-    risk_pct: float = 0.005          # 0.5%
-    fees_bps: float = 6.0
-    slippage_bps: float = 0.0
-    limit: int = 1000
-    data_dir: str = "data"
-    out_dir: str = "result/backtests"
-    strategy_name: str = "current"
-    start: Optional[str] = None
-    end: Optional[str] = None
-
-def load_strategy(name: str) -> Callable[[pd.DataFrame, Dict], Tuple[pd.Series, pd.Series]]:
+# --------- Chargement de la stratégie (factory commune si dispo) ---------
+def load_signal_fn() -> Callable[[str, List[List[float]], float, float], Tuple[str, float]]:
+    """
+    Retourne une fonction (symbol, ohlcv, cash, risk_pct) -> (signal, strength[0..1])
+    Utilise scalper.signals.factory si présent, sinon fallback simple (moyenne 10 closes).
+    """
     try:
-        from scalper.signals.factory import load_signal
-        fn = load_signal(name)
-        return lambda df, params: fn(df=df, **params)
+        from scalper.signals.factory import load_signal  # type: ignore
+        name = os.getenv("STRATEGY", "current")
+        return load_signal(name)
     except Exception:
-        def ema_cross(df: pd.DataFrame, params: Dict) -> Tuple[pd.Series, pd.Series]:
-            f, s = params.get("fast", 12), params.get("slow", 26)
-            ema_f = df["close"].ewm(span=f, adjust=False).mean()
-            ema_s = df["close"].ewm(span=s, adjust=False).mean()
-            entry = (ema_f > ema_s) & (ema_f.shift(1) <= ema_s.shift(1))
-            exit_ = (ema_f < ema_s) & (ema_f.shift(1) >= ema_s.shift(1))
-            return entry.fillna(False), exit_.fillna(False)
-        return ema_cross
+        def _fallback(symbol: str, ohlcv: List[List[float]], cash: float, risk_pct: float) -> Tuple[str, float]:
+            closes = [r[4] for r in (ohlcv[-10:] if len(ohlcv) >= 10 else ohlcv)]
+            if not closes:
+                return "HOLD", 0.0
+            avg = sum(closes) / len(closes)
+            last = closes[-1]
+            if last > avg * 1.002:
+                return "BUY", 1.0
+            if last < avg * 0.998:
+                return "SELL", 1.0
+            return "HOLD", 0.0
+        return _fallback
 
-def _bps_to_frac(bps: float) -> float:
-    return float(bps) / 10_000.0
+# --------- Config ---------
 
-def make_loader(data_dir: str, limit: int) -> Callable[[str, str, Optional[str], Optional[str]], pd.DataFrame]:
-    return hybrid_loader(
-        data_dir=data_dir,
-        use_cache_first=True,
-        min_rows=100,
-        refill_if_stale=True,
-        network_limit=limit,
-    )
+@dataclass
+class BTCfg:
+    symbols: List[str]
+    timeframe: str = "5m"
+    limit: int = 1500
+    cash: float = 10_000.0
+    risk_pct: float = 0.05
+    slippage_bps: float = 0.0
+    fee_bps: float = 6.0
+    data_dir: str = "data"
+    strategy: str = os.getenv("STRATEGY", "current")
 
-# ------------------------------------------------------------
-def run_single(symbol: str, cfg: BTConfig, strat_params: Optional[Dict]=None) -> Dict:
-    strat_params = strat_params or {}
-    load = make_loader(cfg.data_dir, cfg.limit)
-    df = load(symbol, cfg.timeframe, cfg.start, cfg.end)
+# --------- Petit moteur de PnL (long/short, 1 position, all-in sur signal) ---------
 
-    strat = load_strategy(cfg.strategy_name)
-    entry, exit_ = strat(df, strat_params)
+def _bps(x: float) -> float:
+    return x / 10_000.0
 
-    cash = cfg.cash
-    qty = 0.0
-    fee = _bps_to_frac(cfg.fees_bps)
-    slp = _bps_to_frac(cfg.slippage_bps)
+def simulate_symbol(ohlcv: List[List[float]], cfg: BTCfg, signal_fn: Callable) -> Tuple[List[Tuple[int,float]], Dict]:
+    equity = cfg.cash
+    position = 0.0  # quantité (peut être négative si short)
+    entry_price = 0.0
+    equity_curve: List[Tuple[int, float]] = []
+    trades = 0
 
-    equity = []
-    trades = []
+    fee = _bps(cfg.fee_bps)
+    slip = _bps(cfg.slippage_bps)
 
-    for ts, row in df.iterrows():
-        price = float(row["close"])
+    for i in range(1, len(ohlcv)):
+        window = ohlcv[: i+1]  # historique jusqu'à la barre i incluse
+        ts, _, _, _, price, _ = ohlcv[i]
+        signal, strength = signal_fn("SYMBOL", window, equity, cfg.risk_pct)
 
-        # sortie prioritaire
-        if qty > 0 and bool(exit_.get(ts, False)):
-            px = price * (1.0 - slp)
-            cash += qty * px * (1.0 - fee)
-            trades.append({"timestamp": ts, "symbol": symbol, "side": "sell", "price": px, "qty": qty})
-            qty = 0.0
+        # mark-to-market
+        if position != 0:
+            equity += position * (price - ohlcv[i-1][4])
 
-        if qty == 0 and bool(entry.get(ts, False)):
-            risk_cap = cash * cfg.risk_pct
-            if risk_cap > 0:
-                px = price * (1.0 + slp)
-                new_qty = max(risk_cap / px, 0.0)
-                cost = new_qty * px * (1.0 + fee)
-                if cost <= cash:
-                    cash -= cost
-                    qty = new_qty
-                    trades.append({"timestamp": ts, "symbol": symbol, "side": "buy", "price": px, "qty": qty})
+        # décisions sur changement de signal
+        target_pos = 0.0
+        if signal == "BUY":
+            notional = equity * cfg.risk_pct * strength
+            target_pos = max(0.0, notional / price)   # long
+        elif signal == "SELL":
+            notional = equity * cfg.risk_pct * strength
+            target_pos = - max(0.0, notional / price) # short
 
-        equity.append((ts, cash + qty * price))
+        if target_pos != position:
+            # frais & slippage sur la variation de position
+            delta = target_pos - position
+            if delta != 0:
+                trades += 1
+                trade_price = price * (1 + slip * (1 if delta > 0 else -1))
+                equity -= abs(delta) * trade_price * fee
+                # book au prix d’exécution (slippage)
+                position = target_pos
+                entry_price = trade_price if position != 0 else 0.0
 
-    eq_df = pd.DataFrame(equity, columns=["timestamp","equity"]).set_index("timestamp")
-    vals = eq_df["equity"].values
-    ret = vals[-1]/vals[0]-1.0 if len(vals) > 1 else 0.0
-    dd = 0.0; peak = -1e18
-    for v in vals:
-        peak = max(peak, v); dd = min(dd, v/peak - 1.0)
+        equity_curve.append((ts, equity))
 
-    metrics = {
-        "symbol": symbol,
-        "n_bars": int(len(df)),
-        "n_trades": int(len(trades)),
-        "return": float(ret),
-        "max_drawdown": float(dd),
-        "final_equity": float(vals[-1] if len(vals) else cfg.cash),
-        "timeframe": cfg.timeframe,
-        "fees_bps": cfg.fees_bps,
-        "slippage_bps": cfg.slippage_bps,
-        "risk_pct": cfg.risk_pct,
-        "cash_start": cfg.cash,
-    }
-    return {"equity": eq_df, "trades": pd.DataFrame(trades), "metrics": metrics}
+    # fermeture forcée
+    if position != 0 and ohlcv:
+        last_price = ohlcv[-1][4]
+        equity += position * (last_price - entry_price)
+        equity -= abs(position) * last_price * fee
+        position = 0
 
-def run_multi(symbols: List[str], cfg: BTConfig, strat_params: Optional[Dict]=None) -> Dict:
-    pieces = []
-    per_symbol = {}
-    all_trades = []
-    for s in symbols:
-        res = run_single(s, cfg, strat_params)
-        per_symbol[s] = res["metrics"]
-        pieces.append(res["equity"].rename(columns={"equity": s}))
-        all_trades.append(res["trades"].assign(symbol=s))
-    equity = pd.concat(pieces, axis=1).fillna(method="ffill").fillna(method="bfill")
-    equity["equity"] = equity.mean(axis=1)
-    final = float(equity["equity"].iloc[-1]) if len(equity) else cfg.cash
-    ret = final / cfg.cash - 1.0
-    metrics = {
-        "mode": "multi",
-        "symbols": symbols,
-        "timeframe": cfg.timeframe,
-        "cash_start": cfg.cash,
-        "final_equity": final,
-        "return": float(ret),
-        "fees_bps": cfg.fees_bps,
-        "slippage_bps": cfg.slippage_bps,
-        "risk_pct": cfg.risk_pct,
-        "per_symbol": per_symbol,
-    }
-    trades = pd.concat(all_trades, ignore_index=True) if all_trades else pd.DataFrame(columns=["timestamp","symbol","side","price","qty"])
-    return {"equity": equity[["equity"]], "trades": trades, "metrics": metrics}
+    # métriques très simples
+    eq = [e for _, e in equity_curve]
+    ret_tot = (eq[-1] / eq[0] - 1.0) if len(eq) >= 2 else 0.0
+    max_dd = 0.0
+    peak = -1.0
+    for v in eq:
+        if v > peak:
+            peak = v
+        dd = (peak - v) / peak if peak > 0 else 0.0
+        max_dd = max(max_dd, dd)
 
-def save_results(tag: str, res: Dict, out_dir: str) -> Path:
-    stamp = time.strftime("%Y%m%d-%H%M%S")
-    root = Path(out_dir) / f"{stamp}-{tag}"
-    root.mkdir(parents=True, exist_ok=True)
-    res["equity"].to_csv(root / "equity_curve.csv")
-    res["trades"].to_csv(root / "trades.csv", index=False)
-    with open(root / "metrics.json", "w") as f:
-        json.dump(res["metrics"], f, indent=2)
-    return root
-
-# CLI optionnel
-def _parse_args():
-    import argparse
-    p = argparse.ArgumentParser(description="Runner de backtest unifié (mono/multi)")
-    p.add_argument("--symbols", default="BTCUSDT,ETHUSDT")
-    p.add_argument("--timeframe", default="5m")
-    p.add_argument("--cash", type=float, default=10_000)
-    p.add_argument("--risk", type=float, default=0.005)
-    p.add_argument("--fees_bps", type=float, default=6.0)
-    p.add_argument("--slip_bps", type=float, default=0.0)
-    p.add_argument("--limit", type=int, default=1000)
-    p.add_argument("--data_dir", default="data")
-    p.add_argument("--out_dir", default="result/backtests")
-    p.add_argument("--strategy", default="current")
-    p.add_argument("--start", default=None)
-    p.add_argument("--end", default=None)
-    return p.parse_args()
-
-def main():
-    args = _parse_args()
-    symbols = [s.strip().upper() for s in args.symbols.split(",") if s.strip()]
-    cfg = BTConfig(
-        timeframe=args.timeframe, cash=args.cash, risk_pct=args.risk,
-        fees_bps=args.fees_bps, slippage_bps=args.slip_bps, limit=args.limit,
-        data_dir=args.data_dir, out_dir=args.out_dir, strategy_name=args.strategy,
-        start=args.start, end=args.end,
-    )
-    tag = f"{args.timeframe}-{args.strategy}-{len(symbols)}sym"
-    if len(symbols) == 1:
-        res = run_single(symbols[0], cfg)
+    # Sharpe annualisé grossier
+    tf_sec = tf_to_seconds(cfg.timeframe)
+    bars_per_year = int((365.0 * 86400.0) / tf_sec)
+    rets = []
+    for i in range(1, len(eq)):
+        r = (eq[i] / eq[i-1]) - 1.0
+        rets.append(r)
+    if len(rets) > 1:
+        mu = sum(rets) / len(rets)
+        var = sum((x - mu) ** 2 for x in rets) / (len(rets) - 1)
+        std = math.sqrt(var) if var > 0 else 0.0
+        sharpe = (mu * bars_per_year) / (std * math.sqrt(bars_per_year)) if std > 0 else 0.0
     else:
-        res = run_multi(symbols, cfg)
-    path = save_results(tag, res, cfg.out_dir)
-    print(f"[✓] Backtest terminé → {path}")
+        sharpe = 0.0
+
+    metrics = {
+        "final_equity": round(eq[-1], 4) if eq else cfg.cash,
+        "total_return_pct": round(ret_tot * 100, 4),
+        "max_drawdown_pct": round(max_dd * 100, 4),
+        "sharpe_like": round(sharpe, 4),
+        "trades": trades,
+    }
+    return equity_curve, metrics
+
+# --------- Runner principal ---------
+
+async def run_multi(cfg: BTCfg, exchange) -> Dict:
+    """
+    - Valide/rafraîchit le cache CSV pour chaque symbole (selon fraîcheur TF)
+    - Backteste la stratégie sur chaque symbole
+    - Concatène les équités (moyenne simple) => equity_curve.csv
+    - Sauve metrics.json
+    """
+    # 1) ensure cache
+    data = await ensure_csv_cache(exchange, cfg.symbols, cfg.timeframe, cfg.limit)
+
+    # 2) backtest par symbole
+    signal_fn = load_signal_fn()
+    per_symbol: Dict[str, Dict] = {}
+    aligned_ts: List[int] = []
+
+    # construire timeline commune (intersection)
+    sets_ts = []
+    for s in cfg.symbols:
+        rows = data.get(s) or read_csv_ohlcv(csv_path(s, cfg.timeframe))
+        sets_ts.append({r[0] for r in rows})
+    if sets_ts:
+        aligned_ts = sorted(list(set.intersection(*sets_ts)))
+
+    # map ts->close pour performance
+    results_curves: Dict[str, List[Tuple[int, float]]] = {}
+    for s in cfg.symbols:
+        rows = data.get(s) or read_csv_ohlcv(csv_path(s, cfg.timeframe))
+        rows = [r for r in rows if r[0] in set(aligned_ts)]
+        curve, metr = simulate_symbol(rows, cfg, signal_fn)
+        results_curves[s] = curve
+        per_symbol[s] = metr
+
+    # 3) fusion des courbes (moyenne des équités)
+    fused: List[Tuple[int, float]] = []
+    for i in range(len(aligned_ts)):
+        ts = aligned_ts[i]
+        vals = []
+        for s in cfg.symbols:
+            cv = results_curves[s]
+            if i < len(cv) and cv[i][0] == ts:
+                vals.append(cv[i][1])
+        if vals:
+            fused.append((ts, sum(vals) / len(vals)))
+
+    # 4) métriques globales (sur la courbe fusionnée)
+    tmp_cfg = BTCfg(symbols=["AVG"], timeframe=cfg.timeframe, cash=cfg.cash, risk_pct=cfg.risk_pct,
+                    slippage_bps=cfg.slippage_bps, fee_bps=cfg.fee_bps, limit=cfg.limit)
+    glob_metrics = {}
+    if fused:
+        # réutilise calcul DD/Sharpe etc.
+        eq = [e for _, e in fused]
+        ret_tot = (eq[-1]/eq[0]-1.0) if len(eq)>=2 else 0.0
+        # max DD
+        peak = -1.0
+        max_dd = 0.0
+        for v in eq:
+            if v > peak: peak = v
+            dd = (peak - v) / peak if peak > 0 else 0.0
+            max_dd = max(max_dd, dd)
+        # sharpe-like
+        tf_sec = tf_to_seconds(cfg.timeframe)
+        bpy = int((365.0*86400.0)/tf_sec)
+        rets = []
+        for i in range(1, len(eq)):
+            rets.append((eq[i]/eq[i-1]) - 1.0)
+        if len(rets) > 1:
+            mu = sum(rets)/len(rets)
+            var = sum((x-mu)**2 for x in rets)/(len(rets)-1)
+            std = math.sqrt(var) if var>0 else 0.0
+            sharpe = (mu*bpy)/(std*math.sqrt(bpy)) if std>0 else 0.0
+        else:
+            sharpe = 0.0
+        glob_metrics = {
+            "final_equity": round(eq[-1], 4),
+            "total_return_pct": round(ret_tot*100, 4),
+            "max_drawdown_pct": round(max_dd*100, 4),
+            "sharpe_like": round(sharpe, 4),
+        }
+
+    # 5) dump résultats
+    stamp = time.strftime("%Y%m%d-%H%M%S")
+    out_dir = Path(os.getenv("BACKTEST_OUT", f"result/backtest-{stamp}"))
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    # equity_curve.csv (courbe fusionnée)
+    (out_dir / "equity_curve.csv").write_text(
+        "timestamp,equity\n" + "\n".join(f"{ts},{eq:.6f}" for ts, eq in fused)
+    )
+    # metrics.json (global + détail par symbole)
+    all_metrics = {"global": glob_metrics, "per_symbol": per_symbol}
+    (out_dir / "metrics.json").write_text(json.dumps(all_metrics, indent=2))
+
+    # rapport validation CSV
+    dump_validation_report(cfg.symbols, cfg.timeframe, out_dir / "csv_validation.json")
+
+    return {
+        "out_dir": str(out_dir),
+        "equity_curve": str(out_dir / "equity_curve.csv"),
+        "metrics": str(out_dir / "metrics.json"),
+        "csv_validation": str(out_dir / "csv_validation.json"),
+    }
+
+# --------- CLI facultative ---------
 
 if __name__ == "__main__":
-    main()
+    import asyncio
+    # Petit exchange CCXT Bitget (sans clés) uniquement pour fetch OHLCV publics
+    try:
+        import ccxt.async_support as ccxt  # type: ignore
+    except Exception:
+        raise SystemExit("Installe ccxt: pip install ccxt")
+
+    symbols = os.getenv("SYMBOLS", "BTCUSDT,ETHUSDT").split(",")
+    cfg = BTCfg(
+        symbols=[s.strip().upper() for s in symbols if s.strip()],
+        timeframe=os.getenv("TF", "5m"),
+        limit=int(os.getenv("LIMIT", "1500")),
+        cash=float(os.getenv("CASH", "10000")),
+        risk_pct=float(os.getenv("RISK_PCT", "0.05")),
+        slippage_bps=float(os.getenv("SLIPPAGE_BPS", "0.0")),
+        fee_bps=float(os.getenv("FEE_BPS", "6.0")),
+    )
+    exchange = ccxt.bitget()
+    res = asyncio.run(run_multi(cfg, exchange))
+    print("Résultats écrits dans:", res["out_dir"])
