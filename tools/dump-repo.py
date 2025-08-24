@@ -1,26 +1,26 @@
 #!/usr/bin/env python3
 """
-tools/dump-repo.py
+ops/dump_repo.py
 
-Génère un dump complet du repo notebooks/scalp :
+Génère un dump complet du repo :
 - timestamp dans le nom
 - arborescence des fichiers
-- date de dernière modification de chaque fichier
-- contenu intégral des fichiers texte avec numéro de ligne
-- exclusion des fichiers binaires et dossiers inutiles (git, cache, trash…)
+- date de dernière modification
+- contenu intégral des fichiers texte avec numéros de ligne
+- exclut les répertoires inutiles (git, cache, trash, dumps)
+- garde uniquement le dernier dump (supprime les anciens)
 
 Usage :
-    python tools/dump-repo.py
+    python ops/dump_repo.py
 """
 
 from __future__ import annotations
-
 import datetime as dt
 import os
 import sys
 from pathlib import Path
 
-# Racine du repo = notebooks/scalp/
+# Racine du repo = parent d'ops/
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DUMP_DIR = REPO_ROOT / "dumps"
 DUMP_DIR.mkdir(parents=True, exist_ok=True)
@@ -34,7 +34,7 @@ IGNORE_EXT = {
     ".pkl", ".db", ".sqlite", ".zip", ".tar", ".gz",
     ".pyc", ".pyo",
 }
-IGNORE_DIRS = {".git", "__pycache__", ".ipynb_checkpoints"}
+IGNORE_DIRS = {".git", "__pycache__", ".ipynb_checkpoints", "dumps"}
 IGNORE_PREFIX = {"TRASH_"}
 
 def is_text_file(path: Path) -> bool:
@@ -92,11 +92,22 @@ def dump_files(root: Path, f) -> None:
         for i, line in enumerate(content, 1):
             f.write(f"{i:6d}: {line}\n")
 
+def prune_old_dumps() -> None:
+    dumps = sorted(DUMP_DIR.glob("DUMP_*.txt"))
+    for old in dumps:
+        if old != OUT_PATH:  # on ne garde que le nouveau
+            try:
+                old.unlink()
+                print(f"[x] Ancien dump supprimé: {old.name}")
+            except Exception as e:
+                print(f"[!] Impossible de supprimer {old}: {e}")
+
 def main() -> int:
     with open(OUT_PATH, "w", encoding="utf-8") as f:
         f.write(f"# DUMP {TS}\nRepo: {REPO_ROOT}\n")
         dump_tree(REPO_ROOT, f)
         dump_files(REPO_ROOT, f)
+    prune_old_dumps()
     print(f"[✓] Dump écrit: {OUT_PATH}")
     return 0
 
