@@ -20,7 +20,7 @@ if os.getenv("SKIP_PREFLIGHT", "0") not in ("1", "true", "yes"):
         pass
 
     try:
-        from scalper.selfcheck import preflight_or_die
+        from engine.selfcheck import preflight_or_die
         preflight_or_die(verbose=False)
     except SystemExit:
         # le préflight a signalé un problème -> on laisse l'arrêt se propager

@@ -4,7 +4,7 @@ from __future__ import annotations
 import csv
 from typing import Dict, List
 
-from scalper.services.data_cache import csv_path
+from engine.services.data_cache import csv_path
 
 # Format de sortie : liste de bougies [ts, open, high, low, close, volume]
 def load_ohlcv_csv(symbol: str, timeframe: str) -> List[List[float]]:

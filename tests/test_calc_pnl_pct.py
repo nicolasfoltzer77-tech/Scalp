@@ -3,7 +3,7 @@ import sys
 import pytest
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
-from scalper.metrics import calc_pnl_pct
+from engine.metrics import calc_pnl_pct
 
 
 def test_calc_pnl_pct_long():

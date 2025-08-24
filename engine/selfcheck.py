@@ -32,45 +32,45 @@ def preflight(verbose: bool = False) -> list[str]:
     print(f"[i] Python: {sys.version.split()[0]}")
 
     # backtest API
-    ok, mod = _try_import("scalper.backtest")
+    ok, mod = _try_import("engine.backtest")
     if not ok:
-        print("[✗] Import scalper.backtest KO")
+        print("[✗] Import engine.backtest KO")
         if verbose: print(mod)  # ici 'mod' contient la trace
         issues.append("backtest import")
     else:
         has_single = hasattr(mod, "run_single")
         has_multi  = hasattr(mod, "run_multi")
-        print(f"[✓] scalper.backtest: run_single={has_single} run_multi={has_multi}")
+        print(f"[✓] engine.backtest: run_single={has_single} run_multi={has_multi}")
         if not (has_single and has_multi):
             issues.append("backtest API incomplète")
 
     # trade_utils
-    ok, mod = _try_import("scalper.trade_utils")
+    ok, mod = _try_import("engine.trade_utils")
     if not ok:
-        print("[✗] Import scalper.trade_utils KO")
+        print("[✗] Import engine.trade_utils KO")
         if verbose: print(mod)
         issues.append("trade_utils import")
     else:
-        print(f"[✓] scalper.trade_utils: compute_position_size={'compute_position_size' in dir(mod)}")
+        print(f"[✓] engine.trade_utils: compute_position_size={'compute_position_size' in dir(mod)}")
 
     # fees
-    ok, mod = _try_import("scalper.exchange.fees")
+    ok, mod = _try_import("engine.exchange.fees")
     if not ok:
-        print("[✗] Import scalper.exchange.fees KO")
+        print("[✗] Import engine.exchange.fees KO")
         if verbose: print(mod)
         issues.append("fees import")
     else:
         need = {"get_fee", "load_bitget_fees"}
         miss = [n for n in need if not hasattr(mod, n)]
         if miss: issues.append("fees API manquante: " + ",".join(miss))
-        print("[✓] scalper.exchange.fees OK")
+        print("[✓] engine.exchange.fees OK")
 
     # notify/commands/backtest_telegram/orchestrator
     for name, required in [
-        ("scalper.live.notify", ("build_notifier_and_stream",)),
-        ("scalper.live.commands", ("CommandHandler",)),
-        ("scalper.live.backtest_telegram", ("handle_backtest_command",)),
-        ("scalper.live.orchestrator", ("run_orchestrator", "Orchestrator")),
+        ("engine.live.notify", ("build_notifier_and_stream",)),
+        ("engine.live.commands", ("CommandHandler",)),
+        ("engine.live.backtest_telegram", ("handle_backtest_command",)),
+        ("engine.live.orchestrator", ("run_orchestrator", "Orchestrator")),
     ]:
         ok, mod = _try_import(name)
         if not ok:

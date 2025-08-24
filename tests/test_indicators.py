@@ -8,7 +8,7 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 
 
-from scalper.metrics import calc_rsi, calc_atr, calc_macd
+from engine.metrics import calc_rsi, calc_atr, calc_macd
 
 
 def test_calc_rsi_uptrend():

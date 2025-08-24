@@ -1,7 +1,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Dict, Optional, Protocol
-from scalper.trade_utils import extract_available_balance
+from engine.trade_utils import extract_available_balance
 
 
 @dataclass

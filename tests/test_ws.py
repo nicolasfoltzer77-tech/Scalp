@@ -1,6 +1,6 @@
 import asyncio
 
-from scalper.ws import WebsocketManager
+from engine.ws import WebsocketManager
 
 
 def test_websocket_manager_stop():

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import argparse
-from scalper.backtest.runner import run_multi, csv_loader_factory
+from engine.backtest.runner import run_multi, csv_loader_factory
 
 def create_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="backtest", description="Backtest multi symboles / multi timeframes")

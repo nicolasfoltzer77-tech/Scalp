@@ -3,7 +3,7 @@ import time
 from typing import Any, Dict, List, Optional
 
 try:
-    from scalper.adapters.market_data import MarketData
+    from engine.adapters.market_data import MarketData
 except Exception:
     MarketData = None  # type: ignore
 

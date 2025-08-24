@@ -3,8 +3,8 @@ from __future__ import annotations
 import argparse
 import os
 from typing import Dict, List
-from scalper.strategy.factory import load_strategies_cfg
-from scalper.backtest.engine import BacktestEngine
+from engine.strategy.factory import load_strategies_cfg
+from engine.backtest.engine import BacktestEngine
 
 def run_once(
     symbol: str,

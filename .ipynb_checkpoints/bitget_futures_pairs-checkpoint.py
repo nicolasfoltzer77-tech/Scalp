@@ -21,7 +21,7 @@ import sys
 import time
 from typing import Any, Dict, List
 
-from scalper.bot_config import CONFIG
+from engine.bot_config import CONFIG
 
 try:  # pragma: no cover - import guard
     import requests

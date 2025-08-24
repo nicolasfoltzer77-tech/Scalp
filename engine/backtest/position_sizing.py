@@ -1,6 +1,6 @@
 # scalper/backtest/position_sizing.py
 from __future__ import annotations
-from scalper.core.signal import Signal
+from engine.core.signal import Signal
 
 def position_size_from_signal(equity: float, sig: Signal, risk_pct: float) -> float:
     """

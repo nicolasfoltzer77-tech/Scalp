@@ -1,4 +1,4 @@
-import scalper.notifier as notifier
+import engine.notifier as notifier
 
 
 def test_notify_skips_without_targets(monkeypatch):
