@@ -1,0 +1,97 @@
+Nom du fichier : scalper/config/config.yaml
+Rôle : contient TOUS les paramètres généraux versionnés. AUCUN secret ici.
+Le fichier .env (au parent de notebooks/scalp, ex: /notebooks/.env) ne doit contenir QUE les secrets (clés API, tokens). Ce .env est chargé automatiquement au boot par sitecustomize.py.
+
+1) Secrets (dans /notebooks/.env)
+- BITGET_ACCESS_KEY        (aliases: BITGET_API_KEY, BITGET_KEY)
+- BITGET_SECRET_KEY        (aliases: BITGET_API_SECRET, BITGET_SECRET)
+- BITGET_PASSPHRASE        (aliases: BITGET_API_PASSPHRASE, BITGET_PASSWORD, BITGET_API_PASSWORD)
+- TELEGRAM_BOT_TOKEN       (aliases: TELEGRAM_TOKEN, TG_TOKEN)
+- TELEGRAM_CHAT_ID         (aliases: TG_CHAT_ID, TELEGRAM_TO, CHAT_ID)
+
+Exemple minimal .env :
+BITGET_ACCESS_KEY=__A_REMPLIR__
+BITGET_SECRET_KEY=__A_REMPLIR__
+BITGET_PASSPHRASE=__A_REMPLIR__
+TELEGRAM_BOT_TOKEN=
+TELEGRAM_CHAT_ID=
+
+2) Paramètres généraux (dans scalper/config/config.yaml)
+Bloc runtime:
+- data_dir         (chemin, défaut: /notebooks/data)
+- log_dir          (chemin, défaut: /notebooks/scalp/logs)
+- paper_trade      (bool, défaut: true)
+- allowed_symbols  (liste, défaut: [])
+- refresh_secs     (int, défaut: 5)
+
+Bloc strategy:
+- live_timeframe   (str, ex: 1m)
+- ema_fast         (int, défaut: 20)
+- ema_slow         (int, défaut: 50)
+- macd_fast        (int, défaut: 12)
+- macd_slow        (int, défaut: 26)
+- macd_signal      (int, défaut: 9)
+- ema_trend_period (int, défaut: 100)
+
+Bloc risk:
+- risk_pct_equity     (float, défaut: 0.02)
+- leverage            (int, défaut: 5)
+- stop_loss_pct       (float, défaut: 0.01)
+- take_profit_pct     (float, défaut: 0.02)
+- atr_period          (int, défaut: 14)
+- trail_atr_mult      (float, défaut: 2.0)
+- scale_in_atr_mult   (float, défaut: 0.5)
+- progress_min        (int, défaut: 15)
+- timeout_min         (int, défaut: 30)
+- max_daily_loss_pct  (float, défaut: 0.05)
+- max_daily_profit_pct(float, défaut: 0.10)
+- max_positions       (int, défaut: 3)
+
+Exemple complet config.yaml :
+runtime:
+  data_dir: /notebooks/data
+  log_dir: /notebooks/scalp/logs
+  paper_trade: true
+  allowed_symbols: []
+  refresh_secs: 5
+strategy:
+  live_timeframe: 1m
+  ema_fast: 20
+  ema_slow: 50
+  macd_fast: 12
+  macd_slow: 26
+  macd_signal: 9
+  ema_trend_period: 100
+risk:
+  risk_pct_equity: 0.02
+  leverage: 5
+  stop_loss_pct: 0.01
+  take_profit_pct: 0.02
+  atr_period: 14
+  trail_atr_mult: 2.0
+  scale_in_atr_mult: 0.5
+  progress_min: 15
+  timeout_min: 30
+  max_daily_loss_pct: 0.05
+  max_daily_profit_pct: 0.10
+  max_positions: 3
+
+3) Ordre de priorité et validation
+- .env : secrets uniquement, alias normalisés au boot.
+- config.yaml : tous les paramètres généraux.
+- Au démarrage (bot.py -> import automatique sitecustomize.py), pré-flight vérifie:
+  * secrets requis : BITGET_ACCESS_KEY, BITGET_SECRET_KEY
+  * paramètres minimaux : strategy.live_timeframe, runtime.data_dir
+  Si OK, écrit /notebooks/.scalper/READY.json (green-flag) et le bot démarre. Sinon, il affiche ce qui manque et s’arrête.
+
+4) Où ça vit dans le repo
+- .env : parent de notebooks/scalp (déjà géré par le code).
+- config.yaml : scalper/config/config.yaml (versionné).
+- READY.json : /notebooks/.scalper/READY.json
+
+5) Bonnes pratiques
+- Ne jamais versionner .env.
+- Toujours versionner config.yaml.
+- Modifier config.yaml pour faire évoluer les réglages.
+- Les listes de paires peuvent être mises dans allowed_symbols.
+FIN DE FICHIER
