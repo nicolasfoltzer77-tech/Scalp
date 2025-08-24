@@ -1,5 +1,5 @@
+# bot.py  (mise à jour pour brancher les commandes Telegram à part)
 #!/usr/bin/env python3
-# --- bootstrap forcé (au cas où sitecustomize ne se charge pas automatiquement) ---
 from __future__ import annotations
 
 import asyncio
@@ -7,28 +7,6 @@ import logging
 import os
 import sys
 from typing import Any, Dict, Iterable, Optional, Sequence
-from pathlib import Path
-
-# s'assurer que la racine du repo est bien sur sys.path
-ROOT = Path(__file__).resolve().parent
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
-
-# forcer l'import de sitecustomize (verbeux)
-try:
-    import sitecustomize  # noqa: F401
-    print("[bootstrap] sitecustomize importé (OK)")
-except Exception as e:
-    print(f"[bootstrap] sitecustomize non importé: {e}")
-    # dernier filet de sécurité: installation directe des deps
-    try:
-        from engine.utils.bootstrap import ensure_dependencies
-        deps = ensure_dependencies(with_dash=True, with_ccxt=True)
-        print("[bootstrap] ensure_dependencies:", deps)
-    except Exception as ee:
-        print(f"[bootstrap] fallback ensure_dependencies a échoué: {ee}")
-# --- fin bootstrap forcé ---
-
 
 from engine.config.loader import load_config
 from engine.live.orchestrator import RunConfig, run_orchestrator
