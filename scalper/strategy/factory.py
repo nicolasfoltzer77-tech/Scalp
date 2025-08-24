@@ -12,15 +12,12 @@ except Exception:
 
 SignalFn = Callable[..., Any]
 
-# Enregistreur statique (évite import dynamique fragile)
 _REGISTRY: Dict[str, str] = {
     "current": "scalper.strategy.strategies.current:generate_signal",
-    # Tu pourras ajouter d'autres stratégies ici, ex:
-    # "ema_cross": "scalper.strategy.strategies.ema_cross:generate_signal",
+    # ex: "ema_cross": "scalper.strategy.strategies.ema_cross:generate_signal",
 }
 
 def _load_callable(path: str) -> SignalFn:
-    """Charge 'module.sub:attr' de manière sûre."""
     if ":" not in path:
         raise ValueError(f"Chemin de callable invalide: {path}")
     module_name, attr = path.split(":", 1)
@@ -38,7 +35,6 @@ def load_signal(name: str) -> SignalFn:
 
 def _read_yaml(path: str) -> dict:
     if yaml is None:
-        # Fallback JSON si YAML indispo
         with open(path, "r", encoding="utf-8") as f:
             return json.load(f)
     with open(path, "r", encoding="utf-8") as f:
@@ -46,9 +42,8 @@ def _read_yaml(path: str) -> dict:
 
 def load_strategies_cfg(path: str) -> dict:
     if not os.path.isfile(path):
-        raise FileNotFoundError(f"Fichier de config stratégies introuvable: {path}")
+        raise FileNotFoundError(f"Config stratégies introuvable: {path}")
     cfg = _read_yaml(path)
-    # Normalisation clé
     cfg.setdefault("default", "current")
     cfg.setdefault("by_timeframe", {})
     cfg.setdefault("by_symbol", {})
