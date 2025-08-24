@@ -1,0 +1,13 @@
+# scalper/config/strategies.yml
+default: current
+by_timeframe:
+  "1m": current
+  "5m": current
+  "15m": current
+  "1h": current
+by_symbol:
+  BTCUSDT:
+    "1m": current
+    "5m": current
+  ETHUSDT:
+    "5m": current
