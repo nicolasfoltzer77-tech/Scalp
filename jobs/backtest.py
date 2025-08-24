@@ -1,15 +1,18 @@
+#!/usr/bin/env python3
 from __future__ import annotations
 import argparse, json
 from pathlib import Path
 from typing import Any, Dict, List
 from engine.config.loader import load_config
+from engine.config.watchlist import load_watchlist
 from engine.backtest.loader_csv import load_csv_ohlcv
 from engine.backtest.engine import run_backtest_once, compute_metrics, grid_params
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Backtests grid -> DATA_ROOT/reports")
-    ap.add_argument("--symbols", required=True)
-    ap.add_argument("--tfs", required=True)
+    ap.add_argument("--symbols", default="", help="Liste explicite (sinon watchlist)")
+    ap.add_argument("--from-watchlist", action="store_true", help="Utiliser la watchlist (top N)")
+    ap.add_argument("--tfs", required=True, help="1m,5m,15m,1h")
     ap.add_argument("--out", default=None)
     args = ap.parse_args()
 
@@ -18,7 +21,11 @@ def main() -> int:
     reports_dir = Path(args.out or cfg["runtime"]["reports_dir"])
     reports_dir.mkdir(parents=True, exist_ok=True)
 
-    symbols = [s.strip() for s in args.symbols.split(",") if s.strip()]
+    if args.from_watchlist:
+        wl = load_watchlist()
+        symbols = [d["symbol"] for d in wl.get("top", [])]
+    else:
+        symbols = [s.strip() for s in args.symbols.split(",") if s.strip()]
     tfs = [t.strip() for t in args.tfs.split(",") if t.strip()]
 
     summary: List[Dict[str, Any]] = []
@@ -28,7 +35,7 @@ def main() -> int:
         for tf in tfs:
             csv_path = data_dir / f"{sym.replace('/','').replace('_','')}-{tf}.csv"
             if not csv_path.exists():
-                print(f"[!] CSV manquant: {csv_path} (backfill d'abord)")
+                print(f"[!] CSV manquant: {csv_path} — fais d'abord jobs/refresh_pairs.py")
                 continue
             df = load_csv_ohlcv(csv_path)
             best_score = None
