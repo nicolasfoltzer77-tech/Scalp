@@ -6,26 +6,19 @@ from scalper.live.fetcher import DataFetcher
 from scalper.live.runner import JobRunner
 
 class Orchestrator:
-    """
-    Orchestrateur léger :
-      - boucle périodique
-      - fetch OHLCV via DataFetcher
-      - exécute la stratégie via JobRunner
-      - affiche le signal (à brancher plus tard vers RiskManager/OrderService)
-    """
     def __init__(
         self,
         *,
         exchange_client: Any,
         strategies_cfg: Dict[str, Any],
-        jobs: List[Tuple[str, str]],         # [(symbol, timeframe)]
+        jobs: List[Tuple[str, str]],   # [(symbol, timeframe)]
         interval_sec: int = 60,
         equity: float = 1000.0,
         risk_pct: float = 0.01,
     ) -> None:
         self.fetcher = DataFetcher(exchange_client)
         self.runner = JobRunner(strategies_cfg, equity, risk_pct)
-        self.jobs = [(s.upper(), tf) for (s, tf) in jobs]
+        self.jobs = [(s.upper(), tf) for s, tf in jobs]
         self.interval = max(5, int(interval_sec))
 
     def _tick(self) -> None:
@@ -50,5 +43,4 @@ class Orchestrator:
             t0 = time.time()
             self._tick()
             dt = time.time() - t0
-            wait = max(0.0, self.interval - dt)
-            time.sleep(wait)
+            time.sleep(max(0.0, self.interval - dt))
