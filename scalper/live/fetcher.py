@@ -3,9 +3,6 @@ from __future__ import annotations
 from typing import Dict, List, Optional
 
 class DataFetcher:
-    """
-    Récupération OHLCV depuis un client d'exchange (Bitget).
-    """
     def __init__(self, client) -> None:
         self.client = client
 
