@@ -1,31 +1,57 @@
 # sitecustomize.py
-"""
-Ce fichier est importé automatiquement par Python au démarrage, si présent sur sys.path.
-On l'utilise pour lancer un préflight de 'scalper' avant l'exécution du bot,
-sans modifier bot.py. Désactivable via SKIP_PREFLIGHT=1.
-"""
+# Chargé automatiquement au démarrage de Python s'il est sur le PYTHONPATH.
+# - charge /notebooks/.env
+# - normalise les alias de secrets
+# - charge la config pour initialiser les chemins DATA_ROOT
+# - fait un préflight rapide (secrets + chemins) et écrit un green-flag
 
-import os
+from __future__ import annotations
+import json, os
+from pathlib import Path
 
-if os.getenv("SKIP_PREFLIGHT", "0") not in ("1", "true", "yes"):
+READY_PATH = Path("/notebooks/.scalp/READY.json")
+
+def _load_dotenv_parent():
     try:
-        # Optionnel: charger /notebooks/.env si présent
-        try:
-            from dotenv import load_dotenv  # pip install python-dotenv si besoin
-            load_dotenv("/notebooks/.env")
-        except Exception:
-            pass
-
+        from dotenv import load_dotenv
+        load_dotenv("/notebooks/.env")
     except Exception:
         pass
 
+def _apply_aliases():
     try:
-        from engine.selfcheck import preflight_or_die
-        preflight_or_die(verbose=False)
-    except SystemExit:
-        # le préflight a signalé un problème -> on laisse l'arrêt se propager
-        raise
+        from engine.config.loader import apply_env_aliases
+        apply_env_aliases()
+    except Exception:
+        pass
+
+def _preflight():
+    try:
+        from engine.config.loader import load_config
+        cfg = load_config()
+        # vérifs minimales
+        miss = []
+        if not (cfg.get("secrets",{}).get("bitget",{}).get("access")):
+            miss.append("BITGET_ACCESS_KEY")
+        if not (cfg.get("secrets",{}).get("bitget",{}).get("secret")):
+            miss.append("BITGET_SECRET_KEY")
+        if miss:
+            print("[-] Secrets manquants:", ", ".join(miss))
+            return
+        # chemins hors repo
+        for key in ("data_dir","log_dir","reports_dir"):
+            d = Path(cfg["runtime"][key])
+            d.mkdir(parents=True, exist_ok=True)
+        READY_PATH.parent.mkdir(parents=True, exist_ok=True)
+        READY_PATH.write_text(json.dumps({"status":"ok","reason":"preflight"}, indent=2), encoding="utf-8")
+        print("[✓] Préflight OK — green-flag écrit:", READY_PATH)
     except Exception as e:
-        # On ne bloque pas le démarrage si le selfcheck lui-même plante,
-        # mais on affiche une alerte claire.
-        print(f"[sitecustomize] Avertissement: selfcheck non exécuté ({e})")
+        print("[!] Préflight non bloquant:", e)
+
+try:
+    if os.getenv("SKIP_PREFLIGHT","0").lower() not in ("1","true","yes","on"):
+        _load_dotenv_parent()
+        _apply_aliases()
+        _preflight()
+except Exception:
+    pass
