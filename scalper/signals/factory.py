@@ -1,48 +1,72 @@
 # scalper/signals/factory.py
 from __future__ import annotations
-
+from typing import Callable, Dict, Any
 import importlib
-import importlib.util
-from typing import Callable, Dict, Optional
+import os
+import json
 
-SignalFn = Callable[..., object]
+try:
+    import yaml  # type: ignore
+except Exception:
+    yaml = None  # type: ignore
 
-# Mapping symbolique -> module (tu peux en ajouter librement)
+SignalFn = Callable[..., Any]
+
+# IMPORTANT : on pointe par défaut sur TA stratégie actuelle dans scalper/strategy.py
 _REGISTRY: Dict[str, str] = {
-    # Stratégie "actuelle" (renvoie scalper.strategy.generate_signal)
-    "current": "scalper.signals.current",
-
-    # Exemples de plugins (crée les fichiers si tu veux les utiliser)
-    "ema_cross": "scalper.signals.ema_cross",
-    "vwap_break": "scalper.signals.vwap_break",
+    "current": "scalper.strategy:generate_signal",
+    # Tu pourras ajouter d'autres stratégies ici, par ex :
+    # "ema_cross": "scalper.strategies.ema_cross:generate_signal",
 }
 
-def _module_exists(modname: str) -> bool:
-    return importlib.util.find_spec(modname) is not None
-
-def load_signal(name: str, *, default: str = "current") -> SignalFn:
-    """
-    Charge et retourne une fonction `generate_signal` pour la stratégie `name`.
-    Si le module n'existe pas, on retombe sur `default` (courant: 'current').
-    """
-    target = _REGISTRY.get(name, _REGISTRY.get(default, "scalper.signals.current"))
-    if not _module_exists(target):
-        # fallback direct sur 'current'
-        target = _REGISTRY.get(default, "scalper.signals.current")
-
-    mod = importlib.import_module(target)
-    fn = getattr(mod, "generate_signal", None)
+def _load_callable(path: str) -> SignalFn:
+    if ":" not in path:
+        raise ValueError(f"Chemin callable invalide: {path}")
+    module_name, attr = path.split(":", 1)
+    mod = importlib.import_module(module_name)
+    fn = getattr(mod, attr, None)
     if not callable(fn):
-        # dernier filet de sécurité : stratégie live directe
-        from scalper.strategy import generate_signal as live_generate
-        return live_generate
-    return fn
+        raise ValueError(f"{attr} n'est pas callable dans {module_name}")
+    return fn  # type: ignore
 
-def available_strategies() -> Dict[str, str]:
+def load_signal(name: str) -> SignalFn:
+    key = (name or "").strip().lower()
+    if key not in _REGISTRY:
+        raise KeyError(f"Stratégie inconnue: '{name}'. Registre: {list(_REGISTRY)}")
+    return _load_callable(_REGISTRY[key])
+
+def _read_yaml(path: str) -> dict:
+    if yaml is None:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    with open(path, "r", encoding="utf-8") as f:
+        return yaml.safe_load(f) or {}
+
+def load_strategies_cfg(path: str | None) -> dict:
     """
-    Retourne {nom: 'ok'/'missing'} pour afficher ce qui est disponible.
+    Charge le mapping (symbole, timeframe) -> nom de stratégie.
+    Si le fichier n'existe pas, retourne une config par défaut fonctionnelle.
     """
-    out: Dict[str, str] = {}
-    for name, mod in _REGISTRY.items():
-        out[name] = "ok" if _module_exists(mod) else "missing"
-    return out
+    default_cfg = {"default": "current", "by_timeframe": {}, "by_symbol": {}}
+    if not path:
+        return default_cfg
+    if not os.path.isfile(path):
+        # Pas de fichier ? On continue avec les valeurs par défaut.
+        return default_cfg
+    cfg = _read_yaml(path)
+    cfg.setdefault("default", "current")
+    cfg.setdefault("by_timeframe", {})
+    cfg.setdefault("by_symbol", {})
+    return cfg
+
+def resolve_strategy_name(symbol: str, timeframe: str, cfg: dict) -> str:
+    symbol = (symbol or "").upper()
+    timeframe = (timeframe or "").lower()
+    return (
+        cfg.get("by_symbol", {}).get(symbol, {}).get(timeframe)
+        or cfg.get("by_timeframe", {}).get(timeframe)
+        or cfg.get("default", "current")
+    )
+
+def resolve_signal_fn(symbol: str, timeframe: str, cfg: dict) -> SignalFn:
+    return load_signal(resolve_strategy_name(symbol, timeframe, cfg))
