@@ -1,0 +1,31 @@
+# config/config.yaml
+
+runtime:
+  data_dir: /notebooks/data
+  log_dir: /notebooks/scalp/logs
+  paper_trade: true
+  allowed_symbols: []   # vide = toutes
+  refresh_secs: 5
+
+strategy:
+  live_timeframe: 1m
+  ema_fast: 20
+  ema_slow: 50
+  macd_fast: 12
+  macd_slow: 26
+  macd_signal: 9
+  ema_trend_period: 100
+
+risk:
+  risk_pct_equity: 0.02
+  leverage: 5
+  stop_loss_pct: 0.01
+  take_profit_pct: 0.02
+  atr_period: 14
+  trail_atr_mult: 2.0
+  scale_in_atr_mult: 0.5
+  progress_min: 15
+  timeout_min: 30
+  max_daily_loss_pct: 0.05
+  max_daily_profit_pct: 0.10
+  max_positions: 3
