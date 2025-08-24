@@ -1,0 +1,17 @@
+docs/CLEANUP_TODO.txt
+[INUTILE/À SUPPRIMER LATER] Dossier d’archives non utilisé par l’exécution :
+- TRASH_20250823-124533/
+
+[INUTILE/À SUPPRIMER LATER] Scripts et modules obsolètes à l’intérieur de TRASH_20250823-124533/ (doublons ou anciens essais) :
+- quick_order.py
+- dashboard.py
+- rr.py
+- notebooks/spot/bitget_bot.py
+- scalper/telegram_bot.py
+- scalper/notifier.py
+- scalper/legacy_config.py
+
+[NOTE]
+Ces éléments ne sont pas importés par l’entrée bot.py, ni requis par scalper/live/* actuel.
+On les garde pour l’instant comme référence, mais cible de suppression lors de la phase “ménage” (<400 lignes et code mort).
+FIN DE FICHIER
