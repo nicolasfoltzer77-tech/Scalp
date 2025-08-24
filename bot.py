@@ -3,14 +3,17 @@
 """
 Point d'entrée unique (scan/orchestrate).
 
-Principe:
-- --exchange wrapper (défaut) : *pass-through* complet vers TON wrapper Bitget.
-  -> on ne touche NI au symbole, NI au timeframe. C'est le wrapper qui gère.
-- --exchange ccxt : utilise ccxt.bitget (pour debug rapide).
+Modes d'accès:
+- --exchange wrapper (défaut) : passe par TON wrapper Bitget (get_ohlcv). Le bot
+  ajoute automatiquement le suffixe si absent:
+    --market umcbl -> _UMCBL (perp USDT)  [défaut]
+    --market spot  -> _SPBL
+- --exchange ccxt : client ccxt.bitget (fetch_ohlcv), pour debug rapide.
 - --csv / --csv_1h : scan offline.
 
 Exemples:
-  python bot.py --symbols BTCUSDT --tf 5m                     # wrapper pass-through
+  python bot.py --symbols BTCUSDT --tf 5m                     # wrapper, auto -> BTCUSDT_UMCBL
+  python bot.py --symbols BTCUSDT --tf 5m --market spot       # wrapper, auto -> BTCUSDT_SPBL
   python bot.py --symbols BTCUSDT --tf 5m --exchange ccxt     # ccxt (transforme en BTC/USDT:USDT)
   python bot.py --csv data/BTCUSDT-5m.csv --csv_1h data/BTCUSDT-1h.csv
 """
@@ -45,9 +48,8 @@ def _import_orchestrator():
 # ---------- Exchange loader ----------
 def _import_wrapper_class() -> Optional[Any]:
     for mod_name in (
-        "scalper.exchange.bitget",
+        "scalper.exchange.bitget",   # ton wrapper
         "scalper.exchanges.bitget",
-        "scalper/exchange/bitget",   # au cas où
     ):
         try:
             mod = __import__(mod_name, fromlist=["BitgetExchange"])
@@ -93,6 +95,26 @@ def _resolve_exchange(mode: str) -> Tuple[Optional[Any], str, str]:
         return client, "", "ccxt"
     return None, "Aucun exchange Bitget trouvé (wrapper ou ccxt).", ""
 
+# ---------- Helpers symboles ----------
+def _ensure_suffix_for_wrapper(sym: str, market: str) -> str:
+    """Ajoute _UMCBL/_SPBL si manquant, pour le wrapper Bitget."""
+    up = sym.upper()
+    if "_" in up:   # suffixe déjà présent (ex: BTCUSDT_UMCBL / _SPBL)
+        return up
+    if market == "spot":
+        return up + "_SPBL"
+    return up + "_UMCBL"  # défaut: perp USDT
+
+def _to_ccxt_symbol(sym: str) -> str:
+    """BTCUSDT -> BTC/USDT:USDT (defaultType=swap) ; si déjà au format ccxt, renvoie tel quel."""
+    if "/" in sym:
+        return sym
+    base, quote = sym[:-4], sym[-4:]
+    default_type = os.getenv("BITGET_DEFAULT_TYPE","swap")
+    if default_type == "swap":
+        return f"{base}/{quote}:{quote}"
+    return f"{base}/{quote}"
+
 # ---------- Utils OHLCV offline ----------
 def _read_csv(path: str) -> Dict[str, List[float]]:
     import csv
@@ -120,7 +142,7 @@ def _ohlcv_to_dict(rows: List[List[float]]) -> Dict[str, List[float]]:
 def mode_scan(
     *, symbols: List[str], timeframe: str, cfg_path: str,
     csv: Optional[str], csv_1h: Optional[str],
-    equity: float, risk: float, exchange_mode: str
+    equity: float, risk: float, exchange_mode: str, market: str
 ) -> None:
     load_strategies_cfg, resolve_signal_fn = _import_strategy_factory()
     cfg = load_strategies_cfg(cfg_path)
@@ -142,7 +164,6 @@ def mode_scan(
             print(msg); return
 
         if detected == "wrapper":
-            # ⬇️ PASS-THROUGH : on n’ajoute ni suffixe, ni conversion.
             client = ExCtorOrClient(
                 api_key=os.getenv("BITGET_API_KEY",""),
                 api_secret=os.getenv("BITGET_API_SECRET",""),
@@ -150,27 +171,19 @@ def mode_scan(
             )
             fetch = getattr(client, "get_ohlcv")
             for s in symbols:
-                rows = fetch(symbol=s, timeframe=timeframe, limit=1500)
+                s_eff = _ensure_suffix_for_wrapper(s, market)  # << auto-suffix
+                rows = fetch(symbol=s_eff, timeframe=timeframe, limit=1500)
                 data_by_symbol[s] = _ohlcv_to_dict(rows)
                 try:
-                    rows_1h = fetch(symbol=s, timeframe="1h", limit=1500)
+                    s_eff_1h = _ensure_suffix_for_wrapper(s, market)
+                    rows_1h = fetch(symbol=s_eff_1h, timeframe="1h", limit=1500)
                     data_1h_by_symbol[s] = _ohlcv_to_dict(rows_1h)
                 except Exception:
                     pass
         else:
-            # ccxt : on convertit *au besoin* en BTC/USDT:USDT si l'utilisateur a mis BTCUSDT
-            client = ExCtorOrClient
-            default_type = os.getenv("BITGET_DEFAULT_TYPE","swap")
-            def _to_ccxt(sym: str) -> str:
-                if "/" in sym:
-                    return sym
-                # BTCUSDT -> BTC/USDT[:USDT]
-                base, quote = sym[:-4], sym[-4:]
-                if default_type == "swap":
-                    return f"{base}/{quote}:{quote}"
-                return f"{base}/{quote}"
+            client = ExCtorOrClient  # ccxt
             for s in symbols:
-                s_eff = _to_ccxt(s)
+                s_eff = _to_ccxt_symbol(s)
                 rows = client.fetch_ohlcv(s_eff, timeframe=timeframe, limit=1500)
                 data_by_symbol[s] = _ohlcv_to_dict(rows)
                 try:
@@ -179,7 +192,6 @@ def mode_scan(
                 except Exception:
                     pass
 
-    # ---- Génération de signal
     for s in symbols:
         fn = resolve_signal_fn(s, timeframe, cfg)
         ohlcv = data_by_symbol.get(s)
@@ -199,7 +211,7 @@ def mode_scan(
 
 def mode_orchestrate(
     *, symbols: List[str], timeframe: str, cfg_path: str,
-    interval_sec: int, equity: float, risk: float, exchange_mode: str
+    interval_sec: int, equity: float, risk: float, exchange_mode: str, market: str
 ) -> None:
     Orchestrator = _import_orchestrator()
     load_strategies_cfg, _ = _import_strategy_factory()
@@ -216,7 +228,7 @@ def mode_orchestrate(
             api_passphrase=os.getenv("BITGET_API_PASSPHRASE",""),
         )
     else:
-        client = ExCtorOrClient  # ccxt client
+        client = ExCtorOrClient  # ccxt
 
     jobs = [(s, timeframe) for s in symbols]
     orch = Orchestrator(
@@ -232,15 +244,18 @@ def mode_orchestrate(
 def parse_args() -> argparse.Namespace:
     ap = argparse.ArgumentParser(description="Bot (scan/orchestrate)")
     ap.add_argument("--symbols", default=os.getenv("DEFAULT_SYMBOLS","BTCUSDT"),
-                    help="Ex: BTCUSDT (wrapper) ou BTC/USDT:USDT (ccxt). Liste séparée par virgules.")
+                    help="Ex: BTCUSDT (suffixe auto en wrapper) ou BTC/USDT:USDT (ccxt).")
     ap.add_argument("--tf", default=os.getenv("DEFAULT_TF","5m"), help="Ex: 1m, 5m, 15m, 1h")
     ap.add_argument("--cfg", default="scalper/config/strategies.yml", help="Fichier stratégies (YAML/JSON)")
     ap.add_argument("--equity", type=float, default=1000.0)
     ap.add_argument("--risk", type=float, default=0.01)
     ap.add_argument("--mode", choices=["scan","orchestrate"], default="scan")
     ap.add_argument("--interval", type=int, default=60)
-    ap.add_argument("--exchange", choices=["auto","wrapper","ccxt"], default=os.getenv("EXCHANGE_MODE","wrapper"),
-                    help="wrapper = ton module (pass-through) ; ccxt = client ccxt.")
+    ap.add_argument("--exchange", choices=["auto","wrapper","ccxt"],
+                    default=os.getenv("EXCHANGE_MODE","wrapper"),
+                    help="wrapper = ton module (get_ohlcv) ; ccxt = client ccxt (fetch_ohlcv).")
+    ap.add_argument("--market", choices=["umcbl","spot"], default=os.getenv("BITGET_MARKET","umcbl"),
+                    help="Utilisé seulement en wrapper pour suffixe auto (_UMCBL/_SPBL).")
     ap.add_argument("--csv", default="", help="CSV OHLCV principal (scan offline)")
     ap.add_argument("--csv_1h", default="", help="CSV 1h (scan offline)")
     return ap.parse_args()
@@ -256,13 +271,14 @@ def main():
         mode_scan(
             symbols=symbols, timeframe=args.tf, cfg_path=args.cfg,
             csv=(args.csv or None), csv_1h=(args.csv_1h or None),
-            equity=args.equity, risk=args.risk, exchange_mode=args.exchange
+            equity=args.equity, risk=args.risk,
+            exchange_mode=args.exchange, market=args.market
         )
     else:
         mode_orchestrate(
             symbols=symbols, timeframe=args.tf, cfg_path=args.cfg,
             interval_sec=args.interval, equity=args.equity, risk=args.risk,
-            exchange_mode=args.exchange
+            exchange_mode=args.exchange, market=args.market
         )
 
 if __name__ == "__main__":
