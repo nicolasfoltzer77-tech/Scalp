@@ -15,14 +15,13 @@ class Signal:
     tp1: Optional[float] = None
     tp2: Optional[float] = None
     qty: Optional[float] = None
-    score: float = 0.0          # 0..1
+    score: float = 0.0          # 0..1 (ou entier, normalisé au besoin)
     quality: float = 0.0        # 0..1
     reasons: List[str] = field(default_factory=list)
     timestamp: Optional[int] = None  # ms epoch de la bougie de déclenchement
     extra: Dict[str, Any] = field(default_factory=dict)
 
     def risk_per_unit(self) -> float:
-        """Distance entry↔SL en valeur absolue."""
         return abs(self.entry - self.sl)
 
     def as_dict(self) -> Dict[str, Any]:
