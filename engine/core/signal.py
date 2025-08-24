@@ -1,35 +1,19 @@
-# scalper/core/signal.py
 from __future__ import annotations
-from dataclasses import dataclass, field
-from typing import List, Optional, Literal, Dict, Any
+import pandas as pd
+from .indicators import ema, atr
 
-Side = Literal["long", "short"]
-
-@dataclass
-class Signal:
-    symbol: str
-    timeframe: str
-    side: Side
-    entry: float
-    sl: float
-    tp1: Optional[float] = None
-    tp2: Optional[float] = None
-    qty: Optional[float] = None
-    score: float = 0.0          # 0..1 (ou entier, normalisé au besoin)
-    quality: float = 0.0        # 0..1
-    reasons: List[str] = field(default_factory=list)
-    timestamp: Optional[int] = None  # ms epoch de la bougie de déclenchement
-    extra: Dict[str, Any] = field(default_factory=dict)
-
-    def risk_per_unit(self) -> float:
-        return abs(self.entry - self.sl)
-
-    def as_dict(self) -> Dict[str, Any]:
-        d = {
-            "symbol": self.symbol, "timeframe": self.timeframe, "side": self.side,
-            "entry": self.entry, "sl": self.sl, "tp1": self.tp1, "tp2": self.tp2,
-            "qty": self.qty, "score": self.score, "quality": self.quality,
-            "timestamp": self.timestamp, "reasons": "|".join(self.reasons),
-        }
-        d.update(self.extra or {})
-        return d
+def compute_signals(df: pd.DataFrame, params: dict) -> pd.DataFrame:
+    fast = int(params.get("ema_fast", 20))
+    slow = int(params.get("ema_slow", 50))
+    atr_n = int(params.get("atr_period", 14))
+    df = df.copy()
+    df["ema_fast"] = ema(df["close"], fast)
+    df["ema_slow"] = ema(df["close"], slow)
+    df["atr"] = atr(df, atr_n)
+    # signal = +1 si croisement haussier, -1 si baissier, 0 sinon
+    cond_up = (df["ema_fast"] > df["ema_slow"]) & (df["ema_fast"].shift(1) <= df["ema_slow"].shift(1))
+    cond_dn = (df["ema_fast"] < df["ema_slow"]) & (df["ema_fast"].shift(1) >= df["ema_slow"].shift(1))
+    df["signal"] = 0
+    df.loc[cond_up, "signal"] = 1
+    df.loc[cond_dn, "signal"] = -1
+    return df
