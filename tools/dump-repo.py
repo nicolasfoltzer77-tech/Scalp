@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 """
-tools/dump_repo.py
+tools/dump-repo.py
 
 Génère un dump complet du repo notebooks/scalp :
 - timestamp dans le nom
 - arborescence des fichiers
-- contenu intégral des fichiers texte
+- date de dernière modification de chaque fichier
+- contenu intégral des fichiers texte avec numéro de ligne
 - exclusion des fichiers binaires et dossiers inutiles (git, cache, trash…)
 
 Usage :
-    python notebooks/scalp/tools/dump_repo.py
+    python tools/dump-repo.py
 """
 
 from __future__ import annotations
@@ -61,7 +62,11 @@ def dump_tree(root: Path, f) -> None:
             continue
         if any(str(rel).startswith(pref) for pref in IGNORE_PREFIX):
             continue
-        f.write(str(rel) + ("/" if p.is_dir() else "") + "\n")
+        if p.is_file():
+            mtime = dt.datetime.fromtimestamp(p.stat().st_mtime).strftime("%Y-%m-%d %H:%M:%S")
+            f.write(f"{rel}  (last modified: {mtime})\n")
+        else:
+            f.write(str(rel) + "/\n")
 
 def dump_files(root: Path, f) -> None:
     write_header(f, "FICHIERS COMPLETS")
@@ -76,15 +81,16 @@ def dump_files(root: Path, f) -> None:
         if not is_text_file(p):
             continue
         try:
-            content = p.read_text(encoding="utf-8", errors="replace")
+            content = p.read_text(encoding="utf-8", errors="replace").splitlines()
         except Exception as e:
             f.write(f"\n[!!] Impossible de lire {rel}: {e}\n")
             continue
+        mtime = dt.datetime.fromtimestamp(p.stat().st_mtime).strftime("%Y-%m-%d %H:%M:%S")
         f.write("\n" + "-" * 80 + "\n")
-        f.write(f"FILE: {rel}\n")
+        f.write(f"FILE: {rel}  (last modified: {mtime})\n")
         f.write("-" * 80 + "\n")
-        f.write(content)
-        f.write("\n")
+        for i, line in enumerate(content, 1):
+            f.write(f"{i:6d}: {line}\n")
 
 def main() -> int:
     with open(OUT_PATH, "w", encoding="utf-8") as f:
