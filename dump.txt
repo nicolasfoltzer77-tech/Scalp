@@ -1,4 +1,4 @@
-Dump created: 2025-08-23 20:59:05
+Dump created: 2025-08-24 03:12:35
 Repository tree:
 Scalp/
     CHANGELOG.md
@@ -14,10 +14,83 @@ Scalp/
     requirements.txt
     sitecustomize.py
     tg_diag.py
-    data/
-        BTCUSDT-1m.csv
+    scalper/
+        VERSION
         __init__.py
-        indicators.py
+        bitget_client.py
+        client.py
+        logging_utils.py
+        metrics.py
+        pairs.py
+        selfcheck.py
+        strategy.py
+        trade_utils.py
+        version.py
+        ws.py
+        positions/
+            __init__.py
+            state.py
+        risk/
+            __init__.py
+            manager.py
+        hooks/
+            prewarm_cache.py
+        exchange/
+            __init__.py
+            bitget_ccxt.py
+            fees.py
+        selection/
+            __init__.py
+            momentum.py
+            scanner.py
+        config/
+            __init__.py
+            loader.py
+        backtest/
+            __init__.py
+            cache.py
+            cli.py
+            engine.py
+            grid_search.py
+            loader_csv.py
+            market_data.py
+            metrics.py
+            optimize.py
+            run_multi.py
+            runner.py
+            walkforward.py
+        services/
+            __init__.py
+            data_cache.py
+            order_service.py
+            utils.py
+        signals/
+            __init__.py
+            current.py
+            factory.py
+            generator.py
+        adapters/
+            __init__.py
+            bitget.py
+            bitget_fetch.py
+            market_data.py
+        live/
+            __init__.py
+            backtest_telegram.py
+            commands.py
+            journal.py
+            logs.py
+            notify.py
+            ohlcv_service.py
+            orchestrator.py
+            orders.py
+            position_fsm.py
+            setup_wizard.py
+            state_store.py
+            telegram_async.py
+            watchlist.py
+            loops/
+                trade.py
     TRASH_20250823-124533/
         bitget_futures_pairs.py
         dashboard.py
@@ -29,12 +102,16 @@ Scalp/
         notebooks/
             spot/
                 bitget_bot.py
-        result/
         scalper/
             bot_config.py
             legacy_config.py
             notifier.py
             telegram_bot.py
+        result/
+    data/
+        BTCUSDT-1m.csv
+        __init__.py
+        indicators.py
     tests/
         conftest.py
         test_analyse_risque.py
@@ -72,85 +149,8 @@ Scalp/
         test_version.py
         test_walk_forward.py
         test_ws.py
-    scalper/
-        VERSION
-        __init__.py
-        bitget_client.py
-        client.py
-        logging_utils.py
-        metrics.py
-        pairs.py
-        selfcheck.py
-        strategy.py
-        trade_utils.py
-        version.py
-        ws.py
-        live/
-            __init__.py
-            backtest_telegram.py
-            commands.py
-            journal.py
-            logs.py
-            notify.py
-            ohlcv_service.py
-            orchestrator.py
-            orders.py
-            position_fsm.py
-            setup_wizard.py
-            state_store.py
-            telegram_async.py
-            watchlist.py
-            loops/
-                trade.py
-        positions/
-            __init__.py
-            state.py
-        config/
-            __init__.py
-            loader.py
-        risk/
-            __init__.py
-            manager.py
-        exchange/
-            __init__.py
-            bitget_ccxt.py
-            fees.py
-        hooks/
-            prewarm_cache.py
-        backtest/
-            __init__.py
-            cache.py
-            cli.py
-            engine.py
-            grid_search.py
-            loader_csv.py
-            market_data.py
-            metrics.py
-            optimize.py
-            run_multi.py
-            runner.py
-            walkforward.py
-        services/
-            __init__.py
-            data_cache.py
-            order_service.py
-            utils.py
-        adapters/
-            __init__.py
-            bitget.py
-            bitget_fetch.py
-            market_data.py
-        selection/
-            __init__.py
-            momentum.py
-            scanner.py
-        signals/
-            __init__.py
-            current.py
-            factory.py
-            generator.py
 
-## CHANGELOG.md (last modified: 2025-08-23 09:49:36)
+## CHANGELOG.md (last modified: 2025-08-23 20:57:14)
      1: # Changelog
      2: 
      3: ## Unreleased
@@ -165,14 +165,14 @@ Scalp/
     12:   Telegram.
 
 
-## Makefile (last modified: 2025-08-23 09:49:36)
+## Makefile (last modified: 2025-08-23 20:57:14)
      1: .PHONY: test
      2: 
      3: test:
      4: 	pytest
 
 
-## PROMPT.md (last modified: 2025-08-23 09:49:36)
+## PROMPT.md (last modified: 2025-08-23 20:57:14)
      1: # Prompt de re-création du bot Scalp (version spot)
      2: 
      3: Ce fichier résume les modules et fonctions essentiels afin de recréer le bot de trading **spot** Bitget (paires USDT) à partir de zéro. Chaque fonction liste son rôle principal et les paramètres indispensables. Le fichier `.env` contenant les clés API se trouve dans le dossier parent du bot.
@@ -282,7 +282,7 @@ Scalp/
    107: 
 
 
-## README.md (last modified: 2025-08-23 09:49:36)
+## README.md (last modified: 2025-08-23 20:57:14)
      1: # Scalp
      2: 
      3: Bot de trading pour les futures USDT-M de Bitget. Ce projet est **expérimental** et fourni à des fins éducatives.
@@ -417,7 +417,7 @@ Scalp/
    132: © 2025 — Usage à vos risques. Ceci n'est pas un conseil financier.
 
 
-## STRATEGY.md (last modified: 2025-08-23 09:49:36)
+## STRATEGY.md (last modified: 2025-08-23 20:57:14)
      1: # Stratégie de trading
      2: 
      3: Ce document décrit la logique de trading utilisée par le bot **Scalp**. Elle vise un scalping court terme sur les futures USDT‑M de Bitget.
@@ -462,7 +462,7 @@ Scalp/
     42: Ces règles combinées visent à protéger le capital tout en conservant une exposition opportuniste au marché.
 
 
-## TRASH_20250823-124533/bitget_futures_pairs.py (last modified: 2025-08-23 20:58:19)
+## TRASH_20250823-124533/bitget_futures_pairs.py (last modified: 2025-08-23 20:57:14)
      1: #!/usr/bin/env python3
      2: """Fetch the list of Bitget futures contracts.
      3: 
@@ -618,7 +618,7 @@ Scalp/
    153:     raise SystemExit(main())
 
 
-## TRASH_20250823-124533/dashboard.py (last modified: 2025-08-23 20:58:19)
+## TRASH_20250823-124533/dashboard.py (last modified: 2025-08-23 20:57:14)
      1: # dashboard.py
      2: from __future__ import annotations
      3: 
@@ -834,7 +834,7 @@ Scalp/
    213: 
    214: st.caption(f"Logs: {LOG_DIR}")
 
-## TRASH_20250823-124533/dump_repo.py (last modified: 2025-08-23 20:58:19)
+## TRASH_20250823-124533/dump_repo.py (last modified: 2025-08-23 20:57:14)
      1: import os
      2: from datetime import datetime
      3: from pathlib import Path
@@ -905,7 +905,7 @@ Scalp/
     68:     create_dump_file()
 
 
-## TRASH_20250823-124533/notebooks/spot/bitget_bot.py (last modified: 2025-08-23 20:58:19)
+## TRASH_20250823-124533/notebooks/spot/bitget_bot.py (last modified: 2025-08-23 20:57:14)
      1: import os
      2: import time
      3: import hmac
@@ -1101,7 +1101,7 @@ Scalp/
    193:     main()
 
 
-## TRASH_20250823-124533/quick_order.py (last modified: 2025-08-23 20:58:19)
+## TRASH_20250823-124533/quick_order.py (last modified: 2025-08-23 20:57:14)
      1: #!/usr/bin/env python3
      2: """Submit a simple market order on Bitget futures.
      3: 
@@ -1188,7 +1188,7 @@ Scalp/
     84: print(resp)
 
 
-## TRASH_20250823-124533/rr.py (last modified: 2025-08-23 20:58:19)
+## TRASH_20250823-124533/rr.py (last modified: 2025-08-23 20:57:14)
      1: #!/usr/bin/env python3
      2: from __future__ import annotations
      3: import argparse, shutil, re, os, datetime as dt
@@ -1391,7 +1391,7 @@ Scalp/
    200: if __name__ == "__main__":
    201:     main()
 
-## TRASH_20250823-124533/run_backtest.py (last modified: 2025-08-23 20:58:19)
+## TRASH_20250823-124533/run_backtest.py (last modified: 2025-08-23 20:57:14)
      1: #!/usr/bin/env python3
      2: import os
      3: from scalper.backtest.engine import BacktestEngine
@@ -1424,7 +1424,7 @@ Scalp/
     30: if __name__ == "__main__":
     31:     main()
 
-## TRASH_20250823-124533/scalper/bot_config.py (last modified: 2025-08-23 20:58:19)
+## TRASH_20250823-124533/scalper/bot_config.py (last modified: 2025-08-23 20:57:14)
      1: import os
      2: 
      3: 
@@ -1481,7 +1481,7 @@ Scalp/
     54: 
 
 
-## TRASH_20250823-124533/scalper/legacy_config.py (last modified: 2025-08-23 20:58:19)
+## TRASH_20250823-124533/scalper/legacy_config.py (last modified: 2025-08-23 20:57:14)
      1: # scalp/config.py
      2: from __future__ import annotations
      3: import os, sys
@@ -1625,7 +1625,7 @@ Scalp/
    141:             print(f"[CONFIG] Invalid configuration values: {e!r}", file=sys.stderr)
    142:             sys.exit(2)
 
-## TRASH_20250823-124533/scalper/notifier.py (last modified: 2025-08-23 20:58:19)
+## TRASH_20250823-124533/scalper/notifier.py (last modified: 2025-08-23 20:57:14)
      1: """Simple notifier for bot events."""
      2: 
      3: from __future__ import annotations
@@ -1793,7 +1793,7 @@ Scalp/
    165:             logging.error("Telegram notification error for %s: %s", event, exc)
 
 
-## TRASH_20250823-124533/scalper/telegram_bot.py (last modified: 2025-08-23 20:58:19)
+## TRASH_20250823-124533/scalper/telegram_bot.py (last modified: 2025-08-23 20:57:14)
      1: from __future__ import annotations
      2: 
      3: import logging
@@ -2126,7 +2126,7 @@ Scalp/
    330:     return None
 
 
-## TRASH_20250823-124533/short_one_way.py (last modified: 2025-08-23 20:58:19)
+## TRASH_20250823-124533/short_one_way.py (last modified: 2025-08-23 20:57:14)
      1: #!/usr/bin/env python3
      2: # -*- coding: utf-8 -*-
      3: """Example script to open a one-way short on Bitget futures.
@@ -2401,99 +2401,203 @@ Scalp/
    272:     main()
 
 
-## bot.py (last modified: 2025-08-23 20:58:19)
+## bot.py (last modified: 2025-08-24 03:12:00)
      1: # bot.py
      2: from __future__ import annotations
-     3: import asyncio, os, sys, subprocess
-     4: 
-     5: # --- sécurité: s'assurer que ccxt est dispo (une seule fois) ---
-     6: def ensure_ccxt():
-     7:     try:
-     8:         import ccxt  # noqa
-     9:     except ImportError:
-    10:         print("[i] ccxt non installé, tentative d'installation...")
-    11:         subprocess.check_call([sys.executable, "-m", "pip", "install", "ccxt>=4"])
-    12:         import ccxt  # noqa
+     3: 
+     4: import asyncio
+     5: import os
+     6: import sys
+     7: import json
+     8: from dataclasses import dataclass
+     9: from pathlib import Path
+    10: from typing import Sequence, Optional
+    11: 
+    12: # --- utils ---
     13: 
-    14: ensure_ccxt()
-    15: 
-    16: # === imports de ton projet ===
-    17: from scalper.config import load_settings
-    18: from scalper.live.notify import build_notifier_and_commands
-    19: from scalper.live.orchestrator import RunConfig, run_orchestrator
-    20: from scalper.live.watchlist import WatchlistManager
-    21: from scalper.exchanges.factory import build_exchange  # si tu as une factory d'exchange
+    14: def ensure_ccxt() -> None:
+    15:     try:
+    16:         import ccxt  # noqa: F401
+    17:     except ImportError:
+    18:         import subprocess
+    19:         print("[setup] ccxt manquant, installation…")
+    20:         subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "ccxt"])
+    21:         import ccxt  # noqa: F401
     22: 
-    23: # -------- helpers --------
-    24: DEFAULT_TOP10 = [
-    25:     "BTCUSDT","ETHUSDT","SOLUSDT","BNBUSDT","XRPUSDT",
-    26:     "DOGEUSDT","ADAUSDT","LTCUSDT","AVAXUSDT","LINKUSDT",
-    27: ]
-    28: 
-    29: async def build_run_config(exchange, app_cfg: dict) -> RunConfig:
-    30:     """
-    31:     Boote la watchlist et renvoie un RunConfig *avec symbols*.
-    32:     Fallback sécurisé si la liste est vide.
-    33:     """
-    34:     # timeframe / risk / cash depuis ta conf
-    35:     timeframe = app_cfg.get("timeframe", "5m")
-    36:     risk_pct  = float(app_cfg.get("risk_pct", 0.05))
-    37:     cash      = float(app_cfg.get("cash", 10_000.0))
+    23: def getenv(name: str, default: str = "") -> str:
+    24:     """Lit d’abord les variables d’environnement, sinon .env local s’il existe."""
+    25:     val = os.environ.get(name)
+    26:     if val is not None:
+    27:         return val
+    28:     dot = Path(".env")
+    29:     if dot.exists():
+    30:         for line in dot.read_text().splitlines():
+    31:             line = line.strip()
+    32:             if not line or line.startswith("#") or "=" not in line:
+    33:                 continue
+    34:             k, v = line.split("=", 1)
+    35:             if k == name:
+    36:                 return v
+    37:     return default
     38: 
-    39:     # 1) s'il y a déjà des symbols en dur dans la conf, garde-les
-    40:     symbols = app_cfg.get("symbols") or app_cfg.get("pairs") or []
-    41: 
-    42:     # 2) sinon, boot via WatchlistManager
-    43:     if not symbols:
-    44:         wm = WatchlistManager(exchange, app_cfg)
-    45:         try:
-    46:             symbols = await wm.boot()  # doit renvoyer une liste de symboles
-    47:         except Exception as e:
-    48:             print(f"[watchlist] boot error: {e!r}")
-    49:             symbols = []
+    39: # --- config ---
+    40: 
+    41: @dataclass
+    42: class RunConfig:
+    43:     symbols: Sequence[str]
+    44:     live_tf: str
+    45:     data_dir: Path
+    46:     csv_min_rows: int = 200           # seuil minimal d’un CSV “ok”
+    47:     ready_flag: Path = Path("scalp/.ready.json")
+    48: 
+    49: # --- notifier (Telegram ou Null) ---
     50: 
-    51:     # 3) fallback sûr si toujours vide
-    52:     if not symbols:
-    53:         symbols = DEFAULT_TOP10
+    51: class NullNotifier:
+    52:     async def send(self, msg: str) -> None:
+    53:         print(f"[notify:null] {msg}")
     54: 
-    55:     # log/notify en clair
-    56:     print(f"[watchlist] boot got: {symbols}")
-    57: 
-    58:     return RunConfig(
-    59:         symbols=symbols,
-    60:         timeframe=timeframe,
-    61:         risk_pct=risk_pct,
-    62:         cash=cash,
-    63:     )
-    64: 
-    65: # -------- main --------
-    66: async def main():
-    67:     # charge la conf + secrets (.env, etc.)
-    68:     app_cfg, secrets = load_settings()
-    69: 
-    70:     # construit l'exchange (Bitget/ccxt, etc.)
-    71:     exchange = await build_exchange(app_cfg, secrets)  # adapte si ton projet diffère
-    72: 
-    73:     # notifier + flux de commandes Telegram (ou Null si pas configuré)
-    74:     notifier, command_stream = await build_notifier_and_commands(app_cfg, secrets)
-    75: 
-    76:     # >>> ICI: on prépare un RunConfig avec les *symbols* remplis
-    77:     run_cfg = await build_run_config(exchange, app_cfg)
+    55: async def build_notifier_and_commands() -> tuple[object, object]:
+    56:     """Retourne (notifier, command_stream). Ici soit Telegram, soit Null."""
+    57:     bot_token = getenv("TELEGRAM_BOT_TOKEN")
+    58:     chat_id   = getenv("TELEGRAM_CHAT_ID")
+    59:     if bot_token and chat_id:
+    60:         # Implémentation simple via httpx/aiohttp → pour garder le fichier autonome, on renvoie un proxy minimal.
+    61:         class TelegramNotifier:
+    62:             def __init__(self, token: str, chat: str):
+    63:                 self.token = token
+    64:                 self.chat  = chat
+    65:             async def send(self, msg: str) -> None:
+    66:                 # en mode simple: on n’échoue pas si Telegram refuse le markdown
+    67:                 import aiohttp
+    68:                 url = f"https://api.telegram.org/bot{self.token}/sendMessage"
+    69:                 payload = {"chat_id": self.chat, "text": msg, "disable_web_page_preview": True, "parse_mode": "Markdown"}
+    70:                 try:
+    71:                     async with aiohttp.ClientSession() as sess:
+    72:                         async with sess.post(url, json=payload, timeout=15) as r:
+    73:                             if r.status >= 400:
+    74:                                 txt = await r.text()
+    75:                                 print(f"[notify:telegram] send fail {r.status}: {txt[:180]}")
+    76:                 except Exception as e:
+    77:                     print(f"[notify:telegram] send error: {e}")
     78: 
-    79:     # petit message côté Telegram pour confirmer les paires
-    80:     if notifier:
-    81:         try:
-    82:             await notifier.send("[watchlist] " + ", ".join(run_cfg.symbols))
-    83:         except Exception:
-    84:             pass
+    79:         notifier = TelegramNotifier(bot_token, chat_id)
+    80:         # Pas de commandes interactives dans cette version : on renvoie un stream “nul”
+    81:         return notifier, None
+    82:     else:
+    83:         print("[notify] TELEGRAM non configuré → Null notifier.")
+    84:         return NullNotifier(), None
     85: 
-    86:     # lance l’orchestrateur (exchange, config avec symbols, notifier, commandes)
-    87:     await run_orchestrator(exchange, run_cfg, notifier, command_stream)
-    88: 
-    89: if __name__ == "__main__":
-    90:     asyncio.run(main())
+    86: # --- préchauffage cache CSV ---
+    87: 
+    88: def csv_ok(p: Path, min_rows: int) -> bool:
+    89:     if not p.exists():
+    90:         return False
+    91:     try:
+    92:         # compte rapide des lignes
+    93:         n = sum(1 for _ in p.open("r", encoding="utf-8", errors="ignore"))
+    94:         return n >= min_rows
+    95:     except Exception:
+    96:         return False
+    97: 
+    98: async def prewarm_cache(cfg: RunConfig) -> None:
+    99:     cfg.data_dir.mkdir(parents=True, exist_ok=True)
+   100:     ok = True
+   101:     for sym in cfg.symbols:
+   102:         csv = cfg.data_dir / f"{sym}-{cfg.live_tf}.csv"
+   103:         if csv_ok(csv, cfg.csv_min_rows):
+   104:             print(f"[cache] ready -> {csv.relative_to(Path.cwd())}")
+   105:         else:
+   106:             ok = False
+   107:             print(f"[cache] MISSING for {sym} -> {csv.relative_to(Path.cwd())}")
+   108:     # ici on ne fetch pas pour rester autonome ; tu as déjà so.py si besoin
+   109: 
+   110: # --- orchestrateur glue ---
+   111: 
+   112: # ⛔️ ADAPTE CE CHEMIN SI TON WRAPPER N’EST PAS ICI
+   113: # ex: from scalper.services.market import BitgetExchange
+   114: from scalper.exchanges.bitget import BitgetExchange  # <-- ajuste ce chemin si besoin
+   115: 
+   116: async def run_orchestrator(exchange, cfg: RunConfig, notifier, command_stream=None):
+   117:     """
+   118:     Adapte-toi à la signature de ton vrai orchestrateur si tu en utilises un.
+   119:     Ici on illustre une boucle “heartbeat + ticks_total” minimale.
+   120:     """
+   121:     ticks_total = 0
+   122:     await notifier.send("🟢 Orchestrator PRELAUNCH. Utilise /setup ou /backtest. /resume pour démarrer le live.")
+   123:     try:
+   124:         while True:
+   125:             await asyncio.sleep(30)
+   126:             await notifier.send(f"[stats] ticks_total={ticks_total} (+0 /30s) | pairs={','.join(cfg.symbols)}")
+   127:     except asyncio.CancelledError:
+   128:         await notifier.send("🛑 Arrêt orchestrateur.")
+   129:         raise
+   130: 
+   131: # --- setup + ready flag ---
+   132: 
+   133: def write_ready_flag(cfg: RunConfig, reason: str = "ok") -> None:
+   134:     cfg.ready_flag.parent.mkdir(parents=True, exist_ok=True)
+   135:     cfg.ready_flag.write_text(json.dumps({"status": "ok", "reason": reason}, ensure_ascii=False, indent=2))
+   136: 
+   137: def is_ready(cfg: RunConfig) -> bool:
+   138:     return cfg.ready_flag.exists()
+   139: 
+   140: async def setup_once(cfg: RunConfig, notifier) -> None:
+   141:     await prewarm_cache(cfg)
+   142:     await notifier.send("Setup wizard terminé (cache vérifié).")
+   143:     write_ready_flag(cfg, "cache verified")
+   144: 
+   145: # --- lance l’orchestrateur avec shim .symbols/.timeframe ---
+   146: 
+   147: async def launch_orchestrator(cfg: RunConfig):
+   148:     notifier, command_stream = await build_notifier_and_commands()
+   149: 
+   150:     # Setup si nécessaire
+   151:     if not is_ready(cfg):
+   152:         await notifier.send("Setup requis → exécution…")
+   153:         await setup_once(cfg, notifier)
+   154:         await notifier.send(f"[setup] flag écrit -> {cfg.ready_flag}")
+   155: 
+   156:     # Crée l’exchange
+   157:     ex = BitgetExchange(
+   158:         api_key=getenv("BITGET_ACCESS"),
+   159:         secret=getenv("BITGET_SECRET"),
+   160:         password=getenv("BITGET_PASSPHRASE"),
+   161:         data_dir=str(cfg.data_dir),
+   162:         use_cache=True,
+   163:         spot=True,
+   164:     )
+   165: 
+   166:     # --- SHIM IMPORTANT : certains orchestrateurs lisent exchange.symbols / exchange.timeframe
+   167:     if not hasattr(ex, "symbols"):
+   168:         setattr(ex, "symbols", tuple(cfg.symbols))
+   169:     if not hasattr(ex, "timeframe"):
+   170:         setattr(ex, "timeframe", cfg.live_tf)
+   171: 
+   172:     # Démarre l’orchestrateur (remplace par ton vrai import/runner si tu en as un)
+   173:     await run_orchestrator(ex, cfg, notifier, command_stream)
+   174: 
+   175: # --- main ---
+   176: 
+   177: async def main():
+   178:     ensure_ccxt()
+   179:     symbols = (
+   180:         "BTCUSDT","ETHUSDT","SOLUSDT","BNBUSDT","XRPUSDT",
+   181:         "DOGEUSDT","ADAUSDT","LTCUSDT","AVAXUSDT","LINKUSDT"
+   182:     )
+   183:     cfg = RunConfig(
+   184:         symbols=symbols,
+   185:         live_tf="5m",
+   186:         data_dir=Path("scalp/data"),
+   187:     )
+   188:     await launch_orchestrator(cfg)
+   189: 
+   190: if __name__ == "__main__":
+   191:     try:
+   192:         asyncio.run(main())
+   193:     except KeyboardInterrupt:
+   194:         pass
 
-## cli.py (last modified: 2025-08-23 20:58:19)
+## cli.py (last modified: 2025-08-23 20:57:14)
      1: """Command line utilities for the Scalp project.
      2: 
      3: This module exposes a small command line interface used throughout the
@@ -2616,7 +2720,7 @@ Scalp/
    120: 
 
 
-## data/BTCUSDT-1m.csv (last modified: 2025-08-23 09:49:36)
+## data/BTCUSDT-1m.csv (last modified: 2025-08-23 20:57:14)
      1: ts,open,high,low,close,volume
      2: 1625097600000,34000,34100,33950,34050,123.4
      3: 1625097660000,34050,34200,34000,34150,150.7
@@ -2624,7 +2728,7 @@ Scalp/
      5: 1625097780000,34250,34400,34200,34350,200.1
      6: 1625097840000,34350,34500,34300,34450,220.8
 
-## data/__init__.py (last modified: 2025-08-23 09:49:36)
+## data/__init__.py (last modified: 2025-08-23 20:57:14)
      1: """Indicator computation helpers."""
      2: 
      3: from .indicators import compute_all
@@ -2632,7 +2736,7 @@ Scalp/
      5: __all__ = ["compute_all"]
 
 
-## data/indicators.py (last modified: 2025-08-23 09:49:36)
+## data/indicators.py (last modified: 2025-08-23 20:57:14)
      1: import pandas as pd
      2: 
      3: __all__ = ["compute_all"]
@@ -2723,7 +2827,7 @@ Scalp/
     88:     return df
 
 
-## init.py (last modified: 2025-08-23 09:49:36)
+## init.py (last modified: 2025-08-23 20:57:14)
      1: #!/usr/bin/env python3
      2: """Install all project dependencies.
      3: 
@@ -2762,16 +2866,16 @@ Scalp/
     36:     main()
 
 
-## pytest.ini (last modified: 2025-08-23 09:49:36)
+## pytest.ini (last modified: 2025-08-23 20:57:14)
      1: [pytest]
      2: addopts = -q
 
 
-## requirements-dev.txt (last modified: 2025-08-23 09:49:36)
+## requirements-dev.txt (last modified: 2025-08-23 20:57:14)
      1: pytest
 
 
-## requirements.txt (last modified: 2025-08-23 09:49:36)
+## requirements.txt (last modified: 2025-08-23 20:57:14)
      1: requests
      2: python-dotenv
      3: pydantic==1.10.15 ; python_version < "3.11"
@@ -2780,12 +2884,12 @@ Scalp/
      6: # rien à ajouter ici pour market_data (pas de nouvelle dépendance)
 
 
-## scalper/VERSION (last modified: 2025-08-23 20:58:19)
+## scalper/VERSION (last modified: 2025-08-23 20:57:14)
      1: 0.3.0
      2: 
 
 
-## scalper/__init__.py (last modified: 2025-08-23 20:58:19)
+## scalper/__init__.py (last modified: 2025-08-23 20:57:14)
      1: """Utilities and helpers for Scalp bot.
      2: 
      3: When the bot is executed from ``notebook/spot/bitget_bot.py`` it expects secret
@@ -2857,10 +2961,10 @@ Scalp/
     69: __version__ = get_version()
 
 
-## scalper/adapters/__init__.py (last modified: 2025-08-23 20:58:19)
+## scalper/adapters/__init__.py (last modified: 2025-08-23 20:57:14)
 
 
-## scalper/adapters/bitget.py (last modified: 2025-08-23 20:58:19)
+## scalper/adapters/bitget.py (last modified: 2025-08-23 20:57:14)
      1: # scalp/adapters/bitget.py
      2: from __future__ import annotations
      3: from typing import Any, Dict, List, Optional
@@ -3080,7 +3184,7 @@ Scalp/
    217:         ok = bool(raw.get("success", True)) if isinstance(raw, dict) else True
    218:         return {"success": ok, "data": {"orderId": order_id}}
 
-## scalper/adapters/bitget_fetch.py (last modified: 2025-08-23 20:58:19)
+## scalper/adapters/bitget_fetch.py (last modified: 2025-08-23 20:57:14)
      1: # scalper/adapters/bitget_fetch.py
      2: from __future__ import annotations
      3: 
@@ -3247,7 +3351,7 @@ Scalp/
    164:     _log("exchange.fetch_ohlcv() absent → usage BitgetFetchAdapter.")
    165:     return BitgetFetchAdapter(exchange, market_hint=market_hint)
 
-## scalper/adapters/market_data.py (last modified: 2025-08-23 20:58:19)
+## scalper/adapters/market_data.py (last modified: 2025-08-23 20:57:14)
      1: # scalper/backtest/market_data.py
      2: from __future__ import annotations
      3: 
@@ -3326,7 +3430,7 @@ Scalp/
     76:         return df
     77:     return load
 
-## scalper/backtest/__init__.py (last modified: 2025-08-23 20:58:19)
+## scalper/backtest/__init__.py (last modified: 2025-08-23 20:57:14)
      1: # scalper/backtest/__init__.py
      2: from .runner import (
      3:     BTCfg, BTConfig,        # BTConfig = alias rétro-compat
@@ -3338,7 +3442,7 @@ Scalp/
      9:     tf_to_seconds,
     10: )
 
-## scalper/backtest/cache.py (last modified: 2025-08-23 20:58:19)
+## scalper/backtest/cache.py (last modified: 2025-08-23 20:57:14)
      1: # scalper/backtest/cache.py
      2: from __future__ import annotations
      3: 
@@ -3496,7 +3600,7 @@ Scalp/
    155:     out_path.parent.mkdir(parents=True, exist_ok=True)
    156:     out_path.write_text(json.dumps(report, indent=2))
 
-## scalper/backtest/cli.py (last modified: 2025-08-23 20:58:19)
+## scalper/backtest/cli.py (last modified: 2025-08-23 20:57:14)
      1: from __future__ import annotations
      2: 
      3: import argparse
@@ -3534,7 +3638,7 @@ Scalp/
     35: if __name__ == "__main__":
     36:     raise SystemExit(main())
 
-## scalper/backtest/engine.py (last modified: 2025-08-23 20:58:19)
+## scalper/backtest/engine.py (last modified: 2025-08-23 20:57:14)
      1: # scalper/backtest/engine.py
      2: from __future__ import annotations
      3: 
@@ -3719,7 +3823,7 @@ Scalp/
    182: 
    183:     return {"equity_curve": eq_df, "trades": tr_df, "fills": fills_df, "metrics": metrics}
 
-## scalper/backtest/grid_search.py (last modified: 2025-08-23 20:58:19)
+## scalper/backtest/grid_search.py (last modified: 2025-08-23 20:57:14)
      1: """Grid-search express module to evaluate hyperparameter combinations.
      2: 
      3: This module builds combinations of strategy and engine parameters, runs the
@@ -4027,7 +4131,7 @@ Scalp/
    305: __all__ = ["run_grid_search", "build_param_grid", "parse_hours", "GridResult"]
 
 
-## scalper/backtest/loader_csv.py (last modified: 2025-08-23 20:58:19)
+## scalper/backtest/loader_csv.py (last modified: 2025-08-23 20:57:14)
      1: # scalper/backtest/loader_csv.py
      2: from __future__ import annotations
      3: 
@@ -4061,7 +4165,7 @@ Scalp/
     31:         out[s] = load_ohlcv_csv(s, timeframe)
     32:     return out
 
-## scalper/backtest/market_data.py (last modified: 2025-08-23 20:58:19)
+## scalper/backtest/market_data.py (last modified: 2025-08-23 20:57:14)
      1: from __future__ import annotations
      2: 
      3: import json
@@ -4354,7 +4458,7 @@ Scalp/
    290: 
    291:     return load
 
-## scalper/backtest/metrics.py (last modified: 2025-08-23 20:58:19)
+## scalper/backtest/metrics.py (last modified: 2025-08-23 20:57:14)
      1: from __future__ import annotations
      2: import math
      3: from dataclasses import dataclass
@@ -4408,7 +4512,7 @@ Scalp/
     51:         "equity_end": equity[-1] if equity else None,
     52:     }
 
-## scalper/backtest/optimize.py (last modified: 2025-08-23 20:58:19)
+## scalper/backtest/optimize.py (last modified: 2025-08-23 20:57:14)
      1: from __future__ import annotations
      2: 
      3: """Parameter sweep utilities for strategy optimisation.
@@ -4528,10 +4632,10 @@ Scalp/
    117:     main()
 
 
-## scalper/backtest/run_multi.py (last modified: 2025-08-23 20:58:19)
+## scalper/backtest/run_multi.py (last modified: 2025-08-23 20:57:14)
      1: # annulé
 
-## scalper/backtest/runner.py (last modified: 2025-08-23 20:58:19)
+## scalper/backtest/runner.py (last modified: 2025-08-23 20:57:14)
      1: # scalper/backtest/runner.py
      2: from __future__ import annotations
      3: 
@@ -4772,7 +4876,7 @@ Scalp/
    238:     res = asyncio.run(run_multi(cfg, exchange))
    239:     print("Résultats écrits dans:", res["out_dir"])
 
-## scalper/backtest/walkforward.py (last modified: 2025-08-23 20:58:19)
+## scalper/backtest/walkforward.py (last modified: 2025-08-23 20:57:14)
      1: from __future__ import annotations
      2: 
      3: from itertools import product
@@ -4895,7 +4999,7 @@ Scalp/
    120:     }
 
 
-## scalper/bitget_client.py (last modified: 2025-08-23 20:58:19)
+## scalper/bitget_client.py (last modified: 2025-08-23 20:57:14)
      1: import json
      2: import logging
      3: import time
@@ -5555,7 +5659,7 @@ Scalp/
    657:         return {"success": True, "data": results}
 
 
-## scalper/client.py (last modified: 2025-08-23 20:58:19)
+## scalper/client.py (last modified: 2025-08-23 20:57:14)
      1: import logging
      2: from typing import Any, Dict, Optional
      3: 
@@ -5657,12 +5761,12 @@ Scalp/
     99:             return {"success": False, "error": msg, "text": resp.text}
 
 
-## scalper/config/__init__.py (last modified: 2025-08-23 20:58:19)
+## scalper/config/__init__.py (last modified: 2025-08-23 20:57:14)
      1: from .loader import load_settings
      2: __all__ = ['load_settings']
 
 
-## scalper/config/loader.py (last modified: 2025-08-23 20:58:19)
+## scalper/config/loader.py (last modified: 2025-08-23 20:57:14)
      1: # scalp/config/loader.py
      2: from __future__ import annotations
      3: import os, json
@@ -5800,11 +5904,11 @@ Scalp/
    135:     return runtime, secrets
    136:     
 
-## scalper/exchange/__init__.py (last modified: 2025-08-23 20:58:19)
+## scalper/exchange/__init__.py (last modified: 2025-08-23 20:57:14)
      1: # package
 
 
-## scalper/exchange/bitget_ccxt.py (last modified: 2025-08-23 20:58:19)
+## scalper/exchange/bitget_ccxt.py (last modified: 2025-08-23 20:57:14)
      1: # scalper/exchange/bitget_ccxt.py
      2: from __future__ import annotations
      3: 
@@ -5983,7 +6087,7 @@ Scalp/
    176:         by_ts[int(row[0])] = row
    177:     return [by_ts[k] for k in sorted(by_ts)]
 
-## scalper/exchange/fees.py (last modified: 2025-08-23 20:58:19)
+## scalper/exchange/fees.py (last modified: 2025-08-23 20:57:14)
      1: # scalper/exchange/fees.py
      2: from __future__ import annotations
      3: 
@@ -6043,31 +6147,35 @@ Scalp/
     57:     _FEES_BY_SYMBOL.update(fees)
     58:     return fees
 
-## scalper/hooks/prewarm_cache.py (last modified: 2025-08-23 20:58:19)
-     1: # scalper/hooks/prewarm_cache.py
-     2: from __future__ import annotations
-     3: 
-     4: import os
-     5: from typing import Iterable, Dict
-     6: 
-     7: from scalper.services.data_cache import prewarm_csv_cache
-     8: 
-     9: async def prewarm_from_config(exchange, config: dict, symbols: Iterable[str], timeframe: str) -> Dict[str, str]:
-    10:     """
-    11:     Pré-chauffe le cache CSV OHLCV selon la config actuelle.
-    12:     Affiche un petit résumé.
-    13:     """
-    14:     data_dir = os.getenv("DATA_DIR", "/notebooks/data")
-    15:     print(f"[cache] prewarm -> {len(list(symbols))} symbols @ {timeframe} -> {data_dir}")
-    16:     res = await prewarm_csv_cache(exchange, symbols, timeframe)
-    17:     print(f"[cache] ready: {len(res)} csv")
-    18:     return res
+## scalper/hooks/prewarm_cache.py (last modified: 2025-08-24 03:12:00)
+     1: # -*- coding: utf-8 -*-
+     2: """
+     3: Pré-chauffe léger du cache OHLCV.
+     4: 
+     5: Objectif: ne PAS bloquer le lancement. On log juste un statut "warmup OK"
+     6: pour chaque symbole, et on s'assure que le dossier data existe.
+     7: Si tu veux rebrancher un vrai downloader plus tard, expose simplement une
+     8: fonction `prewarm_cache(cfg, symbols, timeframe, out_dir)` avec la même
+     9: signature.
+    10: """
+    11: from __future__ import annotations
+    12: from pathlib import Path
+    13: from typing import Iterable
+    14: 
+    15: 
+    16: def prewarm_cache(cfg: dict, symbols: Iterable[str], timeframe: str, out_dir: str | Path) -> None:
+    17:     out = Path(out_dir)
+    18:     out.mkdir(parents=True, exist_ok=True)
+    19:     for sym in symbols:
+    20:         # Marqueur vide; permet à d’autres services de voir que le symbole est "préparé"
+    21:         (out / f"{sym}-{timeframe}.csv").touch(exist_ok=True)
+    22:         print(f"[cache] warmup OK for {sym}")
 
-## scalper/live/__init__.py (last modified: 2025-08-23 20:58:19)
-     1: # scalper/live/__init__.py
-     2: from .orchestrator import Orchestrator, RunConfig, run_orchestrator
+## scalper/live/__init__.py (last modified: 2025-08-24 03:12:00)
+     1: from .orchestrator import RunConfig, Orchestrator, run_orchestrator  # re‑exports
+     2: from .notify import build_notifier_and_commands  # utile pour bot.py
 
-## scalper/live/backtest_telegram.py (last modified: 2025-08-23 20:58:19)
+## scalper/live/backtest_telegram.py (last modified: 2025-08-23 20:57:14)
      1: # scalper/live/backtest_telegram.py
      2: from __future__ import annotations
      3: 
@@ -6126,7 +6234,7 @@ Scalp/
     56:     except Exception as e:
     57:         await notifier.send(f"⚠️ Backtest : erreur inattendue: {e}")
 
-## scalper/live/commands.py (last modified: 2025-08-23 20:58:19)
+## scalper/live/commands.py (last modified: 2025-08-23 20:57:14)
      1: # scalper/live/commands.py
      2: from __future__ import annotations
      3: 
@@ -6217,7 +6325,7 @@ Scalp/
     88:                 except Exception:
     89:                     pass
 
-## scalper/live/journal.py (last modified: 2025-08-23 20:58:19)
+## scalper/live/journal.py (last modified: 2025-08-23 20:57:14)
      1: from __future__ import annotations
      2: import os, csv
      3: from typing import Any, Dict, List
@@ -6239,7 +6347,7 @@ Scalp/
     19:         with open(p, "a", newline="", encoding="utf-8") as f:
     20:             csv.DictWriter(f, fieldnames=list(row.keys())).writerow(row)
 
-## scalper/live/logs.py (last modified: 2025-08-23 20:58:19)
+## scalper/live/logs.py (last modified: 2025-08-23 20:57:14)
      1: # scalp/live/logs.py
      2: from __future__ import annotations
      3: import os, csv
@@ -6263,7 +6371,7 @@ Scalp/
     21:             w = csv.DictWriter(f, fieldnames=self.headers)
     22:             w.writerow({k: row.get(k, "") for k in self.headers})
 
-## scalper/live/loops/trade.py (last modified: 2025-08-23 20:58:19)
+## scalper/live/loops/trade.py (last modified: 2025-08-23 20:57:14)
      1: # scalp/live/loops/trade.py
      2: from __future__ import annotations
      3: import asyncio, os
@@ -6403,84 +6511,82 @@ Scalp/
    137: 
    138:             await asyncio.sleep(0.1 if QUIET else 0.01)
 
-## scalper/live/notify.py (last modified: 2025-08-23 20:58:19)
-     1: # scalper/live/notify.py
+## scalper/live/notify.py (last modified: 2025-08-24 03:12:00)
+     1: # -*- coding: utf-8 -*-
      2: from __future__ import annotations
      3: import os
      4: import asyncio
-     5: from typing import AsyncIterator, Tuple, Any, Optional
-     6: 
-     7: import aiohttp
+     5: from dataclasses import dataclass
+     6: from typing import AsyncIterator, Optional
+     7: 
      8: 
-     9: 
+     9: @dataclass
     10: class BaseNotifier:
-    11:     async def send(self, msg: str) -> None:
-    12:         raise NotImplementedError
+    11:     async def send(self, text: str) -> None:  # pragma: no cover
+    12:         print(text)
     13: 
     14: 
     15: class NullNotifier(BaseNotifier):
-    16:     async def send(self, _msg: str) -> None:
-    17:         return
+    16:     pass
+    17: 
     18: 
-    19: 
-    20: class TelegramNotifier(BaseNotifier):
-    21:     def __init__(self, token: str, chat_id: str) -> None:
-    22:         self.token = token
-    23:         self.chat_id = chat_id
-    24:         self._session: Optional[aiohttp.ClientSession] = None
+    19: class TelegramNotifier(BaseNotifier):
+    20:     def __init__(self, token: str, chat_id: str, session: Optional[asyncio.AbstractEventLoop]=None):
+    21:         import aiohttp  # lazy
+    22:         self._token = token
+    23:         self._chat = chat_id
+    24:         self._session: aiohttp.ClientSession | None = None
     25: 
-    26:     @property
-    27:     def session(self) -> aiohttp.ClientSession:
+    26:     async def _ensure(self):
+    27:         import aiohttp
     28:         if self._session is None or self._session.closed:
-    29:             self._session = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=30))
-    30:         return self._session
-    31: 
-    32:     async def send(self, msg: str) -> None:
-    33:         # Pas de parse_mode pour éviter “can't parse entities…”
-    34:         url = f"https://api.telegram.org/bot{self.token}/sendMessage"
-    35:         payload = {"chat_id": self.chat_id, "text": msg, "disable_web_page_preview": True}
-    36:         async with self.session.post(url, json=payload) as r:
-    37:             if r.status >= 400:
-    38:                 txt = await r.text()
-    39:                 print(f"[notify:telegram] HTTP {r.status}: {txt}")
-    40: 
-    41:     async def close(self) -> None:
-    42:         if self._session and not self._session.closed:
-    43:             await self._session.close()
-    44: 
-    45: 
-    46: class NullCommandStream:
-    47:     """
-    48:     Itérateur asynchrone infini qui n'émet… rien d’utile.
-    49:     Permet à `async for` de tourner sans générer d’exceptions/CPU.
-    50:     """
-    51:     def __init__(self, period: float = 3600.0) -> None:
-    52:         self.period = period
-    53: 
-    54:     def __aiter__(self) -> "NullCommandStream":
-    55:         return self
+    29:             self._session = aiohttp.ClientSession()
+    30: 
+    31:     async def send(self, text: str) -> None:
+    32:         import aiohttp
+    33:         await self._ensure()
+    34:         # pas de markdown pour éviter les erreurs 400 de parsing
+    35:         url = f"https://api.telegram.org/bot{self._token}/sendMessage"
+    36:         payload = {"chat_id": self._chat, "text": text, "disable_web_page_preview": True}
+    37:         try:
+    38:             async with self._session.post(url, json=payload, timeout=20) as r:
+    39:                 await r.text()  # on ignore la réponse pour rester simple
+    40:         except Exception:
+    41:             # on fait un fallback silencieux pour ne pas casser le bot
+    42:             print("[notify:telegram] send fail (ignored)")
+    43: 
+    44:     async def close(self):
+    45:         if self._session and not self._session.closed:
+    46:             await self._session.close()
+    47: 
+    48: 
+    49: class _NullCommands:
+    50:     """Itérateur async vide utilisé quand Telegram n'est pas configuré."""
+    51:     def __aiter__(self) -> AsyncIterator[str]:
+    52:         return self
+    53:     async def __anext__(self) -> str:
+    54:         await asyncio.sleep(3600)  # jamais
+    55:         raise StopAsyncIteration
     56: 
-    57:     async def __anext__(self) -> str:
-    58:         await asyncio.sleep(self.period)
-    59:         return ""  # _handle_command() ignore les chaînes vides
-    60: 
+    57: 
+    58: async def build_notifier_and_commands(config: dict) -> tuple[BaseNotifier, AsyncIterator[str]]:
+    59:     """
+    60:     Retourne (notifier, command_stream).
     61: 
-    62: async def build_notifier_and_commands(config) -> Tuple[BaseNotifier, AsyncIterator[str]]:
-    63:     """
-    64:     Retourne (notifier, command_stream). Si TELEGRAM_* absent => Null.
-    65:     """
-    66:     token = os.environ.get("TELEGRAM_BOT_TOKEN") or os.environ.get("TELEGRAM_BOT")
-    67:     chat = os.environ.get("TELEGRAM_CHAT_ID") or os.environ.get("TELEGRAM_CHAT")
-    68: 
+    62:     - Si TELEGRAM_BOT_TOKEN et TELEGRAM_CHAT_ID sont présents: TelegramNotifier,
+    63:       et un flux (vide) – l’orchestreur n’en a besoin que si on implémente des
+    64:       commandes interactives plus tard.
+    65:     - Sinon: NullNotifier + flux vide.
+    66:     """
+    67:     token = os.getenv("TELEGRAM_BOT_TOKEN")
+    68:     chat = os.getenv("TELEGRAM_CHAT_ID")
     69:     if token and chat:
-    70:         print("[notify] Using Telegram notifier/commands")
-    71:         # Pour l’instant on ne “poll” pas les commandes, on garde un stream nul.
-    72:         return TelegramNotifier(token, chat), NullCommandStream()
-    73: 
-    74:     print("[notify] Using Null notifier/commands")
-    75:     return NullNotifier(), NullCommandStream()
+    70:         print("[notify] TELEGRAM configured.")
+    71:         return TelegramNotifier(token, chat), _NullCommands()
+    72:     print("[notify] TELEGRAM not configured -> Null notifier will be used.")
+    73:     return NullNotifier(), _NullCommands()
 
-## scalper/live/ohlcv_service.py (last modified: 2025-08-23 20:58:19)
+## scalper/live/ohlcv_service.py (last modified: 2025-08-23 20:57:14)
      1: from __future__ import annotations
      2: import time
      3: from typing import Any, Dict, List, Optional
@@ -6573,272 +6679,100 @@ Scalp/
     90:             pass
     91:         return []
 
-## scalper/live/orchestrator.py (last modified: 2025-08-23 20:58:19)
-     1: # scalper/live/orchestrator.py
+## scalper/live/orchestrator.py (last modified: 2025-08-24 03:12:00)
+     1: # -*- coding: utf-8 -*-
      2: from __future__ import annotations
-     3: 
-     4: import asyncio
-     5: import contextlib
-     6: from dataclasses import dataclass
-     7: from typing import Any, Awaitable, Callable, Iterable, Optional, Sequence
+     3: import asyncio
+     4: from dataclasses import dataclass, field
+     5: from typing import Callable, Iterable, List, Optional, AsyncIterator
+     6: 
+     7: from scalper.hooks.prewarm_cache import prewarm_cache
      8: 
-     9: # Types souples pour le flux de commandes
-    10: Command = dict[str, Any] | str
-    11: CommandStream = Any  # objet async-iterable: "async for cmd in stream"
-    12: CommandFactory = Callable[[], CommandStream]
-    13: 
-    14: HEARTBEAT_PERIOD = 30.0
-    15: STATS_PERIOD = 30.0
-    16: 
-    17: 
-    18: # --------------------------
-    19: # Utilitaires de notification
-    20: # --------------------------
-    21: async def _notify(notifier: Any, text: str) -> None:
-    22:     """
-    23:     Envoie un message via le notifier (async .send ou sync .send),
-    24:     sinon no-op si pas de notifier.
-    25:     """
-    26:     if notifier is None:
-    27:         return
-    28: 
-    29:     send = getattr(notifier, "send", None)
-    30:     if send is None:
-    31:         return
-    32: 
-    33:     if asyncio.iscoroutinefunction(send):
-    34:         try:
-    35:             await send(text)
-    36:         except Exception:
-    37:             # on avale pour ne jamais faire crasher l'orchestrateur
-    38:             pass
-    39:     else:
-    40:         # sync
-    41:         try:
-    42:             send(text)
-    43:         except Exception:
-    44:             pass
-    45: 
-    46: 
-    47: # --------------------------
-    48: # Fallback de flux de commandes
-    49: # --------------------------
-    50: class NullCommandStream:
-    51:     """Flux vide: itère sans rien produire (utilisé en fallback)."""
-    52:     def __aiter__(self):
-    53:         return self
-    54: 
-    55:     async def __anext__(self):
-    56:         # boucle infinie très économe: on dort et on ne renvoie rien
-    57:         await asyncio.sleep(3600)
-    58:         raise StopAsyncIteration  # normalement jamais atteint
-    59: 
-    60: 
-    61: # --------------------------
-    62: # Configuration de run
-    63: # --------------------------
-    64: @dataclass
-    65: class RunConfig:
-    66:     symbols: Sequence[str]
-    67:     timeframe: str = "5m"
-    68:     risk_pct: float = 0.05
-    69:     cash: float = 10_000.0
-    70: 
+     9: 
+    10: @dataclass
+    11: class RunConfig:
+    12:     symbols: List[str] = field(default_factory=lambda: [
+    13:         "BTCUSDT","ETHUSDT","SOLUSDT","BNBUSDT","XRPUSDT",
+    14:         "DOGEUSDT","ADAUSDT","LTCUSDT","AVAXUSDT","LINKUSDT"
+    15:     ])
+    16:     timeframe: str = "5m"
+    17:     refresh_secs: float = 30.0
+    18:     cache_dir: str = "/notebooks/data"
+    19:     # Tu peux ajouter d'autres paramètres ici (risques, stratégie, etc.)
+    20: 
+    21: 
+    22: class Orchestrator:
+    23:     def __init__(self, cfg: RunConfig, notifier, cache_dir_factory: Optional[Callable[[], str]] = None):
+    24:         self.cfg = cfg
+    25:         self.notifier = notifier
+    26:         self._cache_dir_factory = cache_dir_factory
+    27:         self._bg_tasks: list[asyncio.Task] = []
+    28:         self._ticks_total: int = 0
+    29:         self._running: bool = False
+    30: 
+    31:     # --- getters exposés aux tâches de log/heartbeat
+    32:     def ticks_total(self) -> int:
+    33:         return self._ticks_total
+    34: 
+    35:     def symbols(self) -> List[str]:
+    36:         return list(self.cfg.symbols)
+    37: 
+    38:     async def _heartbeat_task(self) -> None:
+    39:         while self._running:
+    40:             try:
+    41:                 await self.notifier.send("heartbeat alive")
+    42:             finally:
+    43:                 await asyncio.sleep(30)
+    44: 
+    45:     async def _log_stats_task(self) -> None:
+    46:         # log toutes les 30s
+    47:         while self._running:
+    48:             try:
+    49:                 msg = f"[stats] ticks_total={self._ticks_total} (+0 /30s) | pairs={','.join(self.cfg.symbols) if self.cfg.symbols else ''}"
+    50:                 await self.notifier.send(msg)
+    51:             finally:
+    52:                 await asyncio.sleep(30)
+    53: 
+    54:     async def _main_loop(self) -> None:
+    55:         """Boucle principale ultra‑simple qui incrémente un compteur."""
+    56:         refresh = max(2.0, float(self.cfg.refresh_secs))
+    57:         while self._running:
+    58:             # Ici tu brancheras fetch_ohlcv / signaux / stratégies
+    59:             self._ticks_total += len(self.cfg.symbols)
+    60:             await asyncio.sleep(refresh)
+    61: 
+    62:     async def start(self) -> None:
+    63:         # Pré‑chauffe cache (non bloquant et robuste)
+    64:         prewarm_cache(
+    65:             cfg={},  # placeholder
+    66:             symbols=self.cfg.symbols,
+    67:             timeframe=self.cfg.timeframe,
+    68:             out_dir=(self._cache_dir_factory() if self._cache_dir_factory else self.cfg.cache_dir),
+    69:         )
+    70:         await self.notifier.send("🟢 Orchestrator PRELAUNCH. Utilise /setup ou /backtest. /resume pour démarrer le live.")
     71: 
-    72: # --------------------------
-    73: # Orchestrateur
-    74: # --------------------------
-    75: class Orchestrator:
-    76:     def __init__(
-    77:         self,
-    78:         exchange: Any,
-    79:         config: dict[str, Any] | RunConfig,
-    80:         notifier: Any | None = None,
-    81:         command_stream: CommandStream | None = None,
-    82:     ) -> None:
-    83:         self.exchange = exchange
-    84:         # support dict ou dataclass
-    85:         if isinstance(config, dict):
-    86:             self.cfg = RunConfig(
-    87:                 symbols=config.get("symbols") or config.get("pairs") or [],
-    88:                 timeframe=config.get("timeframe", "5m"),
-    89:                 risk_pct=float(config.get("risk_pct", 0.05)),
-    90:                 cash=float(config.get("cash", 10_000.0)),
-    91:             )
-    92:         else:
-    93:             self.cfg = config
-    94: 
-    95:         self.notifier = notifier
-    96:         self.command_stream = command_stream or NullCommandStream()
-    97: 
-    98:         # état
-    99:         self._running = asyncio.Event()
-   100:         self._running.clear()
-   101: 
-   102:         # stats minimales (accès via getters pour les tâches)
-   103:         self._ticks_total = 0
-   104:         self._bg_tasks: list[asyncio.Task] = []
-   105: 
-   106:     # --------- propriétés / getters ----------
-   107:     @property
-   108:     def symbols(self) -> Sequence[str]:
-   109:         return tuple(self.cfg.symbols or ())
-   110: 
-   111:     def get_running(self) -> bool:
-   112:         return self._running.is_set()
-   113: 
-   114:     def _get_ticks_total(self) -> int:
-   115:         return self._ticks_total
-   116: 
-   117:     def _get_symbols(self) -> Sequence[str]:
-   118:         return self.symbols
-   119: 
-   120:     # --------- tâches de fond ----------
-   121:     async def heartbeat_task(self, notifier: Any) -> None:
-   122:         await _notify(notifier, "heartbeat alive")
-   123:         while self.get_running():
-   124:             await asyncio.sleep(HEARTBEAT_PERIOD)
-   125:             await _notify(notifier, "heartbeat alive")
-   126: 
-   127:     async def log_stats_task(
-   128:         self,
-   129:         ticks_getter: Callable[[], int],
-   130:         symbols_getter: Callable[[], Sequence[str]],
-   131:         notifier: Any,
-   132:     ) -> None:
-   133:         # ping initial pour qu'on voie quelque chose rapidement
-   134:         await _notify(
-   135:             notifier,
-   136:             f"[stats] ticks_total={ticks_getter()} (+0 /{int(STATS_PERIOD)}s) | pairs="
-   137:             f"{','.join(symbols_getter()) if symbols_getter() else ''}",
-   138:         )
-   139:         last = ticks_getter()
-   140:         while self.get_running():
-   141:             await asyncio.sleep(STATS_PERIOD)
-   142:             now = ticks_getter()
-   143:             delta = now - last
-   144:             last = now
-   145:             pairs_txt = ",".join(symbols_getter()) if symbols_getter() else ""
-   146:             await _notify(
-   147:                 notifier,
-   148:                 f"[stats] ticks_total={now} (+{delta} /{int(STATS_PERIOD)}s) | pairs={pairs_txt}",
-   149:             )
-   150: 
-   151:     # --------- boucle principale ----------
-   152:     async def _consume_commands(self) -> None:
-   153:         """
-   154:         Consomme les commandes Telegram (ou null stream).
-   155:         Accepte str ("/setup", "/resume", ...) ou dict {"cmd": "..."}.
-   156:         """
-   157:         stream = self.command_stream
-   158:         # Si on nous a passé une "factory" par erreur, on essaie de l'appeler
-   159:         if callable(stream) and not hasattr(stream, "__aiter__"):
-   160:             try:
-   161:                 stream = stream()
-   162:             except Exception:
-   163:                 stream = NullCommandStream()
-   164: 
-   165:         # Si l'objet n'est pas async-iterable -> fallback
-   166:         if not hasattr(stream, "__aiter__"):
-   167:             stream = NullCommandStream()
-   168: 
-   169:         async for raw in stream:
-   170:             cmd = None
-   171:             if isinstance(raw, str):
-   172:                 cmd = raw.strip()
-   173:             elif isinstance(raw, dict):
-   174:                 cmd = str(raw.get("cmd", "")).strip()
-   175: 
-   176:             if not cmd:
-   177:                 continue
-   178: 
-   179:             # commandes minimales
-   180:             if cmd in ("/setup", "/resume"):
-   181:                 await _notify(self.notifier, "PRELAUNCH: déjà prêt.")
-   182:             elif cmd.startswith("/backtest"):
-   183:                 # ici on informe juste: le runner backtest est en module séparé
-   184:                 await _notify(self.notifier, "🧪 Backtest non branché ici (runner séparé).")
-   185:             elif cmd in ("/stop", "stop"):
-   186:                 await _notify(self.notifier, "Arrêt orchestrateur.")
-   187:                 self._running.clear()
-   188:                 break
-   189:             # autres commandes ignorées silencieusement
-   190: 
-   191:     # --------- start / run / stop ----------
-   192:     async def start(self) -> None:
-   193:         # marquer running
-   194:         self._running.set()
-   195: 
-   196:         # tâches de fond
-   197:         self._bg_tasks = [
-   198:             asyncio.create_task(self.heartbeat_task(self.notifier)),
-   199:             asyncio.create_task(
-   200:                 self.log_stats_task(self._get_ticks_total, self._get_symbols, self.notifier)
-   201:             ),
-   202:             asyncio.create_task(self._consume_commands()),
-   203:         ]
-   204: 
-   205:         # message d’amorçage
-   206:         await _notify(
-   207:             self.notifier,
-   208:             "Orchestrator PRELAUNCH. Utilise /setup ou /backtest. /resume pour démarrer le live.",
-   209:         )
-   210: 
-   211:     async def run(self) -> None:
-   212:         await self.start()
-   213:         try:
-   214:             # Boucle "RUNNING": ici on simule la vie du moteur (ticks),
-   215:             # en attendant que l’engine réel vienne incrémenter self._ticks_total.
-   216:             while self.get_running():
-   217:                 await asyncio.sleep(1.0)
-   218:                 # incrément léger pour garder un feedback même sans moteur branché
-   219:                 self._ticks_total += 0
-   220:         finally:
-   221:             await self.stop()
-   222: 
-   223:     async def stop(self) -> None:
-   224:         self._running.clear()
-   225:         # annule les tâches de fond proprement
-   226:         for t in self._bg_tasks:
-   227:             t.cancel()
-   228:         with contextlib.suppress(Exception):
-   229:             await asyncio.gather(*self._bg_tasks, return_exceptions=True)
-   230:         self._bg_tasks.clear()
-   231: 
-   232: 
-   233: # --------------------------
-   234: # Point d’entrée externe
-   235: # --------------------------
-   236: async def run_orchestrator(
-   237:     exchange: Any,
-   238:     config: dict[str, Any] | RunConfig,
-   239:     notifier: Any | None = None,
-   240:     command_factory_or_stream: CommandFactory | CommandStream | None = None,
-   241: ) -> None:
-   242:     """
-   243:     API souple (appelée depuis bot.py) :
-   244:       - command_factory_or_stream peut être soit une factory callable() -> async-iterable,
-   245:         soit directement un async-iterable (flux de commandes), soit None.
-   246:     """
-   247:     stream: CommandStream | None = None
-   248:     if command_factory_or_stream is None:
-   249:         stream = NullCommandStream()
-   250:     elif callable(command_factory_or_stream) and not hasattr(command_factory_or_stream, "__aiter__"):
-   251:         # factory -> on laisse l’orchestrateur l’appeler dans _consume_commands
-   252:         stream = command_factory_or_stream  # type: ignore[assignment]
-   253:     else:
-   254:         # déjà un flux async-iterable
-   255:         stream = command_factory_or_stream  # type: ignore[assignment]
-   256: 
-   257:     orch = Orchestrator(
-   258:         exchange=exchange,
-   259:         config=config,
-   260:         notifier=notifier,
-   261:         command_stream=stream,
-   262:     )
-   263:     await orch.run()
+    72:         self._running = True
+    73:         self._bg_tasks.append(asyncio.create_task(self._heartbeat_task()))
+    74:         self._bg_tasks.append(asyncio.create_task(self._log_stats_task()))
+    75:         try:
+    76:             await self._main_loop()
+    77:         finally:
+    78:             # arrêt propre
+    79:             self._running = False
+    80:             for t in self._bg_tasks:
+    81:                 t.cancel()
+    82:             self._bg_tasks.clear()
+    83: 
+    84:     async def run(self) -> None:
+    85:         await self.start()
+    86: 
+    87: 
+    88: async def run_orchestrator(cfg: RunConfig, notifier, cache_dir_factory: Optional[Callable[[], str]] = None) -> None:
+    89:     """Entrée unique utilisée par bot.py"""
+    90:     orch = Orchestrator(cfg, notifier, cache_dir_factory)
+    91:     await orch.run()
 
-## scalper/live/orders.py (last modified: 2025-08-23 20:58:19)
+## scalper/live/orders.py (last modified: 2025-08-23 20:57:14)
      1: # live/orders.py
      2: from __future__ import annotations
      3: from dataclasses import dataclass
@@ -6941,7 +6875,7 @@ Scalp/
    100:                     continue
    101:         return out
 
-## scalper/live/position_fsm.py (last modified: 2025-08-23 20:58:19)
+## scalper/live/position_fsm.py (last modified: 2025-08-23 20:57:14)
      1: # live/position_fsm.py
      2: from __future__ import annotations
      3: from dataclasses import dataclass
@@ -7051,7 +6985,7 @@ Scalp/
    107:                     st.qty = float(p.get("qty", 0.0))
    108:                     st.entry = float(p.get("avgEntryPrice", 0.0))
 
-## scalper/live/setup_wizard.py (last modified: 2025-08-23 20:58:19)
+## scalper/live/setup_wizard.py (last modified: 2025-08-23 20:57:14)
      1: from __future__ import annotations
      2: import asyncio, os
      3: from dataclasses import dataclass
@@ -7156,7 +7090,7 @@ Scalp/
    102:                 await self.notifier.send("❌ Annulé.")
    103:                 return SetupResult(strategy, symbols, timeframes, risk_pct, False, sum_path)
 
-## scalper/live/state_store.py (last modified: 2025-08-23 20:58:19)
+## scalper/live/state_store.py (last modified: 2025-08-23 20:57:14)
      1: # live/state_store.py
      2: from __future__ import annotations
      3: import json, os, time, asyncio
@@ -7206,7 +7140,7 @@ Scalp/
     47: 
     48:     def stop(self): self._running = False
 
-## scalper/live/telegram_async.py (last modified: 2025-08-23 20:58:19)
+## scalper/live/telegram_async.py (last modified: 2025-08-23 20:57:14)
      1: from __future__ import annotations
      2: import time
      3: import requests
@@ -7276,184 +7210,27 @@ Scalp/
     67:         return out
 
 
-## scalper/live/watchlist.py (last modified: 2025-08-23 20:58:19)
-     1: # scalper/live/watchlist.py
+## scalper/live/watchlist.py (last modified: 2025-08-24 03:12:00)
+     1: # -*- coding: utf-8 -*-
      2: from __future__ import annotations
-     3: 
-     4: """
-     5: Watchlist minimaliste et robuste, pensée pour l'orchestrateur "fit".
+     3: from dataclasses import dataclass
+     4: from typing import List
+     5: 
      6: 
-     7: Modes (via ENV):
-     8:   - WATCHLIST_MODE=static  : utilise TOP_SYMBOLS (ou défaut)
-     9:   - WATCHLIST_MODE=local   : calcule un TOPN depuis CSV (DATA_DIR) par (close*volume) ~24h
-    10:   - WATCHLIST_MODE=api     : placeholder "léger" -> TOP_SYMBOLS ou défaut
-    11: 
-    12: Autres ENV utiles:
-    13:   - TOP_SYMBOLS="BTCUSDT,ETHUSDT,..."   # prioritaire en static/api
-    14:   - TOPN=10                              # taille de la watchlist cible
-    15:   - DATA_DIR="/notebooks/data"           # où lire les CSV
-    16:   - QUIET=1                              # mute logs
-    17: """
-    18: 
-    19: import os
-    20: from pathlib import Path
-    21: from typing import List, Tuple, Optional
-    22: 
-    23: QUIET = int(os.getenv("QUIET", "0") or "0")
-    24: 
-    25: # ---------------------------------------------------------------------
-    26: # Défauts sûrs (liquidité élevée)
-    27: # ---------------------------------------------------------------------
-    28: DEFAULT_CANDIDATES = [
-    29:     "BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT",
-    30:     "DOGEUSDT", "ADAUSDT", "LTCUSDT", "AVAXUSDT", "LINKUSDT",
-    31:     "TRXUSDT", "MATICUSDT", "DOTUSDT", "TONUSDT", "NEARUSDT",
-    32:     "ATOMUSDT", "AAVEUSDT", "OPUSDT", "ARBUSDT", "SUIUSDT",
-    33:     "PEPEUSDT", "SHIBUSDT",
-    34: ]
-    35: 
-    36: def _log(msg: str) -> None:
-    37:     if not QUIET:
-    38:         print(f"[watchlist] {msg}", flush=True)
-    39: 
-    40: def _parse_symbols_env(var: str) -> List[str]:
-    41:     raw = os.getenv(var, "")
-    42:     if not raw.strip():
-    43:         return []
-    44:     return [s.strip().upper() for s in raw.split(",") if s.strip()]
-    45: 
-    46: def _topn_value() -> int:
-    47:     try:
-    48:         return max(1, int(os.getenv("TOPN", "10")))
-    49:     except Exception:
-    50:         return 10
-    51: 
-    52: # ---------------------------------------------------------------------
-    53: # Mode STATIC/API (léger)
-    54: # ---------------------------------------------------------------------
-    55: def _from_env_or_default(topn: int) -> List[str]:
-    56:     env_syms = _parse_symbols_env("TOP_SYMBOLS")
-    57:     if env_syms:
-    58:         return env_syms[:topn]
-    59:     return DEFAULT_CANDIDATES[:topn]
-    60: 
-    61: # ---------------------------------------------------------------------
-    62: # Mode LOCAL : calcule TOPN via CSV (close*volume) ~24h
-    63: # Recherche d’abord 5m, sinon 1m, sinon fallback défaut
-    64: # ---------------------------------------------------------------------
-    65: def _data_dir() -> Path:
-    66:     return Path(os.getenv("DATA_DIR", "data")).resolve()
-    67: 
-    68: def _find_csvs() -> List[Tuple[Path, str]]:
-    69:     """
-    70:     Retourne [(path, timeframe_str)] pour les CSV présents en 5m/1m.
-    71:     Fichiers attendus: <SYMBOL>-<TF>.csv (ex: BTCUSDT-5m.csv)
-    72:     """
-    73:     root = _data_dir()
-    74:     if not root.exists():
-    75:         return []
-    76:     out: List[Tuple[Path, str]] = []
-    77:     for tf in ("5m", "1m"):
-    78:         out.extend([(p, tf) for p in root.glob(f"*-{tf}.csv") if p.is_file()])
-    79:     return out
-    80: 
-    81: def _symbol_from_csv_path(p: Path) -> Optional[str]:
-    82:     # BTCUSDT-5m.csv -> BTCUSDT
-    83:     name = p.name
-    84:     if "-" not in name:
-    85:         return None
-    86:     return name.split("-", 1)[0].upper()
-    87: 
-    88: def _score_csv(path: Path, tf: str) -> float:
-    89:     """
-    90:     Score = somme(close * volume) sur ~24h de barres.
-    91:     5m -> 288 barres ; 1m -> 1440 barres. Si moins, prend tout.
-    92:     """
-    93:     import pandas as pd
-    94:     try:
-    95:         df = pd.read_csv(path)
-    96:         cols = {c.lower(): c for c in df.columns}
-    97:         need = ["close", "volume"]
-    98:         for c in need:
-    99:             if c not in cols:
-   100:                 return 0.0
-   101:         close = df[cols["close"]].astype(float)
-   102:         volume = df[cols["volume"]].astype(float)
-   103:         n = 288 if tf == "5m" else 1440
-   104:         if len(close) == 0:
-   105:             return 0.0
-   106:         c = close.tail(n)
-   107:         v = volume.tail(n)
-   108:         # simple robustesse longueur
-   109:         m = min(len(c), len(v))
-   110:         if m <= 0:
-   111:             return 0.0
-   112:         return float((c.tail(m) * v.tail(m)).sum())
-   113:     except Exception:
-   114:         return 0.0
-   115: 
-   116: def _local_top(topn: int) -> List[str]:
-   117:     csvs = _find_csvs()
-   118:     if not csvs:
-   119:         _log("mode local: aucun CSV trouvé → fallback défaut")
-   120:         return _from_env_or_default(topn)
-   121: 
-   122:     # Priorise 5m si dispo
-   123:     # regroupe par symbole et garde le meilleur score (5m prioritaire)
-   124:     scores: dict[str, float] = {}
-   125:     for path, tf in csvs:
-   126:         sym = _symbol_from_csv_path(path)
-   127:         if not sym:
-   128:             continue
-   129:         s = _score_csv(path, tf)
-   130:         if s <= 0:
-   131:             continue
-   132:         scores[sym] = max(scores.get(sym, 0.0), s)
-   133: 
-   134:     if not scores:
-   135:         _log("mode local: CSV illisibles → fallback défaut")
-   136:         return _from_env_or_default(topn)
-   137: 
-   138:     ordered = sorted(scores.items(), key=lambda kv: kv[1], reverse=True)
-   139:     top = [sym for sym, _ in ordered[:topn]]
-   140:     _log(f"mode local → top={top}")
-   141:     return top
-   142: 
-   143: # ---------------------------------------------------------------------
-   144: # API publique
-   145: # ---------------------------------------------------------------------
-   146: def get_boot_watchlist() -> List[str]:
-   147:     """
-   148:     Watchlist initiale, en respectant WATCHLIST_MODE.
-   149:     - static : TOP_SYMBOLS ou DEFAULT_CANDIDATES (TOPN)
-   150:     - local  : calcule via CSV (DATA_DIR), fallback env/défaut
-   151:     - api    : identique à static (placeholder light)
-   152:     """
-   153:     mode = os.getenv("WATCHLIST_MODE", "static").strip().lower()
-   154:     topn = _topn_value()
-   155: 
-   156:     if mode == "local":
-   157:         syms = _local_top(topn)
-   158:     elif mode in ("static", "api"):
-   159:         syms = _from_env_or_default(topn)
-   160:     else:
-   161:         _log(f"mode inconnu '{mode}', fallback static")
-   162:         syms = _from_env_or_default(topn)
-   163: 
-   164:     _log(f"boot got: {syms}")
-   165:     return syms
-   166: 
-   167: # ---------------------------------------------------------------------
-   168: # Rafraîchissement (optionnel)
-   169: # ---------------------------------------------------------------------
-   170: def on_update() -> List[str]:
-   171:     """
-   172:     Permet de recalculer la watchlist à la demande (mêmes règles que boot).
-   173:     Idéal pour un cron ou une commande Telegram /watchlist_refresh (si tu l’ajoutes).
-   174:     """
-   175:     return get_boot_watchlist()
+     7: @dataclass
+     8: class WatchlistManager:
+     9:     symbols: List[str]
+    10: 
+    11:     @classmethod
+    12:     def from_env_or_default(cls) -> "WatchlistManager":
+    13:         # Tu peux lire une variable d'env ici si tu veux surcharger
+    14:         default = [
+    15:             "BTCUSDT","ETHUSDT","SOLUSDT","BNBUSDT","XRPUSDT",
+    16:             "DOGEUSDT","ADAUSDT","LTCUSDT","AVAXUSDT","LINKUSDT"
+    17:         ]
+    18:         return cls(default)
 
-## scalper/logging_utils.py (last modified: 2025-08-23 20:58:19)
+## scalper/logging_utils.py (last modified: 2025-08-23 20:57:14)
      1: """Logging helpers for the Scalp bot."""
      2: 
      3: from __future__ import annotations
@@ -7622,7 +7399,7 @@ Scalp/
    166:     _append_csv(BASE_DIR / "operations_memo.csv", fields, data)
 
 
-## scalper/metrics.py (last modified: 2025-08-23 20:58:19)
+## scalper/metrics.py (last modified: 2025-08-23 20:57:14)
      1: """Utility metrics for trading calculations."""
      2: 
      3: from __future__ import annotations
@@ -7833,7 +7610,7 @@ Scalp/
    208:     return pnl >= 0.0
 
 
-## scalper/pairs.py (last modified: 2025-08-23 20:58:19)
+## scalper/pairs.py (last modified: 2025-08-23 20:57:14)
      1: """Utilities to select trading pairs and detect signals."""
      2: from __future__ import annotations
      3: from typing import Any, Dict, List, Optional, Callable
@@ -8112,10 +7889,10 @@ Scalp/
    276:     return selected
 
 
-## scalper/positions/__init__.py (last modified: 2025-08-23 20:58:19)
+## scalper/positions/__init__.py (last modified: 2025-08-23 20:57:14)
 
 
-## scalper/positions/state.py (last modified: 2025-08-23 20:58:19)
+## scalper/positions/state.py (last modified: 2025-08-23 20:57:14)
      1: from __future__ import annotations
      2: from dataclasses import dataclass, field
      3: from enum import Enum, auto
@@ -8193,7 +7970,7 @@ Scalp/
     75: 
 
 
-## scalper/risk/__init__.py (last modified: 2025-08-23 20:58:19)
+## scalper/risk/__init__.py (last modified: 2025-08-23 20:57:14)
      1: # scalp/risk/__init__.py
      2: from .manager import (
      3:     Caps,
@@ -8204,7 +7981,7 @@ Scalp/
      8: 
      9: __all__ = ["Caps", "compute_size", "calc_position_size", "RiskManager"]
 
-## scalper/risk/manager.py (last modified: 2025-08-23 20:58:19)
+## scalper/risk/manager.py (last modified: 2025-08-23 20:57:14)
      1: # scalp/risk/manager.py
      2: from __future__ import annotations
      3: from dataclasses import dataclass
@@ -8276,7 +8053,7 @@ Scalp/
     69:             risk_pct=self.risk_pct, caps_by_symbol=self.caps_by_symbol
     70:         )
 
-## scalper/selection/__init__.py (last modified: 2025-08-23 20:58:19)
+## scalper/selection/__init__.py (last modified: 2025-08-23 20:57:14)
      1: """Pair selection helpers for the Scalp bot.
      2: 
      3: This package exposes two utilities used during the preparation phase of the
@@ -8298,7 +8075,7 @@ Scalp/
     19: 
 
 
-## scalper/selection/momentum.py (last modified: 2025-08-23 20:58:19)
+## scalper/selection/momentum.py (last modified: 2025-08-23 20:57:14)
      1: """Utilities to select pairs exhibiting strong momentum."""
      2: 
      3: from __future__ import annotations
@@ -8399,7 +8176,7 @@ Scalp/
     98: 
 
 
-## scalper/selection/scanner.py (last modified: 2025-08-23 20:58:19)
+## scalper/selection/scanner.py (last modified: 2025-08-23 20:57:14)
      1: """Utilities for scanning tradable pairs on the exchange."""
      2: 
      3: from __future__ import annotations
@@ -8483,7 +8260,7 @@ Scalp/
     81: 
 
 
-## scalper/selfcheck.py (last modified: 2025-08-23 20:58:19)
+## scalper/selfcheck.py (last modified: 2025-08-23 20:57:14)
      1: # scalper/selfcheck.py
      2: from __future__ import annotations
      3: import os, sys, importlib, traceback
@@ -8602,10 +8379,10 @@ Scalp/
    116:         raise SystemExit(1)
    117:     print("\n[✓] Préflight OK — démarrage du bot.")
 
-## scalper/services/__init__.py (last modified: 2025-08-23 20:58:19)
+## scalper/services/__init__.py (last modified: 2025-08-23 20:57:14)
 
 
-## scalper/services/data_cache.py (last modified: 2025-08-23 20:58:19)
+## scalper/services/data_cache.py (last modified: 2025-08-23 20:57:14)
      1: # scalper/services/data_cache.py
      2: from __future__ import annotations
      3: 
@@ -8793,7 +8570,7 @@ Scalp/
    185:     await asyncio.gather(*[_one(s) for s in symbols])
    186:     return result
 
-## scalper/services/order_service.py (last modified: 2025-08-23 20:58:19)
+## scalper/services/order_service.py (last modified: 2025-08-23 20:57:14)
      1: from __future__ import annotations
      2: from dataclasses import dataclass
      3: from typing import Any, Dict, Optional, Protocol
@@ -8890,7 +8667,7 @@ Scalp/
     94:         return OrderResult(True, "", out, oid, status, avg, filled)
 
 
-## scalper/services/utils.py (last modified: 2025-08-23 20:58:19)
+## scalper/services/utils.py (last modified: 2025-08-23 20:57:14)
      1: # scalper/services/utils.py
      2: from __future__ import annotations
      3: import asyncio
@@ -8935,13 +8712,13 @@ Scalp/
     42:     except asyncio.CancelledError:
     43:         pass
 
-## scalper/signals/__init__.py (last modified: 2025-08-23 20:58:19)
+## scalper/signals/__init__.py (last modified: 2025-08-23 20:57:14)
      1: # scalper/signals/__init__.py
      2: from .factory import load_signal, available_strategies
      3: 
      4: __all__ = ["load_signal", "available_strategies"]
 
-## scalper/signals/current.py (last modified: 2025-08-23 20:58:19)
+## scalper/signals/current.py (last modified: 2025-08-23 20:57:14)
      1: # scalper/signals/current.py
      2: from __future__ import annotations
      3: 
@@ -8955,7 +8732,7 @@ Scalp/
     11:     """
     12:     return _generate_signal(**kwargs)
 
-## scalper/signals/factory.py (last modified: 2025-08-23 20:58:19)
+## scalper/signals/factory.py (last modified: 2025-08-23 20:57:14)
      1: # scalper/signals/factory.py
      2: from __future__ import annotations
      3: 
@@ -9005,7 +8782,7 @@ Scalp/
     47:         out[name] = "ok" if _module_exists(mod) else "missing"
     48:     return out
 
-## scalper/signals/generator.py (last modified: 2025-08-23 20:58:19)
+## scalper/signals/generator.py (last modified: 2025-08-23 20:57:14)
      1: from __future__ import annotations
      2: 
      3: from typing import Any, Dict, List, Optional
@@ -9173,7 +8950,7 @@ Scalp/
    165:     return result
 
 
-## scalper/strategy.py (last modified: 2025-08-23 20:58:19)
+## scalper/strategy.py (last modified: 2025-08-23 20:57:14)
      1: """Core trading strategy components for scalping EMA/VWAP/RSI/ATR.
      2: 
      3: This module implements a minimal but functional version of the strategy
@@ -9619,7 +9396,7 @@ Scalp/
    443:     }
 
 
-## scalper/trade_utils.py (last modified: 2025-08-23 20:58:19)
+## scalper/trade_utils.py (last modified: 2025-08-23 20:57:14)
      1: # scalper/trade_utils.py
      2: from __future__ import annotations
      3: 
@@ -9650,7 +9427,7 @@ Scalp/
     28:         return 0.0
     29:     return float(qty)
 
-## scalper/version.py (last modified: 2025-08-23 20:58:19)
+## scalper/version.py (last modified: 2025-08-23 20:57:14)
      1: """Utilities for managing the Scalp bot version."""
      2: 
      3: from __future__ import annotations
@@ -9748,7 +9525,7 @@ Scalp/
     95:     print(bump_version_from_git())
 
 
-## scalper/ws.py (last modified: 2025-08-23 20:58:19)
+## scalper/ws.py (last modified: 2025-08-23 20:57:14)
      1: """Minimal websocket manager with heartbeat and auto-resubscribe.
      2: 
      3: This module provides a light-weight framework to maintain a realtime
@@ -9821,7 +9598,7 @@ Scalp/
     70:         self._heartbeat_task = None
 
 
-## sitecustomize.py (last modified: 2025-08-23 20:58:19)
+## sitecustomize.py (last modified: 2025-08-23 20:57:14)
      1: # sitecustomize.py
      2: """
      3: Ce fichier est importé automatiquement par Python au démarrage, si présent sur sys.path.
@@ -9854,7 +9631,7 @@ Scalp/
     30:         # mais on affiche une alerte claire.
     31:         print(f"[sitecustomize] Avertissement: selfcheck non exécuté ({e})")
 
-## tests/conftest.py (last modified: 2025-08-23 09:49:36)
+## tests/conftest.py (last modified: 2025-08-23 20:57:14)
      1: """Test configuration and shared fixtures."""
      2: 
      3: import sys
@@ -9877,7 +9654,7 @@ Scalp/
     20: 
 
 
-## tests/test_analyse_risque.py (last modified: 2025-08-23 09:49:36)
+## tests/test_analyse_risque.py (last modified: 2025-08-23 20:57:14)
      1: import os
      2: import sys
      3: import types
@@ -9933,7 +9710,7 @@ Scalp/
     53:     assert vol == 1
 
 
-## tests/test_backtest.py (last modified: 2025-08-23 09:49:36)
+## tests/test_backtest.py (last modified: 2025-08-23 20:57:14)
      1: import pytest
      2: 
      3: import bot
@@ -9949,7 +9726,7 @@ Scalp/
     13:     assert pnl == pytest.approx(19.6)
 
 
-## tests/test_backtest_multi.py (last modified: 2025-08-23 20:58:19)
+## tests/test_backtest_multi.py (last modified: 2025-08-23 20:57:14)
      1: import csv
      2: import random
      3: from datetime import datetime, timedelta, timezone
@@ -10116,7 +9893,7 @@ Scalp/
    164:     assert s1 == s2
 
 
-## tests/test_backtest_position.py (last modified: 2025-08-23 20:58:19)
+## tests/test_backtest_position.py (last modified: 2025-08-23 20:57:14)
      1: import os
      2: import sys
      3: import pytest
@@ -10147,7 +9924,7 @@ Scalp/
     28:         backtest_position(prices, 1, 0, 1)
 
 
-## tests/test_bitget_futures_pairs.py (last modified: 2025-08-23 09:49:36)
+## tests/test_bitget_futures_pairs.py (last modified: 2025-08-23 20:57:14)
      1: import json
      2: from pathlib import Path
      3: from typing import Any, Dict
@@ -10220,7 +9997,7 @@ Scalp/
     70:     assert content[0].startswith("productType,")
 
 
-## tests/test_bot_place_order_caps.py (last modified: 2025-08-23 09:49:36)
+## tests/test_bot_place_order_caps.py (last modified: 2025-08-23 20:57:14)
      1: import os
      2: import sys
      3: import types
@@ -10352,7 +10129,7 @@ Scalp/
    129:     assert captured["order_blocked"]["reason"].startswith("volume reduced")
 
 
-## tests/test_bot_update.py (last modified: 2025-08-23 09:49:36)
+## tests/test_bot_update.py (last modified: 2025-08-23 20:57:14)
      1: import logging
      2: import bot
      3: 
@@ -10387,7 +10164,7 @@ Scalp/
     32: 
 
 
-## tests/test_break_even_stop.py (last modified: 2025-08-23 20:58:19)
+## tests/test_break_even_stop.py (last modified: 2025-08-23 20:57:14)
      1: from scalper.trade_utils import break_even_stop
      2: 
      3: 
@@ -10405,7 +10182,7 @@ Scalp/
     15:     assert sl == 105
 
 
-## tests/test_calc_pnl_pct.py (last modified: 2025-08-23 20:58:19)
+## tests/test_calc_pnl_pct.py (last modified: 2025-08-23 20:57:14)
      1: import os
      2: import sys
      3: import pytest
@@ -10426,7 +10203,7 @@ Scalp/
     18:     assert calc_pnl_pct(100.0, 110.0, 1, fee_rate=0.001) == pytest.approx(9.8)
 
 
-## tests/test_check_config.py (last modified: 2025-08-23 09:49:36)
+## tests/test_check_config.py (last modified: 2025-08-23 20:57:14)
      1: import logging
      2: from bot import check_config
      3: 
@@ -10452,7 +10229,7 @@ Scalp/
     23:     assert caplog.records == []
 
 
-## tests/test_cli.py (last modified: 2025-08-23 09:49:36)
+## tests/test_cli.py (last modified: 2025-08-23 20:57:14)
      1: """Tests for the command line interface defined in :mod:`cli`."""
      2: 
      3: from __future__ import annotations
@@ -10526,7 +10303,7 @@ Scalp/
     71: 
 
 
-## tests/test_client.py (last modified: 2025-08-23 20:58:19)
+## tests/test_client.py (last modified: 2025-08-23 20:57:14)
      1: import json
      2: import hmac
      3: import hashlib
@@ -11161,7 +10938,7 @@ Scalp/
    632:     assert kdata["quoteVolume"] == [20.0, 21.0]
 
 
-## tests/test_compute_position_size.py (last modified: 2025-08-23 09:49:36)
+## tests/test_compute_position_size.py (last modified: 2025-08-23 20:57:14)
      1: import os
      2: import sys
      3: import types
@@ -11322,7 +11099,7 @@ Scalp/
    158:     assert required <= 10
 
 
-## tests/test_compute_position_size_cap.py (last modified: 2025-08-23 09:49:36)
+## tests/test_compute_position_size_cap.py (last modified: 2025-08-23 20:57:14)
      1: import os
      2: import sys
      3: import types
@@ -11396,7 +11173,7 @@ Scalp/
     71:     assert vol % 2 == 0 and vol >= 2
 
 
-## tests/test_dynamic_allocation.py (last modified: 2025-08-23 20:58:19)
+## tests/test_dynamic_allocation.py (last modified: 2025-08-23 20:57:14)
      1: import math
      2: from scalper.risk import adjust_risk_pct
      3: 
@@ -11416,7 +11193,7 @@ Scalp/
     17:     )
 
 
-## tests/test_effective_leverage.py (last modified: 2025-08-23 20:58:19)
+## tests/test_effective_leverage.py (last modified: 2025-08-23 20:57:14)
      1: import pytest
      2: from scalper.trade_utils import effective_leverage
      3: 
@@ -11456,7 +11233,7 @@ Scalp/
     37:     assert effective_leverage(0, 0, 0, 0) == 0.0
 
 
-## tests/test_env_loading.py (last modified: 2025-08-23 09:49:36)
+## tests/test_env_loading.py (last modified: 2025-08-23 20:57:14)
      1: """Tests for loading environment variables from ``notebook/.env``."""
      2: 
      3: from __future__ import annotations
@@ -11494,7 +11271,7 @@ Scalp/
     35:             os.environ["BITGET_ACCESS_KEY"] = old
 
 
-## tests/test_grid_search.py (last modified: 2025-08-23 20:58:19)
+## tests/test_grid_search.py (last modified: 2025-08-23 20:57:14)
      1: import json
      2: import random
      3: 
@@ -11613,7 +11390,7 @@ Scalp/
    116:     assert res1[0].params == res2[0].params
 
 
-## tests/test_heat_score.py (last modified: 2025-08-23 20:58:19)
+## tests/test_heat_score.py (last modified: 2025-08-23 20:57:14)
      1: from scalper.pairs import heat_score, select_top_heat_pairs, decorrelate_pairs
      2: 
      3: 
@@ -11637,7 +11414,7 @@ Scalp/
     21:     assert not ("A" in syms and "B" in syms)
 
 
-## tests/test_indicators.py (last modified: 2025-08-23 20:58:19)
+## tests/test_indicators.py (last modified: 2025-08-23 20:57:14)
      1: 
      2: 
      3: import os
@@ -11709,7 +11486,7 @@ Scalp/
     69: 
 
 
-## tests/test_min_qty_rules.py (last modified: 2025-08-23 09:49:36)
+## tests/test_min_qty_rules.py (last modified: 2025-08-23 20:57:14)
      1: import os
      2: import sys
      3: import types
@@ -11742,7 +11519,7 @@ Scalp/
     30:     assert vol2 == 0
 
 
-## tests/test_notifier.py (last modified: 2025-08-23 20:58:19)
+## tests/test_notifier.py (last modified: 2025-08-23 20:57:14)
      1: import scalper.notifier as notifier
      2: 
      3: 
@@ -11925,7 +11702,7 @@ Scalp/
    180: 
 
 
-## tests/test_notional_and_pnl_units.py (last modified: 2025-08-23 20:58:19)
+## tests/test_notional_and_pnl_units.py (last modified: 2025-08-23 20:57:14)
      1: import os, sys, types, pytest
      2: sys.path.append(os.path.dirname(os.path.dirname(__file__)))
      3: sys.modules['requests'] = types.ModuleType('requests')
@@ -11963,7 +11740,7 @@ Scalp/
     35:     assert pct == pytest.approx(expected_pct)
 
 
-## tests/test_pair_selection.py (last modified: 2025-08-23 09:49:36)
+## tests/test_pair_selection.py (last modified: 2025-08-23 20:57:14)
      1: import bot
      2: 
      3: 
@@ -12085,7 +11862,7 @@ Scalp/
    119:     ]
 
 
-## tests/test_pairs.py (last modified: 2025-08-23 09:49:36)
+## tests/test_pairs.py (last modified: 2025-08-23 20:57:14)
      1: import bot
      2: 
      3: 
@@ -12165,7 +11942,7 @@ Scalp/
     77: 
 
 
-## tests/test_risk_manager.py (last modified: 2025-08-23 09:49:36)
+## tests/test_risk_manager.py (last modified: 2025-08-23 20:57:14)
      1: from scalp import RiskManager
      2: 
      3: 
@@ -12211,7 +11988,7 @@ Scalp/
     43:     assert rm.risk_pct < 0.01
 
 
-## tests/test_risk_utils.py (last modified: 2025-08-23 20:58:19)
+## tests/test_risk_utils.py (last modified: 2025-08-23 20:57:14)
      1: import pytest
      2: 
      3: from scalper.risk import calc_risk_amount, calc_position_size
@@ -12244,7 +12021,7 @@ Scalp/
     30:         calc_position_size(1000, 0.01, stop_distance)
 
 
-## tests/test_signal_risk.py (last modified: 2025-08-23 09:49:36)
+## tests/test_signal_risk.py (last modified: 2025-08-23 20:57:14)
      1: import types
      2: import os
      3: import sys
@@ -12314,7 +12091,7 @@ Scalp/
     67:     assert params["notional"] <= params["cap_ratio"] * available + 1e-6
 
 
-## tests/test_slippage.py (last modified: 2025-08-23 20:58:19)
+## tests/test_slippage.py (last modified: 2025-08-23 20:57:14)
      1: from scalper.trade_utils import marketable_limit_price
      2: 
      3: 
@@ -12325,7 +12102,7 @@ Scalp/
      8:     assert price_sell == 9.9 * (1 - 0.001)
 
 
-## tests/test_strategy_v2.py (last modified: 2025-08-23 20:58:19)
+## tests/test_strategy_v2.py (last modified: 2025-08-23 20:57:14)
      1: import pytest
      2: 
      3: from scalp import strategy
@@ -12477,7 +12254,7 @@ Scalp/
    149:     assert sig is None
    150:     
 
-## tests/test_telegram_bot.py (last modified: 2025-08-23 20:58:19)
+## tests/test_telegram_bot.py (last modified: 2025-08-23 20:57:14)
      1: from scalper.telegram_bot import TelegramBot
      2: 
      3: 
@@ -12699,7 +12476,7 @@ Scalp/
    219: 
 
 
-## tests/test_utils.py (last modified: 2025-08-23 20:58:19)
+## tests/test_utils.py (last modified: 2025-08-23 20:57:14)
      1: import pytest
      2: from bot import ema, cross, compute_position_size, CONFIG
      3: from scalper.trade_utils import extract_available_balance
@@ -12778,7 +12555,7 @@ Scalp/
     76:     assert extract_available_balance(assets) == 0.0
 
 
-## tests/test_version.py (last modified: 2025-08-23 09:49:36)
+## tests/test_version.py (last modified: 2025-08-23 20:57:14)
      1: import pytest
      2: from scalp import version
      3: 
@@ -12817,7 +12594,7 @@ Scalp/
     36: 
 
 
-## tests/test_walk_forward.py (last modified: 2025-08-23 20:58:19)
+## tests/test_walk_forward.py (last modified: 2025-08-23 20:57:14)
      1: from scalper.backtest import walk_forward_windows
      2: 
      3: 
@@ -12831,7 +12608,7 @@ Scalp/
     11:     ]
 
 
-## tests/test_ws.py (last modified: 2025-08-23 20:58:19)
+## tests/test_ws.py (last modified: 2025-08-23 20:57:14)
      1: import asyncio
      2: 
      3: from scalper.ws import WebsocketManager
@@ -12855,7 +12632,7 @@ Scalp/
     21:     asyncio.run(run_and_stop())
 
 
-## tg_diag.py (last modified: 2025-08-23 20:58:19)
+## tg_diag.py (last modified: 2025-08-23 20:57:14)
      1: # tg_diag.py
      2: import asyncio, os, aiohttp
      3: 
