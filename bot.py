@@ -1,285 +1,67 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Point d'entrée unique (scan/orchestrate).
-
-Modes d'accès:
-- --exchange wrapper (défaut) : passe par TON wrapper Bitget (get_ohlcv). Le bot
-  ajoute automatiquement le suffixe si absent:
-    --market umcbl -> _UMCBL (perp USDT)  [défaut]
-    --market spot  -> _SPBL
-- --exchange ccxt : client ccxt.bitget (fetch_ohlcv), pour debug rapide.
-- --csv / --csv_1h : scan offline.
-
-Exemples:
-  python bot.py --symbols BTCUSDT --tf 5m                     # wrapper, auto -> BTCUSDT_UMCBL
-  python bot.py --symbols BTCUSDT --tf 5m --market spot       # wrapper, auto -> BTCUSDT_SPBL
-  python bot.py --symbols BTCUSDT --tf 5m --exchange ccxt     # ccxt (transforme en BTC/USDT:USDT)
-  python bot.py --csv data/BTCUSDT-5m.csv --csv_1h data/BTCUSDT-1h.csv
-"""
-
 from __future__ import annotations
-import os, sys, argparse
-from typing import Dict, List, Any, Optional, Tuple
 
-# ---------- .env (facultatif) ----------
-def _load_dotenv_if_any() -> None:
+import asyncio
+import logging
+import os
+import sys
+from typing import Any, Dict, Iterable, Optional, Sequence
+
+from engine.config.loader import load_config
+from engine.live.orchestrator import RunConfig, run_orchestrator
+from engine.live.notify import build_notifier_and_commands
+
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
+logging.basicConfig(level=getattr(logging, LOG_LEVEL, logging.INFO),
+                    format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+log = logging.getLogger("bot")
+
+def _build_exchange(cfg: Dict[str, Any]):
+    # CCXT si dispo -> sinon REST
     try:
-        from dotenv import load_dotenv  # type: ignore
-        here = os.getcwd()
-        for p in (os.path.join(here, ".env"), os.path.join(os.path.dirname(here), ".env")):
-            if os.path.isfile(p):
-                load_dotenv(p)
-                break
-    except Exception:
-        pass
-_load_dotenv_if_any()
-
-# ---------- Strategies ----------
-def _import_strategy_factory():
-    from scalper.signals.factory import load_strategies_cfg, resolve_signal_fn
-    return load_strategies_cfg, resolve_signal_fn
-
-# ---------- Orchestrator ----------
-def _import_orchestrator():
-    from scalper.live.orchestrator import Orchestrator
-    return Orchestrator
-
-# ---------- Exchange loader ----------
-def _import_wrapper_class() -> Optional[Any]:
-    for mod_name in (
-        "scalper.exchange.bitget",   # ton wrapper
-        "scalper.exchanges.bitget",
-    ):
-        try:
-            mod = __import__(mod_name, fromlist=["BitgetExchange"])
-            cls = getattr(mod, "BitgetExchange", None)
-            if cls is not None:
-                return cls
-        except Exception:
-            continue
-    return None
-
-def _build_ccxt_bitget():
-    try:
-        import ccxt  # type: ignore
-    except Exception:
-        return None
-    k = os.getenv("BITGET_API_KEY","")
-    s = os.getenv("BITGET_API_SECRET","")
-    p = os.getenv("BITGET_API_PASSPHRASE","")
-    default_type = os.getenv("BITGET_DEFAULT_TYPE","swap")
-    opts = {"options": {"defaultType": default_type}}
-    if any([k,s,p]):
-        return ccxt.bitget({"apiKey": k, "secret": s, "password": p, **opts})
-    return ccxt.bitget(opts)
-
-def _resolve_exchange(mode: str) -> Tuple[Optional[Any], str, str]:
-    """Retourne (ExchangeCtorOrClient, message, detected_mode['wrapper'|'ccxt'])."""
-    if mode == "wrapper":
-        cls = _import_wrapper_class()
-        if cls is None:
-            return None, "Wrapper Bitget introuvable (scalper.exchange.bitget).", ""
-        return cls, "", "wrapper"
-    if mode == "ccxt":
-        client = _build_ccxt_bitget()
-        if client is None:
-            return None, "ccxt non installé (pip install ccxt).", ""
-        return client, "", "ccxt"
-    # auto
-    cls = _import_wrapper_class()
-    if cls is not None:
-        return cls, "", "wrapper"
-    client = _build_ccxt_bitget()
-    if client is not None:
-        return client, "", "ccxt"
-    return None, "Aucun exchange Bitget trouvé (wrapper ou ccxt).", ""
-
-# ---------- Helpers symboles ----------
-def _ensure_suffix_for_wrapper(sym: str, market: str) -> str:
-    """Ajoute _UMCBL/_SPBL si manquant, pour le wrapper Bitget."""
-    up = sym.upper()
-    if "_" in up:   # suffixe déjà présent (ex: BTCUSDT_UMCBL / _SPBL)
-        return up
-    if market == "spot":
-        return up + "_SPBL"
-    return up + "_UMCBL"  # défaut: perp USDT
-
-def _to_ccxt_symbol(sym: str) -> str:
-    """BTCUSDT -> BTC/USDT:USDT (defaultType=swap) ; si déjà au format ccxt, renvoie tel quel."""
-    if "/" in sym:
-        return sym
-    base, quote = sym[:-4], sym[-4:]
-    default_type = os.getenv("BITGET_DEFAULT_TYPE","swap")
-    if default_type == "swap":
-        return f"{base}/{quote}:{quote}"
-    return f"{base}/{quote}"
-
-# ---------- Utils OHLCV offline ----------
-def _read_csv(path: str) -> Dict[str, List[float]]:
-    import csv
-    cols = ("timestamp","open","high","low","close","volume")
-    out = {k: [] for k in cols}
-    with open(path, "r", newline="", encoding="utf-8") as f:
-        r = csv.DictReader(f)
-        for row in r:
-            for k in cols:
-                out[k].append(float(row[k]))
-    return out
-
-def _ohlcv_to_dict(rows: List[List[float]]) -> Dict[str, List[float]]:
-    cols = ("timestamp","open","high","low","close","volume")
-    out = {k: [] for k in cols}
-    for r in rows:
-        if len(r) < 6:
-            raise ValueError("Ligne OHLCV invalide (6 colonnes attendues).")
-        out["timestamp"].append(float(r[0])); out["open"].append(float(r[1]))
-        out["high"].append(float(r[2])); out["low"].append(float(r[3]))
-        out["close"].append(float(r[4])); out["volume"].append(float(r[5]))
-    return out
-
-# ---------- Modes ----------
-def mode_scan(
-    *, symbols: List[str], timeframe: str, cfg_path: str,
-    csv: Optional[str], csv_1h: Optional[str],
-    equity: float, risk: float, exchange_mode: str, market: str
-) -> None:
-    load_strategies_cfg, resolve_signal_fn = _import_strategy_factory()
-    cfg = load_strategies_cfg(cfg_path)
-
-    data_by_symbol: Dict[str, Dict[str, List[float]]] = {}
-    data_1h_by_symbol: Dict[str, Dict[str, List[float]]] = {}
-
-    if csv:
-        data = _read_csv(csv)
-        for s in symbols:
-            data_by_symbol[s] = data
-        if csv_1h:
-            d1h = _read_csv(csv_1h)
-            for s in symbols:
-                data_1h_by_symbol[s] = d1h
-    else:
-        ExCtorOrClient, msg, detected = _resolve_exchange(exchange_mode)
-        if ExCtorOrClient is None:
-            print(msg); return
-
-        if detected == "wrapper":
-            client = ExCtorOrClient(
-                api_key=os.getenv("BITGET_API_KEY",""),
-                api_secret=os.getenv("BITGET_API_SECRET",""),
-                api_passphrase=os.getenv("BITGET_API_PASSPHRASE",""),
-            )
-            fetch = getattr(client, "get_ohlcv")
-            for s in symbols:
-                s_eff = _ensure_suffix_for_wrapper(s, market)  # << auto-suffix
-                rows = fetch(symbol=s_eff, timeframe=timeframe, limit=1500)
-                data_by_symbol[s] = _ohlcv_to_dict(rows)
-                try:
-                    s_eff_1h = _ensure_suffix_for_wrapper(s, market)
-                    rows_1h = fetch(symbol=s_eff_1h, timeframe="1h", limit=1500)
-                    data_1h_by_symbol[s] = _ohlcv_to_dict(rows_1h)
-                except Exception:
-                    pass
-        else:
-            client = ExCtorOrClient  # ccxt
-            for s in symbols:
-                s_eff = _to_ccxt_symbol(s)
-                rows = client.fetch_ohlcv(s_eff, timeframe=timeframe, limit=1500)
-                data_by_symbol[s] = _ohlcv_to_dict(rows)
-                try:
-                    rows_1h = client.fetch_ohlcv(s_eff, timeframe="1h", limit=1500)
-                    data_1h_by_symbol[s] = _ohlcv_to_dict(rows_1h)
-                except Exception:
-                    pass
-
-    for s in symbols:
-        fn = resolve_signal_fn(s, timeframe, cfg)
-        ohlcv = data_by_symbol.get(s)
-        print(f"\n=== {s} / {timeframe} ===")
-        if not ohlcv:
-            print("Pas de données OHLCV."); continue
-        sig = fn(symbol=s, timeframe=timeframe, ohlcv=ohlcv,
-                 equity=equity, risk_pct=risk, ohlcv_1h=data_1h_by_symbol.get(s))
-        if sig is None:
-            print("Aucun signal.")
-        else:
-            d = sig.as_dict()
-            print(f"Signal: side={d['side']} entry={d['entry']:.6f} sl={d['sl']:.6f} "
-                  f"tp1={d['tp1']:.6f} tp2={d['tp2']:.6f} score={d['score']} "
-                  f"quality={d['quality']:.2f}")
-            print("Reasons:", d.get("reasons",""))
-
-def mode_orchestrate(
-    *, symbols: List[str], timeframe: str, cfg_path: str,
-    interval_sec: int, equity: float, risk: float, exchange_mode: str, market: str
-) -> None:
-    Orchestrator = _import_orchestrator()
-    load_strategies_cfg, _ = _import_strategy_factory()
-    cfg = load_strategies_cfg(cfg_path)
-
-    ExCtorOrClient, msg, detected = _resolve_exchange(exchange_mode)
-    if ExCtorOrClient is None:
-        print(msg); return
-
-    if detected == "wrapper":
-        client = ExCtorOrClient(
-            api_key=os.getenv("BITGET_API_KEY",""),
-            api_secret=os.getenv("BITGET_API_SECRET",""),
-            api_passphrase=os.getenv("BITGET_API_PASSPHRASE",""),
+        from engine.exchange.bitget_ccxt import BitgetExchange
+        ex = BitgetExchange(
+            api_key=cfg["secrets"]["bitget"]["access"],
+            secret=cfg["secrets"]["bitget"]["secret"],
+            password=cfg["secrets"]["bitget"]["passphrase"],
+            data_dir=cfg["runtime"]["data_dir"],
         )
-    else:
-        client = ExCtorOrClient  # ccxt
+        log.info("Exchange CCXT initialisé")
+        return ex
+    except Exception as exc:
+        log.warning("CCXT indisponible (%s) — fallback REST", exc)
+        from engine.exchange.bitget_rest import BitgetFuturesClient
+        return BitgetFuturesClient(
+            access_key=cfg["secrets"]["bitget"]["access"],
+            secret_key=cfg["secrets"]["bitget"]["secret"],
+            passphrase=cfg["secrets"]["bitget"]["passphrase"],
+            base_url=os.getenv("BITGET_BASE_URL", "https://api.bitget.com"),
+            paper_trade=cfg["runtime"].get("paper_trade", True),
+        )
 
-    jobs = [(s, timeframe) for s in symbols]
-    orch = Orchestrator(
-        exchange_client=client, strategies_cfg=cfg, jobs=jobs,
-        interval_sec=interval_sec, equity=equity, risk_pct=risk
+async def _run() -> int:
+    cfg = load_config()
+    runtime = cfg.get("runtime", {})
+    strategy = cfg.get("strategy", {})
+    symbols: Sequence[str] = runtime.get("allowed_symbols") or ["BTCUSDT", "ETHUSDT", "SOLUSDT"]
+
+    run_cfg = RunConfig(
+        symbols=symbols,
+        timeframe=strategy.get("live_timeframe", "1m"),
+        refresh_secs=int(runtime.get("refresh_secs", 5)),
+        cache_dir=str(runtime.get("data_dir")),  # DATA_ROOT/data (hors repo)
     )
+    ex = _build_exchange(cfg)
+    notifier, cmd_stream = build_notifier_and_commands(cfg)
+    await run_orchestrator(ex, run_cfg, notifier, cmd_stream)
+    return 0
+
+def main(argv: Optional[Iterable[str]] = None) -> int:
     try:
-        orch.loop()
+        return asyncio.run(_run())
     except KeyboardInterrupt:
-        print("\nArrêt demandé (CTRL+C).")
-
-# ---------- CLI ----------
-def parse_args() -> argparse.Namespace:
-    ap = argparse.ArgumentParser(description="Bot (scan/orchestrate)")
-    ap.add_argument("--symbols", default=os.getenv("DEFAULT_SYMBOLS","BTCUSDT"),
-                    help="Ex: BTCUSDT (suffixe auto en wrapper) ou BTC/USDT:USDT (ccxt).")
-    ap.add_argument("--tf", default=os.getenv("DEFAULT_TF","5m"), help="Ex: 1m, 5m, 15m, 1h")
-    ap.add_argument("--cfg", default="scalper/config/strategies.yml", help="Fichier stratégies (YAML/JSON)")
-    ap.add_argument("--equity", type=float, default=1000.0)
-    ap.add_argument("--risk", type=float, default=0.01)
-    ap.add_argument("--mode", choices=["scan","orchestrate"], default="scan")
-    ap.add_argument("--interval", type=int, default=60)
-    ap.add_argument("--exchange", choices=["auto","wrapper","ccxt"],
-                    default=os.getenv("EXCHANGE_MODE","wrapper"),
-                    help="wrapper = ton module (get_ohlcv) ; ccxt = client ccxt (fetch_ohlcv).")
-    ap.add_argument("--market", choices=["umcbl","spot"], default=os.getenv("BITGET_MARKET","umcbl"),
-                    help="Utilisé seulement en wrapper pour suffixe auto (_UMCBL/_SPBL).")
-    ap.add_argument("--csv", default="", help="CSV OHLCV principal (scan offline)")
-    ap.add_argument("--csv_1h", default="", help="CSV 1h (scan offline)")
-    return ap.parse_args()
-
-def main():
-    args = parse_args()
-    symbols = [s.strip() for s in (args.symbols or "").split(",") if s.strip()]
-    if not symbols:
-        print("Aucun symbole fourni (utilise --symbols ou DEFAULT_SYMBOLS).")
-        return
-
-    if args.mode == "scan":
-        mode_scan(
-            symbols=symbols, timeframe=args.tf, cfg_path=args.cfg,
-            csv=(args.csv or None), csv_1h=(args.csv_1h or None),
-            equity=args.equity, risk=args.risk,
-            exchange_mode=args.exchange, market=args.market
-        )
-    else:
-        mode_orchestrate(
-            symbols=symbols, timeframe=args.tf, cfg_path=args.cfg,
-            interval_sec=args.interval, equity=args.equity, risk=args.risk,
-            exchange_mode=args.exchange, market=args.market
-        )
+        log.info("Arrêt demandé (Ctrl+C)")
+        return 0
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main(sys.argv[1:]))
