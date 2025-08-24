@@ -1,0 +1,15 @@
+runtime:
+  data_dir: /notebooks/scalp_data/data
+  log_dir: /notebooks/scalp_data/logs
+  reports_dir: /notebooks/scalp_data/reports
+  paper_trade: true
+  allowed_symbols: []
+  refresh_secs: 5
+
+strategy:
+  live_timeframe: 1m
+  ema_fast: 20
+  ema_slow: 50
+  atr_period: 14
+  trail_atr_mult: 2.0
+  risk_pct_equity: 0.02
