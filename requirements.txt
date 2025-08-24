@@ -1,6 +1,18 @@
-requests
-python-dotenv
-pydantic==1.10.15 ; python_version < "3.11"
+# Dépendances principales du projet scalp
 
-# pydantic v1 déjà pin si environnement ancien
-# rien à ajouter ici pour market_data (pas de nouvelle dépendance)
+# HTTP / API
+requests>=2.31
+
+# Data science
+pandas>=2.1
+numpy>=1.26
+
+# Config et environnements
+PyYAML>=6.0
+python-dotenv>=1.0
+
+# Dashboard (inclus par défaut pour éviter de multiplier les fichiers)
+streamlit>=1.33
+
+# Exchange (optionnel mais utile si activé)
+ccxt>=4.0.0
