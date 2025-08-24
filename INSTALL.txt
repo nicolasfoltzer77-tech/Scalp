@@ -1,0 +1,74 @@
+# INSTALLATION — Projet scalp
+
+Prérequis système
+- Python 3.10+ (recommandé 3.11)
+- Accès réseau sortant (Bitget API, Telegram)
+- Espace persistant pour DATA_ROOT (ex: /notebooks/scalp_data)
+
+Arborescence importante
+- bot.py (entrée)
+- engine/ (moteur)
+- jobs/ (scripts)
+- ops/ (outils)
+- dash/app.py (dashboard Streamlit, optionnel)
+- INSTALL.txt (ce fichier)
+- requirements.txt (dépendances de base)
+- requirements-dash.txt (dépendances dashboard)
+- requirements-dev.txt (outils dev facultatifs)
+
+1) Environnement Python (virtualenv conseillé)
+   python -m venv .venv
+   . .venv/bin/activate
+   python -m pip install --upgrade pip
+
+2) Dépendances de base (obligatoires)
+   pip install -r requirements.txt
+
+   CCXT est optionnel : si souhaité (backend CCXT au lieu de REST)
+   pip install ccxt
+
+3) Dashboard (optionnel)
+   pip install -r requirements-dash.txt
+
+4) Variables d’environnement (SECRETS) — placer dans /notebooks/.env
+   GIT_USER=<optionnel>
+   GIT_TOKEN=<optionnel>
+   TELEGRAM_BOT_TOKEN=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+   TELEGRAM_CHAT_ID=123456789
+   BITGET_ACCESS_KEY=xxxxxxxx
+   BITGET_SECRET_KEY=xxxxxxxx
+   BITGET_PASSPHRASE=xxxxxxxx
+   DATA_ROOT=/notebooks/scalp_data
+   # facultatif:
+   LOG_LEVEL=INFO
+   BITGET_BASE_URL=https://api.bitget.com
+   DISABLE_TG_COMMANDS=0
+
+5) Préflight automatique
+   Au démarrage Python, sitecustomize.py charge /notebooks/.env,
+   vérifie les chemins DATA_ROOT et écrit un green-flag:
+   /notebooks/.scalp/READY.json
+
+6) Premier run (market data simple)
+   python bot.py
+   -> écrit /notebooks/scalp_data/data/live/logs/signals.csv
+
+7) Sélection dynamique + backfill (2–3x/jour)
+   python jobs/refresh_pairs.py --timeframe 5m --top 10 --backfill-tfs 1m,5m,15m,1h --limit 2000
+
+8) Backtests + promotion stratégie
+   python jobs/backtest.py --from-watchlist --tfs 1m,5m,15m,1h
+   python jobs/promote.py --draft /notebooks/scalp_data/reports/strategies.yml.next
+
+9) Live avec stratégie
+   python bot.py
+   -> écrit /notebooks/scalp_data/data/live/orders.csv (paper mode par défaut)
+
+10) Dashboard (optionnel)
+   streamlit run dash/app.py --server.port 8501 --server.headless true
+
+Dépannage rapide
+- CCXT introuvable: message "fallback REST" = normal si non installé
+- Pas de signaux: vérifier DATA_ROOT et /notebooks/.env puis relancer bot.py
+- Watchlist vide: lancer jobs/refresh_pairs.py
+- Aucune stratégie: lancer backtest.py + promote.py
