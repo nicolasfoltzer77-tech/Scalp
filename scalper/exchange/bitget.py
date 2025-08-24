@@ -1,74 +1,111 @@
-# scalper/exchanges/bitget.py
+# scalper/exchange/bitget.py
 from __future__ import annotations
+import os
 import time
+import math
 import requests
-from typing import List
+from typing import List, Dict, Any, Optional
+
+BASE_URL = "https://api.bitget.com"
+
+# Mappings timeframe -> period/granularity
+_SPOT_PERIOD = {
+    "1m": "1min", "3m": "3min", "5m": "5min", "15m": "15min", "30m": "30min",
+    "1h": "1hour", "4h": "4hour", "6h": "6hour", "12h": "12hour",
+    "1d": "1day", "3d": "3day", "1w": "1week"
+}
+_MIX_GRAN = {  # secondes
+    "1m": 60, "3m": 180, "5m": 300, "15m": 900, "30m": 1800,
+    "1h": 3600, "4h": 14400, "6h": 21600, "12h": 43200,
+    "1d": 86400, "3d": 259200, "1w": 604800
+}
+
+def _detect_market(symbol: str) -> str:
+    s = symbol.upper()
+    if s.endswith("_SPBL"):
+        return "spot"
+    # contrats perp/coin margined (les trois suffixes vus chez Bitget)
+    if s.endswith("_UMCBL") or s.endswith("_DMCBL") or s.endswith("_CMCBL"):
+        return "mix"
+    # fallback: variable d'env ou défaut umcbl
+    return os.getenv("BITGET_MARKET", "mix")
 
 class BitgetExchange:
     """
-    Client léger Bitget pour récupérer des OHLCV SPOT en public (pas d'auth).
-    Retourne des lignes au format: [ts_ms, open, high, low, close, volume]
+    Wrapper très simple pour lecture OHLCV (public).
+    Signature compatible avec le code existant: get_ohlcv(symbol, timeframe, limit)
+    - symbol Spot attendu: BTCUSDT_SPBL
+    - symbol Perp USDT:    BTCUSDT_UMCBL
+    - symbol Perp COIN:    BTCUSD_DMCBL / BTCUSD_CMCBL
     """
-
-    BASE = "https://api.bitget.com"
-    # Mapping timeframe -> paramètre 'period' (spot)
-    TF = {
-        "1m": "1min",
-        "3m": "3min",
-        "5m": "5min",
-        "15m": "15min",
-        "30m": "30min",
-        "1h": "1hour",
-        "4h": "4hour",
-        "1d": "1day",
-    }
-
-    def __init__(self, api_key: str = "", api_secret: str = "", api_passphrase: str = "", timeout: int = 15):
-        self.api_key = api_key
-        self.api_secret = api_secret
-        self.api_passphrase = api_passphrase
-        self.timeout = timeout
+    def __init__(
+        self,
+        api_key: str = "",
+        api_secret: str = "",
+        api_passphrase: str = "",
+        timeout: int = 20,
+    ) -> None:
         self.session = requests.Session()
-        self.session.headers.update({"Accept": "application/json"})
+        self.session.headers.update({"User-Agent": "scalp-bot/1.0"})
+        self.timeout = timeout
+        # (Clés gardées pour futures évolutions privées; ici on n’en a pas besoin pour OHLCV)
 
-    def _get(self, path: str, params: dict) -> dict:
-        url = f"{self.BASE}{path}"
+    # ---- HTTP helpers -------------------------------------------------------
+    def _get(self, path: str, params: Dict[str, Any]) -> Dict[str, Any]:
+        url = BASE_URL + path
         r = self.session.get(url, params=params, timeout=self.timeout)
         r.raise_for_status()
-        return r.json()
+        data = r.json()
+        if not isinstance(data, dict):
+            raise ValueError(f"Réponse inattendue: {data}")
+        # Bitget renvoie {"code":"00000","data":[...]}
+        if str(data.get("code")) not in ("00000", "0", "200"):
+            raise RuntimeError(f"Bitget error: {data}")
+        return data
 
-    def get_ohlcv(self, *, symbol: str, timeframe: str, limit: int = 1000) -> List[List[float]]:
+    # ---- Public market data -------------------------------------------------
+    def get_ohlcv(self, symbol: str, timeframe: str = "5m", limit: int = 500) -> List[List[float]]:
         """
-        Candles SPOT (ordre chronologique ascendant).
-        Docs: GET /api/spot/v1/market/candles
-        Params attendus:
-          symbol: ex 'BTCUSDT'
-          period: ex '5min'
-          limit : <= 1000 (Bitget)
-        Réponse Bitget: liste de listes [ts, open, high, low, close, volume, turnover]
-        NB: renvoyée par Bitget en ordre *décroissant* -> on renverse.
+        Retourne une liste de bougies: [[ts, open, high, low, close, volume], ...]
+        ts en millisecondes, trié croissant.
         """
-        tf = timeframe.lower()
-        period = self.TF.get(tf)
-        if not period:
-            raise ValueError(f"Timeframe non supporté: {timeframe} (supportés: {list(self.TF)})")
+        market = _detect_market(symbol)
+        timeframe = timeframe.lower()
+        if market == "spot":
+            period = _SPOT_PERIOD.get(timeframe)
+            if not period:
+                raise ValueError(f"Timeframe spot non supporté: {timeframe}")
+            # /api/spot/v1/market/candles  params: symbol, period, limit
+            params = {"symbol": symbol, "period": period, "limit": int(limit)}
+            data = self._get("/api/spot/v1/market/candles", params=params)
+            rows = data.get("data") or []
+            # Bitget renvoie en ordre décroissant; on renverse et convertit
+            out: List[List[float]] = []
+            for r in reversed(rows):
+                # r = ["ts","open","high","low","close","volume"]
+                ts = int(r[0])
+                o, h, l, c = map(float, r[1:5])
+                v = float(r[5])
+                out.append([ts, o, h, l, c, v])
+            return out
 
-        params = {"symbol": symbol.upper(), "period": period, "limit": min(int(limit), 1000)}
-        data = self._get("/api/spot/v1/market/candles", params=params)
-
-        # Tolérance de structure (certaines versions renvoient {"code":...,"data":[...]} )
-        rows = data.get("data", data)
-        if not isinstance(rows, list):
-            raise ValueError(f"Réponse inattendue Bitget: {data}")
-
+        # MIX (perp)
+        gran = _MIX_GRAN.get(timeframe)
+        if not gran:
+            raise ValueError(f"Timeframe mix non supporté: {timeframe}")
+        # /api/mix/v1/market/candles params: symbol, granularity, limit
+        params = {"symbol": symbol, "granularity": int(gran), "limit": int(limit)}
+        try:
+            data = self._get("/api/mix/v1/market/candles", params=params)
+        except requests.HTTPError as e:
+            # Certains environnements n’acceptent que history-candles; fallback.
+            data = self._get("/api/mix/v1/market/history-candles", params=params)
+        rows = data.get("data") or []
         out: List[List[float]] = []
-        # Bitget renvoie généralement: [timestamp, open, high, low, close, volume, turnover]
-        for r in rows:
-            # robustesse: accepter str ou nombres, tailles variables
-            ts = float(r[0])
-            op = float(r[1]); hi = float(r[2]); lo = float(r[3]); cl = float(r[4]); vol = float(r[5])
-            out.append([ts, op, hi, lo, cl, vol])
-
-        # ordre chrono ASC (le bot/backtest attend croissant)
-        out.sort(key=lambda x: x[0])
+        for r in reversed(rows):
+            # r = ["ts","open","high","low","close","volume", ...]
+            ts = int(r[0])
+            o, h, l, c = map(float, r[1:5])
+            v = float(r[5])
+            out.append([ts, o, h, l, c, v])
         return out
