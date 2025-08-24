@@ -1,12 +1,6 @@
 # scalper/core/indicators.py
 from __future__ import annotations
-from typing import Sequence, Tuple, List, Optional
-import math
-
-try:
-    import numpy as np
-except Exception:  # numpy facultatif
-    np = None  # type: ignore
+from typing import Sequence, Tuple, List
 
 def _to_list(x: Sequence[float]) -> List[float]:
     return list(map(float, x))
@@ -85,7 +79,6 @@ def obv(closes: Sequence[float], volumes: Sequence[float]) -> List[float]:
     return out
 
 def vwap(highs: Sequence[float], lows: Sequence[float], closes: Sequence[float], volumes: Sequence[float]) -> List[float]:
-    """VWAP cumulatif intra-série (utile surtout en intraday)."""
     h, l, c, v = _to_list(highs), _to_list(lows), _to_list(closes), _to_list(volumes)
     out: List[float] = []
     cum_tp_vol = 0.0
@@ -98,12 +91,12 @@ def vwap(highs: Sequence[float], lows: Sequence[float], closes: Sequence[float],
     return out
 
 def slope(series: Sequence[float], lookback: int = 5) -> List[float]:
-    """Pente simple (différence / lookback)."""
     s = _to_list(series)
     out: List[float] = []
     for i in range(len(s)):
         if i < lookback:
             out.append(0.0)
         else:
-            out.append((s[i] - s[i - lookback]) / max(abs(s[i - lookback]), 1e-12))
+            denom = abs(s[i - lookback]) if abs(s[i - lookback]) > 1e-12 else 1e-12
+            out.append((s[i] - s[i - lookback]) / denom)
     return out
