@@ -1,3 +1,4 @@
+# bot.py
 #!/usr/bin/env python3
 from __future__ import annotations
 
@@ -5,14 +6,11 @@ import asyncio
 import logging
 import os
 import sys
-from pathlib import Path
-from typing import Any, Dict, Iterable, Optional
+from typing import Any, Dict, Iterable, Optional, Sequence
 
-# IMPORTANT : sitecustomize.py est importé automatiquement si présent sur le PYTHONPATH.
-# Dans ce repo, il charge /notebooks/.env, normalise les aliases, précharge la config
-# et effectue un pré-flight (écrit un READY.json si tout est OK). 
-
-# ---------- Logging de base ----------
+# -----------------------------------------------------------------------------
+# Logging de base
+# -----------------------------------------------------------------------------
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 logging.basicConfig(
     level=getattr(logging, LOG_LEVEL, logging.INFO),
@@ -20,93 +18,108 @@ logging.basicConfig(
 )
 log = logging.getLogger("bot")
 
-# ---------- Config ----------
+# -----------------------------------------------------------------------------
+# Chargement config (paramètres généraux YAML + secrets .env)
+# sitecustomize.py est importé automatiquement par Python si présent sur le
+# PYTHONPATH et, dans ce repo, il charge /notebooks/.env, normalise les aliases
+# et déclenche un pré‑flight qui écrit un READY.json si tout va bien.
+# -----------------------------------------------------------------------------
 try:
-    from scalper.config.loader import load_config
-except Exception as exc:
+    from scalper.config.loader import load_config  # type: ignore
+except Exception as exc:  # pragma: no cover
     log.error("Impossible d'importer scalper.config.loader.load_config: %s", exc)
     raise
 
-def check_config() -> None:
-    """
-    Vérifie uniquement la présence des secrets critiques (pas les paramètres généraux).
-    Le pré-flight global est déjà exécuté par sitecustomize.py ; cette vérif reste locale.
-    """
-    missing = []
-    if not os.getenv("BITGET_ACCESS_KEY"):
-        missing.append("BITGET_ACCESS_KEY")
-    if not os.getenv("BITGET_SECRET_KEY"):
-        missing.append("BITGET_SECRET_KEY")
-    for k in missing:
-        log.info("Missing %s", k)
 
-# ---------- Utilitaires internes ----------
-def _comma_split(val: Optional[str]) -> Iterable[str]:
+# -----------------------------------------------------------------------------
+# Petits utilitaires
+# -----------------------------------------------------------------------------
+def _comma_split(val: Optional[str]) -> list[str]:
     if not val:
         return []
     return [s.strip() for s in val.split(",") if s.strip()]
 
-# ---------- Intégrations disponibles (souples) ----------
+
+def check_config() -> None:
+    """
+    Vérif locale non bloquante des secrets critiques.
+    Le pré‑flight global (sitecustomize.py) s'occupe déjà de stopper si manquant.
+    """
+    for key in ("BITGET_ACCESS_KEY", "BITGET_SECRET_KEY"):
+        if not os.getenv(key):
+            logging.getLogger("bot.config").info("Missing %s", key)
+
+
 def _has_orchestrator() -> bool:
     try:
-        # orchestrateur live présent dans scalper/live/orchestrator.py (vu dans ton dump) 
-        import scalper.live.orchestrator  # noqa:F401
+        import scalper.live.orchestrator  # noqa: F401
         return True
     except Exception:
         return False
 
+
+# -----------------------------------------------------------------------------
+# Construction de l’exchange (CCXT si possible -> fallback REST)
+# -----------------------------------------------------------------------------
 def _build_exchange(cfg: Dict[str, Any]):
     """
-    Construit l'exchange de manière robuste :
-    1) On essaye la couche CCXT asynchrone si dispo (scalper.exchange.bitget_ccxt).
-    2) Sinon on retombe sur le client REST interne (scalper.bitget_client).
-    Les deux modules existent dans ton arborescence. 
+    Retourne (exchange, backend_name)
+    - backend 'ccxt' si scalper.exchange.bitget_ccxt est dispo
+    - backend 'rest' sinon (scalper.bitget_client.BitgetFuturesClient)
     """
-    # Essai CCXT
+    access = cfg.get("secrets", {}).get("bitget", {}).get("access") or ""
+    secret = cfg.get("secrets", {}).get("bitget", {}).get("secret") or ""
+    passphrase = cfg.get("secrets", {}).get("bitget", {}).get("passphrase") or ""
+    runtime = cfg.get("runtime") or {}
+    data_dir = str(runtime.get("data_dir", "/notebooks/data"))
+
+    # CCXT async
     try:
-        from scalper.exchange.bitget_ccxt import BitgetExchange  # 
-        access = cfg["secrets"]["bitget"]["access"]
-        secret = cfg["secrets"]["bitget"]["secret"]
-        password = cfg["secrets"]["bitget"]["passphrase"]
-        data_dir = (cfg.get("runtime") or {}).get("data_dir", "/notebooks/data")
+        from scalper.exchange.bitget_ccxt import BitgetExchange  # type: ignore
         ex = BitgetExchange(
-            api_key=access or "",
-            secret=secret or "",
-            password=password or "",
-            data_dir=str(data_dir),
+            api_key=access,
+            secret=secret,
+            password=passphrase,
+            data_dir=data_dir,
         )
-        log.info("Exchange: BitgetExchange (ccxt) initialisé")
+        log.info("Exchange initialisé: CCXT")
         return ex, "ccxt"
     except Exception as exc:
-        log.warning("CCXT indisponible ou erreur init (%s) — fallback REST", exc)
+        log.warning("CCXT indisponible (%s) — on bascule REST", exc)
 
-    # Fallback REST
-    from scalper.bitget_client import BitgetFuturesClient  # 
+    # REST interne
+    from scalper.bitget_client import BitgetFuturesClient  # type: ignore
     base_url = os.getenv("BITGET_BASE_URL", "https://api.bitget.com")
     ex = BitgetFuturesClient(
-        access_key=cfg["secrets"]["bitget"]["access"] or "",
-        secret_key=cfg["secrets"]["bitget"]["secret"] or "",
-        passphrase=cfg["secrets"]["bitget"]["passphrase"] or "",
+        access_key=access,
+        secret_key=secret,
+        passphrase=passphrase,
         base_url=base_url,
-        paper_trade=(cfg.get("runtime") or {}).get("paper_trade", True),
+        paper_trade=bool(runtime.get("paper_trade", True)),
     )
-    log.info("Exchange: BitgetFuturesClient (REST) initialisé")
+    log.info("Exchange initialisé: REST")
     return ex, "rest"
 
+
+# -----------------------------------------------------------------------------
+# Chemin principal: orchestrateur live
+# -----------------------------------------------------------------------------
 async def _run_with_orchestrator(cfg: Dict[str, Any]) -> None:
     """
-    Chemin "complet" : utilise l’orchestrateur live si présent.
-    Le package scalper/live/* est bien présent dans le repo. 
+    Démarre l’orchestrateur live si disponible.
+    Modules attendus (présents dans le repo) :
+      - scalper/live/orchestrator.py : RunConfig, run_orchestrator
+      - scalper/live/notify.py      : build_notifier_and_commands
     """
-    from scalper.live.orchestrator import run_orchestrator, RunConfig  # 
-    from scalper.live.notify import build_notifier_and_commands  # 
+    from scalper.live.orchestrator import RunConfig, run_orchestrator  # type: ignore
+    from scalper.live.notify import build_notifier_and_commands        # type: ignore
 
     runtime = cfg.get("runtime") or {}
     strategy = cfg.get("strategy") or {}
 
-    # Déterminer la watchlist
-    allowed = runtime.get("allowed_symbols") or []
-    symbols = allowed if allowed else ["BTCUSDT", "ETHUSDT", "SOLUSDT"]
+    # Watchlist : si allowed_symbols vide -> fallback par défaut
+    allowed: Sequence[str] = runtime.get("allowed_symbols") or []
+    symbols = list(allowed) if allowed else ["BTCUSDT", "ETHUSDT", "SOLUSDT"]
 
     run_cfg = RunConfig(
         symbols=symbols,
@@ -118,58 +131,73 @@ async def _run_with_orchestrator(cfg: Dict[str, Any]) -> None:
     exchange, backend = _build_exchange(cfg)
     notifier, cmd_stream = await build_notifier_and_commands(cfg)
 
-    log.info("Démarrage orchestrateur (backend=%s, tf=%s, symbols=%s)",
-             backend, run_cfg.timeframe, ",".join(run_cfg.symbols))
+    log.info(
+        "Orchestrateur: backend=%s timeframe=%s symbols=%s",
+        backend, run_cfg.timeframe, ",".join(run_cfg.symbols),
+    )
     await run_orchestrator(exchange, run_cfg, notifier, cmd_stream)
 
-def _select_pairs_and_tick(cfg: Dict[str, Any]) -> None:
+
+# -----------------------------------------------------------------------------
+# Fallback minimal: scan pairs + log (si orchestrateur indisponible)
+# -----------------------------------------------------------------------------
+def _fallback_scan_once(cfg: Dict[str, Any]) -> None:
     """
-    Chemin minimaliste (fallback) si orchestrateur non disponible :
-    - utilise pairs.py / strategy.py pour scanner et logguer.
-    Tous ces modules existent dans ton dépôt. 
+    Mode secouru (pour ne pas planter si l’orchestrateur n’est pas importable).
+    Utilise le client REST + pairs.py pour un scan et log d’activité.
     """
-    from scalper.pairs import select_top_pairs, get_trade_pairs  # 
-    from scalper.bitget_client import BitgetFuturesClient  # 
+    from scalper.bitget_client import BitgetFuturesClient  # type: ignore
+    from scalper.pairs import get_trade_pairs, select_top_pairs  # type: ignore
+
+    access = cfg.get("secrets", {}).get("bitget", {}).get("access") or ""
+    secret = cfg.get("secrets", {}).get("bitget", {}).get("secret") or ""
+    passphrase = cfg.get("secrets", {}).get("bitget", {}).get("passphrase") or ""
+    runtime = cfg.get("runtime") or {}
 
     client = BitgetFuturesClient(
-        access_key=cfg["secrets"]["bitget"]["access"] or "",
-        secret_key=cfg["secrets"]["bitget"]["secret"] or "",
-        passphrase=cfg["secrets"]["bitget"]["passphrase"] or "",
+        access_key=access,
+        secret_key=secret,
+        passphrase=passphrase,
         base_url=os.getenv("BITGET_BASE_URL", "https://api.bitget.com"),
-        paper_trade=(cfg.get("runtime") or {}).get("paper_trade", True),
+        paper_trade=bool(runtime.get("paper_trade", True)),
     )
-    pairs = get_trade_pairs(client)
-    top = select_top_pairs(client, top_n=10)
-    log.info("Pairs totales=%d / Top10=%s", len(pairs or []), ",".join([p.get("symbol","?") for p in (top or [])]))
+    pairs = get_trade_pairs(client) or []
+    top = select_top_pairs(client, top_n=10) or []
+    top_symbols = [p.get("symbol", "?") for p in top]
+    log.info("Scanner: total_pairs=%d top10=%s", len(pairs), ",".join(top_symbols))
 
+
+# -----------------------------------------------------------------------------
+# Entrée CLI
+# -----------------------------------------------------------------------------
 def main(argv: Optional[Iterable[str]] = None) -> int:
-    # Petit rappel local (non bloquant) des secrets critiques
+    # Vérif locale (info) des secrets critiques
     check_config()
 
-    # Charger la configuration fusionnée (config.yaml + .env)
+    # Charge la config fusionnée (config.yaml + .env)
     cfg = load_config()
 
-    # Si orchestrateur dispo → chemin principal ; sinon fallback
     if _has_orchestrator():
         try:
             asyncio.run(_run_with_orchestrator(cfg))
             return 0
         except KeyboardInterrupt:
-            log.info("Arrêt demandé par l'utilisateur (Ctrl+C)")
+            log.info("Arrêt demandé (Ctrl+C)")
             return 0
         except SystemExit as exc:
             return int(getattr(exc, "code", 1) or 1)
         except Exception as exc:
-            log.exception("Erreur run_orchestrator: %s", exc)
+            log.exception("Erreur orchestrateur: %s", exc)
             return 1
     else:
-        log.warning("Orchestrateur indisponible — exécution en mode scanner minimal.")
+        log.warning("Orchestrateur indisponible — mode scanner minimal.")
         try:
-            _select_pairs_and_tick(cfg)
+            _fallback_scan_once(cfg)
             return 0
         except Exception as exc:
-            log.exception("Erreur fallback scanner: %s", exc)
+            log.exception("Erreur scanner: %s", exc)
             return 1
+
 
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv[1:]))
