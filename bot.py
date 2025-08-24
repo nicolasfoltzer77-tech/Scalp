@@ -2,20 +2,19 @@
 # -*- coding: utf-8 -*-
 """
 Point d'entrée unique (scan/orchestrate) — agnostique de l'implémentation Exchange.
-- Essaie d'abord tes modules 'scalper.exchanges.*' ou 'scalper.exchange.*'
-- Sinon fallback ccxt (bitget) automatiquement si ccxt est installé.
+- Détecte automatiquement wrapper Bitget (get_ohlcv) ou ccxt (fetch_ohlcv).
+- Normalise les symboles selon le client détecté (BTCUSDT <-> BTC/USDT[:USDT]).
 - Charge .env si présent (python-dotenv facultatif).
 """
 
 from __future__ import annotations
-import os, sys, argparse
-from typing import Dict, List, Any, Optional
+import os, sys, argparse, re
+from typing import Dict, List, Any, Optional, Tuple
 
 # ---- .env facultatif ---------------------------------------------------------
 def _load_dotenv_if_any() -> None:
     try:
         from dotenv import load_dotenv  # type: ignore
-        # cherche .env dans CWD puis parent (utile depuis notebooks/)
         here = os.getcwd()
         candidates = [os.path.join(here, ".env"), os.path.join(os.path.dirname(here), ".env")]
         for p in candidates:
@@ -24,12 +23,10 @@ def _load_dotenv_if_any() -> None:
                 break
     except Exception:
         pass
-
 _load_dotenv_if_any()
 
 # ---- Factory stratégies ------------------------------------------------------
 def _import_strategy_factory():
-    # On a déplacé la factory sous scalper.signals.factory pour éviter le conflit 'scalper/strategy.py'
     from scalper.signals.factory import load_strategies_cfg, resolve_signal_fn
     return load_strategies_cfg, resolve_signal_fn
 
@@ -38,39 +35,29 @@ def _import_orchestrator():
     from scalper.live.orchestrator import Orchestrator
     return Orchestrator
 
-# ---- Exchange loader (multi-essais + fallback ccxt) --------------------------
+# ---- Exchange loader (wrapper ou ccxt) ---------------------------------------
 def _build_ccxt_bitget_from_env(default_type: str = "swap"):
-    """
-    Fallback ccxt: construit un client ccxt.bitget prêt à l'emploi (public ou privé).
-    """
     try:
         import ccxt  # type: ignore
     except Exception:
         return None
-
     api_key = os.getenv("BITGET_API_KEY", "")
     api_secret = os.getenv("BITGET_API_SECRET", "")
     api_passphrase = os.getenv("BITGET_API_PASSPHRASE", "")
-
     opts = {"options": {"defaultType": default_type}}
     if any([api_key, api_secret, api_passphrase]):
-        client = ccxt.bitget({"apiKey": api_key, "secret": api_secret, "password": api_passphrase, **opts})
-    else:
-        client = ccxt.bitget(opts)  # accès public (lecture OHLCV)
+        return ccxt.bitget({"apiKey": api_key, "secret": api_secret, "password": api_passphrase, **opts})
+    return ccxt.bitget(opts)  # public (lecture)
 
-    # Pour compat DataFetcher (qui sait gérer fetch_ohlcv)
-    return client
-
-def _import_exchange() -> tuple[Optional[Any], str]:
+def _import_exchange() -> Tuple[Optional[Any], str, str]:
     """
-    Tente plusieurs chemins d'import pour ton exchange Bitget.
-    Retourne (ExchangeCtor_ou_client, help_message)
-    - Si on trouve une classe avec get_ohlcv(...), on la retourne (BitgetExchange).
-    - Sinon on retourne un client ccxt prêt (ayant fetch_ohlcv).
+    Retourne (ExchangeCtorOuClient, message_aide, mode)
+    - mode = "wrapper" si classe BitgetExchange avec get_ohlcv
+    - mode = "ccxt" si client ccxt.bitget (fetch_ohlcv)
     """
     candidates = [
-        "scalper.exchanges.bitget",     # classique
-        "scalper.exchange.bitget",      # autre convention
+        "scalper.exchanges.bitget",
+        "scalper.exchange.bitget",
         "scalper.exchanges.bitget_ccxt",
         "scalper.exchange.bitget_ccxt",
     ]
@@ -79,18 +66,47 @@ def _import_exchange() -> tuple[Optional[Any], str]:
             mod = __import__(mod_name, fromlist=["BitgetExchange"])
             BitgetExchange = getattr(mod, "BitgetExchange", None)
             if BitgetExchange is not None:
-                return BitgetExchange, ""
+                return BitgetExchange, "", "wrapper"
         except Exception:
             continue
 
-    # Fallback ccxt (client déjà prêt)
     ccxt_client = _build_ccxt_bitget_from_env(default_type=os.getenv("BITGET_DEFAULT_TYPE", "swap"))
     if ccxt_client is not None:
-        return ccxt_client, ""  # on renvoie directement l'instance ccxt
+        return ccxt_client, "", "ccxt"
 
-    # Rien trouvé
-    return None, ("Aucun exchange Bitget trouvé. Installe/active ton module 'scalper.exchanges.bitget' "
-                  "ou installe 'ccxt' pour le fallback (pip install ccxt).")
+    return None, ("Aucun exchange Bitget trouvé. Installe ton module wrapper "
+                  "ou 'pip install ccxt' pour le fallback."), ""
+
+# ---- Normalisation symboles --------------------------------------------------
+_SPOT_QUOTES = ("USDT","USDC","BTC","ETH","EUR","USD","BUSD","DAI")
+
+def _bitget_native_from_ccxt(sym: str) -> str:
+    """ 'BTC/USDT:USDT' -> 'BTCUSDT' ; 'BTC/USDT' -> 'BTCUSDT' """
+    if "/" in sym:
+        base, quote_part = sym.split("/", 1)
+        quote = quote_part.split(":")[0]  # 'USDT:USDT' -> 'USDT'
+        return f"{base}{quote}".upper()
+    return sym.replace(":", "").replace("-", "").upper()
+
+def _ccxt_from_bitget_native(sym: str, default_type: str = "swap") -> str:
+    """ 'BTCUSDT' -> 'BTC/USDT[:USDT]' selon default_type ('swap' -> ajouter :USDT). """
+    s = sym.upper().replace("-", "").replace(":", "")
+    # coupe en base/quote pour quotes connues
+    for q in _SPOT_QUOTES:
+        if s.endswith(q):
+            base = s[:-len(q)]
+            if default_type == "swap" and q in ("USDT","USDC"):
+                return f"{base}/{q}:{q}"
+            return f"{base}/{q}"
+    # fallback (impossible à couper proprement)
+    return sym
+
+def _norm_symbol_for_client(sym: str, mode: str, default_type: str = "swap") -> str:
+    if mode == "wrapper":    # ton exchange avec get_ohlcv → format Bitget natif
+        return _bitget_native_from_ccxt(sym)
+    elif mode == "ccxt":     # client ccxt → format ccxt
+        return _ccxt_from_bitget_native(sym, default_type=default_type)
+    return sym
 
 # ---- Utils OHLCV offline -----------------------------------------------------
 def _ohlcv_to_dict(rows: List[List[float]]) -> Dict[str, List[float]]:
@@ -136,35 +152,38 @@ def mode_scan(
             for s in symbols:
                 data_1h_by_symbol[s] = d1h
     else:
-        ExchangeCtorOrClient, msg = _import_exchange()
-        if ExchangeCtorOrClient is None:
+        ExCtorOrClient, msg, mode = _import_exchange()
+        if ExCtorOrClient is None:
             print(msg); return
 
-        # Si c'est une classe wrapper -> instancie ; si c'est déjà un client ccxt -> utilise tel quel
-        if hasattr(ExchangeCtorOrClient, "__call__") and ExchangeCtorOrClient.__name__ != "bitget":
-            # Classe type BitgetExchange(...)
-            client = ExchangeCtorOrClient(
+        default_type = os.getenv("BITGET_DEFAULT_TYPE", "swap")
+
+        if mode == "wrapper":
+            # Classe BitgetExchange(...)
+            client = ExCtorOrClient(
                 api_key=os.getenv("BITGET_API_KEY",""),
                 api_secret=os.getenv("BITGET_API_SECRET",""),
                 api_passphrase=os.getenv("BITGET_API_PASSPHRASE",""),
             )
             fetch = getattr(client, "get_ohlcv")
             for s in symbols:
-                rows = fetch(symbol=s, timeframe=timeframe, limit=1500)
+                s_eff = _norm_symbol_for_client(s, mode="wrapper")
+                rows = fetch(symbol=s_eff, timeframe=timeframe, limit=1500)
                 data_by_symbol[s] = _ohlcv_to_dict(rows)
                 try:
-                    rows_1h = fetch(symbol=s, timeframe="1h", limit=1500)
+                    rows_1h = fetch(symbol=s_eff, timeframe="1h", limit=1500)
                     data_1h_by_symbol[s] = _ohlcv_to_dict(rows_1h)
                 except Exception:
                     pass
         else:
             # ccxt client direct
-            client = ExchangeCtorOrClient  # instance ccxt.bitget
+            client = ExCtorOrClient
             for s in symbols:
-                rows = client.fetch_ohlcv(s, timeframe=timeframe, limit=1500)
+                s_eff = _norm_symbol_for_client(s, mode="ccxt", default_type=default_type)
+                rows = client.fetch_ohlcv(s_eff, timeframe=timeframe, limit=1500)
                 data_by_symbol[s] = _ohlcv_to_dict(rows)
                 try:
-                    rows_1h = client.fetch_ohlcv(s, timeframe="1h", limit=1500)
+                    rows_1h = client.fetch_ohlcv(s_eff, timeframe="1h", limit=1500)
                     data_1h_by_symbol[s] = _ohlcv_to_dict(rows_1h)
                 except Exception:
                     pass
@@ -194,19 +213,18 @@ def mode_orchestrate(
     load_strategies_cfg, _ = _import_strategy_factory()
     cfg = load_strategies_cfg(cfg_path)
 
-    ExchangeCtorOrClient, msg = _import_exchange()
-    if ExchangeCtorOrClient is None:
+    ExCtorOrClient, msg, mode = _import_exchange()
+    if ExCtorOrClient is None:
         print(msg); return
 
-    # Si classe -> instancier ; si ccxt client -> passer tel quel
-    if hasattr(ExchangeCtorOrClient, "__call__") and ExchangeCtorOrClient.__name__ != "bitget":
-        client = ExchangeCtorOrClient(
+    if mode == "wrapper":
+        client = ExCtorOrClient(
             api_key=os.getenv("BITGET_API_KEY",""),
             api_secret=os.getenv("BITGET_API_SECRET",""),
             api_passphrase=os.getenv("BITGET_API_PASSPHRASE",""),
         )
     else:
-        client = ExchangeCtorOrClient  # instance ccxt
+        client = ExCtorOrClient  # ccxt
 
     jobs = [(s, timeframe) for s in symbols]
     orch = Orchestrator(
@@ -222,10 +240,11 @@ def mode_orchestrate(
 def parse_args() -> argparse.Namespace:
     ap = argparse.ArgumentParser(description="Bot (scan/orchestrate)")
 
-    default_symbols = os.getenv("DEFAULT_SYMBOLS", "BTC/USDT:USDT")  # ccxt symbol par défaut (swap)
+    # Par défaut, on met un symbole neutre (format natif Bitget).
+    default_symbols = os.getenv("DEFAULT_SYMBOLS", "BTCUSDT")
     default_tf = os.getenv("DEFAULT_TF", "5m")
 
-    ap.add_argument("--symbols", default=default_symbols, help="Ex: BTCUSDT ou BTC/USDT:USDT (ccxt)")
+    ap.add_argument("--symbols", default=default_symbols, help="Ex: BTCUSDT (wrapper) ou BTC/USDT:USDT (ccxt)")
     ap.add_argument("--tf", default=default_tf, help="Ex: 5m, 15m, 1h")
     ap.add_argument("--cfg", default="scalper/config/strategies.yml", help="Fichier stratégies (YAML/JSON)")
     ap.add_argument("--equity", type=float, default=1000.0)
