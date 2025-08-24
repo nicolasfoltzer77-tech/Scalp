@@ -1,73 +1,59 @@
-# -*- coding: utf-8 -*-
+# scalper/live/notify.py
 from __future__ import annotations
-import os
+
 import asyncio
-from dataclasses import dataclass
-from typing import AsyncIterator, Optional
+import json
+import logging
+import os
+from typing import Any, AsyncIterator, Dict, Optional
+
+import requests
+
+log = logging.getLogger("scalper.live.notify")
 
 
-@dataclass
-class BaseNotifier:
-    async def send(self, text: str) -> None:  # pragma: no cover
-        print(text)
+class _NullNotifier:
+    async def send(self, text: str) -> None:
+        log.info("[NOTIFY] %s", text)
 
 
-class NullNotifier(BaseNotifier):
-    pass
-
-
-class TelegramNotifier(BaseNotifier):
-    def __init__(self, token: str, chat_id: str, session: Optional[asyncio.AbstractEventLoop]=None):
-        import aiohttp  # lazy
-        self._token = token
-        self._chat = chat_id
-        self._session: aiohttp.ClientSession | None = None
-
-    async def _ensure(self):
-        import aiohttp
-        if self._session is None or self._session.closed:
-            self._session = aiohttp.ClientSession()
+class TelegramNotifier:
+    def __init__(self, token: str, chat_id: str, timeout: float = 5.0) -> None:
+        self.token = token
+        self.chat_id = chat_id
+        self.timeout = timeout
 
     async def send(self, text: str) -> None:
-        import aiohttp
-        await self._ensure()
-        # pas de markdown pour éviter les erreurs 400 de parsing
-        url = f"https://api.telegram.org/bot{self._token}/sendMessage"
-        payload = {"chat_id": self._chat, "text": text, "disable_web_page_preview": True}
+        url = f"https://api.telegram.org/bot{self.token}/sendMessage"
+        payload = {"chat_id": self.chat_id, "text": text}
         try:
-            async with self._session.post(url, json=payload, timeout=20) as r:
-                await r.text()  # on ignore la réponse pour rester simple
+            # Appel sync dans thread pour rester simple
+            def _post() -> None:
+                requests.post(url, json=payload, timeout=self.timeout)
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(None, _post)
         except Exception:
-            # on fait un fallback silencieux pour ne pas casser le bot
-            print("[notify:telegram] send fail (ignored)")
-
-    async def close(self):
-        if self._session and not self._session.closed:
-            await self._session.close()
+            log.debug("Envoi Telegram échoué", exc_info=True)
 
 
-class _NullCommands:
-    """Itérateur async vide utilisé quand Telegram n'est pas configuré."""
-    def __aiter__(self) -> AsyncIterator[str]:
-        return self
-    async def __anext__(self) -> str:
-        await asyncio.sleep(3600)  # jamais
-        raise StopAsyncIteration
-
-
-async def build_notifier_and_commands(config: dict) -> tuple[BaseNotifier, AsyncIterator[str]]:
+async def _command_stream_stub() -> AsyncIterator[Dict[str, Any]]:
     """
-    Retourne (notifier, command_stream).
-
-    - Si TELEGRAM_BOT_TOKEN et TELEGRAM_CHAT_ID sont présents: TelegramNotifier,
-      et un flux (vide) – l’orchestreur n’en a besoin que si on implémente des
-      commandes interactives plus tard.
-    - Sinon: NullNotifier + flux vide.
+    Générateur de commandes vide (placeholder).
+    Peut être remplacé par une vraie source (websocket, telegram callbacks, etc.).
     """
-    token = os.getenv("TELEGRAM_BOT_TOKEN")
-    chat = os.getenv("TELEGRAM_CHAT_ID")
-    if token and chat:
-        print("[notify] TELEGRAM configured.")
-        return TelegramNotifier(token, chat), _NullCommands()
-    print("[notify] TELEGRAM not configured -> Null notifier will be used.")
-    return NullNotifier(), _NullCommands()
+    while False:
+        yield {}
+
+
+def build_notifier_and_commands(cfg: Dict[str, Any] | None = None) -> tuple[Any, AsyncIterator[Dict[str, Any]] | None]:
+    """
+    Retourne (notifier, command_stream)
+    - Notifier Telegram si TELEGRAM_BOT_TOKEN et TELEGRAM_CHAT_ID présents, sinon Null.
+    - Flux de commandes: stub None (l’orchestrateur gère le None).
+    """
+    token = os.getenv("TELEGRAM_BOT_TOKEN") or (cfg or {}).get("secrets", {}).get("telegram", {}).get("token")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID") or (cfg or {}).get("secrets", {}).get("telegram", {}).get("chat_id")
+
+    if token and chat_id:
+        return TelegramNotifier(token, chat_id), None
+    return _NullNotifier(), None
