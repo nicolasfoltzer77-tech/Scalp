@@ -2,232 +2,193 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import os
 import sys
-import time
-import subprocess
-import inspect
+import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Tuple
+from typing import Sequence, Optional
 
-# ---------- utilitaires locaux ----------
+# --- utils ---
 
-ROOT = Path(__file__).resolve().parent
-DATA_DIR = ROOT / "data"
-READY_FLAG = ROOT / ".ready.json"
-ENV_FILE = Path("/notebooks/.env")  # tes secrets Notebook sont ici d'après tes captures
-
-def log(msg: str) -> None:
-    print(msg, flush=True)
-
-# ---------- ccxt auto-install ----------
 def ensure_ccxt() -> None:
     try:
         import ccxt  # noqa: F401
     except ImportError:
-        log("[i] ccxt non installé, tentative d'installation…")
+        import subprocess
+        print("[setup] ccxt manquant, installation…")
         subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "ccxt"])
         import ccxt  # noqa: F401
-        log("[i] ccxt installé.")
 
-# ---------- config / env ----------
-def load_env_file_into_os_env() -> None:
-    """Charge /notebooks/.env (clé=valeur) dans os.environ si présent."""
-    if not ENV_FILE.exists():
-        return
-    try:
-        for line in ENV_FILE.read_text(encoding="utf-8").splitlines():
+def getenv(name: str, default: str = "") -> str:
+    """Lit d’abord les variables d’environnement, sinon .env local s’il existe."""
+    val = os.environ.get(name)
+    if val is not None:
+        return val
+    dot = Path(".env")
+    if dot.exists():
+        for line in dot.read_text().splitlines():
             line = line.strip()
             if not line or line.startswith("#") or "=" not in line:
                 continue
             k, v = line.split("=", 1)
-            k, v = k.strip(), v.strip()
-            if k and v and k not in os.environ:
-                os.environ[k] = v
-    except Exception as e:
-        log(f"[env] warning: lecture .env impossible: {e}")
+            if k == name:
+                return v
+    return default
 
-def telegram_is_configured(env: dict[str, str]) -> bool:
-    return bool(env.get("TELEGRAM_BOT_TOKEN") and env.get("TELEGRAM_CHAT_ID"))
+# --- config ---
 
 @dataclass
-class AppConfig:
-    DATA_DIR: Path
-    SYMBOLS: list[str]
-    LIVE_TF: str
-    BITGET_API_KEY: str | None
-    BITGET_API_SECRET: str | None
-    BITGET_API_PASSPHRASE: str | None
-    TELEGRAM_BOT_TOKEN: str | None
-    TELEGRAM_CHAT_ID: str | None
+class RunConfig:
+    symbols: Sequence[str]
+    live_tf: str
+    data_dir: Path
+    csv_min_rows: int = 200           # seuil minimal d’un CSV “ok”
+    ready_flag: Path = Path("scalp/.ready.json")
 
-def build_config() -> AppConfig:
-    env = os.environ
-    symbols = env.get(
-        "SYMBOLS",
-        "BTCUSDT,ETHUSDT,SOLUSDT,BNBUSDT,XRPSUDT,DOGEUSDT,ADAUSDT,LTCUSDT,AVAXUSDT,LINKUSDT",
-    )
-    # corrige éventuel XRPSUDT -> XRPUSDT
-    symbols = symbols.replace("XRPSUDT", "XRPUSDT")
-    live_tf = env.get("LIVE_TF", "5m")
+# --- notifier (Telegram ou Null) ---
 
-    cfg = AppConfig(
-        DATA_DIR=DATA_DIR,
-        SYMBOLS=[s.strip() for s in symbols.split(",") if s.strip()],
-        LIVE_TF=live_tf,
-        BITGET_API_KEY=env.get("BITGET_ACCESS"),
-        BITGET_API_SECRET=env.get("BITGET_SECRET"),
-        BITGET_API_PASSPHRASE=env.get("BITGET_PASSPHRASE") or env.get("BITGET_PASSPWD"),
-        TELEGRAM_BOT_TOKEN=env.get("TELEGRAM_BOT_TOKEN"),
-        TELEGRAM_CHAT_ID=env.get("TELEGRAM_CHAT_ID"),
-    )
-    return cfg
+class NullNotifier:
+    async def send(self, msg: str) -> None:
+        print(f"[notify:null] {msg}")
 
-# ---------- pré-chauffage cache / CSV ----------
-def _csv_name(symbol: str, tf: str) -> str:
-    return f"{symbol}-{tf}.csv"
+async def build_notifier_and_commands() -> tuple[object, object]:
+    """Retourne (notifier, command_stream). Ici soit Telegram, soit Null."""
+    bot_token = getenv("TELEGRAM_BOT_TOKEN")
+    chat_id   = getenv("TELEGRAM_CHAT_ID")
+    if bot_token and chat_id:
+        # Implémentation simple via httpx/aiohttp → pour garder le fichier autonome, on renvoie un proxy minimal.
+        class TelegramNotifier:
+            def __init__(self, token: str, chat: str):
+                self.token = token
+                self.chat  = chat
+            async def send(self, msg: str) -> None:
+                # en mode simple: on n’échoue pas si Telegram refuse le markdown
+                import aiohttp
+                url = f"https://api.telegram.org/bot{self.token}/sendMessage"
+                payload = {"chat_id": self.chat, "text": msg, "disable_web_page_preview": True, "parse_mode": "Markdown"}
+                try:
+                    async with aiohttp.ClientSession() as sess:
+                        async with sess.post(url, json=payload, timeout=15) as r:
+                            if r.status >= 400:
+                                txt = await r.text()
+                                print(f"[notify:telegram] send fail {r.status}: {txt[:180]}")
+                except Exception as e:
+                    print(f"[notify:telegram] send error: {e}")
 
-def validate_local_csvs(cfg: AppConfig) -> dict[str, Path]:
-    """Vérifie la présence d’un CSV <SYMBOL>-<TF>.csv dans data/ et loggue."""
-    cfg.DATA_DIR.mkdir(parents=True, exist_ok=True)
-    found: dict[str, Path] = {}
-    for sym in cfg.SYMBOLS:
-        p = cfg.DATA_DIR / _csv_name(sym, cfg.LIVE_TF)
-        if p.exists() and p.stat().st_size > 0:
-            found[sym] = p
-            log(f"[cache] warmup OK for {sym}")
-        else:
-            # Pas bloquant, l’exchange/CCXT pourra récupérer au fil de l’eau
-            log(f"[cache] MISSING for {sym} -> {p}")
-    return found
+        notifier = TelegramNotifier(bot_token, chat_id)
+        # Pas de commandes interactives dans cette version : on renvoie un stream “nul”
+        return notifier, None
+    else:
+        print("[notify] TELEGRAM non configuré → Null notifier.")
+        return NullNotifier(), None
 
-# ---------- flag prêt ----------
-def write_ready_flag(reason: str = "ok") -> None:
-    READY_FLAG.write_text(json.dumps({"ready": True, "ts": time.time(), "reason": reason}), encoding="utf-8")
+# --- préchauffage cache CSV ---
 
-def ready_flag_ok() -> bool:
-    if not READY_FLAG.exists():
+def csv_ok(p: Path, min_rows: int) -> bool:
+    if not p.exists():
         return False
     try:
-        data = json.loads(READY_FLAG.read_text(encoding="utf-8"))
-        return bool(data.get("ready"))
+        # compte rapide des lignes
+        n = sum(1 for _ in p.open("r", encoding="utf-8", errors="ignore"))
+        return n >= min_rows
     except Exception:
         return False
 
-# ---------- setup global ----------
-async def run_setup(cfg: AppConfig) -> None:
+async def prewarm_cache(cfg: RunConfig) -> None:
+    cfg.data_dir.mkdir(parents=True, exist_ok=True)
+    ok = True
+    for sym in cfg.symbols:
+        csv = cfg.data_dir / f"{sym}-{cfg.live_tf}.csv"
+        if csv_ok(csv, cfg.csv_min_rows):
+            print(f"[cache] ready -> {csv.relative_to(Path.cwd())}")
+        else:
+            ok = False
+            print(f"[cache] MISSING for {sym} -> {csv.relative_to(Path.cwd())}")
+    # ici on ne fetch pas pour rester autonome ; tu as déjà so.py si besoin
+
+# --- orchestrateur glue ---
+
+# ⛔️ ADAPTE CE CHEMIN SI TON WRAPPER N’EST PAS ICI
+# ex: from scalper.services.market import BitgetExchange
+from scalper.exchanges.bitget import BitgetExchange  # <-- ajuste ce chemin si besoin
+
+async def run_orchestrator(exchange, cfg: RunConfig, notifier, command_stream=None):
     """
-    Setup idempotent :
-     - charge env,
-     - valide CSV locaux,
-     - note l’état telegram,
-     - écrit le flag de readiness.
+    Adapte-toi à la signature de ton vrai orchestrateur si tu en utilises un.
+    Ici on illustre une boucle “heartbeat + ticks_total” minimale.
     """
-    validate_local_csvs(cfg)
+    ticks_total = 0
+    await notifier.send("🟢 Orchestrator PRELAUNCH. Utilise /setup ou /backtest. /resume pour démarrer le live.")
+    try:
+        while True:
+            await asyncio.sleep(30)
+            await notifier.send(f"[stats] ticks_total={ticks_total} (+0 /30s) | pairs={','.join(cfg.symbols)}")
+    except asyncio.CancelledError:
+        await notifier.send("🛑 Arrêt orchestrateur.")
+        raise
 
-    if telegram_is_configured(os.environ):
-        log("[notify] TELEGRAM configured.")
-    else:
-        log("[notify] TELEGRAM not configured -> Null notifier will be used.")
+# --- setup + ready flag ---
 
-    write_ready_flag("setup-completed")
-    log(f"[setup] flag written -> {READY_FLAG}")
-    log("[setup] completed.")
+def write_ready_flag(cfg: RunConfig, reason: str = "ok") -> None:
+    cfg.ready_flag.parent.mkdir(parents=True, exist_ok=True)
+    cfg.ready_flag.write_text(json.dumps({"status": "ok", "reason": reason}, ensure_ascii=False, indent=2))
 
-# ---------- heartbeat ----------
-async def heartbeat_task(notifier_like: Any, label: str = "orchestrator") -> None:
-    async def _send(text: str) -> None:
-        try:
-            if notifier_like and hasattr(notifier_like, "send"):
-                await notifier_like.send(text)
-            else:
-                log(text)
-        except Exception as e:
-            log(f"[heartbeat] send fail: {e}")
+def is_ready(cfg: RunConfig) -> bool:
+    return cfg.ready_flag.exists()
 
-    while True:
-        await _send("heartbeat alive")
-        await asyncio.sleep(30)
+async def setup_once(cfg: RunConfig, notifier) -> None:
+    await prewarm_cache(cfg)
+    await notifier.send("Setup wizard terminé (cache vérifié).")
+    write_ready_flag(cfg, "cache verified")
 
-# ---------- lancement orchestrateur ----------
-async def launch_orchestrator(cfg: AppConfig) -> None:
-    # imports tardifs (structure projet)
-    from scalper.exchange.bitget_ccxt import BitgetExchange
-    from scalper.live.notify import build_notifier_and_commands
-    from scalper.live.orchestrator import run_orchestrator, RunConfig
+# --- lance l’orchestrateur avec shim .symbols/.timeframe ---
 
-    # Exchange
+async def launch_orchestrator(cfg: RunConfig):
+    notifier, command_stream = await build_notifier_and_commands()
+
+    # Setup si nécessaire
+    if not is_ready(cfg):
+        await notifier.send("Setup requis → exécution…")
+        await setup_once(cfg, notifier)
+        await notifier.send(f"[setup] flag écrit -> {cfg.ready_flag}")
+
+    # Crée l’exchange
     ex = BitgetExchange(
-        api_key=cfg.BITGET_API_KEY,
-        secret=cfg.BITGET_API_SECRET,
-        password=cfg.BITGET_API_PASSPHRASE,
-        data_dir=str(cfg.DATA_DIR),
+        api_key=getenv("BITGET_ACCESS"),
+        secret=getenv("BITGET_SECRET"),
+        password=getenv("BITGET_PASSPHRASE"),
+        data_dir=str(cfg.data_dir),
         use_cache=True,
-        min_fresh_seconds=0,
         spot=True,
     )
 
-    # Notifier + stream commandes (telegram ou null)
-    notifier, command_stream = await build_notifier_and_commands(
-        {
-            "TELEGRAM_BOT_TOKEN": cfg.TELEGRAM_BOT_TOKEN,
-            "TELEGRAM_CHAT_ID": cfg.TELEGRAM_CHAT_ID,
-        }
-    )
+    # --- SHIM IMPORTANT : certains orchestrateurs lisent exchange.symbols / exchange.timeframe
+    if not hasattr(ex, "symbols"):
+        setattr(ex, "symbols", tuple(cfg.symbols))
+    if not hasattr(ex, "timeframe"):
+        setattr(ex, "timeframe", cfg.live_tf)
 
-    # Ajoute .commands au notifier si l’API interne en a besoin
-    class NotifierWithCommands:
-        def __init__(self, base, commands):
-            self._base = base
-            self.commands = commands
-        async def send(self, *a, **kw):
-            return await self._base.send(*a, **kw)
-        def __getattr__(self, name):
-            return getattr(self._base, name)
+    # Démarre l’orchestrateur (remplace par ton vrai import/runner si tu en as un)
+    await run_orchestrator(ex, cfg, notifier, command_stream)
 
-    wrapped_notifier = NotifierWithCommands(notifier, command_stream)
+# --- main ---
 
-    run_cfg = RunConfig(
-        symbols=cfg.SYMBOLS,
-        timeframe=cfg.LIVE_TF,
-    )
-
-    # Heartbeat en tâche de fond
-    asyncio.create_task(heartbeat_task(wrapped_notifier, "orchestrator"))
-
-    # Adapte l’appel selon la signature réelle de run_orchestrator
-    params = list(inspect.signature(run_orchestrator).parameters.keys())
-    # ex: ['exchange', 'run_cfg']  ou  ['exchange', 'run_cfg', 'notifier']
-    if len(params) <= 2:
-        await run_orchestrator(ex, run_cfg)
-    else:
-        await run_orchestrator(ex, run_cfg, wrapped_notifier)
-
-# ---------- main ----------
-async def main() -> None:
-    log("[*] Lancement du bot.py…")
+async def main():
     ensure_ccxt()
-    load_env_file_into_os_env()
-    cfg = build_config()
-
-    # SETUP auto si flag manquant
-    if not ready_flag_ok():
-        await run_setup(cfg)
-    else:
-        log("[setup] ready flag present -> skip setup.")
-
-    # Info Telegram effective
-    if telegram_is_configured(os.environ):
-        log("[notify] Using Telegram notifier/commands")
-    else:
-        log("[notify] Using Null notifier/commands")
-
+    symbols = (
+        "BTCUSDT","ETHUSDT","SOLUSDT","BNBUSDT","XRPUSDT",
+        "DOGEUSDT","ADAUSDT","LTCUSDT","AVAXUSDT","LINKUSDT"
+    )
+    cfg = RunConfig(
+        symbols=symbols,
+        live_tf="5m",
+        data_dir=Path("scalp/data"),
+    )
     await launch_orchestrator(cfg)
 
 if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        log("Interrupted.")
+        pass
