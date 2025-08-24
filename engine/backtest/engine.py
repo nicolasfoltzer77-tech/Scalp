@@ -4,9 +4,9 @@ from typing import Any, Dict, List, Optional, Tuple
 import csv
 import os
 from dataclasses import dataclass
-from scalper.strategy.factory import resolve_signal_fn
-from scalper.core.signal import Signal
-from scalper.backtest.position_sizing import position_size_from_signal, fees_cost
+from engine.strategy.factory import resolve_signal_fn
+from engine.core.signal import Signal
+from engine.backtest.position_sizing import position_size_from_signal, fees_cost
 
 @dataclass
 class Trade:

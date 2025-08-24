@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Optional
 
-from scalper.services.order_service import OrderService, OrderRequest
+from engine.services.order_service import OrderService, OrderRequest
 
 @dataclass
 class OrderResult:

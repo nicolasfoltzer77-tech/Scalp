@@ -5,8 +5,8 @@ import asyncio
 import os
 from typing import List
 
-from scalper.backtest import BTCfg, run_multi
-from scalper.services.utils import safe_call
+from engine.backtest import BTCfg, run_multi
+from engine.services.utils import safe_call
 
 # Exchange CCXT asynchrone pour OHLCV publics (Bitget)
 async def _get_exchange():

@@ -1,4 +1,4 @@
-from scalper.telegram_bot import TelegramBot
+from engine.telegram_bot import TelegramBot
 
 
 class DummyClient:

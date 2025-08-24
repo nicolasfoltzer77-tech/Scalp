@@ -1,5 +1,5 @@
 import pytest
-from scalper.trade_utils import effective_leverage
+from engine.trade_utils import effective_leverage
 
 
 def test_effective_leverage_basic():

@@ -14,9 +14,9 @@ SignalFn = Callable[..., Any]
 
 # IMPORTANT : on pointe par défaut sur TA stratégie actuelle dans scalper/strategy.py
 _REGISTRY: Dict[str, str] = {
-    "current": "scalper.strategy:generate_signal",
+    "current": "engine.strategy:generate_signal",
     # Tu pourras ajouter d'autres stratégies ici, par ex :
-    # "ema_cross": "scalper.strategies.ema_cross:generate_signal",
+    # "ema_cross": "engine.strategies.ema_cross:generate_signal",
 }
 
 def _load_callable(path: str) -> SignalFn:

@@ -15,7 +15,7 @@ import argparse
 import asyncio
 from typing import Iterable, List
 
-from scalper.version import bump_version_from_git
+from engine.version import bump_version_from_git
 
 
 # ---------------------------------------------------------------------------

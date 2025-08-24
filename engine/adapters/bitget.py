@@ -5,7 +5,7 @@ import inspect, os
 import requests
 
 # Client bas-niveau fourni par le repo
-from scalper.bitget_client import BitgetFuturesClient as _Base
+from engine.bitget_client import BitgetFuturesClient as _Base
 
 
 def _to_float(x, default: float = 0.0) -> float:

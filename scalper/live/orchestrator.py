@@ -2,8 +2,8 @@
 from __future__ import annotations
 import time
 from typing import List, Tuple, Dict, Any
-from scalper.live.fetcher import DataFetcher
-from scalper.live.runner import JobRunner
+from engine.live.fetcher import DataFetcher
+from engine.live.runner import JobRunner
 
 class Orchestrator:
     def __init__(

@@ -18,7 +18,7 @@ try:  # Optional dependency
 except Exception:  # pragma: no cover - ray is optional
     ray = None
 
-from scalper.backtest import backtest_trades
+from engine.backtest import backtest_trades
 
 
 # ---------------------------------------------------------------------------

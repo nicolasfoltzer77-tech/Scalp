@@ -1,5 +1,5 @@
 import math
-from scalper.risk import adjust_risk_pct
+from engine.risk import adjust_risk_pct
 
 
 def test_adjust_risk_pct_increase_decrease():

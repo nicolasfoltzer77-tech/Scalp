@@ -1,4 +1,4 @@
-from scalper.pairs import heat_score, select_top_heat_pairs, decorrelate_pairs
+from engine.pairs import heat_score, select_top_heat_pairs, decorrelate_pairs
 
 
 def test_heat_score_value():

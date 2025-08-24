@@ -1,7 +1,7 @@
 # scalper/live/runner.py
 from __future__ import annotations
 from typing import Dict, List, Optional
-from scalper.signals.factory import resolve_signal_fn
+from engine.signals.factory import resolve_signal_fn
 
 class JobRunner:
     def __init__(self, strategies_cfg: dict, equity: float, risk_pct: float) -> None:

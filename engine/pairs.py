@@ -1,11 +1,11 @@
 """Utilities to select trading pairs and detect signals."""
 from __future__ import annotations
 from typing import Any, Dict, List, Optional, Callable
-from scalper.strategy import Signal
+from engine.strategy import Signal
 
-from scalper.bot_config import CONFIG
-from scalper.strategy import ema as default_ema, cross as default_cross
-from scalper.notifier import notify
+from engine.bot_config import CONFIG
+from engine.strategy import ema as default_ema, cross as default_cross
+from engine.notifier import notify
 
 
 def get_trade_pairs(client: Any) -> List[Dict[str, Any]]:
