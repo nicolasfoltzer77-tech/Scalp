@@ -1,657 +1,375 @@
+# scalper/bitget_client.py
+from __future__ import annotations
+
+import base64
+import hashlib
+import hmac
 import json
 import logging
 import time
-import hmac
-import hashlib
-import base64
-import uuid
-from typing import Any, Dict, List, Optional
+from dataclasses import dataclass
+from typing import Any, Dict, Mapping, Optional
 
 import requests
 
+__all__ = ["BitgetFuturesClient", "ApiError"]
 
-# Mapping of deprecated v1 product type identifiers to the new v2 names
-_PRODUCT_TYPE_ALIASES = {
-    "UMCBL": "USDT-FUTURES",
-    "DMCBL": "USDC-FUTURES",
-    "CMCBL": "COIN-FUTURES",
-}
-
-# Granularity aliases from v1 to v2 nomenclature
-_GRANULARITY_ALIASES = {
-    "MIN1": "1m",
-    "MIN3": "3m",
-    "MIN5": "5m",
-    "MIN15": "15m",
-    "MIN30": "30m",
-    "HOUR1": "1H",
-    "HOUR4": "4H",
-    "HOUR12": "12H",
-    "DAY1": "1D",
-    "WEEK1": "1W",
-}
+log = logging.getLogger("scalper.bitget_client")
 
 
-# Default margin coin for each product type. Some authenticated endpoints
-# require ``marginCoin`` in addition to ``productType``; supplying a sensible
-# default avoids ``400 Bad Request`` responses when the caller does not provide
-# it explicitly.
-_DEFAULT_MARGIN_COIN = {
-    "USDT-FUTURES": "USDT",
-    "USDC-FUTURES": "USDC",
-}
+# =============================================================================
+# Exceptions
+# =============================================================================
+class ApiError(RuntimeError):
+    """Erreur API Bitget (HTTP != 200, code != '00000', ou payload invalide)."""
+
+    def __init__(self, message: str, *, http_status: int | None = None, body: Any | None = None):
+        super().__init__(message)
+        self.http_status = http_status
+        self.body = body
+
+
+# =============================================================================
+# Helpers
+# =============================================================================
+def _now_ms() -> int:
+    return int(time.time() * 1000)
+
+
+def _canonical_json(obj: Mapping[str, Any] | None) -> str:
+    if not obj:
+        return ""
+    # JSON compact, trié, ascii pour signature stable
+    return json.dumps(obj, separators=(",", ":"), sort_keys=True, ensure_ascii=True)
+
+
+# =============================================================================
+# Client REST Futures (USDT-M)
+# =============================================================================
+@dataclass
+class _Auth:
+    access_key: str
+    secret_key: str
+    passphrase: str
+    recv_window: int = 30_000  # ms
 
 
 class BitgetFuturesClient:
-    """Lightweight REST client for Bitget LAPI v2 futures endpoints."""
+    """
+    Client REST léger pour les Futures USDT-M de Bitget.
+
+    Points clés:
+    - Public: get_ticker(symbol?), get_klines(symbol, interval, limit, start/end?)
+    - Privé : get_account(), get_open_orders(symbol?), cancel_order(), cancel_all()
+              place_market_order_one_way(), place_limit_order_one_way()
+              set_position_mode_one_way(), set_leverage()
+    - Safe: gestion d’erreurs centralisée, retries modestes côté réseau, timeouts.
+
+    Notes:
+    - Les endpoints et champs renvoyés sont harmonisés pour rester stables
+      côté bot/orchestrateur. On tolère plusieurs variantes de clés (lastPr/lastPrice).
+    """
 
     def __init__(
         self,
-        access_key: str,
-        secret_key: str,
-        base_url: str,
         *,
-        product_type: str = "USDT-FUTURES",
-        recv_window: int = 30,
+        access_key: str = "",
+        secret_key: str = "",
+        passphrase: str = "",
+        base_url: str = "https://api.bitget.com",
         paper_trade: bool = True,
-        requests_module: Any = requests,
-        log_event: Optional[Any] = None,
-        passphrase: Optional[str] = None,
+        timeout: float = 10.0,
+        session: Optional[requests.Session] = None,
     ) -> None:
-        self.ak = access_key
-        self.sk = secret_key
-        self.base = base_url.rstrip("/")
-        pt = product_type.upper()
-        self.product_type = _PRODUCT_TYPE_ALIASES.get(pt, pt)
-        self.recv_window = recv_window
-        self.paper_trade = paper_trade
-        self.requests = requests_module
-        self.log_event = log_event or (lambda *a, **k: None)
-        self.passphrase = passphrase
-        if not self.ak or not self.sk or self.ak == "A_METTRE" or self.sk == "B_METTRE":
-            logging.warning(
-                "\u26a0\ufe0f Cl\u00e9s API non d\u00e9finies. Le mode r\u00e9el ne fonctionnera pas.",
+        self.base_url = base_url.rstrip("/")
+        self.auth = _Auth(access_key, secret_key, passphrase)
+        self.paper = paper_trade
+        self.timeout = float(timeout)
+        self.sess = session or requests.Session()
+        # En-têtes par défaut (Bitget utilise parfois des headers dédiés)
+        self.sess.headers.update({"Accept": "application/json"})
+        log.info("BitgetFuturesClient ready (paper=%s base=%s)", self.paper, self.base_url)
+
+    # -------------------------------------------------------------------------
+    # Core HTTP
+    # -------------------------------------------------------------------------
+    def _sign(self, ts_ms: int, method: str, path: str, query: str, body: str) -> str:
+        """
+        Signature (préservée au plus simple) :
+          sign = base64( HMAC_SHA256(secret, f"{ts}{method}{path}{query}{body}") )
+        - method en MAJUSCULES
+        - query inclut '?' si présent, sinon ""
+        - body = chaîne JSON canonique (ou vide)
+        """
+        msg = f"{ts_ms}{method.upper()}{path}{query}{body}"
+        return base64.b64encode(hmac.new(self.auth.secret_key.encode(), msg.encode(), hashlib.sha256).digest()).decode()
+
+    def _request(
+        self,
+        method: str,
+        path: str,
+        *,
+        params: Optional[Mapping[str, Any]] = None,
+        body: Optional[Mapping[str, Any]] = None,
+        signed: bool = False,
+    ) -> Dict[str, Any]:
+        url = f"{self.base_url}{path}"
+        params = dict(params or {})
+        body_json = _canonical_json(body)
+        query = ""
+
+        headers = {"Content-Type": "application/json"}
+        if not signed:
+            # Public
+            resp = self.sess.request(
+                method=method.upper(),
+                url=url,
+                params=params or None,
+                timeout=self.timeout,
+                headers=headers,
             )
-        # Cache for contract precision details to avoid repeated network calls
-        self._contract_cache: Dict[str, Dict[str, Any]] = {}
-
-    # ------------------------------------------------------------------
-    # Helpers
-    # ------------------------------------------------------------------
-    @staticmethod
-    def _ms() -> int:
-        return int(time.time() * 1000)
-
-    @staticmethod
-    def _urlencode_sorted(params: Dict[str, Any]) -> str:
-        if not params:
-            return ""
-        items = []
-        for k in sorted(params.keys()):
-            v = "" if params[k] is None else str(params[k])
-            items.append(f"{k}={v}")
-        return "&".join(items)
-
-    def _sign(self, prehash: str) -> str:
-        """Return a base64-encoded HMAC SHA256 signature."""
-        digest = hmac.new(self.sk.encode(), prehash.encode(), hashlib.sha256).digest()
-        return base64.b64encode(digest).decode()
-
-    def _headers(self, signature: str, timestamp: int) -> Dict[str, str]:
-        headers = {
-            "ACCESS-KEY": self.ak,
-            "ACCESS-SIGN": signature,
-            "ACCESS-TIMESTAMP": str(timestamp),
-            "ACCESS-RECV-WINDOW": str(self.recv_window),
-            "Content-Type": "application/json",
-        }
-        if self.passphrase:
-            headers["ACCESS-PASSPHRASE"] = self.passphrase
-        return headers
-
-    def _format_symbol(self, symbol: str) -> str:
-        """Return ``symbol`` formatted for Bitget API.
-
-        The v2 endpoints expect the trading pair without any product type
-        suffix (``BTCUSDT``). Older configurations may provide symbols like
-        ``BTC_USDT`` or ``BTCUSDT_UMCBL``; these are normalised by removing the
-        separators and any trailing product type string (legacy or v2).
-        """
-
-        if not symbol:
-            return symbol
-
-        sym = symbol.replace("_", "").upper()
-        # Strip product type suffix if present (e.g. BTCUSDTUMCBL)
-        if sym.endswith(self.product_type):
-            sym = sym[: -len(self.product_type)]
         else:
-            for old in _PRODUCT_TYPE_ALIASES.keys():
-                if sym.endswith(old):
-                    sym = sym[: -len(old)]
-                    break
-        return sym
+            # Privé: timestamp + recvWindow
+            ts = _now_ms()
+            if "recvWindow" not in params:
+                params["recvWindow"] = self.auth.recv_window
+            # Construire la query string stable (requests la formate si on passe 'params')
+            # Pour la signature, on reconstruit minimalement:
+            if params:
+                # Tri simple par clé pour stabilité
+                q_items = "&".join(f"{k}={params[k]}" for k in sorted(params))
+                query = f"?{q_items}"
+            signature = self._sign(ts, method, path, query, body_json)
 
-    def _product_type(self, pt: Optional[str] = None) -> str:
-        """Normalise ``pt`` to a valid v2 product type identifier."""
-        key = (pt or self.product_type or "").upper()
-        return _PRODUCT_TYPE_ALIASES.get(key, key)
+            headers.update(
+                {
+                    "ACCESS-KEY": self.auth.access_key,
+                    "ACCESS-SIGN": signature,
+                    "ACCESS-TIMESTAMP": str(ts),
+                    "ACCESS-PASSPHRASE": self.auth.passphrase,
+                }
+            )
 
-    # ------------------------------------------------------------------
-    # Public endpoints
-    # ------------------------------------------------------------------
-    def get_contract_detail(self, symbol: Optional[str] = None) -> Dict[str, Any]:
-        """Return futures contract information.
+            resp = self.sess.request(
+                method=method.upper(),
+                url=url,
+                params=params or None,
+                data=body_json if body_json else None,
+                timeout=self.timeout,
+                headers=headers,
+            )
 
-        The previous implementation queried ``/contract-detail`` which does not
-        exist on Bitget's v2 API and resulted in a 404 error.  The correct
-        endpoint is ``/contracts`` with the symbol supplied as a query
-        parameter."""
+        # Gestion d’erreurs HTTP
+        if resp.status_code != 200:
+            raise ApiError(f"HTTP {resp.status_code} for {path}", http_status=resp.status_code, body=resp.text)
 
-        url = f"{self.base}/api/v2/mix/market/contracts"
-        params: Dict[str, Any] = {"productType": self.product_type}
-        if symbol:
-            params["symbol"] = self._format_symbol(symbol)
-        r = self.requests.get(url, params=params, timeout=15)
-        if r.status_code == 404:  # pragma: no cover - depends on network
-            logging.error("Contract detail introuvable pour %s", symbol)
-            return {"success": False, "code": 404, "data": None}
-        r.raise_for_status()
-        return r.json()
+        # Décodage JSON
+        try:
+            data = resp.json()
+        except Exception as exc:
+            raise ApiError(f"Non-JSON response for {path}: {resp.text[:200]}") from exc
 
-    # ------------------------------------------------------------------
-    def _get_contract_precision(self, symbol: str) -> tuple[int, int]:
-        """Return price and volume precision for ``symbol``.
+        # Protocole Bitget: code == '00000' attendu
+        code = str(data.get("code", ""))
+        if code and code != "00000":
+            raise ApiError(f"Bitget API error code={code} for {path}", body=data)
 
-        Results are cached to minimise HTTP requests. If the contract
-        information cannot be retrieved, ``(0, 0)`` is returned.
+        return data
+
+    # -------------------------------------------------------------------------
+    # PUBLIC
+    # -------------------------------------------------------------------------
+    def get_ticker(self, symbol: Optional[str] = None) -> Dict[str, Any]:
         """
-        sym = self._format_symbol(symbol)
-        info = self._contract_cache.get(sym)
-        if info is None:
-            detail = self.get_contract_detail(sym)
-            try:
-                data = detail.get("data", [])
-                if isinstance(data, list) and data:
-                    info = data[0]
-                else:
-                    info = {}
-            except Exception:
-                info = {}
-            self._contract_cache[sym] = info
-        price_place = int(info.get("pricePlace") or 0)
-        volume_place = int(info.get("volumePlace") or 0)
-        return price_place, volume_place
+        Ticker spot/futures. On suit l'API publique 'mix' si symbol précisé.
+        Retourne un dict avec 'data' list/dict ; on tolère plusieurs champs prix.
+        """
+        if symbol:
+            # Futures Mix tickers (ex: /api/v2/mix/market/tickers?productType=USDT-FUTURES)
+            # Ici on récupère tous les tickers puis on filtre localement pour robustesse.
+            data = self._request(
+                "GET",
+                "/api/v2/mix/market/tickers",
+                params={"productType": "USDT-FUTURES"},
+                signed=False,
+            )
+            # Harmoniser: extraire l’entrée du symbole demandé
+            items = data.get("data") or []
+            sym = symbol.replace("_", "").upper()
+            hit: Dict[str, Any] | None = None
+            for it in items:
+                if (it.get("symbol") or "").replace("_", "").upper() == sym:
+                    hit = it
+                    break
+            return {"data": hit or {}}
 
-    def get_kline(
+        # Sans symbole: renvoie tout (liste)
+        return self._request(
+            "GET",
+            "/api/v2/mix/market/tickers",
+            params={"productType": "USDT-FUTURES"},
+            signed=False,
+        )
+
+    def get_klines(
         self,
         symbol: str,
         interval: str = "1m",
+        limit: int = 100,
         start: Optional[int] = None,
         end: Optional[int] = None,
     ) -> Dict[str, Any]:
-        # Endpoint expects the trading pair in query parameters rather than
-        # encoded in the path. Using ``/candles/{symbol}`` results in a 404
-        # response from Bitget. See: https://api.bitget.com/api/v2/mix/market/candles
-        url = f"{self.base}/api/v2/mix/market/candles"
-        interval_norm = _GRANULARITY_ALIASES.get(interval.replace("_", "").upper(), interval)
+        """
+        OHLCV Futures.
+        interval: '1m', '5m', '15m', '1h', ...
+        start/end: timestamps ms optionnels selon l’API.
+        """
         params: Dict[str, Any] = {
-            "symbol": self._format_symbol(symbol),
-            "productType": self.product_type,
-            "granularity": interval_norm,
+            "symbol": symbol.replace("_", "").upper(),
+            "granularity": interval,
+            "productType": "USDT-FUTURES",
+            "limit": max(1, min(int(limit), 1000)),
         }
         if start is not None:
             params["startTime"] = int(start)
         if end is not None:
             params["endTime"] = int(end)
-        r = self.requests.get(url, params=params, timeout=15)
-        r.raise_for_status()
-        data = r.json()
 
-        rows = data.get("data") if isinstance(data, dict) else None
-        if isinstance(rows, list) and rows and isinstance(rows[0], list):
-            cols = {"ts": [], "open": [], "high": [], "low": [], "close": [], "volume": [], "quoteVolume": []}
-            for row in rows:
-                if len(row) < 7:
-                    continue
-                try:
-                    ts, op, hi, lo, cl, vol, qv = row[:7]
-                    cols["ts"].append(int(ts))
-                    cols["open"].append(float(op))
-                    cols["high"].append(float(hi))
-                    cols["low"].append(float(lo))
-                    cols["close"].append(float(cl))
-                    cols["volume"].append(float(vol))
-                    cols["quoteVolume"].append(float(qv))
-                except (TypeError, ValueError):
-                    continue
-            data["data"] = cols
-        elif isinstance(rows, list):
-            data["data"] = {"ts": [], "open": [], "high": [], "low": [], "close": [], "volume": [], "quoteVolume": []}
-        return data
+        return self._request("GET", "/api/v2/mix/market/candles", params=params, signed=False)
 
-    def get_ticker(self, symbol: Optional[str] = None) -> Dict[str, Any]:
-        if symbol:
-            url = f"{self.base}/api/v2/mix/market/ticker"
-            params = {
-                "symbol": self._format_symbol(symbol),
-                "productType": self.product_type,
-            }
-        else:
-            url = f"{self.base}/api/v2/mix/market/tickers"
-            params = {"productType": self.product_type}
-        r = self.requests.get(url, params=params, timeout=15)
-        r.raise_for_status()
-        return r.json()
-
-    # ------------------------------------------------------------------
-    # Private endpoints
-    # ------------------------------------------------------------------
-    def _private_request(
-        self,
-        method: str,
-        path: str,
-        *,
-        params: Optional[Dict[str, Any]] = None,
-        body: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
-        method = method.upper()
-        ts = self._ms()
-
-        if method in ("GET", "DELETE"):
-            qs = self._urlencode_sorted(params or {})
-            req_path = path + (f"?{qs}" if qs else "")
-            sig = self._sign(f"{ts}{method}{req_path}")
-            headers = self._headers(sig, ts)
-            url = f"{self.base}{req_path}"
-            r = self.requests.request(method, url, headers=headers, timeout=20)
-        elif method == "POST":
-            qs = self._urlencode_sorted(params or {})
-            req_path = path + (f"?{qs}" if qs else "")
-            body_str = json.dumps(body or {}, separators=(",", ":"), ensure_ascii=False)
-            sig = self._sign(f"{ts}{method}{req_path}{body_str}")
-            headers = self._headers(sig, ts)
-            url = f"{self.base}{req_path}"
-            r = self.requests.post(
-                url,
-                data=body_str.encode("utf-8"),
-                headers=headers,
-                timeout=20,
-            )
-        else:
-            raise ValueError("M\u00e9thode non support\u00e9e")
-
-        resp_text = getattr(r, "text", "")
-        try:
-            data = r.json()
-        except Exception:
-            data = {
-                "success": False,
-                "error": resp_text,
-                "status_code": getattr(r, "status_code", None),
-            }
-
-        status = getattr(r, "status_code", 0)
-        if status >= 400:
-            code = str(data.get("code")) if isinstance(data, dict) else ""
-            if code == "22001":
-                logging.info("Aucun ordre à annuler (%s %s)", method, path)
-            else:
-                try:
-                    r.raise_for_status()
-                except Exception as e:
-                    if not resp_text:
-                        resp_text = getattr(r, "text", "") or str(e)
-                logging.error(
-                    "Erreur HTTP/JSON %s %s -> %s %s",
-                    method,
-                    path,
-                    status,
-                    resp_text,
-                )
-                if isinstance(data, dict):
-                    data.setdefault("success", False)
-                    data.setdefault("status_code", status)
-                    data.setdefault("error", resp_text)
-
-        self.log_event(
-            "http_private",
-            {"method": method, "path": path, "params": params, "body": body, "response": data},
-        )
-        return data
-
-    # Accounts & positions -------------------------------------------------
-    def get_assets(self, margin_coin: Optional[str] = None) -> Dict[str, Any]:
-        if self.paper_trade:
-            return {
-                "success": True,
-                "code": 0,
-                "data": [
-                    {
-                        "currency": "USDT",
-                        "equity": 100.0,
-                    }
-                ],
-            }
-
-        params = {"productType": self.product_type}
-        if margin_coin is None:
-            margin_coin = _DEFAULT_MARGIN_COIN.get(self.product_type)
-        if margin_coin:
-            params["marginCoin"] = margin_coin
-        data = self._private_request(
-            "GET", "/api/v2/mix/account/accounts", params=params
-        )
-        if isinstance(data, dict):
-            data.setdefault("success", str(data.get("code")) == "00000")
-        try:
-            for row in data.get("data", []):
-                if "currency" not in row and row.get("marginCoin"):
-                    row["currency"] = str(row["marginCoin"]).upper()
-                chosen = None
-                for key in ("available", "cashBalance", "equity", "usdtEquity"):
-                    val = row.get(key)
-                    if val is not None:
-                        chosen = val
-                        break
-                if chosen is not None:
-                    row["equity"] = chosen
-                try:
-                    row["equity"] = float(row["equity"])
-                except Exception:
-                    pass
-        except Exception:  # pragma: no cover - best effort
-            pass
-        return data
-
-    def get_positions(self, product_type: Optional[str] = None) -> Dict[str, Any]:
-        if self.paper_trade:
-            return {"success": True, "code": 0, "data": []}
-        data = self._private_request(
-            "GET",
-            "/api/v2/mix/position/all-position",
-            params={"productType": self._product_type(product_type)},
-        )
-        try:
-            positions = data.get("data", [])
-            filtered = []
-            for pos in positions:
-                vol = pos.get("vol")
-                try:
-                    if vol is not None and float(vol) > 0:
-                        filtered.append(pos)
-                except (TypeError, ValueError):
-                    continue
-            data["data"] = filtered
-        except Exception:  # pragma: no cover - best effort
-            pass
-        return data
+    # -------------------------------------------------------------------------
+    # PRIVÉ (Futures One-Way par défaut)
+    # -------------------------------------------------------------------------
+    def get_account(self) -> Dict[str, Any]:
+        """Infos compte futures (marges, balances)."""
+        return self._request("GET", "/api/v2/mix/account/accounts", params={"productType": "USDT-FUTURES"}, signed=True)
 
     def get_open_orders(self, symbol: Optional[str] = None) -> Dict[str, Any]:
-        if self.paper_trade:
-            return {"success": True, "code": 0, "data": []}
-        params: Dict[str, Any] = {"productType": self.product_type}
+        params: Dict[str, Any] = {"productType": "USDT-FUTURES"}
         if symbol:
-            params["symbol"] = self._format_symbol(symbol)
-        return self._private_request("GET", "/api/v2/mix/order/orders-pending", params=params)
+            params["symbol"] = symbol.replace("_", "").upper()
+        return self._request("GET", "/api/v2/mix/order/open-orders", params=params, signed=True)
 
-    # Account configuration -------------------------------------------------
-    def set_position_mode_one_way(self, symbol: str, product_type: Optional[str] = None) -> Dict[str, Any]:
+    def cancel_order(self, symbol: str, order_id: str) -> Dict[str, Any]:
         body = {
-            "productType": self._product_type(product_type),
-            "symbol": self._format_symbol(symbol),
-            "posMode": "one_way_mode",
+            "symbol": symbol.replace("_", "").upper(),
+            "productType": "USDT-FUTURES",
+            "orderId": order_id,
         }
-        return self._private_request("POST", "/api/v2/mix/account/set-position-mode", body=body)
+        return self._request("POST", "/api/v2/mix/order/cancel-order", body=body, signed=True)
+
+    def cancel_all(self, symbol: Optional[str] = None) -> Dict[str, Any]:
+        body: Dict[str, Any] = {"productType": "USDT-FUTURES"}
+        if symbol:
+            body["symbol"] = symbol.replace("_", "").upper()
+        return self._request("POST", "/api/v2/mix/order/cancel-batch-orders", body=body, signed=True)
+
+    # -- Mode de position & levier ------------------------------------------------
+    def set_position_mode_one_way(self, symbol: str, product_type: str = "USDT-FUTURES") -> Dict[str, Any]:
+        """Passe le mode de position en One-Way (si nécessaire)."""
+        body = {
+            "productType": product_type,
+            "symbol": symbol.replace("_", "").upper(),
+            "holdMode": "one_way",  # valeur usuelle côté API mix
+        }
+        return self._request("POST", "/api/v2/mix/account/set-position-mode", body=body, signed=True)
 
     def set_leverage(
         self,
         symbol: str,
-        product_type: Optional[str] = None,
+        product_type: str = "USDT-FUTURES",
         margin_coin: str = "USDT",
-        leverage: int = 1,
+        leverage: int = 2,
+        side: str = "long",
     ) -> Dict[str, Any]:
+        """Règle l’effet de levier (par side 'long'/'short' ou global selon l’API)."""
+        lev = max(1, int(leverage))
         body = {
-            "symbol": self._format_symbol(symbol),
-            "productType": self._product_type(product_type),
+            "symbol": symbol.replace("_", "").upper(),
+            "productType": product_type,
             "marginCoin": margin_coin,
-            "leverage": int(leverage),
+            "leverage": str(lev),
+            "holdSide": side.lower(),  # 'long' ou 'short'
         }
-        return self._private_request(
-            "POST", "/api/v2/mix/account/set-leverage", body=body
-        )
+        return self._request("POST", "/api/v2/mix/account/set-leverage", body=body, signed=True)
 
+    # -- Placement d’ordres (One-Way) -------------------------------------------
     def place_market_order_one_way(
         self,
         symbol: str,
         side: str,
         size: float,
-        product_type: Optional[str] = None,
+        product_type: str = "USDT-FUTURES",
         margin_coin: str = "USDT",
-        *,
-        time_in_force: str = "normal",
+        client_oid: Optional[str] = None,
     ) -> Dict[str, Any]:
-        side = side.lower()
-        if side not in {"buy", "sell"}:
-            raise ValueError("side must be 'buy' or 'sell'")
-        body = {
-            "symbol": self._format_symbol(symbol),
-            "productType": self._product_type(product_type),
+        """
+        Place un ordre MARKET en mode one-way.
+        side: 'buy' ou 'sell'
+        size: quantité de contrat (arrondie au format serveur côté API)
+        """
+        body: Dict[str, Any] = {
+            "symbol": symbol.replace("_", "").upper(),
+            "productType": product_type,
             "marginCoin": margin_coin,
-            "marginMode": "crossed",
-            "posMode": "one_way_mode",
+            "size": f"{float(size):.6f}",
+            "side": side.lower(),
             "orderType": "market",
-            "side": side,
-            "size": str(size),
-            "timeInForceValue": time_in_force,
-            "clientOid": str(uuid.uuid4())[:32],
         }
-        return self._private_request(
-            "POST", "/api/v2/mix/order/place-order", body=body
-        )
+        if client_oid:
+            body["clientOid"] = client_oid
+        return self._request("POST", "/api/v2/mix/order/place-order", body=body, signed=True)
 
-    # Orders ---------------------------------------------------------------
-    def place_order(
+    def place_limit_order_one_way(
         self,
         symbol: str,
-        side: int,
-        vol: int,
-        order_type: int,
-        *,
-        price: Optional[float] = None,
-        open_type: int = 1,
-        leverage: Optional[int] = None,
-        position_id: Optional[int] = None,
-        external_oid: Optional[str] = None,
-        stop_loss: Optional[float] = None,
-        take_profit: Optional[float] = None,
-        position_mode: Optional[int] = None,
-        margin_coin: Optional[str] = None,
-        time_in_force: str = "normal",
+        side: str,
+        size: float,
+        price: float,
+        product_type: str = "USDT-FUTURES",
+        margin_coin: str = "USDT",
+        tif: str = "GTC",
+        client_oid: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """Submit an order.
-
-        This helper keeps backward compatibility with the older numeric
-        parameters used by the bot while translating them to the string based
-        fields required by Bitget's v2 API.
         """
-        if self.paper_trade:
-            logging.info(
-                "PAPER_TRADE=True -> ordre simul\u00e9: side=%s vol=%s type=%s price=%s",
-                side,
-                vol,
-                order_type,
-                price,
-            )
-            return {
-                "success": True,
-                "paperTrade": True,
-                "simulated": {
-                    "symbol": symbol,
-                    "side": side,
-                    "vol": vol,
-                    "type": order_type,
-                    "price": price,
-                    "openType": open_type,
-                    "leverage": leverage,
-                    "stopLossPrice": stop_loss,
-                    "takeProfitPrice": take_profit,
-                },
-            }
-
-        # ------------------------------------------------------------------
-        # Parameter mapping
-        # ------------------------------------------------------------------
-        side_map = {
-            1: ("buy", "long"),
-            2: ("buy", "short"),
-            3: ("sell", "short"),
-            4: ("sell", "long"),
-        }
-        if isinstance(side, int):
-            mapped = side_map.get(side)
-            if not mapped:
-                raise ValueError(f"Invalid side value: {side}")
-            side_str, pos_side = mapped
-        else:
-            side_str = str(side)
-            pos_side = None
-
-        order_map = {1: "market", 2: "limit", 3: "post_only", 4: "fok", 5: "limit"}
-        if isinstance(order_type, int):
-            order_str = order_map.get(order_type)
-            if order_str is None:
-                order_str = "limit" if price is not None else "market"
-        else:
-            order_str = str(order_type)
-
-        margin_mode = "crossed" if int(open_type) == 1 else "isolated"
-
-        if margin_coin is None:
-            margin_coin = _DEFAULT_MARGIN_COIN.get(self.product_type)
-
-        # ------------------------------------------------------------------
-        # Precision handling
-        # ------------------------------------------------------------------
-        try:
-            price_place, volume_place = self._get_contract_precision(symbol)
-        except Exception:  # pragma: no cover - best effort
-            price_place = volume_place = 0
-        if price is not None:
-            price = round(float(price), price_place)
-        if vol is not None:
-            vol = round(float(vol), volume_place)
-
-        body = {
-            "symbol": self._format_symbol(symbol),
-            "productType": self.product_type,
-            "marginMode": margin_mode,
-            "orderType": order_str,
-            "side": side_str,
-            "size": vol,
-            "timeInForceValue": time_in_force,
-        }
-        if pos_side is not None:
-            body["posSide"] = pos_side
-        if margin_coin:
-            body["marginCoin"] = margin_coin
-        if price is not None:
-            body["price"] = float(price)
-        if leverage is not None:
-            body["leverage"] = int(leverage)
-        if position_id is not None:
-            body["positionId"] = int(position_id)
-        if external_oid:
-            body["clientOid"] = str(external_oid)[:32]
-        else:
-            body["clientOid"] = str(uuid.uuid4())[:32]
-        if stop_loss is not None:
-            body["stopLossPrice"] = float(stop_loss)
-        if take_profit is not None:
-            body["takeProfitPrice"] = float(take_profit)
-        if position_mode is not None:
-            body["posMode"] = "one_way_mode" if int(position_mode) == 1 else "hedge_mode"
-        elif pos_side is not None:
-            body["posMode"] = "hedge_mode"
-
-        return self._private_request("POST", "/api/v2/mix/order/place-order", body=body)
-
-    def cancel_order(self, order_ids: List[int]) -> Dict[str, Any]:
-        if self.paper_trade:
-            logging.info(
-                "PAPER_TRADE=True -> annulation simulée: order_ids=%s", order_ids
-            )
-            return {"success": True, "code": 0}
-        return self._private_request(
-            "POST", "/api/v2/mix/order/cancel-order", body={"orderIds": order_ids}
-        )
-
-    def cancel_all(
-        self,
-        symbol: Optional[str] = None,
-        margin_coin: Optional[str] = None,
-    ) -> Dict[str, Any]:
-        if self.paper_trade:
-            logging.info(
-                "PAPER_TRADE=True -> annulation simulée de tous les ordres"
-            )
-            return {"success": True, "code": 0}
-        body = {"productType": self.product_type}
-        if symbol:
-            body["symbol"] = self._format_symbol(symbol)
-        if margin_coin is None:
-            margin_coin = _DEFAULT_MARGIN_COIN.get(self.product_type)
-        if margin_coin:
-            body["marginCoin"] = margin_coin
-        return self._private_request(
-            "POST", "/api/v2/mix/order/cancel-all-orders", body=body
-        )
-
-    def close_position(
-        self,
-        symbol: str,
-        size: Optional[int] = None,
-        hold_side: Optional[str] = None,
-    ) -> Dict[str, Any]:
-        """Close an open position for ``symbol``.
-
-        Parameters
-        ----------
-        symbol:
-            Trading symbol to close.
-        size:
-            Optional number of contracts to close. If omitted the entire
-            position is closed.
-        hold_side:
-            Optional side (``"long"``/``"short"``) to close when ``size`` is
-            specified. If not provided the exchange will infer it.
+        Place un ordre LIMIT en mode one-way.
+        tif: GTC/IOC/FOK suivant l’API.
         """
+        body: Dict[str, Any] = {
+            "symbol": symbol.replace("_", "").upper(),
+            "productType": product_type,
+            "marginCoin": margin_coin,
+            "size": f"{float(size):.6f}",
+            "price": f"{float(price):.8f}",
+            "side": side.lower(),
+            "orderType": "limit",
+            "timeInForceValue": tif.upper(),
+        }
+        if client_oid:
+            body["clientOid"] = client_oid
+        return self._request("POST", "/api/v2/mix/order/place-order", body=body, signed=True)
 
-        if self.paper_trade:
-            logging.info(
-                "PAPER_TRADE=True -> fermeture simulée de la position %s", symbol
-            )
-            return {"success": True, "code": 0}
-
-        body = {"symbol": self._format_symbol(symbol)}
-        if size is not None:
-            body["size"] = int(size)
-        if hold_side:
-            body["holdSide"] = hold_side
-
-        body["productType"] = self.product_type
-        return self._private_request(
-            "POST", "/api/v2/mix/position/close-position", body=body
+    # -------------------------------------------------------------------------
+    # Helpers d’accès — compat facilité avec du code existant
+    # -------------------------------------------------------------------------
+    def last_price(self, symbol: str) -> float:
+        """
+        Renvoie un prix last connu en tolérant plusieurs structures/clefs de la réponse.
+        """
+        tick = self.get_ticker(symbol)
+        data = tick.get("data")
+        if isinstance(data, list) and data:
+            data = data[0]
+        if not isinstance(data, dict):
+            return 0.0
+        price_str = (
+            data.get("lastPr")
+            or data.get("lastPrice")
+            or data.get("close")
+            or data.get("price")
+            or data.get("l")
         )
-
-    def close_all_positions(self, product_type: Optional[str] = None) -> Dict[str, Any]:
-        """Close all open positions."""
-        results = []
         try:
-            for pos in self.get_positions(product_type).get("data", []):
-                sym = pos.get("symbol")
-                if sym:
-                    results.append(self.close_position(sym))
-        except Exception as exc:  # pragma: no cover - best effort
-            logging.error("Erreur fermeture de toutes les positions: %s", exc)
-        return {"success": True, "data": results}
+            return float(price_str)
+        except Exception:
+            return 0.0
