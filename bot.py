@@ -1,194 +1,225 @@
-# bot.py
-from __future__ import annotations
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Bot d'entrée unique : scan des signaux (par défaut) ou boucle orchestrée.
+Compatible avec les packages 'scalp' et 'scalper' (import fallback).
+"""
 
-import asyncio
+from __future__ import annotations
 import os
 import sys
-import json
-from dataclasses import dataclass
-from pathlib import Path
-from typing import Sequence, Optional
+import time
+import argparse
+from typing import Dict, List, Any, Optional
 
-# --- utils ---
-
-def ensure_ccxt() -> None:
+# --- Compat imports 'scalp' / 'scalper' --------------------------------------
+def _import_strategy_factory():
     try:
-        import ccxt  # noqa: F401
-    except ImportError:
-        import subprocess
-        print("[setup] ccxt manquant, installation…")
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "ccxt"])
-        import ccxt  # noqa: F401
-
-def getenv(name: str, default: str = "") -> str:
-    """Lit d’abord les variables d’environnement, sinon .env local s’il existe."""
-    val = os.environ.get(name)
-    if val is not None:
-        return val
-    dot = Path(".env")
-    if dot.exists():
-        for line in dot.read_text().splitlines():
-            line = line.strip()
-            if not line or line.startswith("#") or "=" not in line:
-                continue
-            k, v = line.split("=", 1)
-            if k == name:
-                return v
-    return default
-
-# --- config ---
-
-@dataclass
-class RunConfig:
-    symbols: Sequence[str]
-    live_tf: str
-    data_dir: Path
-    csv_min_rows: int = 200           # seuil minimal d’un CSV “ok”
-    ready_flag: Path = Path("scalp/.ready.json")
-
-# --- notifier (Telegram ou Null) ---
-
-class NullNotifier:
-    async def send(self, msg: str) -> None:
-        print(f"[notify:null] {msg}")
-
-async def build_notifier_and_commands() -> tuple[object, object]:
-    """Retourne (notifier, command_stream). Ici soit Telegram, soit Null."""
-    bot_token = getenv("TELEGRAM_BOT_TOKEN")
-    chat_id   = getenv("TELEGRAM_CHAT_ID")
-    if bot_token and chat_id:
-        # Implémentation simple via httpx/aiohttp → pour garder le fichier autonome, on renvoie un proxy minimal.
-        class TelegramNotifier:
-            def __init__(self, token: str, chat: str):
-                self.token = token
-                self.chat  = chat
-            async def send(self, msg: str) -> None:
-                # en mode simple: on n’échoue pas si Telegram refuse le markdown
-                import aiohttp
-                url = f"https://api.telegram.org/bot{self.token}/sendMessage"
-                payload = {"chat_id": self.chat, "text": msg, "disable_web_page_preview": True, "parse_mode": "Markdown"}
-                try:
-                    async with aiohttp.ClientSession() as sess:
-                        async with sess.post(url, json=payload, timeout=15) as r:
-                            if r.status >= 400:
-                                txt = await r.text()
-                                print(f"[notify:telegram] send fail {r.status}: {txt[:180]}")
-                except Exception as e:
-                    print(f"[notify:telegram] send error: {e}")
-
-        notifier = TelegramNotifier(bot_token, chat_id)
-        # Pas de commandes interactives dans cette version : on renvoie un stream “nul”
-        return notifier, None
-    else:
-        print("[notify] TELEGRAM non configuré → Null notifier.")
-        return NullNotifier(), None
-
-# --- préchauffage cache CSV ---
-
-def csv_ok(p: Path, min_rows: int) -> bool:
-    if not p.exists():
-        return False
-    try:
-        # compte rapide des lignes
-        n = sum(1 for _ in p.open("r", encoding="utf-8", errors="ignore"))
-        return n >= min_rows
+        from scalp.strategy.factory import load_strategies_cfg, resolve_signal_fn
+        return load_strategies_cfg, resolve_signal_fn
     except Exception:
-        return False
+        from scalper.strategy.factory import load_strategies_cfg, resolve_signal_fn
+        return load_strategies_cfg, resolve_signal_fn
 
-async def prewarm_cache(cfg: RunConfig) -> None:
-    cfg.data_dir.mkdir(parents=True, exist_ok=True)
-    ok = True
-    for sym in cfg.symbols:
-        csv = cfg.data_dir / f"{sym}-{cfg.live_tf}.csv"
-        if csv_ok(csv, cfg.csv_min_rows):
-            print(f"[cache] ready -> {csv.relative_to(Path.cwd())}")
-        else:
-            ok = False
-            print(f"[cache] MISSING for {sym} -> {csv.relative_to(Path.cwd())}")
-    # ici on ne fetch pas pour rester autonome ; tu as déjà so.py si besoin
-
-# --- orchestrateur glue ---
-
-# ⛔️ ADAPTE CE CHEMIN SI TON WRAPPER N’EST PAS ICI
-# ex: from scalper.services.market import BitgetExchange
-from scalper.exchanges.bitget import BitgetExchange  # <-- ajuste ce chemin si besoin
-
-async def run_orchestrator(exchange, cfg: RunConfig, notifier, command_stream=None):
-    """
-    Adapte-toi à la signature de ton vrai orchestrateur si tu en utilises un.
-    Ici on illustre une boucle “heartbeat + ticks_total” minimale.
-    """
-    ticks_total = 0
-    await notifier.send("🟢 Orchestrator PRELAUNCH. Utilise /setup ou /backtest. /resume pour démarrer le live.")
+def _import_indicators_signal():
     try:
-        while True:
-            await asyncio.sleep(30)
-            await notifier.send(f"[stats] ticks_total={ticks_total} (+0 /30s) | pairs={','.join(cfg.symbols)}")
-    except asyncio.CancelledError:
-        await notifier.send("🛑 Arrêt orchestrateur.")
-        raise
+        from scalp.core.signal import Signal  # type: ignore
+        return Signal
+    except Exception:
+        from scalper.core.signal import Signal  # type: ignore
+        return Signal
 
-# --- setup + ready flag ---
+def _import_orchestrator():
+    try:
+        from scalp.orchestrator import Orchestrator  # type: ignore
+        return Orchestrator
+    except Exception:
+        from scalper.orchestrator import Orchestrator  # type: ignore
+        return Orchestrator
 
-def write_ready_flag(cfg: RunConfig, reason: str = "ok") -> None:
-    cfg.ready_flag.parent.mkdir(parents=True, exist_ok=True)
-    cfg.ready_flag.write_text(json.dumps({"status": "ok", "reason": reason}, ensure_ascii=False, indent=2))
+def _import_exchange():
+    """
+    Retourne (BitgetExchange ou None, message d’aide).
+    On tolère l’absence du client Bitget pour le mode 'scan --csv'.
+    """
+    candidates = [
+        "scalp.exchanges.bitget",
+        "scalper.exchanges.bitget",
+    ]
+    for mod_name in candidates:
+        try:
+            mod = __import__(mod_name, fromlist=["BitgetExchange"])
+            return getattr(mod, "BitgetExchange"), ""
+        except Exception:
+            continue
+    return None, ("Client Bitget introuvable. Installe/active le module 'scalp.exchanges.bitget' "
+                  "ou utilise le mode --csv pour scanner des signaux hors-ligne.")
 
-def is_ready(cfg: RunConfig) -> bool:
-    return cfg.ready_flag.exists()
+# --- Transformateurs de données OHLCV ----------------------------------------
+def _ohlcv_to_dict(rows: List[List[float]]) -> Dict[str, List[float]]:
+    """
+    rows: [[ts, open, high, low, close, volume], ...]
+    -> dict de listes
+    """
+    cols = ("timestamp", "open", "high", "low", "close", "volume")
+    out: Dict[str, List[float]] = {k: [] for k in cols}
+    for r in rows:
+        if len(r) < 6:
+            raise ValueError("Ligne OHLCV invalide (6 colonnes attendues).")
+        out["timestamp"].append(float(r[0]))
+        out["open"].append(float(r[1]))
+        out["high"].append(float(r[2]))
+        out["low"].append(float(r[3]))
+        out["close"].append(float(r[4]))
+        out["volume"].append(float(r[5]))
+    return out
 
-async def setup_once(cfg: RunConfig, notifier) -> None:
-    await prewarm_cache(cfg)
-    await notifier.send("Setup wizard terminé (cache vérifié).")
-    write_ready_flag(cfg, "cache verified")
+def _read_csv(csv_path: str) -> Dict[str, List[float]]:
+    import csv
+    cols = ("timestamp", "open", "high", "low", "close", "volume")
+    out = {k: [] for k in cols}
+    with open(csv_path, "r", newline="", encoding="utf-8") as f:
+        r = csv.DictReader(f)
+        for row in r:
+            for k in cols:
+                out[k].append(float(row[k]))
+    return out
 
-# --- lance l’orchestrateur avec shim .symbols/.timeframe ---
+# --- Modes --------------------------------------------------------------------
+def mode_scan(
+    *,
+    symbols: List[str],
+    timeframe: str,
+    cfg_path: str,
+    csv: Optional[str],
+    csv_1h: Optional[str],
+    equity: float,
+    risk: float,
+) -> None:
+    load_strategies_cfg, resolve_signal_fn = _import_strategy_factory()
+    Signal = _import_indicators_signal()
 
-async def launch_orchestrator(cfg: RunConfig):
-    notifier, command_stream = await build_notifier_and_commands()
+    cfg = load_strategies_cfg(cfg_path)
 
-    # Setup si nécessaire
-    if not is_ready(cfg):
-        await notifier.send("Setup requis → exécution…")
-        await setup_once(cfg, notifier)
-        await notifier.send(f"[setup] flag écrit -> {cfg.ready_flag}")
+    # Source des données : CSV (offline) ou Bitget (online)
+    data_by_symbol: Dict[str, Dict[str, List[float]]] = {}
+    data_1h_by_symbol: Dict[str, Dict[str, List[float]]] = {}
 
-    # Crée l’exchange
-    ex = BitgetExchange(
-        api_key=getenv("BITGET_ACCESS"),
-        secret=getenv("BITGET_SECRET"),
-        password=getenv("BITGET_PASSPHRASE"),
-        data_dir=str(cfg.data_dir),
-        use_cache=True,
-        spot=True,
+    if csv:
+        # Un CSV pour tous (usage rapide) ; chacun peut pointer vers son propre CSV si besoin.
+        data = _read_csv(csv)
+        for s in symbols:
+            data_by_symbol[s] = data
+        if csv_1h:
+            d1h = _read_csv(csv_1h)
+            for s in symbols:
+                data_1h_by_symbol[s] = d1h
+    else:
+        BitgetExchange, msg = _import_exchange()
+        if BitgetExchange is None:
+            print(msg)
+            sys.exit(2)
+        api_key = os.getenv("BITGET_API_KEY", "")
+        api_secret = os.getenv("BITGET_API_SECRET", "")
+        api_passphrase = os.getenv("BITGET_API_PASSPHRASE", "")
+        client = BitgetExchange(api_key=api_key, api_secret=api_secret, api_passphrase=api_passphrase)
+
+        for s in symbols:
+            rows = client.get_ohlcv(symbol=s, timeframe=timeframe, limit=1500)  # -> [[ts,o,h,l,c,v],...]
+            data_by_symbol[s] = _ohlcv_to_dict(rows)
+            # 1h optionnel pour filtre MTF
+            try:
+                rows_1h = client.get_ohlcv(symbol=s, timeframe="1h", limit=1500)
+                data_1h_by_symbol[s] = _ohlcv_to_dict(rows_1h)
+            except Exception:
+                pass
+
+    # Scan et affichage
+    for s in symbols:
+        signal_fn = resolve_signal_fn(s, timeframe, cfg)
+        ohlcv = data_by_symbol[s]
+        ohlcv_1h = data_1h_by_symbol.get(s)
+        sig = signal_fn(
+            symbol=s, timeframe=timeframe, ohlcv=ohlcv, equity=equity, risk_pct=risk, ohlcv_1h=ohlcv_1h
+        )
+        print(f"\n=== {s} / {timeframe} ===")
+        if sig is None:
+            print("Aucun signal.")
+        else:
+            d = sig.as_dict()
+            print(f"Signal: side={d['side']} entry={d['entry']:.6f} sl={d['sl']:.6f} "
+                  f"tp1={d['tp1']:.6f} tp2={d['tp2']:.6f} score={d['score']} "
+                  f"quality={d['quality']:.2f}")
+            print("Reasons:", d.get("reasons", ""))
+
+def mode_orchestrate(
+    *,
+    symbols: List[str],
+    timeframe: str,
+    cfg_path: str,
+    interval_sec: int,
+    equity: float,
+    risk: float,
+) -> None:
+    Orchestrator = _import_orchestrator()
+    load_strategies_cfg, resolve_signal_fn = _import_strategy_factory()
+    cfg = load_strategies_cfg(cfg_path)
+
+    BitgetExchange, msg = _import_exchange()
+    if BitgetExchange is None:
+        print(msg)
+        sys.exit(2)
+
+    api_key = os.getenv("BITGET_API_KEY", "")
+    api_secret = os.getenv("BITGET_API_SECRET", "")
+    api_passphrase = os.getenv("BITGET_API_PASSPHRASE", "")
+    client = BitgetExchange(api_key=api_key, api_secret=api_secret, api_passphrase=api_passphrase)
+
+    orch = Orchestrator(
+        exchange_client=client,
+        strategies_cfg=cfg,
+        jobs=[(s, timeframe) for s in symbols],
+        interval_sec=interval_sec,
+        equity=equity,
+        risk_pct=risk,
     )
+    try:
+        orch.loop()
+    except KeyboardInterrupt:
+        print("\nArrêt demandé (CTRL+C).")
 
-    # --- SHIM IMPORTANT : certains orchestrateurs lisent exchange.symbols / exchange.timeframe
-    if not hasattr(ex, "symbols"):
-        setattr(ex, "symbols", tuple(cfg.symbols))
-    if not hasattr(ex, "timeframe"):
-        setattr(ex, "timeframe", cfg.live_tf)
+# --- CLI ----------------------------------------------------------------------
+def parse_args() -> argparse.Namespace:
+    ap = argparse.ArgumentParser(description="Bot d'entrée unique (scan / orchestrate)")
+    ap.add_argument("--symbols", required=True, help="Ex: BTCUSDT,ETHUSDT")
+    ap.add_argument("--tf", required=True, help="Ex: 5m, 15m, 1h")
+    ap.add_argument("--cfg", default="scalper/config/strategies.yml", help="Fichier stratégies (YAML ou JSON)")
+    ap.add_argument("--equity", type=float, default=1000.0)
+    ap.add_argument("--risk", type=float, default=0.01)
+    ap.add_argument("--mode", choices=["scan", "orchestrate"], default="scan")
+    ap.add_argument("--interval", type=int, default=60, help="Intervalle (s) pour orchestrate")
+    ap.add_argument("--csv", default="", help="Chemin CSV OHLCV (optionnel pour scan offline)")
+    ap.add_argument("--csv_1h", default="", help="Chemin CSV 1h (optionnel pour scan offline)")
+    return ap.parse_args()
 
-    # Démarre l’orchestrateur (remplace par ton vrai import/runner si tu en as un)
-    await run_orchestrator(ex, cfg, notifier, command_stream)
+def main():
+    args = parse_args()
+    symbols = [s.strip().upper() for s in args.symbols.split(",") if s.strip()]
+    if not symbols:
+        print("Aucun symbole.")
+        sys.exit(2)
 
-# --- main ---
-
-async def main():
-    ensure_ccxt()
-    symbols = (
-        "BTCUSDT","ETHUSDT","SOLUSDT","BNBUSDT","XRPUSDT",
-        "DOGEUSDT","ADAUSDT","LTCUSDT","AVAXUSDT","LINKUSDT"
-    )
-    cfg = RunConfig(
-        symbols=symbols,
-        live_tf="5m",
-        data_dir=Path("scalp/data"),
-    )
-    await launch_orchestrator(cfg)
+    if args.mode == "scan":
+        mode_scan(
+            symbols=symbols, timeframe=args.tf, cfg_path=args.cfg,
+            csv=(args.csv or None), csv_1h=(args.csv_1h or None),
+            equity=args.equity, risk=args.risk,
+        )
+    else:
+        mode_orchestrate(
+            symbols=symbols, timeframe=args.tf, cfg_path=args.cfg,
+            interval_sec=args.interval, equity=args.equity, risk=args.risk,
+        )
 
 if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        pass
+    main()
