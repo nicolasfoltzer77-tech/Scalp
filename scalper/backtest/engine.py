@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional, Tuple
 import csv
 import os
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 from scalper.strategy.factory import resolve_signal_fn
 from scalper.core.signal import Signal
 from scalper.backtest.position_sizing import position_size_from_signal, fees_cost
@@ -41,11 +41,11 @@ class BacktestEngine:
         *,
         symbol: str,
         timeframe: str,
-        data: Dict[str, List[float]],           # OHLCV complet
+        data: Dict[str, List[float]],
         equity_start: float = 1_000.0,
         risk_pct: float = 0.01,
-        fees_bps: float = 6.0,                   # 6 bps round-trip par défaut
-        warmup: int = 230,                       # pour EMA200/MACD
+        fees_bps: float = 6.0,
+        warmup: int = 230,
         strategies_cfg: Dict[str, Any],
         data_1h: Optional[Dict[str, List[float]]] = None,
     ):
@@ -61,7 +61,6 @@ class BacktestEngine:
         self.cfg = strategies_cfg
         self.trades: List[Trade] = []
         self.signals_rows: List[Dict[str, Any]] = []
-
         self.signal_fn = resolve_signal_fn(self.symbol, self.tf, self.cfg)
 
     def run(self) -> Tuple[float, List[Trade]]:
@@ -75,57 +74,41 @@ class BacktestEngine:
             window_1h = _slice(self.data_1h, self._map_1h_index(i)) if self.data_1h else None
 
             sig = self.signal_fn(
-                symbol=self.symbol,
-                timeframe=self.tf,
-                ohlcv=window,
-                equity=self.equity,
-                risk_pct=self.risk_pct,
-                ohlcv_1h=window_1h,
+                symbol=self.symbol, timeframe=self.tf, ohlcv=window,
+                equity=self.equity, risk_pct=self.risk_pct, ohlcv_1h=window_1h,
             )
-
             if sig:
                 self.signals_rows.append(sig.as_dict())
 
-            # Si aucune position, tenter l'entrée
             if pos_open is None and sig is not None:
                 qty = position_size_from_signal(self.equity, sig, self.risk_pct * max(0.25, sig.quality))
                 if qty <= 0:
                     continue
-                pos_open = sig
-                pos_qty = qty
-                entry_idx = i
+                pos_open, pos_qty, entry_idx = sig, qty, i
                 continue
 
-            # Gestion position ouverte
             if pos_open is not None:
-                # Check TP/SL sur la bougie suivante (pas de futur)
                 hi = self.data["high"][i]
                 lo = self.data["low"][i]
                 exit_price: Optional[float] = None
                 tp1 = pos_open.tp1 or pos_open.entry
                 tp2 = pos_open.tp2 or pos_open.entry
-
-                # logique: TP1 -> moitié + BE; TP2 -> full
                 half_closed = False
                 be = pos_open.entry
 
                 if pos_open.side == "long":
-                    # Stop
                     if lo <= pos_open.sl:
                         exit_price = pos_open.sl
-                    # TP1
                     elif hi >= tp1:
                         pnl_half = (tp1 - pos_open.entry) * (pos_qty * 0.5)
                         fees = fees_cost(tp1 * (pos_qty * 0.5), self.fees_bps)
                         self.equity += pnl_half - fees
                         pos_qty *= 0.5
                         half_closed = True
-                        pos_open.sl = be  # BE
-                    # TP2
+                        pos_open.sl = be
                     if hi >= tp2:
                         exit_price = tp2
-
-                else:  # short
+                else:
                     if hi >= pos_open.sl:
                         exit_price = pos_open.sl
                     elif lo <= tp1:
@@ -138,11 +121,9 @@ class BacktestEngine:
                     if lo <= tp2:
                         exit_price = tp2
 
-                # sortie partielle non suivie de TP2/SL : on continue
                 if exit_price is None and half_closed:
                     continue
 
-                # fermeture
                 if exit_price is not None:
                     pnl = (exit_price - pos_open.entry) * pos_qty if pos_open.side == "long" else (pos_open.entry - exit_price) * pos_qty
                     fees = fees_cost(exit_price * pos_qty, self.fees_bps)
@@ -153,30 +134,24 @@ class BacktestEngine:
                         symbol=self.symbol, timeframe=self.tf, side=pos_open.side,
                         entry_ts=int(self.data["timestamp"][entry_idx]), exit_ts=int(self.data["timestamp"][i]),
                         entry=pos_open.entry, exit=exit_price, qty=pos_qty,
-                        pnl=pnl, pnl_after_fees=pnl_after,
-                        reasons="|".join(pos_open.reasons),
+                        pnl=pnl, pnl_after_fees=pnl_after, reasons="|".join(pos_open.reasons),
                     )
                     self.trades.append(tr)
-                    pos_open = None
-                    pos_qty = 0.0
-                    entry_idx = -1
+                    pos_open, pos_qty, entry_idx = None, 0.0, -1
 
         return self.equity, self.trades
 
     def _map_1h_index(self, i_main: int) -> int:
-        """Mapping naïf: suppose que self.data_1h est alignée en temps croissant.
-        Ici, on prend l'index 1h correspondant au timestamp le plus proche inférieur ou égal."""
         if not self.data_1h:
             return 0
         ts = self.data["timestamp"][i_main]
         arr = self.data_1h["timestamp"]
-        # recherche linéaire (suffisant pour test; remplaçable par bisect)
         j = 0
         while j + 1 < len(arr) and arr[j + 1] <= ts:
             j += 1
         return j
 
-    # --- Helpers d'E/S ---
+    # --- E/S helpers ---
     @staticmethod
     def load_csv(path: str) -> Dict[str, List[float]]:
         if not os.path.isfile(path):
@@ -185,7 +160,6 @@ class BacktestEngine:
 
     def save_results(self, out_dir: str = "backtest_out") -> None:
         os.makedirs(out_dir, exist_ok=True)
-        # signals.csv
         if self.signals_rows:
             sig_path = os.path.join(out_dir, f"signals_{self.symbol}_{self.tf}.csv")
             keys = sorted(self.signals_rows[0].keys())
@@ -195,7 +169,6 @@ class BacktestEngine:
                 w.writeheader()
                 for row in self.signals_rows:
                     w.writerow(row)
-        # trades.csv
         if self.trades:
             tr_path = os.path.join(out_dir, f"trades_{self.symbol}_{self.tf}.csv")
             with open(tr_path, "w", newline="", encoding="utf-8") as f:
