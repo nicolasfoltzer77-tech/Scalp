@@ -8,7 +8,6 @@ try:
 except Exception:
     yaml = None
 
-# Aliases ENV -> clés canoniques (SECRETS UNIQUEMENT)
 _ALIASES: Dict[str, Tuple[str, ...]] = {
     "BITGET_ACCESS_KEY": ("BITGET_API_KEY", "BITGET_KEY"),
     "BITGET_SECRET_KEY": ("BITGET_API_SECRET", "BITGET_SECRET"),
@@ -31,7 +30,7 @@ def apply_env_aliases() -> None:
         _adopt_alias(k)
 
 def _default_paths() -> Dict[str, str]:
-    data_root = os.getenv("DATA_ROOT", "/notebooks/scalp_data")  # HORS REPO
+    data_root = os.getenv("DATA_ROOT", "/notebooks/scalp_data")
     root = Path(data_root)
     return {
         "data_dir": str(root / "data"),
@@ -52,7 +51,6 @@ def load_config(path: str | os.PathLike | None = None) -> Dict[str, Any]:
     cfg = load_yaml_config(path)
     apply_env_aliases()
 
-    # Secrets depuis .env parent (sitecustomize.py les charge)
     cfg.setdefault("secrets", {})
     cfg["secrets"]["bitget"] = {
         "access": os.getenv("BITGET_ACCESS_KEY") or "",
@@ -64,7 +62,6 @@ def load_config(path: str | os.PathLike | None = None) -> Dict[str, Any]:
         "chat_id": os.getenv("TELEGRAM_CHAT_ID") or "",
     }
 
-    # Chemins hors repo
     defaults = _default_paths()
     r = cfg.setdefault("runtime", {})
     r.setdefault("data_dir", defaults["data_dir"])
