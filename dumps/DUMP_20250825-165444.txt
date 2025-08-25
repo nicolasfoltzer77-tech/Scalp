@@ -1,0 +1,123 @@
+# ---- DUMP SCALP (simple) ----
+time        : 2025-08-25 16:54:44
+root       : /notebooks/scalp
+out        : /notebooks/scalp/dumps/DUMP_20250825-165444.txt
+allow_ext  : .cfg, .ini, .md, .py, .sh, .txt, .yaml, .yml
+exclude_dirs: .git, .github, .idea, .ipynb_checkpoints, .mypy_cache, .pytest_cache, .vscode, __pycache__, backups, build, dash, dist, dump, dumps, engine/backtest, scalp0, scalp1, scalp2, scalp3, tests
+exclude_suf: .bz2, .csv, .feather, .gif, .gz, .ipynb, .jpeg, .jpg, .log, .parquet, .pdf, .png, .svg, .xz, .zip
+
+path :: lines :: mtime
+----------------------------------------
+CHANGELOG.md :: 12 :: 2025-08-25 16:33:10
+INSTALL.txt :: 41 :: 2025-08-25 16:33:10
+PROMPT.md :: 107 :: 2025-08-25 16:33:10
+README.md :: 132 :: 2025-08-25 16:33:10
+STRATEGY.md :: 42 :: 2025-08-25 16:33:10
+bot.py :: 24 :: 2025-08-25 16:33:10
+cli.py :: 9 :: 2025-08-25 16:33:10
+data/__init__.py :: 5 :: 2025-08-25 16:33:10
+engine/__init__.py :: 2 :: 2025-08-25 16:33:10
+engine/adapters/__init__.py :: 0 :: 2025-08-25 16:33:10
+engine/adapters/bitget.py :: 218 :: 2025-08-25 16:33:10
+engine/adapters/bitget_fetch.py :: 165 :: 2025-08-25 16:33:10
+engine/adapters/market_data.py :: 77 :: 2025-08-25 16:33:10
+engine/app.py :: 21 :: 2025-08-25 16:33:10
+engine/bitget_client.py :: 657 :: 2025-08-25 16:33:10
+engine/bootstrap.py :: 142 :: 2025-08-25 16:33:10
+engine/client.py :: 99 :: 2025-08-25 16:33:10
+engine/config/config.yaml :: 56 :: 2025-08-25 16:33:10
+engine/config/loader.py :: 119 :: 2025-08-25 16:33:10
+engine/config/strategies.py :: 128 :: 2025-08-25 16:33:10
+engine/config/strategies.yml :: 16 :: 2025-08-25 16:54:18
+engine/config/watchlist.py :: 35 :: 2025-08-25 16:33:10
+engine/core/indicators.py :: 17 :: 2025-08-25 16:33:10
+engine/core/signal.py :: 19 :: 2025-08-25 16:33:10
+engine/core/signals.py :: 47 :: 2025-08-25 16:33:10
+engine/exchange/bitget_ccxt.py :: 22 :: 2025-08-25 16:33:10
+engine/exchange/bitget_rest.py :: 353 :: 2025-08-25 16:33:10
+engine/hooks/prewarm_cache.py :: 22 :: 2025-08-25 16:33:10
+engine/live/__init__.py :: 1 :: 2025-08-25 16:33:10
+engine/live/commands.py :: 60 :: 2025-08-25 16:33:10
+engine/live/health.py :: 71 :: 2025-08-25 16:33:10
+engine/live/notify.py :: 35 :: 2025-08-25 16:33:10
+engine/live/orchestrator.py :: 69 :: 2025-08-25 16:33:10
+engine/live/scheduler.py :: 15 :: 2025-08-25 16:33:10
+engine/live/state.py :: 94 :: 2025-08-25 16:33:10
+engine/live/trader.py :: 96 :: 2025-08-25 16:33:10
+engine/logging_utils.py :: 166 :: 2025-08-25 16:33:10
+engine/metrics.py :: 208 :: 2025-08-25 16:33:10
+engine/pairs.py :: 276 :: 2025-08-25 16:33:10
+engine/pairs/__init__.py :: 3 :: 2025-08-25 16:33:10
+engine/pairs/selector.py :: 94 :: 2025-08-25 16:33:10
+engine/positions/__init__.py :: 0 :: 2025-08-25 16:33:10
+engine/positions/state.py :: 75 :: 2025-08-25 16:33:10
+engine/risk/__init__.py :: 9 :: 2025-08-25 16:33:10
+engine/risk/manager.py :: 70 :: 2025-08-25 16:33:10
+engine/selection/__init__.py :: 19 :: 2025-08-25 16:33:10
+engine/selection/momentum.py :: 98 :: 2025-08-25 16:33:10
+engine/selection/scanner.py :: 81 :: 2025-08-25 16:33:10
+engine/selfcheck.py :: 117 :: 2025-08-25 16:33:10
+engine/services/__init__.py :: 0 :: 2025-08-25 16:33:10
+engine/services/data_cache.py :: 186 :: 2025-08-25 16:33:10
+engine/services/order_service.py :: 94 :: 2025-08-25 16:33:10
+engine/services/utils.py :: 43 :: 2025-08-25 16:33:10
+engine/signals/__init__.py :: 1 :: 2025-08-25 16:33:10
+engine/signals/current.py :: 12 :: 2025-08-25 16:33:10
+engine/signals/factory.py :: 72 :: 2025-08-25 16:33:10
+engine/signals/generator.py :: 165 :: 2025-08-25 16:33:10
+engine/strategy.py :: 443 :: 2025-08-25 16:33:10
+engine/strategy/factory.py :: 1 :: 2025-08-25 16:33:10
+engine/trade_utils.py :: 29 :: 2025-08-25 16:33:10
+engine/utils/bootstrap.py :: 73 :: 2025-08-25 16:33:10
+engine/utils/ensure_deps.py :: 68 :: 2025-08-25 16:33:10
+engine/version.py :: 95 :: 2025-08-25 16:33:10
+engine/ws.py :: 70 :: 2025-08-25 16:33:10
+init.py :: 36 :: 2025-08-25 16:33:10
+jobs/__init__.py :: 1 :: 2025-08-25 16:33:10
+jobs/backfill.py :: 37 :: 2025-08-25 16:33:10
+jobs/backtest.py :: 60 :: 2025-08-25 16:33:10
+jobs/boot_live.py :: 57 :: 2025-08-25 16:33:10
+jobs/dash.py :: 38 :: 2025-08-25 16:33:10
+jobs/maintainer.py :: 399 :: 2025-08-25 16:33:10
+jobs/promote.py :: 177 :: 2025-08-25 16:33:10
+jobs/refresh_pairs.py :: 227 :: 2025-08-25 16:33:10
+jobs/seeds_strategies.py :: 148 :: 2025-08-25 16:33:10
+jobs/termboard.py :: 152 :: 2025-08-25 16:33:10
+jobs/viewer.py :: 163 :: 2025-08-25 16:33:10
+pytest.ini :: 2 :: 2025-08-25 16:33:10
+requirements-dev.txt :: 1 :: 2025-08-25 16:33:10
+requirements.txt :: 23 :: 2025-08-25 16:33:10
+run-dash.sh :: 6 :: 2025-08-25 16:33:10
+scalper/config/__init__.py :: 2 :: 2025-08-25 16:33:10
+scalper/config/loader.py :: 136 :: 2025-08-25 16:33:10
+scalper/config/strategies.yml :: 13 :: 2025-08-25 16:33:10
+scalper/exchange/__init__.py :: 2 :: 2025-08-25 16:33:10
+scalper/exchange/bitget.py :: 107 :: 2025-08-25 16:33:10
+scalper/exchange/bitget_ccxt.py :: 177 :: 2025-08-25 16:33:10
+scalper/exchange/fees.py :: 58 :: 2025-08-25 16:33:10
+scalper/live/__init__.py :: 1 :: 2025-08-25 16:33:10
+scalper/live/backtest_telegram.py :: 57 :: 2025-08-25 16:33:10
+scalper/live/commands.py :: 89 :: 2025-08-25 16:33:10
+scalper/live/data_utils.py :: 51 :: 2025-08-25 16:33:10
+scalper/live/fetcher.py :: 56 :: 2025-08-25 16:33:10
+scalper/live/journal.py :: 20 :: 2025-08-25 16:33:10
+scalper/live/logs.py :: 22 :: 2025-08-25 16:33:10
+scalper/live/loops/trade.py :: 138 :: 2025-08-25 16:33:10
+scalper/live/notify.py :: 73 :: 2025-08-25 16:33:10
+scalper/live/ohlcv_service.py :: 91 :: 2025-08-25 16:33:10
+scalper/live/orchestrator.py :: 46 :: 2025-08-25 16:33:10
+scalper/live/orders.py :: 101 :: 2025-08-25 16:33:10
+scalper/live/position_fsm.py :: 108 :: 2025-08-25 16:33:10
+scalper/live/runner.py :: 21 :: 2025-08-25 16:33:10
+scalper/live/setup_wizard.py :: 103 :: 2025-08-25 16:33:10
+scalper/live/state_store.py :: 48 :: 2025-08-25 16:33:10
+scalper/live/telegram_async.py :: 67 :: 2025-08-25 16:33:10
+scalper/live/watchlist.py :: 18 :: 2025-08-25 16:33:10
+sitecustomize.py :: 24 :: 2025-08-25 16:33:10
+tg_diag.py :: 23 :: 2025-08-25 16:33:10
+tools/dump-repo.py :: 120 :: 2025-08-25 16:54:11
+tools/migrate-to-engine.py :: 48 :: 2025-08-25 16:33:10
+tools/trashify.py :: 167 :: 2025-08-25 16:33:10
+----------------------------------------
+TOTAL files: 110
+TOTAL lines: 9110
