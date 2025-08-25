@@ -13,27 +13,24 @@ from engine.config.watchlist import load_watchlist
 from engine.backtest.loader_csv import load_csv_ohlcv  # lecture OHLCV
 
 # ============================================================
-# Config & Modèle
+# Modèle / Config d'exécution
 # ============================================================
 
 @dataclass
 class RunConfig:
-    symbols: List[str]       # univers (watchlist)
-    tfs: List[str]           # plusieurs TF à gérer en colonnes
-    refresh_secs: int        # cadence d’affichage/évaluation
-    data_dir: str            # data_dir (csv)
-    limit: int               # nb de bougies lors backfill
-    auto: bool = True        # déclencher refresh/backtest/promote automatiquement
+    symbols: List[str]        # univers (watchlist)
+    tfs: List[str]            # colonnes (1m,5m,15m,…)
+    refresh_secs: int         # cadence d’affichage/évaluation
+    data_dir: str             # répertoire OHLCV csv
+    limit: int                # profondeur lors des backfills
+    auto: bool = True         # automation (refresh, backtest, promote)
+    fresh_mult: float = 1.0   # “fraîche” si âge <= fresh_mult × TF
+    cooldown_secs: int = 60   # anti-tempête pour actions AUTO par TF
 
 _TF_MIN = {"1m":1, "5m":5, "15m":15, "1h":60, "4h":240, "1d":1440}
 
 def _tf_minutes(tf: str) -> int:
     return _TF_MIN.get(str(tf), 1)
-
-# seuil fraîcheur (1×TF -> ROUGE rapide)
-def _is_fresh(now_ms: int, last_ms: Optional[int], tf: str) -> bool:
-    if last_ms is None: return False
-    return (now_ms - last_ms) <= (_tf_minutes(tf) * 60_000)
 
 # ============================================================
 # OHLCV & Stratégies
@@ -51,47 +48,65 @@ def _strat_valid(strats: Dict[str, Dict], symbol: str, tf: str) -> bool:
     return bool(s) and not bool(s.get("expired"))
 
 # ============================================================
-# Statut / Couleurs
+# Statut / Couleurs (console)
 # ============================================================
 
 _COL = {"k":"\x1b[30m","r":"\x1b[31m","g":"\x1b[32m","o":"\x1b[33m","x":"\x1b[0m"}
 
-def _short(s: str) -> str:
-    s = s.upper().replace("_","")
-    return s[:-4] if s.endswith("USDT") else s
+def _short(sym: str) -> str:
+    sym = sym.upper().replace("_","")
+    return sym[:-4] if sym.endswith("USDT") else sym
 
-def _status_cell(data_dir: str, strats: Dict[str, Dict], symbol: str, tf: str) -> Tuple[str,str]:
+def _is_fresh(now_ms: int, last_ms: Optional[int], tf: str, fresh_mult: float) -> bool:
+    if last_ms is None: return False
+    return (now_ms - last_ms) <= (fresh_mult * _tf_minutes(tf) * 60_000)
+
+def _status_cell(data_dir: str, strats: Dict[str, Dict], symbol: str, tf: str, fresh_mult: float) -> Tuple[str,str]:
+    """
+    Retourne (label, color_code):
+      MIS / k  : pas de données
+      OLD / r  : données présentes mais pas fraîches
+      DAT / o  : données fraîches, pas de stratégie
+      OK  / g  : données fraîches + stratégie valide
+    """
     now = int(time.time()*1000)
     last = _last_ts_ms(data_dir, symbol, tf)
-    if last is None:              return ("MIS","k")  # noir
-    if not _is_fresh(now, last, tf): return ("OLD","r")  # rouge
-    if _strat_valid(strats, symbol, tf): return ("OK ","g")  # vert
-    return ("DAT","o")  # orange
+    if last is None:
+        return ("MIS","k")
+    if not _is_fresh(now, last, tf, fresh_mult):
+        return ("OLD","r")
+    if _strat_valid(strats, symbol, tf):
+        return ("OK ","g")
+    return ("DAT","o")
 
 # ============================================================
-# Rendu tableau multi‑TF (centré)
+# Rendu tableau multi‑TF
 # ============================================================
 
 def _center(t: str, w: int) -> str:
-    pad = max(0, w-len(t)); return " "*(pad//2)+t+" "*(pad-pad//2)
+    pad = max(0, w - len(t))
+    return " "*(pad//2) + t + " "*(pad - pad//2)
 
-def _render(symbols: List[str], tfs: List[str], data_dir: str, strats: Dict[str,Dict]) -> Tuple[str, Dict[Tuple[str,str], Tuple[str,str]]]:
+def _render(symbols: List[str], tfs: List[str], data_dir: str, strats: Dict[str,Dict], fresh_mult: float
+           ) -> Tuple[str, Dict[Tuple[str,str], Tuple[str,str]], Dict[str,int]]:
     header = ["PAIR", *tfs]
     rows: List[List[str]] = []
     states: Dict[Tuple[str,str], Tuple[str,str]] = {}
+    counts = {"k":0,"r":0,"o":0,"g":0}
 
     for s in symbols:
         one = [_short(s)]
         for tf in tfs:
-            lbl, c = _status_cell(data_dir, strats, s, tf)
-            states[(s,tf)] = (lbl,c)
-            one.append(f"{_COL[c]}{lbl}{_COL['x']}")
+            lbl, col = _status_cell(data_dir, strats, s, tf, fresh_mult)
+            states[(s,tf)] = (lbl, col)
+            counts[col] = counts.get(col,0) + 1
+            one.append(f"{_COL[col]}{lbl}{_COL['x']}")
         rows.append(one)
 
-    # largeur visible (sans ANSI)
+    # largeur visible (strip ANSI)
     import re
     def vis_len(x: str) -> int: return len(re.sub(r"\x1b\[[0-9;]*m","",x))
-    width = [max(vis_len(r[i]) for r in [header]+rows) for i in range(len(header))]
+    width = [max(vis_len(r[i]) for r in [header] + rows) for i in range(len(header))]
 
     def fmt(row: List[str]) -> str:
         out=[]
@@ -99,19 +114,29 @@ def _render(symbols: List[str], tfs: List[str], data_dir: str, strats: Dict[str,
             w=width[i]
             if "\x1b[" in v:
                 plain = re.sub(r"\x1b\[[0-9;]*m","",v)
-                v = v.replace(plain, _center(plain,w))
+                v = v.replace(plain, _center(plain, w))
             else:
-                v = _center(v,w)
+                v = _center(v, w)
             out.append(v)
         return " | ".join(out)
 
     sep = ["-"*w for w in width]
     table = "\n".join([fmt(header), fmt(sep), *[fmt(r) for r in rows]])
-    return table, states
+    return table, states, counts
 
 # ============================================================
-# Actions AUTO (refresh / backtest / promote)
+# AUTO actions (refresh / backtest / promote) avec cooldown
 # ============================================================
+
+_last_auto: Dict[str, float] = {}  # par clé (refresh:TF, backtest)
+
+def _cool(key: str, cooldown: int) -> bool:
+    now = time.time()
+    t0 = _last_auto.get(key, 0.0)
+    if (now - t0) >= cooldown:
+        _last_auto[key] = now
+        return True
+    return False
 
 def _run(args: List[str]) -> int:
     p = subprocess.run(args, capture_output=True, text=True)
@@ -120,54 +145,75 @@ def _run(args: List[str]) -> int:
     if err: print(err)
     return p.returncode
 
-def _refresh_tf(tf: str, limit: int) -> None:
+def _auto_refresh(tf: str, limit: int, cooldown: int) -> None:
+    key = f"refresh:{tf}"
+    if not _cool(key, cooldown):
+        return
+    print(f"[auto] refresh tf={tf}")
     _run(["python","-m","jobs.refresh_pairs","--timeframe",tf,"--top","0","--backfill-tfs",tf,"--limit",str(limit)])
 
-def _backtest_promote(tfs: List[str]) -> None:
+def _auto_backtest_promote(tfs: List[str], cooldown: int) -> None:
+    key = "backtest"
+    if not _cool(key, cooldown):
+        return
+    print("[auto] backtest + promote")
     _run(["python","-m","jobs.backtest","--from-watchlist","--tfs",",".join(tfs)])
     _run(["python","-m","jobs.promote","--backup"])
 
 # ============================================================
-# Boucle
+# Boucle orchestrateur
 # ============================================================
 
 async def run_orchestrator(ex, run_cfg: RunConfig, notifier=None, command_stream=None) -> None:
     cfg = load_config()
     trade_cfg = (cfg.get("trading") or {})
     exec_enabled = bool(trade_cfg.get("exec_enabled", False))
-    max_pairs = int(trade_cfg.get("max_pairs", 10))
+    max_pairs = int(trade_cfg.get("max_pairs", 12))
+
+    first_legend = True
 
     while True:
         try:
             strats = load_strategies()
-            table, states = _render(run_cfg.symbols, run_cfg.tfs, run_cfg.data_dir, strats)
+            table, states, counts = _render(run_cfg.symbols, run_cfg.tfs, run_cfg.data_dir, strats, run_cfg.fresh_mult)
 
+            # clear + home
             print("\x1b[2J\x1b[H", end="")
             print("=== ORCHESTRATOR ===")
             print(f"timeframes={','.join(run_cfg.tfs)} refresh={run_cfg.refresh_secs}s exec_enabled={int(exec_enabled)}")
+            if first_legend:
+                print("legend: "
+                      f"{_COL['k']}MIS{_COL['x']}=no data • "
+                      f"{_COL['r']}OLD{_COL['x']}=stale • "
+                      f"{_COL['o']}DAT{_COL['x']}=data no strat • "
+                      f"{_COL['g']}OK{_COL['x']}=ready")
+                first_legend = False
             print(table)
+            print(f"stats • MIS={counts['k']} OLD={counts['r']} DAT={counts['o']} OK={counts['g']}")
 
             # ---------- AUTO ----------
             if run_cfg.auto:
-                # 1) refresh par TF si au moins un MIS/OLD
+                # refresh par TF si présence de MIS/OLD
                 for tf in run_cfg.tfs:
-                    if any(states[(s,tf)][0] in ("MIS","OLD") for s in run_cfg.symbols if (s,tf) in states):
-                        print(f"[auto] refresh tf={tf}")
-                        _refresh_tf(tf, run_cfg.limit)
+                    if any(states.get((s,tf),("",""))[0] in ("MIS","OLD") for s in run_cfg.symbols):
+                        _auto_refresh(tf, run_cfg.limit, run_cfg.cooldown_secs)
 
-                # 2) backtest+promote si au moins un DAT (data ok mais pas de strat)
-                if any(lbl=="DAT" for lbl,_ in states.values()):
-                    print("[auto] backtest + promote")
-                    _backtest_promote(run_cfg.tfs)
+                # backtest+promote si on observe au moins un DAT
+                if any(lbl=="DAT" for lbl,_c in states.values()):
+                    _auto_backtest_promote(run_cfg.tfs, run_cfg.cooldown_secs)
 
-            # ---------- exécution signaux seulement sur VERT ----------
+            # ---------- Actifs (VERT uniquement) ----------
             active: List[Tuple[str,str]] = [(s,tf) for (s,tf),(lbl,c) in states.items() if lbl=="OK "]
-            if max_pairs>0: active = active[:max_pairs]
-            print(f"[orchestrator] actifs={len(active)} / {len(run_cfg.symbols)*len(run_cfg.tfs)} -> " +
-                  (", ".join(f"{_short(s)}:{tf}" for s,tf in active) if active else "(aucun)"))
+            if max_pairs > 0:
+                active = active[:max_pairs]
+            if active:
+                pairs = ", ".join(f"{_short(s)}:{tf}" for s,tf in active)
+            else:
+                pairs = "(aucun)"
+            print(f"[orchestrator] actifs={len(active)} / {len(run_cfg.symbols)*len(run_cfg.tfs)} -> {pairs}")
 
-            # placeholder d’évaluation (observe-only si exec_disabled)
-            async def _eval_one(sym:str, tf:str, strat:Dict[str,Any]):
+            # Placeholder d'évaluation (observe-only si exec disabled)
+            async def _eval_one(sym: str, tf: str, strat: Dict[str,Any]):
                 try:
                     from engine.signals.executor import evaluate_tick  # optionnel
                 except Exception:
@@ -177,11 +223,11 @@ async def run_orchestrator(ex, run_cfg: RunConfig, notifier=None, command_stream
                 else:
                     print(f"[observe] {_short(sym)}:{tf} • ema_f={strat.get('ema_fast')} ema_s={strat.get('ema_slow')}")
 
-            tasks=[]
+            tasks: List[asyncio.Task] = []
             for s,tf in active:
-                strat = strats.get(f"{s}:{tf}")
-                if not strat: continue
-                tasks.append(asyncio.create_task(_eval_one(s, tf, strat)))
+                st = strats.get(f"{s}:{tf}")
+                if not st: continue
+                tasks.append(asyncio.create_task(_eval_one(s, tf, st)))
             if tasks:
                 await asyncio.gather(*tasks)
 
@@ -195,7 +241,7 @@ async def maybe_await(x):
     return x
 
 # ============================================================
-# Aide : construire une RunConfig depuis la conf
+# Fabrique de RunConfig à partir de config.yml
 # ============================================================
 
 def run_config_from_yaml() -> RunConfig:
@@ -203,8 +249,9 @@ def run_config_from_yaml() -> RunConfig:
     rt = cfg.get("runtime", {}) or {}
     wl = cfg.get("watchlist", {}) or {}
     mt = cfg.get("maintainer", {}) or {}
+    auto_cfg = (cfg.get("auto") or {})  # section optionnelle pour ce module
 
-    # symbols = top de la watchlist (sinon fallback)
+    # univers = top watchlist (sinon fallback)
     wl_doc = load_watchlist()
     syms = [(d.get("symbol") or "").replace("_","").upper() for d in (wl_doc.get("top") or []) if d.get("symbol")]
     if not syms:
@@ -217,5 +264,7 @@ def run_config_from_yaml() -> RunConfig:
         refresh_secs=int(mt.get("live_interval_secs", 5)),
         data_dir=str(rt.get("data_dir") or "/notebooks/scalp_data/data"),
         limit=int(wl.get("backfill_limit", 1500)),
-        auto=True,
+        auto=bool(auto_cfg.get("enabled", True)),
+        fresh_mult=float(auto_cfg.get("fresh_mult", mt.get("fresh_mult", 1.0))),
+        cooldown_secs=int(auto_cfg.get("cooldown_secs", 60)),
     )
