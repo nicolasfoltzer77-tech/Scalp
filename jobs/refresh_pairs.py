@@ -7,6 +7,21 @@ from engine.exchange.bitget_rest import BitgetFuturesClient
 from engine.pairs.selector import select_top_pairs
 from engine.config.watchlist import save_watchlist
 from engine.backtest.loader_csv import write_csv_ohlcv
+#!/usr/bin/env python3
+# jobs/refresh_pairs.py
+
+# --- bootstrap chemin + sitecustomize ---
+from pathlib import Path
+import sys
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+try:
+    import sitecustomize  # charge .env + deps + paths
+except Exception:
+    pass
+# --- fin bootstrap ---
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Sélection dynamique des paires + backfill")
