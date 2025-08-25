@@ -21,8 +21,10 @@ except Exception:
     pass
 
 from engine.config.loader import load_config
-from engine.live.orchestrator import RunConfig, run_orchestrator
+from engine.live.orchestrator import run_config_from_yaml, run_orchestrator
+cfg = run_config_from_yaml()
 
+# ... passer l'instance exchange (ex) et lancer
 # REST Bitget (fallback) et, si dispo, wrapper CCXT
 from engine.exchange.bitget_rest import BitgetFuturesClient as BitgetRESTClient
 
