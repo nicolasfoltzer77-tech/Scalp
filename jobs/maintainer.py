@@ -94,14 +94,27 @@ def _symbols_top(top: int | None) -> List[str]:
 
 # ------------------------ statut data/strat ------------------------
 
+_MIS_REPORTED = set()
+
 def _last_bar_ts_ms(data_dir: str, symbol: str, tf: str) -> int | None:
-    """Dernier timestamp (ms) disponible dans le CSV, sinon None."""
-    try:
-        rows = load_csv_ohlcv(data_dir, symbol, tf, max_rows=1)  # fin uniquement
-        if rows:
-            return int(rows[-1][0])
-    except Exception:
-        pass
+    """
+    Dernier timestamp (ms) ; trace 1 fois un warning si fichier introuvable
+    pour aider au diagnostic.
+    """
+    rows = load_csv_ohlcv(data_dir, symbol, tf, max_rows=1)
+    if rows:
+        return int(rows[-1][0])
+
+    key = (symbol, tf)
+    if key not in _MIS_REPORTED:
+        _MIS_REPORTED.add(key)
+        guessed = find_csv_path(data_dir, symbol, tf)
+        msg = f"CSV introuvable pour {symbol}:{tf}"
+        if guessed:
+            msg += f" (dernier essai: {guessed})"
+        else:
+            msg += " (aucun chemin candidat trouvé)"
+        log.warning(msg)
     return None
 
 def _data_is_fresh(now_ms: int, last_ms: int | None, tf: str) -> bool:
