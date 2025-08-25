@@ -146,13 +146,20 @@ def maybe_start_streamlit(reports_dir: str, logs_dir: str, project_root: str):
             stdout=open(os.path.join(logs_dir, "streamlit.out"), "a"),
             stderr=open(os.path.join(logs_dir, "streamlit.err"), "a"),
             env=env,
-            preexec_fn=os.setsid  # groupe pour faciliter le kill à l’arrêt
+            preexec_fn=os.setsid
         )
-        with open(pidfile, "w") as f: f.write(str(proc.pid))
-        print(f"[DASH] Streamlit démarré sur port 8501 (PID {proc.pid}).")
+        with open(pidfile, "w") as f:
+            f.write(str(proc.pid))
+
+        # 🔥 écrire l’URL dans un fichier dash/dashboard_url.txt
+        url_file = os.path.join(project_root, "dash", "dashboard_url.txt")
+        os.makedirs(os.path.dirname(url_file), exist_ok=True)
+        with open(url_file, "w", encoding="utf-8") as f:
+            f.write("http://localhost:8501\n")
+
+        print(f"[DASH] Streamlit démarré sur port 8501 (PID {proc.pid}). URL écrite dans dash/dashboard_url.txt")
     except Exception as e:
         print(f"[DASH] Échec démarrage Streamlit: {e}")
-
 # ---------------- main: promotion + TOP + dash ----------------
 def main():
     ap = argparse.ArgumentParser()
