@@ -1,0 +1,18 @@
+{
+  "meta": {
+    "generated_at": "now",
+    "note": "Stratégies promues. Les stratégies avec execute=false restent en mode OBSERVE (aucun ordre)."
+  },
+  "strategies": {
+    "BTCUSDT:1m": {
+      "name": "BASE_UNTESTED",
+      "risk_label": "EXPERIMENTAL",
+      "execute": false,
+      "ema_fast": 9,
+      "ema_slow": 21,
+      "atr_period": 14,
+      "trail_atr_mult": 1.5,
+      "risk_pct_equity": 0.005
+    }
+  }
+}
