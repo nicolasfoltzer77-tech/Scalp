@@ -1,15 +1,18 @@
+# engine/config/config.yaml
 runtime:
-  data_dir: /notebooks/scalp_data/data
-  log_dir: /notebooks/scalp_data/logs
-  reports_dir: /notebooks/scalp_data/reports
-  paper_trade: true
-  allowed_symbols: []
+  timeframe: "1m"
   refresh_secs: 5
+  data_dir: "/notebooks/scalp_data/data"
+  reports_dir: "/notebooks/scalp_data/reports"
 
-strategy:
-  live_timeframe: 1m
-  ema_fast: 20
-  ema_slow: 50
-  atr_period: 14
-  trail_atr_mult: 2.0
-  risk_pct_equity: 0.02
+watchlist:
+  top: 10           # TOP-N dynamiques
+  score_tf: "5m"    # TF utilisé pour scorer (vol/volat)
+  backfill_tfs: ["1m","5m","15m"]  # TFs à maintenir
+  backfill_limit: 1500             # nb de barres à récupérer par TF
+
+maintainer:
+  enable: true
+  interval_secs: 43200             # relance toutes les 12h
+  seed_tfs: ["1m"]                 # TFs pour seed des stratégies EXPERIMENTAL
+  ttl_bars_experimental: 120       # TTL en nb de barres pour EXPERIMENTAL
