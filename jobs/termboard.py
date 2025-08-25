@@ -91,7 +91,7 @@ def main() -> int:
         while True:
             strats = _load_strats(STRAT)
             title = (f"=== ORCHESTRATOR (TUI) ===\n"
-                     f"DATA_DIR={DATA}\nrefresh={args.refresh}s  tfs={','.join(tfs)}  age_mult×TF={args.age-mult}")
+f"DATA_DIR={DATA}\nrefresh={args.refresh}s  tfs={','.join(tfs)}  age_mult×TF={args.age_mult}"
             table = _build_table(syms, tfs, DATA, strats, args.age_mult)
             console.clear()
             console.print(Panel(table, title=title, border_style="cyan"))
