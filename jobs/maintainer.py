@@ -1,3 +1,19 @@
+#!/usr/bin/env python3
+# jobs/maintainer.py
+
+# --- bootstrap chemin + sitecustomize ---
+from pathlib import Path
+import sys
+
+ROOT = Path(__file__).resolve().parents[1]   # racine du repo
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+try:
+    import sitecustomize  # charge .env + deps + paths (si présent)
+except Exception:
+    pass
+# --- fin bootstrap ---
+
 from engine.config.loader import load_config
 
 def _cfg_vals():
