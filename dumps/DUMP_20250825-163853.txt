@@ -1,5 +1,5 @@
 # DUMP du repo (root=/notebooks/scalp)
-# Date: 2025-08-25 15:52:44
+# Date: 2025-08-25 16:38:53
 # Filtres: exclude_dirs=['.git', '.github', '.idea', '.ipynb_checkpoints', '.mypy_cache', '.pytest_cache', '.vscode', '__pycache__', 'backups', 'build', 'dist', 'dump', 'dumps', 'scalp0', 'scalp1', 'scalp2', 'scalp3']
 #          exclude_globs=['*.csv', '*.parquet', '*.feather', '*.log', '*.gz', '*.zip', '*.xz', '*.bz2', '*.png', '*.jpg', '*.jpeg', '*.gif', '*.svg', '*.pdf', '*.so', '*.dll', '*.dylib', '*.bin', '*.ipynb']
 #          allow_ext=['.ini', '.md', '.py', '.sh', '.toml', '.txt', '.yaml', '.yml']
@@ -367,127 +367,16 @@ Ce résumé fournit les éléments nécessaires à la reconstruction du bot et �
   Telegram.
 
 
-# ==== cli.py (4373 bytes) ====
-"""Command line utilities for the Scalp project.
-
-This module exposes a small command line interface used throughout the
-project.  The actual trading logic lives in other modules, however the CLI is
-responsible for parsing parameters and dispatching the appropriate routines.
-
-The implementation intentionally keeps the invoked functions minimal so that
-tests can patch them easily.  In a real deployment these functions would
-perform optimisation, walk‑forward analysis or run the live pipeline.
-"""
-
+# ==== cli.py (413 bytes) ====
+# cli.py  (à la racine du repo)
 from __future__ import annotations
-
 import argparse
-import asyncio
-from typing import Iterable, List
 
-from engine.version import bump_version_from_git
-
-
-# ---------------------------------------------------------------------------
-# Placeholder implementations
-# ---------------------------------------------------------------------------
-
-
-def run_parallel_optimization(pairs: List[str], timeframe: str, jobs: int) -> None:
-    """Run a parallel parameter optimisation.
-
-    The real project dispatches a potentially heavy optimisation routine.  The
-    function is kept trivial so unit tests can verify that the CLI wiring works
-    without actually performing the optimisation.
-    """
-
-    print(f"Optimising {pairs} on {timeframe} with {jobs} jobs")
-
-
-def run_walkforward_analysis(
-    pair: str, timeframe: str, splits: int, train_ratio: float
-) -> None:
-    """Execute a walk-forward analysis."""
-
-    print(
-        f"Walk-forward on {pair} ({timeframe}), splits={splits}, train_ratio={train_ratio}"
-    )
-
-
-async def run_live_pipeline(pairs: List[str], tfs: Iterable[str]) -> None:
-    """Run the live trading pipeline."""
-
-    print(f"Running live pipeline for pairs={pairs} on tfs={list(tfs)}")
-
-
-# ---------------------------------------------------------------------------
-# Argument parsing
-# ---------------------------------------------------------------------------
-
-
-def create_parser() -> argparse.ArgumentParser:
-    """Create the top-level argument parser."""
-
-    parser = argparse.ArgumentParser(description="Scalp command line tools")
-    sub = parser.add_subparsers(dest="command")
-
-    # --- ``opt`` command -------------------------------------------------
-    opt_p = sub.add_parser("opt", help="run optimisation in parallel")
-    opt_p.add_argument("--pairs", nargs="+", required=True, help="trading pairs")
-    opt_p.add_argument("--tf", required=True, help="timeframe")
-    opt_p.add_argument("--jobs", type=int, default=1, help="number of workers")
-    opt_p.set_defaults(
-        func=lambda a: run_parallel_optimization(a.pairs, a.tf, a.jobs)
-    )
-
-    # --- ``walkforward`` command ----------------------------------------
-    wf_p = sub.add_parser("walkforward", help="perform walk-forward analysis")
-    wf_p.add_argument("--pair", required=True, help="trading pair")
-    wf_p.add_argument("--tf", required=True, help="timeframe")
-    wf_p.add_argument("--splits", type=int, default=1, help="number of splits")
-    wf_p.add_argument(
-        "--train-ratio",
-        type=float,
-        default=0.7,
-        help="portion of data used for training",
-    )
-    wf_p.set_defaults(
-        func=lambda a: run_walkforward_analysis(
-            a.pair, a.tf, a.splits, a.train_ratio
-        )
-    )
-
-    # --- ``live`` command -----------------------------------------------
-    live_p = sub.add_parser("live", help="run the live async pipeline")
-    live_p.add_argument("--pairs", nargs="+", required=True, help="trading pairs")
-    live_p.add_argument("--tfs", nargs="+", required=True, help="timeframes")
-    live_p.set_defaults(func=lambda a: asyncio.run(run_live_pipeline(a.pairs, a.tfs)))
-
-    # --- ``bump-version`` command -------------------------------------
-    bv_p = sub.add_parser(
-        "bump-version",
-        help="update the VERSION file based on the latest git commit",
-    )
-    bv_p.set_defaults(func=lambda a: print(bump_version_from_git()))
-
-    return parser
-
-
-def main(argv: Iterable[str] | None = None) -> int:
-    """Entry point used by tests and ``if __name__ == '__main__'`` block."""
-
-    parser = create_parser()
-    args = parser.parse_args(argv)
-    if not hasattr(args, "func"):
-        parser.print_help()
-        return 0
-    result = args.func(args)
-    return 0 if result is None else int(result)
-
-
-if __name__ == "__main__":  # pragma: no cover - manual invocation
-    raise SystemExit(main())
-
+def parse_cli() -> argparse.Namespace:
+    ap = argparse.ArgumentParser(description="SCALP — launcher")
+    ap.add_argument("--once", action="store_true", help="Exécuter une seule passe orchestrateur")
+    ap.add_argument("--log-level", default="INFO", help="DEBUG/INFO/WARN/ERROR (défaut: INFO)")
+    return ap.parse_args()
 
 
 # ==== run-dash.sh (285 bytes) ====
@@ -504,112 +393,31 @@ streamlit run dash/app.py --server.port 8501 --server.headless true
 addopts = -q
 
 
-# ==== bot.py (3174 bytes) ====
-#!/usr/bin/env python3
-# bot.py
+# ==== bot.py (601 bytes) ====
 from __future__ import annotations
-
-# --- bootstrap (chemins + sitecustomize) ---
-import sys, asyncio, logging, subprocess
+import sys, shutil
 from pathlib import Path
+
 ROOT = Path(__file__).resolve().parent
-if str(ROOT) not in sys.path: sys.path.insert(0, str(ROOT))
-try:
-    import sitecustomize  # noqa: F401
-    print("[bootstrap] sitecustomize importé (OK)")
-except Exception as e:
-    print(f"[bootstrap] sitecustomize indisponible: {e}")
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
-# --- conf & exchange ---
-from engine.config.loader import load_config
-from engine.exchange.bitget_rest import BitgetFuturesClient  # fallback REST (pas de ccxt ici)
-from engine.live.orchestrator import run_orchestrator, run_config_from_yaml  # ✅ pas besoin d'importer RunConfig
+def _clean_py_caches(root: Path) -> None:
+    for p in root.rglob("*.pyc"):
+        try: p.unlink()
+        except Exception: pass
+    for d in root.rglob("__pycache__"):
+        try: shutil.rmtree(d, ignore_errors=True)
+        except Exception: pass
 
-log = logging.getLogger("bot")
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)s %(name)s: %(message)s"
-)
-
-def _build_exchange():
-    """
-    Fabrique résiliente : tente avec (paper, base) puis dégrade
-    si la classe ne supporte pas ces kwargs.
-    """
-    cfg = load_config()
-    ex_cfg = (cfg.get("exchange") or {}).get("bitget", {}) or {}
-    trading = (cfg.get("trading") or {})
-
-    ak = ex_cfg.get("access_key", "")
-    sk = ex_cfg.get("secret_key", "")
-    pp = ex_cfg.get("passphrase", "")
-    base = ex_cfg.get("base", "https://api.bitget.com")
-    paper = bool(trading.get("paper", True))
-
-    # 1) Essai complet (anciennes versions)
-    try:
-        return BitgetFuturesClient(
-            access_key=ak,
-            secret_key=sk,
-            passphrase=pp,
-            paper=paper,
-            base=base,
-        )
-    except TypeError:
-        pass
-
-    # 2) Sans 'paper'
-    try:
-        return BitgetFuturesClient(
-            access_key=ak,
-            secret_key=sk,
-            passphrase=pp,
-            base=base,
-        )
-    except TypeError:
-        pass
-
-    # 3) Sans 'base' non plus
-    try:
-        return BitgetFuturesClient(
-            access_key=ak,
-            secret_key=sk,
-            passphrase=pp,
-        )
-    except TypeError as e:
-        raise RuntimeError(f"BitgetFuturesClient incompatible: {e}")
-        
-def _spawn_maintainer():
-    """Lance le maintainer en arrière‑plan, sans bloquer."""
-    try:
-        args = [
-            sys.executable, "-m", "jobs.maintainer",
-            "--once"  # une passe au lancement; ensuite l'orchestrateur AUTO tourne
-        ]
-        print("[maintainer] lancé en arrière‑plan (config).")
-        subprocess.Popen(args, cwd=str(ROOT))
-    except Exception as e:
-        log.warning("impossible de lancer le maintainer: %s", e)
-
-async def main():
-    # 1) exchange
-    ex = _build_exchange()
-    print(f"[bot] Exchange REST prêt: BitgetFuturesClient ready")
-
-    # 2) maintainer (backfill + première passe)
-    _spawn_maintainer()
-
-    # 3) config d’exécution pour l’orchestrateur (AUTO + multi‑TF)
-    run_cfg = run_config_from_yaml()  # ✅ construit à partir de engine/config/config.yml
-
-    # 4) boucle orchestrateur
-    await run_orchestrator(ex, run_cfg)
+def main() -> int:
+    _clean_py_caches(ROOT)
+    from engine.app import run_app
+    run_app()
+    return 0
 
 if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        print("\n[bot] arrêt demandé.")
+    raise SystemExit(main())
 
 
 # ==== Makefile (104 bytes) ====
@@ -4109,6 +3917,30 @@ if __name__ == "__main__":
     raise SystemExit(main())
 
 
+# ==== engine/app.py (570 bytes) ====
+from __future__ import annotations
+import asyncio
+import logging
+
+from engine.bootstrap import bootstrap_environment, build_exchange
+
+log = logging.getLogger("app")
+
+async def _main_async() -> None:
+    # import paresseux pour éviter toute boucle d'import
+    from engine.live.orchestrator import Orchestrator, run_config_from_yaml
+
+    bootstrap_environment()
+    cfg = run_config_from_yaml()
+    ex = build_exchange()
+
+    orch = Orchestrator(cfg, ex)
+    await orch.start()  # boucle infinie (scheduler interne)
+
+def run_app() -> None:
+    asyncio.run(_main_async())
+
+
 # ==== engine/selfcheck.py (4470 bytes) ====
 # scalper/selfcheck.py
 from __future__ import annotations
@@ -5589,6 +5421,151 @@ class HttpClient:
             msg = "Invalid JSON in response"
             logging.error("%s for %s: %s", msg, url, resp.text)
             return {"success": False, "error": msg, "text": resp.text}
+
+
+# ==== engine/bootstrap.py (4378 bytes) ====
+# engine/bootstrap.py
+from __future__ import annotations
+
+import importlib
+import logging
+import subprocess
+import sys
+from pathlib import Path
+from typing import Iterable, Optional
+
+from engine.config.loader import load_config
+
+
+log = logging.getLogger("bootstrap")
+
+
+# ------------------------------------------------------------
+# Dépendances minimales (légères) – on reste soft (pas de streamlit ici)
+# ------------------------------------------------------------
+
+_MIN_PKGS = [
+    # pour la visu terminal (jobs/termboard ou health board)
+    ("rich", "rich"),
+    # utilitaires de base déjà utilisés dans le projet
+    ("yaml", "pyyaml"),
+    ("requests", "requests"),
+]
+
+def _is_installed(mod: str) -> bool:
+    try:
+        importlib.import_module(mod)
+        return True
+    except Exception:
+        return False
+
+def _pip_install(args: Iterable[str]) -> int:
+    cmd = [sys.executable, "-m", "pip", "install", *list(args)]
+    return subprocess.call(cmd)
+
+def ensure_min_deps(extra: Optional[Iterable[str]] = None) -> None:
+    """
+    Installe en douceur les dépendances manquantes (rich, pyyaml, requests).
+    Évite de planter le démarrage si pip échoue (on loggue seulement).
+    """
+    missing = []
+    for mod, pip_name in _MIN_PKGS:
+        if not _is_installed(mod):
+            missing.append(pip_name)
+    if extra:
+        for name in extra:
+            # si l'appelant veut forcer un paquet, on tente
+            if not _is_installed(name):
+                missing.append(name)
+
+    if not missing:
+        return
+
+    try:
+        log.info("[deps] installation manquante: %s", ", ".join(missing))
+        _pip_install(missing)
+    except Exception as e:
+        log.warning("[deps] installation partielle: %s", e)
+
+
+# ------------------------------------------------------------
+# Chemins runtime (crée dossiers si absents)
+# ------------------------------------------------------------
+
+def ensure_paths() -> None:
+    """
+    Crée data_dir / reports_dir / logs_dir / tmp_dir si définis dans config.
+    """
+    cfg = load_config()
+    rt = (cfg.get("runtime") or {})
+    for key in ("data_dir", "reports_dir", "logs_dir", "tmp_dir"):
+        p = Path(rt.get(key) or "").expanduser()
+        if not p:
+            continue
+        try:
+            p.mkdir(parents=True, exist_ok=True)
+        except Exception as e:
+            log.warning("impossible de créer %s=%s: %s", key, p, e)
+
+
+# ------------------------------------------------------------
+# Exchange (Bitget REST) – tolérant aux signatures différentes
+# ------------------------------------------------------------
+
+def build_exchange():
+    """
+    Construit un client BitgetFuturesClient à partir de la conf.
+    Supporte plusieurs signatures (paper/base optionnels) sans planter.
+    """
+    from engine.exchange.bitget_rest import BitgetFuturesClient  # existant dans ton repo
+
+    cfg = load_config()
+    ex_cfg = (cfg.get("exchange") or {}).get("bitget", {}) or {}
+    trading = (cfg.get("trading") or {}) or {}
+
+    ak = ex_cfg.get("access_key", "")
+    sk = ex_cfg.get("secret_key", "")
+    pp = ex_cfg.get("passphrase", "")
+    base = ex_cfg.get("base", "https://api.bitget.com")
+    paper = bool(trading.get("paper", True))
+
+    # Essai 1: avec paper + base
+    try:
+        return BitgetFuturesClient(
+            access_key=ak, secret_key=sk, passphrase=pp,
+            paper=paper, base=base
+        )
+    except TypeError:
+        pass
+    # Essai 2: sans paper
+    try:
+        return BitgetFuturesClient(
+            access_key=ak, secret_key=sk, passphrase=pp,
+            base=base
+        )
+    except TypeError:
+        pass
+    # Essai 3: minimal
+    try:
+        return BitgetFuturesClient(
+            access_key=ak, secret_key=sk, passphrase=pp
+        )
+    except TypeError as e:
+        raise RuntimeError(f"BitgetFuturesClient incompatible avec la conf: {e}")
+
+
+# ------------------------------------------------------------
+# Entrée unique pour préparer l’environnement (appelée par app.run)
+# ------------------------------------------------------------
+
+def bootstrap_environment() -> None:
+    """
+    À appeler tôt au démarrage (depuis engine.app) :
+      - installe les deps minimales (rich/pyyaml/requests) si besoin
+      - prépare les dossiers runtime (data/reports/logs/tmp)
+    """
+    ensure_min_deps()
+    ensure_paths()
 
 
 # ==== engine/version.py (2608 bytes) ====
@@ -7352,6 +7329,125 @@ def select_top_pairs(
 annulé
 
 
+# ==== engine/live/scheduler.py (380 bytes) ====
+from __future__ import annotations
+import asyncio
+from typing import AsyncIterator
+
+class Scheduler:
+    def __init__(self, interval_sec: int = 2):
+        self.interval = max(1, int(interval_sec))
+
+    async def ticks(self) -> AsyncIterator[int]:
+        i = 0
+        while True:
+            yield i
+            i += 1
+            await asyncio.sleep(self.interval)
+            
+
+
+# ==== engine/live/state.py (3938 bytes) ====
+# engine/live/state.py
+from __future__ import annotations
+import time, subprocess
+from dataclasses import dataclass
+from typing import Dict, List, Tuple, Optional
+
+from engine.backtest.loader_csv import load_csv_ohlcv
+from engine.config.loader import load_config
+from engine.config.strategies import load_strategies
+
+_TF_MIN = {"1m":1,"5m":5,"15m":15,"1h":60,"4h":240,"1d":1440}
+
+def _is_fresh(now_ms: int, last_ms: Optional[int], tf: str, mult: float) -> bool:
+    if last_ms is None: return False
+    return (now_ms - last_ms) <= (mult * _TF_MIN.get(tf,1) * 60_000)
+
+@dataclass
+class Cell:
+    lbl: str  # MIS/OLD/DAT/OK
+    col: str  # k/r/o/g
+
+class MarketState:
+    """Gère l’état (fraîcheur des CSV + présence/validité des stratégies) et actions AUTO."""
+    def __init__(self, symbols: List[str], tfs: List[str], data_dir: str, fresh_mult: float = 1.0):
+        self.symbols = symbols
+        self.tfs = tfs
+        self.data_dir = data_dir
+        self.fresh_mult = fresh_mult
+        self.grid: Dict[Tuple[str,str], Tuple[str,str]] = {}  # (lbl, col)
+        self._cooldowns: Dict[str, float] = {}  # clé → epoch
+
+    def _last_ts_ms(self, symbol: str, tf: str) -> Optional[int]:
+        try:
+            rows = load_csv_ohlcv(self.data_dir, symbol, tf, max_rows=1)
+            return int(rows[-1][0]) if rows else None
+        except Exception:
+            return None
+
+    def _status_cell(self, strategies: Dict[str, Dict], symbol: str, tf: str) -> Tuple[str,str]:
+        now = int(time.time()*1000)
+        last = self._last_ts_ms(symbol, tf)
+        if last is None:
+            return ("MIS","k")
+        if not _is_fresh(now, last, tf, self.fresh_mult):
+            return ("OLD","r")
+        s = strategies.get(f"{symbol}:{tf}")
+        if s and not s.get("expired"):
+            return ("OK ","g")
+        return ("DAT","o")
+
+    def refresh(self, strategies: Optional[Dict[str, Dict]] = None) -> None:
+        if strategies is None:
+            strategies = load_strategies()
+        new_grid: Dict[Tuple[str,str], Tuple[str,str]] = {}
+        for s in self.symbols:
+            for tf in self.tfs:
+                new_grid[(s, tf)] = self._status_cell(strategies, s, tf)
+        self.grid = new_grid
+
+    def ready_pairs(self) -> List[Tuple[str,str]]:
+        """Retourne (symbol, tf) dont la cellule est OK (verte)."""
+        return [(s,tf) for (s,tf),(lbl,col) in self.grid.items() if col == "g"]
+
+    # ---------- AUTO ----------
+    def _cool(self, key: str, cooldown_secs: int) -> bool:
+        now = time.time()
+        t0 = self._cooldowns.get(key, 0.0)
+        if (now - t0) >= cooldown_secs:
+            self._cooldowns[key] = now
+            return True
+        return False
+
+    def _run(self, args: List[str]) -> int:
+        p = subprocess.run(args, capture_output=True, text=True)
+        if p.stdout: print(p.stdout.strip())
+        if p.stderr: print(p.stderr.strip())
+        return p.returncode
+
+    def auto_actions(self, limit: int, cooldown: int) -> None:
+        """Déclenche automatiquement refresh/backtest/promote selon l’état."""
+        # 1) refresh par TF si on voit MIS/OLD
+        for tf in self.tfs:
+            if any(self.grid.get((s,tf),("",""))[0] in ("MIS","OLD") for s in self.symbols):
+                key = f"refresh:{tf}"
+                if self._cool(key, cooldown):
+                    print(f"[auto] refresh tf={tf}")
+                    self._run(["python","-m","jobs.refresh_pairs","--timeframe",tf,"--top","0","--backfill-tfs",tf,"--limit",str(limit)])
+
+        # 2) backtest + promote si on observe au moins un DAT
+        if any(lbl == "DAT" for (lbl, _c) in self.grid.values()):
+            if self._cool("backtest", cooldown):
+                print("[auto] backtest + promote")
+                self._run(["python","-m","jobs.backtest","--from-watchlist","--tfs",",".join(self.tfs)])
+                self._run(["python","-m","jobs.promote","--backup"])
+
+
+# ==== engine/live/__init__.py (1 bytes) ====
+ 
+
+
 # ==== engine/live/commands.py (2244 bytes) ====
 # engine/live/commands.py
 from __future__ import annotations
@@ -7514,277 +7610,150 @@ class Trader:
                 self.state[(symbol, tf)] = Position(symbol=symbol, tf=tf)
 
 
-# ==== engine/live/orchestrator.py (10715 bytes) ====
-# engine/live/orchestrator.py
+# ==== engine/live/orchestrator.py (2453 bytes) ====
 from __future__ import annotations
-
-import asyncio
-import subprocess
-import time
 from dataclasses import dataclass
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import List
 
 from engine.config.loader import load_config
-from engine.config.strategies import load_strategies
 from engine.config.watchlist import load_watchlist
-from engine.backtest.loader_csv import load_csv_ohlcv  # lecture OHLCV
-
-# ============================================================
-# Modèle / Config d'exécution
-# ============================================================
+from engine.live.scheduler import Scheduler
+from engine.live.state import MarketState
+from engine.live.health import HealthBoard
 
 @dataclass
 class RunConfig:
-    symbols: List[str]        # univers (watchlist)
-    tfs: List[str]            # colonnes (1m,5m,15m,…)
-    refresh_secs: int         # cadence d’affichage/évaluation
-    data_dir: str             # répertoire OHLCV csv
-    limit: int                # profondeur lors des backfills
-    auto: bool = True         # automation (refresh, backtest, promote)
-    fresh_mult: float = 1.0   # “fraîche” si âge <= fresh_mult × TF
-    cooldown_secs: int = 60   # anti-tempête pour actions AUTO par TF
-
-_TF_MIN = {"1m":1, "5m":5, "15m":15, "1h":60, "4h":240, "1d":1440}
-
-def _tf_minutes(tf: str) -> int:
-    return _TF_MIN.get(str(tf), 1)
-
-# ============================================================
-# OHLCV & Stratégies
-# ============================================================
-
-def _last_ts_ms(data_dir: str, symbol: str, tf: str) -> Optional[int]:
-    try:
-        rows = load_csv_ohlcv(data_dir, symbol, tf, max_rows=1)
-        return int(rows[-1][0]) if rows else None
-    except Exception:
-        return None
-
-def _strat_valid(strats: Dict[str, Dict], symbol: str, tf: str) -> bool:
-    s = strats.get(f"{symbol}:{tf}")
-    return bool(s) and not bool(s.get("expired"))
-
-# ============================================================
-# Statut / Couleurs (console)
-# ============================================================
-
-_COL = {"k":"\x1b[30m","r":"\x1b[31m","g":"\x1b[32m","o":"\x1b[33m","x":"\x1b[0m"}
-
-def _short(sym: str) -> str:
-    sym = sym.upper().replace("_","")
-    return sym[:-4] if sym.endswith("USDT") else sym
-
-def _is_fresh(now_ms: int, last_ms: Optional[int], tf: str, fresh_mult: float) -> bool:
-    if last_ms is None: return False
-    return (now_ms - last_ms) <= (fresh_mult * _tf_minutes(tf) * 60_000)
-
-def _status_cell(data_dir: str, strats: Dict[str, Dict], symbol: str, tf: str, fresh_mult: float) -> Tuple[str,str]:
-    """
-    Retourne (label, color_code):
-      MIS / k  : pas de données
-      OLD / r  : données présentes mais pas fraîches
-      DAT / o  : données fraîches, pas de stratégie
-      OK  / g  : données fraîches + stratégie valide
-    """
-    now = int(time.time()*1000)
-    last = _last_ts_ms(data_dir, symbol, tf)
-    if last is None:
-        return ("MIS","k")
-    if not _is_fresh(now, last, tf, fresh_mult):
-        return ("OLD","r")
-    if _strat_valid(strats, symbol, tf):
-        return ("OK ","g")
-    return ("DAT","o")
-
-# ============================================================
-# Rendu tableau multi‑TF
-# ============================================================
-
-def _center(t: str, w: int) -> str:
-    pad = max(0, w - len(t))
-    return " "*(pad//2) + t + " "*(pad - pad//2)
-
-def _render(symbols: List[str], tfs: List[str], data_dir: str, strats: Dict[str,Dict], fresh_mult: float
-           ) -> Tuple[str, Dict[Tuple[str,str], Tuple[str,str]], Dict[str,int]]:
-    header = ["PAIR", *tfs]
-    rows: List[List[str]] = []
-    states: Dict[Tuple[str,str], Tuple[str,str]] = {}
-    counts = {"k":0,"r":0,"o":0,"g":0}
-
-    for s in symbols:
-        one = [_short(s)]
-        for tf in tfs:
-            lbl, col = _status_cell(data_dir, strats, s, tf, fresh_mult)
-            states[(s,tf)] = (lbl, col)
-            counts[col] = counts.get(col,0) + 1
-            one.append(f"{_COL[col]}{lbl}{_COL['x']}")
-        rows.append(one)
-
-    # largeur visible (strip ANSI)
-    import re
-    def vis_len(x: str) -> int: return len(re.sub(r"\x1b\[[0-9;]*m","",x))
-    width = [max(vis_len(r[i]) for r in [header] + rows) for i in range(len(header))]
-
-    def fmt(row: List[str]) -> str:
-        out=[]
-        for i,v in enumerate(row):
-            w=width[i]
-            if "\x1b[" in v:
-                plain = re.sub(r"\x1b\[[0-9;]*m","",v)
-                v = v.replace(plain, _center(plain, w))
-            else:
-                v = _center(v, w)
-            out.append(v)
-        return " | ".join(out)
-
-    sep = ["-"*w for w in width]
-    table = "\n".join([fmt(header), fmt(sep), *[fmt(r) for r in rows]])
-    return table, states, counts
-
-# ============================================================
-# AUTO actions (refresh / backtest / promote) avec cooldown
-# ============================================================
-
-_last_auto: Dict[str, float] = {}  # par clé (refresh:TF, backtest)
-
-def _cool(key: str, cooldown: int) -> bool:
-    now = time.time()
-    t0 = _last_auto.get(key, 0.0)
-    if (now - t0) >= cooldown:
-        _last_auto[key] = now
-        return True
-    return False
-
-def _run(args: List[str]) -> int:
-    p = subprocess.run(args, capture_output=True, text=True)
-    out = (p.stdout or "").strip(); err = (p.stderr or "").strip()
-    if out: print(out)
-    if err: print(err)
-    return p.returncode
-
-def _auto_refresh(tf: str, limit: int, cooldown: int) -> None:
-    key = f"refresh:{tf}"
-    if not _cool(key, cooldown):
-        return
-    print(f"[auto] refresh tf={tf}")
-    _run(["python","-m","jobs.refresh_pairs","--timeframe",tf,"--top","0","--backfill-tfs",tf,"--limit",str(limit)])
-
-def _auto_backtest_promote(tfs: List[str], cooldown: int) -> None:
-    key = "backtest"
-    if not _cool(key, cooldown):
-        return
-    print("[auto] backtest + promote")
-    _run(["python","-m","jobs.backtest","--from-watchlist","--tfs",",".join(tfs)])
-    _run(["python","-m","jobs.promote","--backup"])
-
-# ============================================================
-# Boucle orchestrateur
-# ============================================================
-
-async def run_orchestrator(ex, run_cfg: RunConfig, notifier=None, command_stream=None) -> None:
-    cfg = load_config()
-    trade_cfg = (cfg.get("trading") or {})
-    exec_enabled = bool(trade_cfg.get("exec_enabled", False))
-    max_pairs = int(trade_cfg.get("max_pairs", 12))
-
-    first_legend = True
-
-    while True:
-        try:
-            strats = load_strategies()
-            table, states, counts = _render(run_cfg.symbols, run_cfg.tfs, run_cfg.data_dir, strats, run_cfg.fresh_mult)
-
-            # clear + home
-            print("\x1b[2J\x1b[H", end="")
-            print("=== ORCHESTRATOR ===")
-            print(f"timeframes={','.join(run_cfg.tfs)} refresh={run_cfg.refresh_secs}s exec_enabled={int(exec_enabled)}")
-            if first_legend:
-                print("legend: "
-                      f"{_COL['k']}MIS{_COL['x']}=no data • "
-                      f"{_COL['r']}OLD{_COL['x']}=stale • "
-                      f"{_COL['o']}DAT{_COL['x']}=data no strat • "
-                      f"{_COL['g']}OK{_COL['x']}=ready")
-                first_legend = False
-            print(table)
-            print(f"stats • MIS={counts['k']} OLD={counts['r']} DAT={counts['o']} OK={counts['g']}")
-
-            # ---------- AUTO ----------
-            if run_cfg.auto:
-                # refresh par TF si présence de MIS/OLD
-                for tf in run_cfg.tfs:
-                    if any(states.get((s,tf),("",""))[0] in ("MIS","OLD") for s in run_cfg.symbols):
-                        _auto_refresh(tf, run_cfg.limit, run_cfg.cooldown_secs)
-
-                # backtest+promote si on observe au moins un DAT
-                if any(lbl=="DAT" for lbl,_c in states.values()):
-                    _auto_backtest_promote(run_cfg.tfs, run_cfg.cooldown_secs)
-
-            # ---------- Actifs (VERT uniquement) ----------
-            active: List[Tuple[str,str]] = [(s,tf) for (s,tf),(lbl,c) in states.items() if lbl=="OK "]
-            if max_pairs > 0:
-                active = active[:max_pairs]
-            if active:
-                pairs = ", ".join(f"{_short(s)}:{tf}" for s,tf in active)
-            else:
-                pairs = "(aucun)"
-            print(f"[orchestrator] actifs={len(active)} / {len(run_cfg.symbols)*len(run_cfg.tfs)} -> {pairs}")
-
-            # Placeholder d'évaluation (observe-only si exec disabled)
-            async def _eval_one(sym: str, tf: str, strat: Dict[str,Any]):
-                try:
-                    from engine.signals.executor import evaluate_tick  # optionnel
-                except Exception:
-                    evaluate_tick = None  # type: ignore
-                if evaluate_tick:
-                    await maybe_await(evaluate_tick(ex, sym, tf, strat, exec_enabled))
-                else:
-                    print(f"[observe] {_short(sym)}:{tf} • ema_f={strat.get('ema_fast')} ema_s={strat.get('ema_slow')}")
-
-            tasks: List[asyncio.Task] = []
-            for s,tf in active:
-                st = strats.get(f"{s}:{tf}")
-                if not st: continue
-                tasks.append(asyncio.create_task(_eval_one(s, tf, st)))
-            if tasks:
-                await asyncio.gather(*tasks)
-
-        except Exception as e:
-            print(f"[orchestrator] erreur: {e}")
-
-        await asyncio.sleep(max(1, int(run_cfg.refresh_secs)))
-
-async def maybe_await(x):
-    if hasattr(x, "__await__"): return await x
-    return x
-
-# ============================================================
-# Fabrique de RunConfig à partir de config.yml
-# ============================================================
+    symbols: List[str]
+    timeframes: List[str]
+    refresh_secs: int
+    data_dir: str
+    limit: int
+    exec_enabled: bool = False
+    auto: bool = True
+    fresh_mult: float = 1.0
+    cooldown_secs: int = 60
 
 def run_config_from_yaml() -> RunConfig:
     cfg = load_config()
     rt = cfg.get("runtime", {}) or {}
     wl = cfg.get("watchlist", {}) or {}
     mt = cfg.get("maintainer", {}) or {}
-    auto_cfg = (cfg.get("auto") or {})  # section optionnelle pour ce module
+    auto_cfg = cfg.get("auto") or {}
 
-    # univers = top watchlist (sinon fallback)
     wl_doc = load_watchlist()
-    syms = [(d.get("symbol") or "").replace("_","").upper() for d in (wl_doc.get("top") or []) if d.get("symbol")]
-    if not syms:
-        syms = ["BTCUSDT","ETHUSDT","SOLUSDT"]
-
+    syms = [(d.get("symbol") or "").replace("_", "").upper()
+            for d in (wl_doc.get("top") or []) if d.get("symbol")] or ["BTCUSDT","ETHUSDT","SOLUSDT"]
     tfs = [str(x) for x in (wl.get("backfill_tfs") or ["1m","5m","15m"])]
+
     return RunConfig(
         symbols=syms,
-        tfs=tfs,
+        timeframes=tfs,
         refresh_secs=int(mt.get("live_interval_secs", 5)),
         data_dir=str(rt.get("data_dir") or "/notebooks/scalp_data/data"),
         limit=int(wl.get("backfill_limit", 1500)),
+        exec_enabled=bool((cfg.get("trading") or {}).get("exec_enabled", False)),
         auto=bool(auto_cfg.get("enabled", True)),
         fresh_mult=float(auto_cfg.get("fresh_mult", mt.get("fresh_mult", 1.0))),
         cooldown_secs=int(auto_cfg.get("cooldown_secs", 60)),
     )
+
+class Orchestrator:
+    def __init__(self, cfg: RunConfig, exchange):
+        self.cfg = cfg
+        self.exchange = exchange
+        self.state = MarketState(cfg.symbols, cfg.timeframes, cfg.data_dir, cfg.fresh_mult)
+        self.health = HealthBoard(self.state)
+        self.sched = Scheduler(interval_sec=max(1, int(cfg.refresh_secs)))
+
+    async def start(self) -> None:
+        self.health.banner()
+        async for _ in self.sched.ticks():       # boucle infinie
+            await self._step()
+
+    async def step_once(self) -> None:
+        await self._step()
+
+    async def _step(self) -> None:
+        self.state.refresh()
+        self.health.render()
+        if self.cfg.auto:
+            self.state.auto_actions(limit=self.cfg.limit, cooldown=self.cfg.cooldown_secs)
+        for (s, tf) in self.state.ready_pairs():
+            pass  # placeholder signaux
+
+
+# ==== engine/live/health.py (2479 bytes) ====
+# engine/live/health.py
+from __future__ import annotations
+from typing import Dict, List, Tuple
+import re
+
+# codes ANSI simples
+_COL = {"k":"\x1b[30m","r":"\x1b[31m","g":"\x1b[32m","o":"\x1b[33m","x":"\x1b[0m"}
+
+def _short(sym: str) -> str:
+    s = sym.upper().replace("_","")
+    return s[:-4] if s.endswith("USDT") else s
+
+def _center(t: str, w: int) -> str:
+    pad = max(0, w-len(t)); return " "*(pad//2) + t + " "*(pad-pad//2)
+
+class HealthBoard:
+    """Affichage console: tableau PAIR × TF avec MIS/OLD/DAT/OK."""
+    def __init__(self, state):
+        self.state = state
+        self._legend_once = False
+
+    def banner(self) -> None:
+        print("\x1b[2J\x1b[H", end="")
+        print("=== ORCHESTRATOR ===")
+
+    def _render_table(self) -> str:
+        syms = self.state.symbols
+        tfs  = self.state.tfs
+        header = ["PAIR", *tfs]
+        rows: List[List[str]] = []
+        counts = {"k":0,"r":0,"o":0,"g":0}
+
+        for s in syms:
+            line = [_short(s)]
+            for tf in tfs:
+                lbl, col = self.state.grid.get((s, tf), ("MIS","k"))
+                counts[col] = counts.get(col,0) + 1
+                cell = f"{_COL[col]}{lbl}{_COL['x']}"
+                line.append(cell)
+            rows.append(line)
+
+        # largeurs visibles (sans ANSI)
+        def vislen(x: str) -> int:
+            return len(re.sub(r"\x1b\[[0-9;]*m","",x))
+
+        widths = [max(vislen(r[i]) for r in [header]+rows) for i in range(len(header))]
+
+        def fmt(row: List[str]) -> str:
+            out=[]
+            for i,v in enumerate(row):
+                w=widths[i]
+                if "\x1b[" in v:
+                    plain = re.sub(r"\x1b\[[0-9;]*m","",v)
+                    v = v.replace(plain, _center(plain, w))
+                else:
+                    v = _center(v, w)
+                out.append(v)
+            return " | ".join(out)
+
+        sep = ["-"*w for w in widths]
+        table = "\n".join([fmt(header), fmt(sep), *[fmt(r) for r in rows]])
+        legend = (f"{_COL['k']}MIS{_COL['x']}=no data • "
+                  f"{_COL['r']}OLD{_COL['x']}=stale • "
+                  f"{_COL['o']}DAT{_COL['x']}=data no strat • "
+                  f"{_COL['g']}OK{_COL['x']}=ready")
+        stats = f"stats • MIS={counts['k']} OLD={counts['r']} DAT={counts['o']} OK={counts['g']}"
+        return f"{table}\n{legend}\n{stats}"
+
+    def render(self) -> None:
+        print("\x1b[2J\x1b[H", end="")
+        print(self._render_table())
 
 
 # ==== engine/live/notify.py (1189 bytes) ====
@@ -11189,7 +11158,3 @@ def main(argv: Iterable[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
-
-# ---- DIAGNOSTIC: GROS FICHIERS EXCLUS ----
-    530563  dump.txt
