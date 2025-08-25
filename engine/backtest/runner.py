@@ -9,10 +9,8 @@ from typing import Dict, Iterable, List
 
 from engine.config.loader import load_config
 from engine.config.watchlist import load_watchlist
-from engine.signals.factory import load_strategies_cfg          # <- FIX d'import
+from engine.signals.factory import load_strategies_cfg          # FIX d'import
 from engine.backtest.loader_csv import load_csv_ohlcv           # lecteur OHLCV CSV
-
-# -------------------------------------------------------------
 
 @dataclass
 class DraftStrategy:
@@ -23,7 +21,7 @@ class DraftStrategy:
     trail_atr_mult: float = 2.0
     risk_pct_equity: float = 0.5
     created_at: int = 0        # ms epoch
-    ttl_bars: int = 240        # durée de vie par défaut (ex: 240 barres)
+    ttl_bars: int = 240        # durée de vie par défaut (barres)
     expired: bool = False
 
 def _now_ms() -> int:
@@ -63,8 +61,7 @@ def _has_enough_data(data_dir: str, symbol: str, tf: str, min_rows: int = 200) -
 def run_backtests(*, from_watchlist: bool, tfs: Iterable[str]) -> Path:
     """
     Produit un draft minimal 'strategies.yml.next' sous reports/.
-    On génère des stratégies de base (baseline) pour chaque (symbol, tf)
-    ayant assez d'historique. Le vrai scoring/perf pourra être ajouté plus tard.
+    Génère des stratégies baseline pour chaque (symbol, tf) avec assez d'historique.
     """
     cfg = load_config()
     rt = cfg.get("runtime", {})
