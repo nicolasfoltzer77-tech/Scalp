@@ -4,6 +4,7 @@ runtime:
   refresh_secs: 5
   data_dir: "/notebooks/scalp_data/data"
   reports_dir: "/notebooks/scalp_data/reports"
+  logs_dir: "/notebooks/scalp_data/logs"   # <— NOUVEAU
 
 watchlist:
   top: 10           # TOP-N dynamiques
