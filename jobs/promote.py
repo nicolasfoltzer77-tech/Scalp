@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import annotations
-import argparse, os, sys, time, logging, yaml, json, subprocess, signal
+import argparse, os, sys, time, logging, yaml, json, subprocess
 from copy import deepcopy
 from typing import Dict, List
 
@@ -71,8 +71,8 @@ def _pass_policy(r: Dict, mode: str) -> bool:
 def _explain_fail(r: Dict, mode: str) -> str:
     pol = RISK_POLICIES.get(mode, RISK_POLICIES["normal"])
     why = []
-    if r.get("pf",0) < pol["pf"]:      why.append(f"PF {r.get('pf',0):.2f}<{pol['pf']:.2f}")
-    if r.get("mdd",1) > pol["mdd"]:    why.append(f"MDD {r.get('mdd',1):.2%}>{pol['mdd']:.0%}")
+    if r.get("pf",0) < pol["pf"]:         why.append(f"PF {r.get('pf',0):.2f}<{pol['pf']:.2f}")
+    if r.get("mdd",1) > pol["mdd"]:       why.append(f"MDD {r.get('mdd',1):.2%}>{pol['mdd']:.0%}")
     if r.get("trades",0) < pol["trades"]: why.append(f"TR {r.get('trades',0)}<{pol['trades']}")
     return "; ".join(why) if why else "OK"
 
@@ -99,35 +99,41 @@ def print_topk_in_console(summary_path: str, risk_mode: str, k:int=12):
     passed = sum(1 for r in rows if _pass_policy(r, risk_mode))
     print(f"[TOP] Résumé: {passed} PASS / {len(rows)} total")
 
-# ---------------- Streamlit auto (install + start) ----------------
+# ---------------- Streamlit auto (install + start + URL file) ----------------
 def maybe_start_streamlit(reports_dir: str, logs_dir: str, project_root: str):
     """
     - installe streamlit/plotly/pyarrow si absents
     - démarre streamlit en arrière-plan (port 8501) si pas déjà lancé
     - écrit un pidfile dans logs_dir/streamlit.pid
+    - écrit l’URL dans dash/dashboard_url.txt
     """
+    # ensure deps
     try:
         from tools.ensure_deps import ensure
     except Exception:
-        # chemin relatif quand lancé depuis ailleurs
         sys.path.insert(0, os.path.abspath(os.path.join(project_root)))
         from tools.ensure_deps import ensure
 
     need = {"streamlit": "streamlit", "plotly": "plotly", "pyarrow": "pyarrow"}
-    res = ensure(need)  # installe silencieusement si manquant
+    ensure(need)  # installe silencieusement si manquant
 
-    # Chemin de l'app
+    # app path
     app_path = os.path.join(project_root, "dash", "app_streamlit.py")
     if not os.path.isfile(app_path):
-        return  # pas d'app, on sort
+        return
 
     pidfile = os.path.join(logs_dir, "streamlit.pid")
-
     # déjà lancé ?
     if os.path.isfile(pidfile):
         try:
             with open(pidfile, "r") as f: pid = int(f.read().strip())
-            os.kill(pid, 0)  # check process exists
+            os.kill(pid, 0)  # process existe -> on ne relance pas
+            # écrire/mettre à jour l'URL quand même
+            url_file = os.path.join(project_root, "dash", "dashboard_url.txt")
+            os.makedirs(os.path.dirname(url_file), exist_ok=True)
+            with open(url_file, "w", encoding="utf-8") as f:
+                f.write("http://localhost:8501\n")
+                f.write("(Paperspace public URL: https://<ton-instance>.paperspacegradient.com:8501)\n")
             return
         except Exception:
             try: os.remove(pidfile)
@@ -137,7 +143,7 @@ def maybe_start_streamlit(reports_dir: str, logs_dir: str, project_root: str):
     try:
         env = os.environ.copy()
         env["STREAMLIT_BROWSER_GATHER_USAGE_STATS"] = "false"
-        env["SCALP_REPORTS_DIR"] = reports_dir  # l’app lit ce var si présent
+        env["SCALP_REPORTS_DIR"] = reports_dir
         proc = subprocess.Popen(
             [sys.executable, "-m", "streamlit", "run", app_path,
              "--server.headless", "true",
@@ -151,23 +157,17 @@ def maybe_start_streamlit(reports_dir: str, logs_dir: str, project_root: str):
         with open(pidfile, "w") as f:
             f.write(str(proc.pid))
 
-        # 🔥 écrire l’URL dans un fichier dash/dashboard_url.txt
-        url_file = os.path.join(project_root, "dash", "dashboard_url.txt")
-        os.makedirs(os.path.dirname(url_file), exist_ok=True)
-        with open(url_file, "w", encoding="utf-8") as f:
-            f.write("http://localhost:8501\n")
-
-        print(f"[DASH] Streamlit démarré sur port 8501 (PID {proc.pid}). URL écrite dans dash/dashboard_url.txt")
-    except Exception as e:
-        print(f"[DASH] Échec démarrage Streamlit: {e}")
-        
-                # 🔥 écrire l’URL dans un fichier dash/dashboard_url.txt
+        # écrire l’URL dans un fichier texte au format copiable
         url_file = os.path.join(project_root, "dash", "dashboard_url.txt")
         os.makedirs(os.path.dirname(url_file), exist_ok=True)
         with open(url_file, "w", encoding="utf-8") as f:
             f.write("http://localhost:8501\n")
             f.write("(Paperspace public URL: https://<ton-instance>.paperspacegradient.com:8501)\n")
-            
+
+        print(f"[DASH] Streamlit démarré sur port 8501 (PID {proc.pid}). URL écrite dans dash/dashboard_url.txt")
+    except Exception as e:
+        print(f"[DASH] Échec démarrage Streamlit: {e}")
+
 # ---------------- main: promotion + TOP + dash ----------------
 def main():
     ap = argparse.ArgumentParser()
@@ -199,7 +199,7 @@ def main():
 
     if not cand:
         log.info(f"Aucune stratégie candidate ({source}).")
-        # TOP console (même s'il n'y a pas de candidats, on veut la visu)
+        # TOP console (même sans candidats, on veut la visu)
         print_topk_in_console(os.path.join(reports_dir, "summary.json"), risk_mode, k=args.top_k)
         if not args.no_dash:
             maybe_start_streamlit(reports_dir, logs_dir, project_root)
@@ -226,7 +226,6 @@ def main():
     if not filt:
         dest_obj["strategies"] = cur; save_yaml(dest_obj, args.dest)
         log.info("Aucun candidat après filtrage risk_mode.")
-        # TOP console + éventuel dash
         print_topk_in_console(os.path.join(reports_dir, "summary.json"), risk_mode, k=args.top_k)
         if not args.no_dash:
             maybe_start_streamlit(reports_dir, logs_dir, project_root)
