@@ -1,52 +1,110 @@
-# scalper/backtest/runner.py
+# engine/backtest/runner.py
 from __future__ import annotations
-import argparse
-import os
-from typing import Dict, List
-from engine.strategy.factory import load_strategies_cfg
-from engine.backtest.engine import BacktestEngine
 
-def run_once(
-    symbol: str,
-    timeframe: str,
-    csv_path: str,
-    strategies_cfg_path: str = "scalper/config/strategies.yml",
-    csv_1h_path: str = "",
-    equity: float = 1000.0,
-    risk: float = 0.01,
-    fees_bps: float = 6.0,
-) -> Dict[str, float]:
-    cfg = load_strategies_cfg(strategies_cfg_path)
-    data = BacktestEngine.load_csv(csv_path)
-    data_1h = BacktestEngine.load_csv(csv_1h_path) if csv_1h_path and os.path.isfile(csv_1h_path) else None
+import json
+import time
+from dataclasses import dataclass, asdict
+from pathlib import Path
+from typing import Dict, Iterable, List, Tuple
 
-    eng = BacktestEngine(
-        symbol=symbol, timeframe=timeframe, data=data, data_1h=data_1h,
-        equity_start=equity, risk_pct=risk, fees_bps=fees_bps, strategies_cfg=cfg,
-    )
-    eng.run()
-    eng.save_results()
-    return eng.summary()
+from engine.config.loader import load_config
+from engine.config.watchlist import load_watchlist
+from engine.signals.factory import load_strategies_cfg  # <- FIX: anciennement engine.strategy.factory
+from engine.backtest.loader_csv import load_csv_ohlcv  # suppose déjà présent
+# Si tu n'as pas d'indicateurs/BT détaillés, on fait un backtest "baseline"
+# pour produire une stratégie draft exploitable par jobs/promote.
 
-def main():
-    ap = argparse.ArgumentParser(description="Runner Backtest (point d'entrée unique)")
-    ap.add_argument("--symbol", required=True, help="ex: BTCUSDT")
-    ap.add_argument("--tf", required=True, help="ex: 5m, 1h")
-    ap.add_argument("--csv", required=True, help="CSV OHLCV principal (timestamp,open,high,low,close,volume)")
-    ap.add_argument("--csv_1h", default="", help="CSV 1h (optionnel) pour filtre MTF")
-    ap.add_argument("--cfg", default="scalper/config/strategies.yml", help="config stratégies (YAML/JSON)")
-    ap.add_argument("--equity", type=float, default=1000.0)
-    ap.add_argument("--risk", type=float, default=0.01)
-    ap.add_argument("--fees_bps", type=float, default=6.0)
-    args = ap.parse_args()
+@dataclass
+class DraftStrategy:
+    # stratégie "baseline" : EMA cross + ATR trail
+    name: str = "ema_cross_atr"
+    ema_fast: int = 9
+    ema_slow: int = 21
+    atr_period: int = 14
+    trail_atr_mult: float = 2.0
+    risk_pct_equity: float = 0.5
+    created_at: int = 0           # ms
+    ttl_bars: int = 240           # 4h sur 1m; adapter côté promote/ttl
+    expired: bool = False         # mis à jour par promote/maintainer
 
-    summary = run_once(
-        symbol=args.symbol, timeframe=args.tf, csv_path=args.csv,
-        strategies_cfg_path=args.cfg, csv_1h_path=args.csv_1h,
-        equity=args.equity, risk=args.risk, fees_bps=args.fees_bps,
-    )
-    print("== Résumé ==")
-    print(summary)
+def _now_ms() -> int:
+    return int(time.time() * 1000)
 
-if __name__ == "__main__":
-    main()
+def _pairs_from_watchlist(top: int | None = None) -> List[str]:
+    wl = load_watchlist()
+    items = wl.get("top") or []
+    syms = [(d.get("symbol") or "").replace("_", "").upper() for d in items if d.get("symbol")]
+    return syms[:top] if top and top > 0 else syms
+
+def _load_universe(from_watchlist: bool, top: int | None = None) -> List[str]:
+    if from_watchlist:
+        syms = _pairs_from_watchlist(top)
+        if syms:
+            return syms
+    # fallback minimal
+    return ["BTCUSDT", "ETHUSDT", "SOLUSDT"]
+
+def _baseline_params(tf: str) -> DraftStrategy:
+    # ajustements par TF (simple mais utile)
+    if tf == "1m":
+        return DraftStrategy(ema_fast=9, ema_slow=21, atr_period=14, trail_atr_mult=2.2, risk_pct_equity=0.4)
+    if tf == "5m":
+        return DraftStrategy(ema_fast=12, ema_slow=26, atr_period=14, trail_atr_mult=2.0, risk_pct_equity=0.5)
+    if tf == "15m":
+        return DraftStrategy(ema_fast=20, ema_slow=50, atr_period=14, trail_atr_mult=1.8, risk_pct_equity=0.6)
+    if tf == "1h":
+        return DraftStrategy(ema_fast=34, ema_slow=89, atr_period=14, trail_atr_mult=1.6, risk_pct_equity=0.7)
+    return DraftStrategy()
+
+def _has_enough_data(data_dir: str, symbol: str, tf: str, min_rows: int = 200) -> bool:
+    try:
+        rows = load_csv_ohlcv(data_dir, symbol, tf, max_rows=min_rows)
+        return len(rows) >= min_rows
+    except Exception:
+        return False
+
+def run_backtests(*, from_watchlist: bool, tfs: Iterable[str]) -> Path:
+    """
+    Produit un draft 'strategies.yml.next' sous reports/, avec des
+    stratégies baseline pour chaque (symbol, tf) ayant assez d'historique.
+    Le "backtest" ici est léger : on ne calcule pas la perf, on génère
+    une config première qui sera évaluée/raffinée plus tard.
+    """
+    cfg = load_config()
+    rt = cfg.get("runtime", {})
+    data_dir = str(rt.get("data_dir") or "/notebooks/scalp_data/data")
+    reports_dir = str(rt.get("reports_dir") or "/notebooks/scalp_data/reports")
+    Path(reports_dir).mkdir(parents=True, exist_ok=True)
+
+    symbols = _load_universe(from_watchlist=from_watchlist, top=int(cfg.get("watchlist", {}).get("top", 10)))
+    tfs_list = [str(tf) for tf in tfs]
+    created = _now_ms()
+
+    draft: Dict[str, Dict] = {"strategies": {}}
+
+    # charger d'éventuels réglages globaux utilisateur (optionnels)
+    try:
+        user_overrides = load_strategies_cfg()
+    except Exception:
+        user_overrides = {}
+
+    for s in symbols:
+        for tf in tfs_list:
+            if not _has_enough_data(data_dir, s, tf, min_rows=200):
+                continue
+            params = _baseline_params(tf)
+            params.created_at = created
+            key = f"{s}:{tf}"
+            doc = asdict(params)
+
+            # overrides utilisateur (s'il existe des réglages par défaut)
+            # ex: user_overrides.get("defaults", {}) ou user_overrides.get(key, {})
+            defaults = (user_overrides.get("defaults") or {})
+            specific = (user_overrides.get(key) or {})
+            merged = {**doc, **defaults, **specific}
+
+            draft["strategies"][key] = merged
+
+    out_path = Path(reports_dir) / "strategies.yml.next"
+    out_path.write_text(json.dumps(draft, indent=2), encoding="utf-8")
+    return out_path
