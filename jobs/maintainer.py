@@ -9,7 +9,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 
 from engine.config.loader import load_config
 from engine.config.watchlist import load_watchlist
@@ -44,10 +44,7 @@ def _setup_logging() -> None:
 # ------------------------ helpers ------------------------
 
 def run_cmd(args: List[str]) -> tuple[int, str, str]:
-    """
-    Lance une commande en capturant stdout/stderr.
-    Retourne (rc, out, err).
-    """
+    """Lance une commande en capturant stdout/stderr. Retourne (rc, out, err)."""
     log.info("+ %s", " ".join(args))
     p = subprocess.run(args, cwd=str(ROOT), capture_output=True, text=True)
     if p.stdout:
@@ -108,10 +105,7 @@ def refresh_watchlist(top: int, score_tf: str, backfill_tfs: List[str], limit: i
 
 
 def backfill_symbol_tf(symbol: str, tf: str, limit: int) -> bool:
-    """
-    Backfill un (symbol, tf). Retourne True si OK.
-    Utilise refresh_pairs en mode ciblé TF (simple & robuste).
-    """
+    """Backfill un (symbol, tf). Retourne True si OK."""
     rc, _, _ = run_cmd([
         sys.executable, "-m", "jobs.refresh_pairs",
         "--timeframe", tf,
@@ -128,14 +122,51 @@ def backfill_symbol_tf(symbol: str, tf: str, limit: int) -> bool:
 
 
 def backtest_and_promote() -> None:
+    """Enchaîne backtest -> promotion, puis journalise un résumé."""
+    # 1) backtest (depuis watchlist, multi‑TF)
     rc, _, _ = run_cmd([sys.executable, "-m", "jobs.backtest",
                         "--from-watchlist", "--tfs", "1m,5m,15m,1h"])
     if rc != 0:
         log.warning("backtest RC=%s", rc)
-    rc, _, _ = run_cmd([sys.executable, "-m", "jobs.promote",
-                        "--draft", "/notebooks/scalp_data/reports/strategies.yml.next"])
+
+    # 2) promote (draft -> strategies.yml)
+    draft = "/notebooks/scalp_data/reports/strategies.yml.next"
+    rc, _, _ = run_cmd([sys.executable, "-m", "jobs.promote", "--draft", draft])
     if rc != 0:
         log.warning("promote RC=%s", rc)
+
+    # 3) résumé
+    _summary_strategies()
+
+
+def _summary_strategies() -> None:
+    """
+    Lit strategies.yml et affiche:
+      - total stratégies actives
+      - par TF
+      - nb expirées
+    """
+    try:
+        strat: Dict[str, Dict] = load_strategies()
+        total = len(strat)
+        by_tf: Dict[str, int] = {}
+        expired = 0
+        for k, v in strat.items():
+            try:
+                _, tf = k.split(":")
+            except ValueError:
+                tf = "?"
+            by_tf[tf] = by_tf.get(tf, 0) + 1
+            if v.get("expired"):
+                expired += 1
+
+        parts = [f"total={total}", f"expirées={expired}"]
+        if by_tf:
+            tf_str = ", ".join(f"{tf}:{n}" for tf, n in sorted(by_tf.items()))
+            parts.append(f"par_tf=({tf_str})")
+        log.info("STRATEGIES • " + " • ".join(parts))
+    except Exception as e:
+        log.warning("summary strategies impossible: %s", e)
 
 
 # ------------------------ pipeline ------------------------
@@ -164,7 +195,6 @@ def run_once(top: int, score_tf: str, tfs: List[str], limit: int,
     for s in syms:
         for tf in tfs:
             if (s, tf) in todo:
-                # journaliser durée par paire
                 t0 = time.time()
                 ok = backfill_symbol_tf(s, tf, limit=limit)
                 dt = time.time() - t0
@@ -172,12 +202,13 @@ def run_once(top: int, score_tf: str, tfs: List[str], limit: int,
                 touched = touched or ok
                 time.sleep(max(0.0, sleep_between_secs))
 
-    # 5) si on a touché des données expirées → backtest+promote
+    # 5) si on a touché des données expirées → backtest+promote (+ résumé)
     if touched:
         log.info("backtest → promote…")
         backtest_and_promote()
     else:
         log.info("rien d'expiré — skip backtest.")
+        _summary_strategies()  # on log quand même l’état courant
 
 
 # ------------------------ CLI ------------------------
