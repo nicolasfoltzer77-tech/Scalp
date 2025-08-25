@@ -53,11 +53,18 @@
     "global_constraints": { "min_trades": 200, "min_pf": 1.2 },
     "grids": {
       "regime": {
-        "ema_fast": [7, 9, 12], "ema_slow": [21, 26, 34], "ema_long": [100, 200],
-        "macd": [[8,21,5],[12,26,9]], "rsi_length": [7,10,14],
+        "ema_fast": [7, 9, 12],
+        "ema_slow": [21, 26, 34],
+        "ema_long": [100, 200],
+        "macd": [[8,21,5],[12,26,9]],
+        "rsi_length": [7, 10, 14],
         "hysteresis_buy_exit": [[0.6,0.45],[0.65,0.5]],
-        "atr_gate_pct_scale": [0.8,1.0,1.2], "softmax_temperature": [0.3,0.35,0.4],
-        "tf_weights_sets": [ { "30m": 0.5, "15m": 0.3, "5m": 0.2 }, { "30m": 0.4, "15m": 0.4, "5m": 0.2 } ]
+        "atr_gate_pct_scale": [0.8, 1.0, 1.2],
+        "softmax_temperature": [0.3, 0.35, 0.4],
+        "tf_weights_sets": [
+          { "30m": 0.5, "15m": 0.3, "5m": 0.2 },
+          { "30m": 0.4, "15m": 0.4, "5m": 0.2 }
+        ]
       }
     }
   },
