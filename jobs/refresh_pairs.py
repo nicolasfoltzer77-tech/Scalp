@@ -156,7 +156,7 @@ def _save_watchlist(path: Path, scores: List[PairScore], top: int) -> None:
         "generated_at": int(time.time() * 1000),
         "top": [
             {"symbol": s.symbol, "vol_usd_24h": s.vol_usd_24h, "atr_pct_24h": s.atr_pct_24h, "score": s.score}
-            for s in scores[:top] if top > 0 else scores
+            for s in (scores[:top] if top > 0 else scores):
         ],
     }
     path.parent.mkdir(parents=True, exist_ok=True)
