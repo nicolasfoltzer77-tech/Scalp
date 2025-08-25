@@ -114,7 +114,7 @@ def _build_exchange():
             return BitgetCCXTClient(paper=True)  # si ton wrapper supporte paper
         except Exception:
             pass
-    return BitgetRESTClient(base="https://api.bitget.com")
+    return BitgetRESTClient()
 
 
 # ---------- scoring ----------
