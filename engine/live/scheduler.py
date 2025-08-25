@@ -1,28 +1,16 @@
-# engine/app.py
+# engine/live/scheduler.py  (version finale, 100% sans import réciproque)
 from __future__ import annotations
 import asyncio
-import logging
-from engine.config.loader import load_config
-from engine.live.orchestrator import Orchestrator, run_config_from_yaml
-from engine.bootstrap import build_exchange
+from typing import AsyncIterator
 
-log = logging.getLogger("app")
+class Scheduler:
+    """Tick simple basé sur asyncio.sleep(interval)."""
+    def __init__(self, interval_sec: int = 2):
+        self.interval = max(1, int(interval_sec))
 
-def _setup_logging(level: str = "INFO") -> None:
-    logging.basicConfig(
-        level=getattr(logging, level.upper(), logging.INFO),
-        format="%(asctime)s %(levelname)s %(name)s: %(message)s"
-    )
-
-async def run_app(args) -> None:
-    _setup_logging(args.log_level)
-    cfg = load_config()
-    ex = build_exchange()
-
-    rc = run_config_from_yaml()  # lit config.yml + watchlist
-    orch = Orchestrator(cfg=rc, exchange=ex)
-
-    if args.once:
-        await orch.step_once()
-    else:
-        await orch.start()
+    async def ticks(self) -> AsyncIterator[int]:
+        i = 0
+        while True:
+            yield i
+            i += 1
+            await asyncio.sleep(self.interval)
