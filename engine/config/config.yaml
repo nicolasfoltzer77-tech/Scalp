@@ -1,5 +1,8 @@
 # engine/config/config.yaml
 runtime:
+  maintainer:
+    interval_secs: 43200   # toutes les 12h
+runtime:
   timeframe: "1m"
   refresh_secs: 5
   data_dir: "/notebooks/scalp_data/data"
