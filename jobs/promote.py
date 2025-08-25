@@ -160,6 +160,14 @@ def maybe_start_streamlit(reports_dir: str, logs_dir: str, project_root: str):
         print(f"[DASH] Streamlit démarré sur port 8501 (PID {proc.pid}). URL écrite dans dash/dashboard_url.txt")
     except Exception as e:
         print(f"[DASH] Échec démarrage Streamlit: {e}")
+        
+                # 🔥 écrire l’URL dans un fichier dash/dashboard_url.txt
+        url_file = os.path.join(project_root, "dash", "dashboard_url.txt")
+        os.makedirs(os.path.dirname(url_file), exist_ok=True)
+        with open(url_file, "w", encoding="utf-8") as f:
+            f.write("http://localhost:8501\n")
+            f.write("(Paperspace public URL: https://<ton-instance>.paperspacegradient.com:8501)\n")
+            
 # ---------------- main: promotion + TOP + dash ----------------
 def main():
     ap = argparse.ArgumentParser()
