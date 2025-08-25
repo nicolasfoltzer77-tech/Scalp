@@ -1,10 +1,8 @@
-# engine/live/scheduler.py  (version finale, 100% sans import réciproque)
 from __future__ import annotations
 import asyncio
 from typing import AsyncIterator
 
 class Scheduler:
-    """Tick simple basé sur asyncio.sleep(interval)."""
     def __init__(self, interval_sec: int = 2):
         self.interval = max(1, int(interval_sec))
 
