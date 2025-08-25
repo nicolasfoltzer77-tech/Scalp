@@ -14,7 +14,7 @@ from typing import Dict, List, Set, Tuple
 from engine.config.loader import load_config
 from engine.config.watchlist import load_watchlist
 from engine.config.strategies import load_strategies
-from engine.backtest.loader_csv import load_csv_ohlcv  # pour vérifier la fraicheur des données
+from engine.backtest.loader_csv import load_csv_ohlcv, find_csv_path  # pour vérifier la fraicheur des données
 
 ROOT = Path(__file__).resolve().parents[1]
 log = logging.getLogger("maintainer")
