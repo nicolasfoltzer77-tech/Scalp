@@ -1,25 +1,20 @@
 {
   "meta": {
-    "generated_at": "now",
-    "note": "TTL = nb de barres * durée d'une barre (par TF).",
-    "ttl_policy_bars": {
-      "DEFAULT": 300,        # 300 barres si pas de risque spécifié
-      "LOW": 1000,           # ex: ~1000 barres => long
-      "MEDIUM": 500,
-      "HIGH": 250,
-      "EXPERIMENTAL": 120    # ex: 120 barres -> court
-    },
-    "ttl_global_multiplier": 1.0  # permet de tout étirer/comprimer
+    "generated_at": "2025-08-25T08:30:00Z",
+    "ttl_policy_bars": { "DEFAULT": 300, "EXPERIMENTAL": 120 }
   },
   "strategies": {
     "BTCUSDT:1m": {
       "name": "BASE_UNTESTED",
       "risk_label": "EXPERIMENTAL",
-      "execute": false,                  # observe-only tant que pas validée
-      "ema_fast": 9, "ema_slow": 21,
-      "atr_period": 14, "trail_atr_mult": 1.5, "risk_pct_equity": 0.005,
-      "last_validated": "2025-08-24T12:00:00Z",
-      "ttl_bars": 180                    # (optionnel) force un TTL spécifique
+      "execute": false,
+      "ema_fast": 9,
+      "ema_slow": 21,
+      "atr_period": 14,
+      "trail_atr_mult": 1.5,
+      "risk_pct_equity": 0.005,
+      "last_validated": "2025-08-25T08:30:00Z",
+      "ttl_bars": 120
     }
   }
 }
