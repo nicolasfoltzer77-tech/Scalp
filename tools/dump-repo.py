@@ -15,7 +15,7 @@ from datetime import datetime
 
 # --- Réglages simples (modifiables) -----------------------------------------
 ROOT = Path("/notebooks/scalp")                  # dossier à dumper
-OUT_DIR = Path("/notebooks/scalpdumps")               # où écrire le dump
+OUT_DIR = Path("/notebooks/scalp/dumps/")               # où écrire le dump
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # Extensions considérées "texte utile"
