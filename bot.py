@@ -79,7 +79,7 @@ def _build_exchange(cfg: Dict[str, Any]):
 
     # Fallback REST Bitget — >>> pas de param 'paper' ici <<<
     base = "https://api.bitget.com"
-    ex = BitgetRESTClient(base=base)
+    ex = BitgetRESTClient()
     print(f"INFO engine.exchange.bitget_rest: BitgetFuturesClient ready (base={base})")
     return ex
 
