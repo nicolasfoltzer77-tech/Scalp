@@ -1,22 +1,56 @@
-# engine/config/config.yaml
+# engine/config/config.yml
+# ========================
+# ⚙️ Configuration centrale (versionnée) – secrets (API keys) restent dans .env
+
 runtime:
-  maintainer:
-    interval_secs: 43200   # toutes les 12h
-runtime:
-  timeframe: "1m"
-  refresh_secs: 5
-  data_dir: "/notebooks/scalp_data/data"
-  reports_dir: "/notebooks/scalp_data/reports"
-  logs_dir: "/notebooks/scalp_data/logs"   # <— NOUVEAU
+  data_dir: /notebooks/scalp_data/data
+  reports_dir: /notebooks/scalp_data/reports
+  logs_dir: /notebooks/scalp_data/logs
+  tmp_dir: /notebooks/scalp_data/tmp
+
+exchange:
+  name: bitget
+  base_url: https://api.bitget.com
+  paper: true                 # false = réel, true = paper/sandbox si dispo
+  rate_limit_ms: 200
 
 watchlist:
-  top: 10           # TOP-N dynamiques
-  score_tf: "5m"    # TF utilisé pour scorer (vol/volat)
-  backfill_tfs: ["1m","5m","15m"]  # TFs à maintenir
-  backfill_limit: 1500             # nb de barres à récupérer par TF
+  top: 10                     # nb de paires conservées
+  score_tf: 5m               # TF pour scorer la watchlist (vol/volatilité)
+  backfill_tfs: [1m, 5m, 15m]# TF à backfiller à chaque cycle
+  backfill_limit: 1500       # nb max de bougies par appel
 
 maintainer:
-  enable: true
-  interval_secs: 43200             # relance toutes les 12h
-  seed_tfs: ["1m"]                 # TFs pour seed des stratégies EXPERIMENTAL
-  ttl_bars_experimental: 120       # TTL en nb de barres pour EXPERIMENTAL
+  interval_secs: 43200       # relance du cycle complet (12h)
+  sleep_between_secs: 0.5    # pause entre backfills pour limiter le rate‑limit
+
+  # Affichage "live" du tableau PAIR×TF dans le terminal
+  live_table: true
+  live_interval_secs: 2.0
+
+  # Multiplicateur de durée de vie des stratégies (TTL = mult × TF)
+  # ex: 1m × 240 = 240 minutes ≈ 4h
+  ttl_mult:
+    1m: 240
+    5m: 240
+    15m: 192
+    1h: 168
+    4h: 90
+    1d: 60
+
+strategies:
+  # Valeurs par défaut pour la stratégie baseline (EMA/ATR)
+  risk_default_pct: 1.0
+  ema_fast: 9
+  ema_slow: 21
+  atr_period: 14
+  trail_atr_mult: 2.0
+
+notify:
+  telegram: true
+  console: true
+  discord: false
+
+dash:
+  port: 8501
+  auto_open_browser: false
