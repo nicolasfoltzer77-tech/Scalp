@@ -25,17 +25,53 @@ logging.basicConfig(
 )
 
 def _build_exchange():
+    """
+    Fabrique résiliente : tente avec (paper, base) puis dégrade
+    si la classe ne supporte pas ces kwargs.
+    """
     cfg = load_config()
     ex_cfg = (cfg.get("exchange") or {}).get("bitget", {}) or {}
-    # REST client simple (papier/réel suivant cfg)
-    return BitgetFuturesClient(
-        access_key=ex_cfg.get("access_key", ""),
-        secret_key=ex_cfg.get("secret_key", ""),
-        passphrase=ex_cfg.get("passphrase", ""),
-        paper=bool((cfg.get("trading") or {}).get("paper", True)),
-        base=ex_cfg.get("base", "https://api.bitget.com"),
-    )
+    trading = (cfg.get("trading") or {})
 
+    ak = ex_cfg.get("access_key", "")
+    sk = ex_cfg.get("secret_key", "")
+    pp = ex_cfg.get("passphrase", "")
+    base = ex_cfg.get("base", "https://api.bitget.com")
+    paper = bool(trading.get("paper", True))
+
+    # 1) Essai complet (anciennes versions)
+    try:
+        return BitgetFuturesClient(
+            access_key=ak,
+            secret_key=sk,
+            passphrase=pp,
+            paper=paper,
+            base=base,
+        )
+    except TypeError:
+        pass
+
+    # 2) Sans 'paper'
+    try:
+        return BitgetFuturesClient(
+            access_key=ak,
+            secret_key=sk,
+            passphrase=pp,
+            base=base,
+        )
+    except TypeError:
+        pass
+
+    # 3) Sans 'base' non plus
+    try:
+        return BitgetFuturesClient(
+            access_key=ak,
+            secret_key=sk,
+            passphrase=pp,
+        )
+    except TypeError as e:
+        raise RuntimeError(f"BitgetFuturesClient incompatible: {e}")
+        
 def _spawn_maintainer():
     """Lance le maintainer en arrière‑plan, sans bloquer."""
     try:
