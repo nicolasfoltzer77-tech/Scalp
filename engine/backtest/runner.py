@@ -5,27 +5,26 @@ import json
 import time
 from dataclasses import dataclass, asdict
 from pathlib import Path
-from typing import Dict, Iterable, List, Tuple
+from typing import Dict, Iterable, List
 
 from engine.config.loader import load_config
 from engine.config.watchlist import load_watchlist
-from engine.signals.factory import load_strategies_cfg  # <- FIX: anciennement engine.strategy.factory
-from engine.backtest.loader_csv import load_csv_ohlcv  # suppose déjà présent
-# Si tu n'as pas d'indicateurs/BT détaillés, on fait un backtest "baseline"
-# pour produire une stratégie draft exploitable par jobs/promote.
+from engine.signals.factory import load_strategies_cfg          # <- FIX d'import
+from engine.backtest.loader_csv import load_csv_ohlcv           # lecteur OHLCV CSV
+
+# -------------------------------------------------------------
 
 @dataclass
 class DraftStrategy:
-    # stratégie "baseline" : EMA cross + ATR trail
     name: str = "ema_cross_atr"
     ema_fast: int = 9
     ema_slow: int = 21
     atr_period: int = 14
     trail_atr_mult: float = 2.0
     risk_pct_equity: float = 0.5
-    created_at: int = 0           # ms
-    ttl_bars: int = 240           # 4h sur 1m; adapter côté promote/ttl
-    expired: bool = False         # mis à jour par promote/maintainer
+    created_at: int = 0        # ms epoch
+    ttl_bars: int = 240        # durée de vie par défaut (ex: 240 barres)
+    expired: bool = False
 
 def _now_ms() -> int:
     return int(time.time() * 1000)
@@ -36,18 +35,16 @@ def _pairs_from_watchlist(top: int | None = None) -> List[str]:
     syms = [(d.get("symbol") or "").replace("_", "").upper() for d in items if d.get("symbol")]
     return syms[:top] if top and top > 0 else syms
 
-def _load_universe(from_watchlist: bool, top: int | None = None) -> List[str]:
+def _load_universe(from_watchlist: bool, top: int | None) -> List[str]:
     if from_watchlist:
         syms = _pairs_from_watchlist(top)
         if syms:
             return syms
-    # fallback minimal
     return ["BTCUSDT", "ETHUSDT", "SOLUSDT"]
 
 def _baseline_params(tf: str) -> DraftStrategy:
-    # ajustements par TF (simple mais utile)
     if tf == "1m":
-        return DraftStrategy(ema_fast=9, ema_slow=21, atr_period=14, trail_atr_mult=2.2, risk_pct_equity=0.4)
+        return DraftStrategy(ema_fast=9,  ema_slow=21, atr_period=14, trail_atr_mult=2.2, risk_pct_equity=0.4)
     if tf == "5m":
         return DraftStrategy(ema_fast=12, ema_slow=26, atr_period=14, trail_atr_mult=2.0, risk_pct_equity=0.5)
     if tf == "15m":
@@ -65,10 +62,9 @@ def _has_enough_data(data_dir: str, symbol: str, tf: str, min_rows: int = 200) -
 
 def run_backtests(*, from_watchlist: bool, tfs: Iterable[str]) -> Path:
     """
-    Produit un draft 'strategies.yml.next' sous reports/, avec des
-    stratégies baseline pour chaque (symbol, tf) ayant assez d'historique.
-    Le "backtest" ici est léger : on ne calcule pas la perf, on génère
-    une config première qui sera évaluée/raffinée plus tard.
+    Produit un draft minimal 'strategies.yml.next' sous reports/.
+    On génère des stratégies de base (baseline) pour chaque (symbol, tf)
+    ayant assez d'historique. Le vrai scoring/perf pourra être ajouté plus tard.
     """
     cfg = load_config()
     rt = cfg.get("runtime", {})
@@ -76,17 +72,20 @@ def run_backtests(*, from_watchlist: bool, tfs: Iterable[str]) -> Path:
     reports_dir = str(rt.get("reports_dir") or "/notebooks/scalp_data/reports")
     Path(reports_dir).mkdir(parents=True, exist_ok=True)
 
-    symbols = _load_universe(from_watchlist=from_watchlist, top=int(cfg.get("watchlist", {}).get("top", 10)))
+    top = int(cfg.get("watchlist", {}).get("top", 10))
+    symbols = _load_universe(from_watchlist=from_watchlist, top=top)
     tfs_list = [str(tf) for tf in tfs]
     created = _now_ms()
 
     draft: Dict[str, Dict] = {"strategies": {}}
 
-    # charger d'éventuels réglages globaux utilisateur (optionnels)
+    # overrides utilisateur (facultatifs)
     try:
-        user_overrides = load_strategies_cfg()
+        user_overrides = load_strategies_cfg() or {}
     except Exception:
         user_overrides = {}
+
+    defaults = user_overrides.get("defaults") or {}
 
     for s in symbols:
         for tf in tfs_list:
@@ -95,15 +94,8 @@ def run_backtests(*, from_watchlist: bool, tfs: Iterable[str]) -> Path:
             params = _baseline_params(tf)
             params.created_at = created
             key = f"{s}:{tf}"
-            doc = asdict(params)
-
-            # overrides utilisateur (s'il existe des réglages par défaut)
-            # ex: user_overrides.get("defaults", {}) ou user_overrides.get(key, {})
-            defaults = (user_overrides.get("defaults") or {})
-            specific = (user_overrides.get(key) or {})
-            merged = {**doc, **defaults, **specific}
-
-            draft["strategies"][key] = merged
+            specific = user_overrides.get(key) or {}
+            draft["strategies"][key] = {**asdict(params), **defaults, **specific}
 
     out_path = Path(reports_dir) / "strategies.yml.next"
     out_path.write_text(json.dumps(draft, indent=2), encoding="utf-8")
