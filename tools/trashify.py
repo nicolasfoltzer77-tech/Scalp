@@ -1,169 +1,165 @@
+#!/usr/bin/env python3
 # tools/trashify.py
-# Déplacement sécurisé des fichiers/dossiers "candidats" vers TRASH_YYYYMMDD-HHMMSS/
-# Usage:
-#   python tools/trashify.py            # dry-run (affiche seulement)
-#   python tools/trashify.py --apply    # déplace réellement
-# Options:
-#   --trash-dir NAME   # nom personnalisé du dossier trash (sinon timestamp)
-#   --no-git           # force l'utilisation de shutil.move au lieu de `git mv`
-#
-# Notes:
-# - Détecte automatiquement un repo Git et utilise `git mv` si possible (meilleure traçabilité).
-# - Écrit un manifeste: TRASH_.../TRASH_MANIFEST.txt avec la liste des éléments déplacés.
-# - La liste des "candidats" ci-dessous est issue du dump fourni le 2025-08-24 (répertoire racine: Scalp/).  #  [oai_citation:1‡Vierge 19.txt](file-service://file-9QiWVhpqthb1XibRXMXmiu)
+"""
+Ménage du dépôt : déplace les éléments legacy/ inutiles vers .trash/<TIMESTAMP>/
+- DRY RUN par défaut (aucune action tant que --apply n'est pas passé)
+- Liste adaptée au dump le plus récent
+- Prend soin de garder le dernier dump dans dumps/
+- Sécurisé : ne touche jamais .git/ ni .trash/
+
+Usage :
+  python tools/trashify.py                 # aperçu (DRY RUN)
+  python tools/trashify.py --apply         # exécute les déplacements
+  python tools/trashify.py --restore PATH  # restaure depuis .trash/
+  python tools/trashify.py --aggressive    # inclut fichiers/dev en plus (toujours DRY tant que --apply pas présent)
+"""
 
 from __future__ import annotations
-
 import argparse
-import datetime as dt
 import os
 import shutil
-import subprocess
+import time
 from pathlib import Path
-from typing import Iterable, List, Tuple
+from typing import Iterable, List
 
-# --------------------------------------------------------------------------------------
-# Candidats à déplacer (conservateur). Ajuste cette liste si besoin avant --apply.
-# --------------------------------------------------------------------------------------
-CANDIDATES: List[str] = [
-    # 1) Ancienne corbeille entière (archives obsolètes) — doublons du code actuel
-    "TRASH_20250823-124533",
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
-    # 2) Duplication manifeste: indicateurs déjà présents sous scalper/core/indicators.py
-    "data/indicators.py",
 
-    # 3) Typo de dossier de stratégie (probablement un essai non concluant)
-    "scalper/strategy/startegies",  # <- oui "startegies" (typo)
-
-    # 4) Scripts ponctuels/démo non utilisés par bot.py
-    # (laisse commentés par défaut; décommente si tu valides)
-    # "tg_diag.py",
-    # "TRASH_20250823-124533/quick_order.py",
-    # "TRASH_20250823-124533/dashboard.py",
-    # "TRASH_20250823-124533/notebooks",
-
-    # 5) Anciennes configs/legacy dans TRASH (redondantes avec scalper/config/* actuels)
-    # (déjà couvert par la ligne 1 déplaçant le dossier complet)
+# --- Cibles principales (safe) ------------------------------------------------
+TRASH_DIRS_SAFE = [
+    "scalper",                 # ancien moteur non utilisé par bot.py
+    "tests",                   # dossiers de tests obsolètes
+    "data",                    # les données doivent être hors dépôt
 ]
 
-# Racine du repo = dossier parent de CE fichier, puis deux niveaux si placé dans tools/
-HERE = Path(__file__).resolve()
-REPO_ROOT = HERE.parent.parent if HERE.parent.name == "tools" else HERE.parent
-assert (REPO_ROOT / ".").exists(), f"Repo root introuvable: {REPO_ROOT}"
+TRASH_GLOBS_COMMON = [
+    "**/__pycache__",          # caches py
+    "**/.ipynb_checkpoints",   # artefacts jupyter
+]
+
+TRASH_FILES_SAFE = [
+    "engine/core/signal.py",   # doublon vs signals.py
+    "dump.txt",                # vieux dump
+    "requirements-dash.txt",   # on garde un seul requirements.txt
+    "requirements-dev.txt",
+]
+
+# --- Cibles 'agressives' optionnelles ----------------------------------------
+TRASH_FILES_AGGRESSIVE = [
+    "pytest.ini",
+    ".pytest_cache",
+]
 
 
-def _is_git_repo(root: Path) -> bool:
-    return (root / ".git").exists()
-
-
-def _git_mv(src: Path, dst: Path) -> Tuple[bool, str]:
-    try:
-        subprocess.run(["git", "mv", str(src), str(dst)], cwd=REPO_ROOT, check=True, capture_output=True)
-        return True, "git mv"
-    except Exception as e:
-        return False, f"git mv failed: {e}"
-
-
-def _shutil_mv(src: Path, dst: Path) -> Tuple[bool, str]:
-    try:
-        dst.parent.mkdir(parents=True, exist_ok=True)
-        shutil.move(str(src), str(dst))
-        return True, "shutil.move"
-    except Exception as e:
-        return False, f"move failed: {e}"
-
-
-def _timestamp() -> str:
-    return dt.datetime.now().strftime("%Y%m%d-%H%M%S")
-
-
-def resolve_existing(paths: Iterable[str]) -> List[Path]:
+# --- Helpers ------------------------------------------------------------------
+def _existing(paths: Iterable[Path]) -> List[Path]:
     out: List[Path] = []
     for p in paths:
-        rp = (REPO_ROOT / p).resolve()
-        if rp.exists():
-            out.append(rp)
+        try:
+            if p.exists():
+                out.append(p)
+        except OSError:
+            pass
     return out
 
+def _is_protected(p: Path) -> bool:
+    rp = p.resolve()
+    # ne jamais toucher au repo root lui‑même, ni .git, ni .trash
+    for forbid in [REPO_ROOT, REPO_ROOT / ".git", REPO_ROOT / ".trash"]:
+        try:
+            if rp == forbid.resolve() or str(rp).startswith(str(forbid.resolve())):
+                return True
+        except Exception:
+            continue
+    return False
 
-def write_manifest(trash_dir: Path, moved: List[Path], skipped: List[Tuple[Path, str]]) -> None:
-    manifest = trash_dir / "TRASH_MANIFEST.txt"
-    lines: List[str] = []
-    lines.append(f"Repo root: {REPO_ROOT}")
-    lines.append(f"Trash dir: {trash_dir}")
-    lines.append(f"Moved count: {len(moved)}")
-    lines.append("Moved items:")
-    for p in moved:
-        rel = p.relative_to(trash_dir)
-        lines.append(f"  - {rel}")
-    if skipped:
-        lines.append("")
-        lines.append("Skipped/not moved (reason):")
-        for p, reason in skipped:
-            lines.append(f"  - {p.relative_to(REPO_ROOT)} :: {reason}")
-    manifest.parent.mkdir(parents=True, exist_ok=True)
-    manifest.write_text("\n".join(lines) + "\n", encoding="utf-8")
+def _collect_basic_targets(aggressive: bool) -> List[Path]:
+    items: List[Path] = []
+
+    # dossiers exacts
+    items += _existing([REPO_ROOT / d for d in TRASH_DIRS_SAFE])
+
+    # fichiers exacts
+    base_files = TRASH_FILES_SAFE + (TRASH_FILES_AGGRESSIVE if aggressive else [])
+    items += _existing([REPO_ROOT / f for f in base_files])
+
+    # globs
+    for pat in TRASH_GLOBS_COMMON:
+        for p in REPO_ROOT.glob(pat):
+            items.append(p)
+
+    # filtre de sécurité
+    safe = [p for p in items if not _is_protected(p)]
+    # dédupliquer et trier (dossiers parents avant enfants)
+    safe_sorted = sorted(set(safe), key=lambda x: (str(x).count(os.sep), str(x)))
+    return safe_sorted
+
+def _collect_old_dumps() -> List[Path]:
+    """Dans dumps/, garder le fichier le plus récent et déplacer les autres."""
+    d = REPO_ROOT / "dumps"
+    if not d.exists() or not d.is_dir():
+        return []
+    files = sorted([p for p in d.glob("DUMP_*.txt") if p.is_file()],
+                   key=lambda p: p.stat().st_mtime, reverse=True)
+    if len(files) <= 1:
+        return []
+    # on garde files[0] (le plus récent), on déplace le reste
+    return files[1:]
+
+def _move_to_trash(paths: List[Path], apply: bool, label: str = "") -> None:
+    if not paths:
+        return
+    dest_root = REPO_ROOT / ".trash" / time.strftime("%Y%m%d-%H%M%S")
+    print(f"Destination: {dest_root} {label}".rstrip())
+    for p in paths:
+        rel = p.relative_to(REPO_ROOT)
+        dest = dest_root / rel
+        print(f"- {rel}  ->  .trash/{dest.relative_to(REPO_ROOT / '.trash')}")
+        if apply:
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            try:
+                shutil.move(str(p), str(dest))
+            except Exception as e:
+                print(f"  [!] move failed: {e}")
+
+def _restore_from_trash(src: Path) -> None:
+    src = src.resolve()
+    if (REPO_ROOT / ".trash") not in src.parents:
+        raise SystemExit("Le chemin à restaurer doit provenir de .trash/")
+    rel = src.relative_to(REPO_ROOT / ".trash")
+    dest = REPO_ROOT / rel
+    print(f"RESTORE  .trash/{rel} -> {rel}")
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    shutil.move(str(src), str(dest))
 
 
-def main() -> int:
-    ap = argparse.ArgumentParser(description="Déplacer des fichiers/dossiers vers un répertoire TRASH_*")
-    ap.add_argument("--apply", action="store_true", help="Exécuter réellement les déplacements (sinon dry-run)")
-    ap.add_argument("--trash-dir", default="", help="Nom personnalisé du répertoire trash (par défaut TRASH_<timestamp>)")
-    ap.add_argument("--no-git", action="store_true", help="Ne pas utiliser git mv, forcer shutil.move")
-    args = ap.parse_args()
+# --- Main ---------------------------------------------------------------------
+def main(argv: Iterable[str] | None = None) -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--apply", action="store_true", help="Exécuter réellement (sinon DRY RUN).")
+    ap.add_argument("--restore", type=str, default="", help="Chemin à restaurer depuis .trash/")
+    ap.add_argument("--aggressive", action="store_true", help="Inclut aussi fichiers/dev optionnels (pytest.ini, etc.).")
+    args = ap.parse_args(list(argv) if argv is not None else None)
 
-    # Résolution des candidats présents
-    existing = resolve_existing(CANDIDATES)
-    missing = sorted(set(CANDIDATES) - {str(p.relative_to(REPO_ROOT)) for p in existing})
-    if missing:
-        print("[i] Éléments non trouvés (ignorés) :")
-        for m in missing:
-            print(f"    - {m}")
-
-    if not existing:
-        print("[✓] Rien à déplacer: aucun candidat présent.")
+    if args.restore:
+        _restore_from_trash(Path(args.restore))
         return 0
 
-    # Dossier TRASH cible
-    trash_name = args.trash_dir.strip() or f"TRASH_{_timestamp()}"
-    trash_dir = (REPO_ROOT / trash_name).resolve()
+    print(f"[trashify] Repo : {REPO_ROOT}")
+    basic = _collect_basic_targets(args.aggressive)
+    print(f"[trashify] Cibles de base détectées : {len(basic)}")
+    _move_to_trash(basic, apply=args.apply)
 
-    print(f"[i] Repo: {REPO_ROOT}")
-    print(f"[i] Trash: {trash_dir}")
-    print("[i] Candidats résolus:")
-    for p in existing:
-        print(f"    - {p.relative_to(REPO_ROOT)}")
+    # dumps obsolètes (garde le plus récent)
+    old_dumps = _collect_old_dumps()
+    if old_dumps:
+        print(f"[trashify] Dumps obsolètes : {len(old_dumps)} (le plus récent est conservé)")
+        _move_to_trash(old_dumps, apply=args.apply, label="(dumps)")
 
     if not args.apply:
-        print("\n[DRY-RUN] Ajoute --apply pour exécuter réellement les déplacements.")
-        return 0
-
-    # Exécution
-    moved: List[Path] = []
-    skipped: List[Tuple[Path, str]] = []
-    use_git = _is_git_repo(REPO_ROOT) and not args.no_git
-
-    for src in existing:
-        rel = src.relative_to(REPO_ROOT)
-        dst = trash_dir / rel  # conserve la structure relative
-        dst.parent.mkdir(parents=True, exist_ok=True)
-
-        if use_git:
-            ok, how = _git_mv(src, dst)
-        else:
-            ok, how = _shutil_mv(src, dst)
-
-        if ok:
-            print(f"[→] {rel}  ->  {dst.relative_to(REPO_ROOT)}  ({how})")
-            moved.append(dst)
-        else:
-            print(f"[!] SKIP {rel} ({how})")
-            skipped.append((src, how))
-
-    # Manifeste
-    write_manifest(trash_dir, moved, skipped)
-    print(f"[✓] Manifeste écrit: {trash_dir / 'TRASH_MANIFEST.txt'}")
-    print("[✓] Terminé.")
+        print("\nDRY RUN — ajoute --apply pour déplacer réellement.")
+    else:
+        print("\n[✓] Déplacement terminé. Vérifie .trash/, puis commit/push si ok.")
     return 0
 
 
