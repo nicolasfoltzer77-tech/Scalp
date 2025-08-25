@@ -1,77 +1,55 @@
+# engine/config/loader.py (ajoute/replace ce bloc d’aides)
 from __future__ import annotations
-import os
+import json, os
 from pathlib import Path
-from typing import Any, Dict, Tuple
+from typing import Any, Dict
 
-try:
-    import yaml
-except Exception:
-    yaml = None
+_CFG_PATH = Path(__file__).resolve().parent / "config.yaml"
 
-_ALIASES: Dict[str, Tuple[str, ...]] = {
-    "BITGET_ACCESS_KEY": ("BITGET_API_KEY", "BITGET_KEY"),
-    "BITGET_SECRET_KEY": ("BITGET_API_SECRET", "BITGET_SECRET"),
-    "BITGET_PASSPHRASE": ("BITGET_API_PASSPHRASE", "BITGET_PASSWORD", "BITGET_API_PASSWORD"),
-    "TELEGRAM_BOT_TOKEN": ("TELEGRAM_TOKEN", "TG_TOKEN"),
-    "TELEGRAM_CHAT_ID": ("TG_CHAT_ID", "TELEGRAM_TO", "CHAT_ID"),
+_DEFAULTS: Dict[str, Any] = {
+    "runtime": {
+        "timeframe": "1m",
+        "refresh_secs": 5,
+        "data_dir": "/notebooks/scalp_data/data",
+        "reports_dir": "/notebooks/scalp_data/reports",
+    },
+    "watchlist": {
+        "top": 10,
+        "score_tf": "5m",
+        "backfill_tfs": ["1m", "5m", "15m"],
+        "backfill_limit": 1500,
+    },
+    "maintainer": {
+        "enable": True,
+        "interval_secs": 43200,
+        "seed_tfs": ["1m"],
+        "ttl_bars_experimental": 120,
+    },
 }
 
-def _adopt_alias(target: str) -> None:
-    if os.getenv(target):
-        return
-    for alt in _ALIASES.get(target, ()):
-        v = os.getenv(alt)
-        if v:
-            os.environ[target] = v
-            return
-
-def apply_env_aliases() -> None:
-    for k in _ALIASES:
-        _adopt_alias(k)
-
-def _default_paths() -> Dict[str, str]:
-    data_root = os.getenv("DATA_ROOT", "/notebooks/scalp_data")
-    root = Path(data_root)
-    return {
-        "data_dir": str(root / "data"),
-        "log_dir": str(root / "logs"),
-        "reports_dir": str(root / "reports"),
-    }
-
-def load_yaml_config(path: str | os.PathLike | None = None) -> Dict[str, Any]:
-    if path is None:
-        path = Path(__file__).resolve().parent / "config.yaml"
-    path = Path(path)
-    if yaml is None or not path.exists():
+def _read_jsonish(p: Path) -> Dict[str, Any]:
+    if not p.exists():
         return {}
-    with path.open("r", encoding="utf-8") as fh:
-        return yaml.safe_load(fh) or {}
+    try:
+        # notre "yaml" est du JSON lisible
+        return json.loads(p.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
 
-def load_config(path: str | os.PathLike | None = None) -> Dict[str, Any]:
-    cfg = load_yaml_config(path)
-    apply_env_aliases()
+def _deep_merge(base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any]:
+    out = dict(base)
+    for k, v in override.items():
+        if isinstance(v, dict) and isinstance(out.get(k), dict):
+            out[k] = _deep_merge(out[k], v)
+        else:
+            out[k] = v
+    return out
 
-    cfg.setdefault("secrets", {})
-    cfg["secrets"]["bitget"] = {
-        "access": os.getenv("BITGET_ACCESS_KEY") or "",
-        "secret": os.getenv("BITGET_SECRET_KEY") or "",
-        "passphrase": os.getenv("BITGET_PASSPHRASE") or "",
-    }
-    cfg["secrets"]["telegram"] = {
-        "token": os.getenv("TELEGRAM_BOT_TOKEN") or "",
-        "chat_id": os.getenv("TELEGRAM_CHAT_ID") or "",
-    }
+def load_config() -> Dict[str, Any]:
+    doc = _read_jsonish(_CFG_PATH)
+    return _deep_merge(_DEFAULTS, doc)
 
-    defaults = _default_paths()
-    r = cfg.setdefault("runtime", {})
-    r.setdefault("data_dir", defaults["data_dir"])
-    r.setdefault("log_dir", defaults["log_dir"])
-    r.setdefault("reports_dir", defaults["reports_dir"])
-    r.setdefault("paper_trade", True)
-    r.setdefault("allowed_symbols", [])
-    r.setdefault("refresh_secs", 5)
-
-    s = cfg.setdefault("strategy", {})
-    s.setdefault("live_timeframe", "1m")
-
-    return cfg
+# optionnel: alias pour compenser variables d'env historiques (on garde)
+def apply_env_aliases() -> None:
+    # pas de logique nécessaire ici pour ces nouveaux paramètres
+    return
