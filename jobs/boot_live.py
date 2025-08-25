@@ -27,6 +27,19 @@ import subprocess
 import sys
 from pathlib import Path
 
+from engine.config.loader import load_config
+
+cfg = load_config()
+wl = cfg.get("watchlist", {})
+mt = cfg.get("maintainer", {})
+
+top = ns.top or int(wl.get("top", 10))
+timeframe = ns.timeframe or str(wl.get("score_tf", "5m"))
+backfill_tfs = ns.backfill_tfs or ",".join(wl.get("backfill_tfs", ["1m","5m","15m"]))
+limit = ns.limit or int(wl.get("backfill_limit", 1500))
+seed_tfs = ns.seed_tfs or ",".join(mt.get("seed_tfs", ["1m"]))
+ttl_bars_exp = ns.ttl_bars_exp or int(mt.get("ttl_bars_experimental", 120))
+
 ROOT = Path(__file__).resolve().parents[1]
 
 def run(cmd: list[str]) -> int:
