@@ -8,7 +8,7 @@ import json
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Iterable, List, Tuple
+from typing import Dict, Iterable, List
 
 from engine.config.loader import load_config
 
@@ -21,7 +21,7 @@ except Exception:
     _HAS_CCXT = False
 
 
-# ---------------- utils ----------------
+# ---------- utils FS ----------
 
 def _ensure_dir(p: Path) -> Path:
     p.mkdir(parents=True, exist_ok=True)
@@ -35,15 +35,21 @@ def _write_csv_ohlcv(path: Path, rows: Iterable[List[float]]) -> None:
     with path.open("a", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
         if write_header:
-            w.writerow(["ts","open","high","low","close","volume"])
+            w.writerow(["ts", "open", "high", "low", "close", "volume"])
         for r in rows:
             try:
-                w.writerow([int(r[0]), float(r[1]), float(r[2]), float(r[3]), float(r[4]), float(r[5]) if len(r)>5 else 0.0])
+                ts = int(r[0])
+                o, h, l, c = float(r[1]), float(r[2]), float(r[3]), float(r[4])
+                v = float(r[5]) if len(r) > 5 else 0.0
+                w.writerow([ts, o, h, l, c, v])
             except Exception:
                 continue
 
+
+# ---------- exchange helpers ----------
+
 def _fetch_ohlcv_any(ex, symbol: str, timeframe: str, limit: int = 1000) -> List[List[float]]:
-    # 1) CCXT
+    # 1) CCXT sync si dispo
     fetch = getattr(ex, "fetch_ohlcv", None)
     if callable(fetch):
         try:
@@ -51,7 +57,7 @@ def _fetch_ohlcv_any(ex, symbol: str, timeframe: str, limit: int = 1000) -> List
             return list(data or [])
         except Exception:
             pass
-    # 2) REST Bitget
+    # 2) REST Bitget (wrapper)
     get_klines = getattr(ex, "get_klines", None)
     if callable(get_klines):
         try:
@@ -60,7 +66,10 @@ def _fetch_ohlcv_any(ex, symbol: str, timeframe: str, limit: int = 1000) -> List
             out: List[List[float]] = []
             for r in rows:
                 try:
-                    out.append([int(r[0]), float(r[1]), float(r[2]), float(r[3]), float(r[4]), float(r[5]) if len(r)>5 else 0.0])
+                    out.append([
+                        int(r[0]), float(r[1]), float(r[2]), float(r[3]),
+                        float(r[4]), float(r[5]) if len(r) > 5 else 0.0
+                    ])
                 except Exception:
                     continue
             out.sort(key=lambda x: x[0])
@@ -70,36 +79,45 @@ def _fetch_ohlcv_any(ex, symbol: str, timeframe: str, limit: int = 1000) -> List
     return []
 
 def _list_usdt_perps_any(ex) -> List[str]:
-    """
-    Essaie de récupérer la liste des symboles perpétuels USDT.
-    - CCXT: utilise load_markets()
-    - REST: tente un endpoint listant les contrats (ton wrapper peut exposer .list_symbols())
-    En dernier recours: si rien, on revient sur un fallback court.
-    """
-    # CCXT
+    # CCXT: via load_markets()
     load_markets = getattr(ex, "load_markets", None)
     if callable(load_markets):
         try:
-            markets = load_markets()
-            syms = []
+            markets = load_markets() or {}
+            syms: List[str] = []
             for m in markets.values():
-                symbol = m.get("symbol") or ""
-                if "USDT" in symbol and m.get("type") in ("swap","future","perpetual"):
-                    syms.append(symbol.replace("_","").upper())
-            return sorted(set(syms))
+                sym = str(m.get("symbol") or "")
+                typ = str(m.get("type") or "")
+                if "USDT" in sym and typ in {"swap", "future", "perpetual"}:
+                    syms.append(sym.replace("_", "").upper())
+            if syms:
+                return sorted(set(syms))
         except Exception:
             pass
-    # REST wrapper (si tu as implémenté une méthode)
+    # REST wrapper: méthode custom facultative
     list_symbols = getattr(ex, "list_symbols", None)
     if callable(list_symbols):
         try:
-            items = list_symbols()
-            return [str(s).replace("_","").upper() for s in items if "USDT" in str(s).upper()]
+            items = list_symbols() or []
+            out = [str(s).replace("_", "").upper() for s in items if "USDT" in str(s).upper()]
+            if out:
+                return sorted(set(out))
         except Exception:
             pass
-    # Fallback minimal
-    return ["BTCUSDT","ETHUSDT","SOLUSDT","BNBUSDT","XRPUSDT","ADAUSDT","DOGEUSDT","LTCUSDT","MATICUSDT","LINKUSDT"]
+    # Fallback statique
+    return ["BTCUSDT","ETHUSDT","SOLUSDT","BNBUSDT","XRPUSDT",
+            "ADAUSDT","DOGEUSDT","LTCUSDT","MATICUSDT","LINKUSDT"]
 
+def _build_exchange():
+    if _HAS_CCXT:
+        try:
+            return BitgetCCXTClient(paper=True)  # si ton wrapper supporte paper
+        except Exception:
+            pass
+    return BitgetRESTClient(base="https://api.bitget.com")
+
+
+# ---------- scoring ----------
 
 @dataclass
 class PairScore:
@@ -108,16 +126,13 @@ class PairScore:
     atr_pct_24h: float
     score: float
 
-
 def _atr_pct_estimate(ohlcv: List[List[float]]) -> float:
-    # approx rapide: ATR ~ moyenne(high-low); % ~ ATR / close
     if len(ohlcv) < 50:
         return 0.0
-    rng = [(r[2] - r[3]) for r in ohlcv[-200:]]  # haut-bas
+    rng = [(r[2] - r[3]) for r in ohlcv[-200:]]
     atr = sum(abs(x) for x in rng) / max(1, len(rng))
     close = float(ohlcv[-1][4])
     return (atr / close) if close > 0 else 0.0
-
 
 def _score_pairs(ex, symbols: List[str], timeframe: str, limit: int) -> List[PairScore]:
     out: List[PairScore] = []
@@ -125,7 +140,6 @@ def _score_pairs(ex, symbols: List[str], timeframe: str, limit: int) -> List[Pai
         ohlcv = _fetch_ohlcv_any(ex, s, timeframe, limit=min(1000, limit))
         if not ohlcv:
             continue
-        # volume USD approx = somme(close*volume) sur la fenêtre
         vol_usd = 0.0
         for r in ohlcv[-500:]:
             try:
@@ -133,35 +147,34 @@ def _score_pairs(ex, symbols: List[str], timeframe: str, limit: int) -> List[Pai
             except Exception:
                 pass
         atr_pct = _atr_pct_estimate(ohlcv)
-        score = vol_usd * (1.0 + 10.0 * atr_pct)  # pondération simple
+        score = vol_usd * (1.0 + 10.0 * atr_pct)
         out.append(PairScore(symbol=s, vol_usd_24h=vol_usd, atr_pct_24h=atr_pct, score=score))
-        # petite pause anti‑rate limit
-        time.sleep(0.05)
+        time.sleep(0.03)  # anti rate‑limit léger
     out.sort(key=lambda x: x.score, reverse=True)
     return out
 
 
-def _build_exchange():
-    # CCXT si dispo, sinon REST
-    if _HAS_CCXT:
-        try:
-            return BitgetCCXTClient(paper=True)  # si ton wrapper CCXT supporte
-        except Exception:
-            pass
-    return BitgetRESTClient(base="https://api.bitget.com")
-
+# ---------- watchlist IO ----------
 
 def _save_watchlist(path: Path, scores: List[PairScore], top: int) -> None:
+    selected = scores[:top] if top > 0 else scores
     doc = {
         "generated_at": int(time.time() * 1000),
         "top": [
-            {"symbol": s.symbol, "vol_usd_24h": s.vol_usd_24h, "atr_pct_24h": s.atr_pct_24h, "score": s.score}
-            for s in (scores[:top] if top > 0 else scores):
+            {
+                "symbol": s.symbol,
+                "vol_usd_24h": s.vol_usd_24h,
+                "atr_pct_24h": s.atr_pct_24h,
+                "score": s.score,
+            }
+            for s in selected
         ],
     }
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(doc, indent=2), encoding="utf-8")
 
+
+# ---------- main ----------
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="Rafraîchit watchlist + backfill OHLCV")
@@ -178,33 +191,33 @@ def main(argv=None) -> int:
 
     ex = _build_exchange()
 
-    # 1) liste brute des symboles
+    # 1) universe
     symbols = _list_usdt_perps_any(ex)
     if not symbols:
         print("[refresh] aucun symbole listé — abandon.")
         return 2
 
-    # 2) scorer
+    # 2) scoring
     scores = _score_pairs(ex, symbols, ns.timeframe, ns.limit)
     if not scores:
         print("[refresh] aucun score — abandon.")
         return 3
 
-    # 3) sauvegarder la watchlist
+    # 3) write watchlist
     _save_watchlist(Path(reports_dir) / "watchlist.yml", scores, ns.top)
-    sel = [s.symbol for s in (scores[:ns.top] if ns.top > 0 else scores)]
-    print(f"[refresh] watchlist top={ns.top}: {', '.join(sel)}")
+    selected = [s.symbol for s in (scores[:ns.top] if ns.top > 0 else scores)]
+    print(f"[refresh] watchlist top={ns.top}: {', '.join(selected)}")
 
-    # 4) backfill pour chaque TF demandé
+    # 4) backfill
     tfs = [t.strip() for t in ns.backfill_tfs.split(",") if t.strip()]
     for tf in tfs:
-        for sym in sel:
+        for sym in selected:
             ohlcv = _fetch_ohlcv_any(ex, sym, tf, limit=ns.limit)
             if not ohlcv:
+                print(f"[refresh] pas de données pour {sym}:{tf}")
                 continue
             _write_csv_ohlcv(_ohlcv_path(data_dir, sym, tf), ohlcv)
-            # petite pause anti‑rate limit
-            time.sleep(0.05)
+            time.sleep(0.02)  # anti rate‑limit
 
     print("[refresh] terminé.")
     return 0
@@ -212,4 +225,3 @@ def main(argv=None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-    
