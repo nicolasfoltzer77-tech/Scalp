@@ -69,4 +69,53 @@ def main():
     cur = dest_obj.get("strategies", {})
 
     if not cand:
-        log.info(f"Aucune stratégie candidate
+        log.info(f"Aucune stratégie candidate ({source}).")
+        dest_obj["strategies"] = cur; save_yaml(dest_obj, args.dest); return
+
+    now = int(time.time()); changes = []
+
+    # expire existantes
+    for key, strat in list(cur.items()):
+        try: _, tf = key.split(":")
+        except ValueError: continue
+        created = int(strat.get("created_at") or now)
+        exp = strat.get("expires_at") or (created + lifetime_minutes(tf, age_mult)*60)
+        if now >= exp and not strat.get("expired", False):
+            strat["expired"] = True; strat["expires_at"] = exp; changes.append(f"EXPIRE {key}")
+
+    pol = POLICY.get(risk_mode, POLICY["normal"])
+    filt = {
+        k: v for k, v in cand.items()
+        if v.get("metrics", {}).get("pf", 0) >= pol["pf"]
+        and v.get("metrics", {}).get("mdd", 1) <= pol["mdd"]
+        and v.get("metrics", {}).get("trades", 0) >= pol["trades"]
+    }
+    if not filt:
+        dest_obj["strategies"] = cur; save_yaml(dest_obj, args.dest)
+        log.info("Aucun candidat après filtrage risk_mode."); return
+
+    for key, s in filt.items():
+        try: _, tf = key.split(":")
+        except ValueError: log.warning(f"Clé invalide {key}"); continue
+        created = int(s.get("created_at") or now)
+        s["expires_at"] = created + lifetime_minutes(tf, age_mult)*60
+        s["expired"] = False
+
+        old = cur.get(key)
+        if old is None:
+            cur[key] = deepcopy(s); changes.append(f"ADD {key} PF={s['metrics']['pf']:.2f}")
+        else:
+            newer = int(s.get("created_at") or 0) > int(old.get("created_at") or 0)
+            better = better_than(s.get("metrics", {}), old.get("metrics", {}))
+            if (newer and better) or (old.get("expired", False) and better):
+                cur[key] = deepcopy(s); changes.append(f"REPLACE {key}")
+
+    dest_obj["strategies"] = cur; save_yaml(dest_obj, args.dest)
+    if changes:
+        for c in changes: log.info(c)
+    else:
+        log.info("Promotion idempotente: aucun changement.")
+    log.info(f"Écrit : {args.dest}")
+
+if __name__ == "__main__":
+    main()
