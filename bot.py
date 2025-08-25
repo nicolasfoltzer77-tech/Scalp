@@ -1,93 +1,32 @@
-#!/usr/bin/env python3
-# --- bootstrap forcé (au cas où sitecustomize ne se charge pas automatiquement) ---
-from __future__ import annotations
-
+# --- démarrage mainteneur en arrière-plan (optionnel) ---
 import asyncio
-import logging
-import os
-import sys
-from typing import Any, Dict, Iterable, Optional, Sequence
 from pathlib import Path
 
-# s'assurer que la racine du repo est bien sur sys.path
-ROOT = Path(__file__).resolve().parent
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
-
-# forcer l'import de sitecustomize (verbeux)
-try:
-    import sitecustomize  # noqa: F401
-    print("[bootstrap] sitecustomize importé (OK)")
-except Exception as e:
-    print(f"[bootstrap] sitecustomize non importé: {e}")
-    # dernier filet de sécurité: installation directe des deps
+def _start_maintainer_bg() -> None:
+    """
+    Lance jobs/maintainer.py en sous‑processus boucle (12h par défaut)
+    si ENABLE_MAINTAINER=1 (par défaut).
+    """
+    import os, subprocess, sys
+    if os.getenv("ENABLE_MAINTAINER", "1") not in {"1","true","yes"}:
+        print("[maintainer] désactivé (ENABLE_MAINTAINER=0)")
+        return
+    root = Path(__file__).resolve().parent
+    args = [
+        sys.executable, str(root / "jobs" / "maintainer.py"),
+        "--top", os.getenv("WL_TOP", "10"),
+        "--score-tf", os.getenv("WL_TF", "5m"),
+        "--tfs", os.getenv("BACKFILL_TFS", "1m,5m,15m"),
+        "--limit", os.getenv("BACKFILL_LIMIT", "1500"),
+        "--interval", os.getenv("MAINTAINER_INTERVAL", "43200"),
+    ]
+    # on le détache pour ne pas bloquer le bot (simple & robuste)
     try:
-        from engine.utils.bootstrap import ensure_dependencies
-        deps = ensure_dependencies(with_dash=True, with_ccxt=True)
-        print("[bootstrap] ensure_dependencies:", deps)
-    except Exception as ee:
-        print(f"[bootstrap] fallback ensure_dependencies a échoué: {ee}")
-# --- fin bootstrap forcé ---
+        subprocess.Popen(args, cwd=str(root))
+        print("[maintainer] lancé en arrière‑plan.")
+    except Exception as e:
+        print(f"[maintainer] échec lancement: {e}")
 
-
-from engine.config.loader import load_config
-from engine.live.orchestrator import RunConfig, run_orchestrator
-from engine.live.notify import build_notifier
-from engine.live.commands import build_command_stream
-
-LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
-logging.basicConfig(level=getattr(logging, LOG_LEVEL, logging.INFO),
-                    format="%(asctime)s %(levelname)s %(name)s: %(message)s")
-log = logging.getLogger("bot")
-
-
-def _build_exchange(cfg: Dict[str, Any]):
-    try:
-        from engine.exchange.bitget_ccxt import BitgetExchange
-        ex = BitgetExchange(
-            api_key=cfg["secrets"]["bitget"]["access"],
-            secret=cfg["secrets"]["bitget"]["secret"],
-            password=cfg["secrets"]["bitget"]["passphrase"],
-            data_dir=cfg["runtime"]["data_dir"],
-        )
-        log.info("Exchange CCXT initialisé")
-        return ex
-    except Exception as exc:
-        log.warning("CCXT indisponible (%s) — fallback REST", exc)
-        from engine.exchange.bitget_rest import BitgetFuturesClient
-        return BitgetFuturesClient(
-            access_key=cfg["secrets"]["bitget"]["access"],
-            secret_key=cfg["secrets"]["bitget"]["secret"],
-            passphrase=cfg["secrets"]["bitget"]["passphrase"],
-            base_url=os.getenv("BITGET_BASE_URL", "https://api.bitget.com"),
-            paper_trade=cfg["runtime"].get("paper_trade", True),
-        )
-
-
-async def _run() -> int:
-    cfg = load_config()
-    runtime, strategy = cfg.get("runtime", {}), cfg.get("strategy", {})
-    symbols: Sequence[str] = runtime.get("allowed_symbols") or []
-    run_cfg = RunConfig(
-        symbols=symbols or ["BTCUSDT", "ETHUSDT", "SOLUSDT"],
-        timeframe=strategy.get("live_timeframe", "1m"),
-        refresh_secs=int(runtime.get("refresh_secs", 5)),
-        cache_dir=str(runtime.get("data_dir")),
-    )
-    ex = _build_exchange(cfg)
-    notifier = build_notifier(cfg)
-    cmd_stream = build_command_stream(cfg)
-    await run_orchestrator(ex, run_cfg, notifier, cmd_stream)
-    return 0
-
-
-def main(argv: Optional[Iterable[str]] = None) -> int:
-    try:
-        return asyncio.run(_run())
-    except KeyboardInterrupt:
-        log.info("Arrêt demandé (Ctrl+C)")
-        return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main(sys.argv[1:]))
+# appeler juste après le parsing de ta config, avant l'orchestrateur:
+_start_maintainer_bg()
+# --- fin démarrage mainteneur ---
