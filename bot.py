@@ -1,5 +1,5 @@
 # --- démarrage mainteneur en arrière-plan (optionnel) ---
-import asyncio
+import asyncio , sys
 from pathlib import Path
 
 from engine.config.loader import load_config
