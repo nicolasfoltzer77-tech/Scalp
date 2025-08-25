@@ -1,18 +1,23 @@
-# Dépendances principales du projet scalp
-
-# HTTP / API
+# --- Core ---
+pandas>=2.0
+numpy>=1.24
+pyyaml>=6.0
 requests>=2.31
+tqdm>=4.66
 
-# Data science
-pandas>=2.1
-numpy>=1.26
+# --- Async / IO ---
+aiohttp>=3.9
+websockets>=11.0
 
-# Config et environnements
-PyYAML>=6.0
-python-dotenv>=1.0
+# --- Console / UI ---
+rich>=13.7
+streamlit>=1.36
+plotly>=5.20
+matplotlib>=3.8
 
-# Dashboard (inclus par défaut pour éviter de multiplier les fichiers)
-streamlit>=1.33
+# --- Notifications (si Telegram) ---
+python-telegram-bot>=20.3
 
-# Exchange (optionnel mais utile si activé)
-ccxt>=4.0.0
+# --- Optionnel (laisse commenté si REST-only) ---
+# ccxt>=4.0
+# uvloop>=0.19 ; platform_system == "Linux"
