@@ -32,8 +32,10 @@ def lifetime_minutes(tf: str, k: int) -> int:
     return k * tf_minutes(tf)
 
 def better_than(a: dict, b: dict) -> bool:
-    if a.get("pf", 0) != b.get("pf", 0): return a.get("pf", 0) > b.get("pf", 0)
-    if a.get("mdd", 1) != b.get("mdd", 1): return a.get("mdd", 1) < b.get("mdd", 1)
+    if a.get("pf", 0) != b.get("pf, 0", 0):
+        return a.get("pf", 0) > b.get("pf", 0)
+    if a.get("mdd", 1) != b.get("mdd", 1):
+        return a.get("mdd", 1) < b.get("mdd", 1)
     return a.get("sharpe", 0) > b.get("sharpe", 0)
 
 def setup_logger(logs_dir: str) -> logging.Logger:
@@ -49,6 +51,7 @@ def main():
     ap.add_argument("--config", default=DEFAULT_CONFIG)
     ap.add_argument("--source", default=None, help="strategies.yml.next (déduit si absent)")
     ap.add_argument("--dest", default=DEFAULT_DEST)
+    ap.add_argument("--backup", action="store_true", help="(ignoré, compat bot.py)")
     args = ap.parse_args()
 
     cfg = load_yaml(args.config)
@@ -74,7 +77,7 @@ def main():
 
     now = int(time.time()); changes = []
 
-    # expire existantes
+    # Expirer existantes si lifetime dépassé
     for key, strat in list(cur.items()):
         try: _, tf = key.split(":")
         except ValueError: continue
@@ -106,7 +109,14 @@ def main():
             cur[key] = deepcopy(s); changes.append(f"ADD {key} PF={s['metrics']['pf']:.2f}")
         else:
             newer = int(s.get("created_at") or 0) > int(old.get("created_at") or 0)
-            better = better_than(s.get("metrics", {}), old.get("metrics", {}))
+            better = (
+                s.get("metrics", {}).get("pf", 0) > old.get("metrics", {}).get("pf", 0)
+                or (
+                    s.get("metrics", {}).get("pf", 0) == old.get("metrics", {}).get("pf", 0)
+                    and s.get("metrics", {}).get("mdd", 1) < old.get("metrics", {}).get("mdd", 1)
+                )
+                or s.get("metrics", {}).get("sharpe", 0) > old.get("metrics", {}).get("sharpe", 0)
+            )
             if (newer and better) or (old.get("expired", False) and better):
                 cur[key] = deepcopy(s); changes.append(f"REPLACE {key}")
 
