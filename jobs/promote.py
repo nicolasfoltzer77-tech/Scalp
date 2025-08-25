@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import annotations
-import argparse, os, sys, time, logging, yaml, json, subprocess, socket, re
+import argparse, os, sys, time, logging, yaml, json, subprocess
 from copy import deepcopy
 from typing import Dict, List
 
@@ -99,93 +99,26 @@ def print_topk_in_console(summary_path: str, risk_mode: str, k:int=12):
     passed = sum(1 for r in rows if _pass_policy(r, risk_mode))
     print(f"[TOP] Résumé: {passed} PASS / {len(rows)} total")
 
-# ---------------- Streamlit auto (install + start + URL file) ----------------
-def _guess_public_base_url() -> str:
+# ---------------- Dashboard auto-setup (installe & lance) --------------
+def ensure_dashboard(project_root: str, reports_dir: str, logs_dir: str):
     """
-    Déduit l'URL publique Paperspace à partir du hostname.
-    - peut être surchargée via SCALP_PUBLIC_BASE_URL (prend tel quel)
-    - fallback: https://<hostname>.paperspacegradient.com:8501
+    Appelle tools/setup_dashboard.py — idempotent:
+      - installe streamlit/plotly/pyarrow/altair/pydeck si manquants
+      - démarre Streamlit (port 8501) s’il n’est pas déjà lancé
+      - écrit dash/dashboard_url.txt avec 2 lignes (localhost + publique)
     """
-    env_override = os.environ.get("SCALP_PUBLIC_BASE_URL")
-    if env_override:
-        return env_override.rstrip("/")
-
-    # host candidates
-    candidates = [
-        os.environ.get("PS_GRADIENT_WORKSPACE_HOSTNAME", ""),
-        os.environ.get("HOSTNAME", ""),
-        socket.gethostname(),
-    ]
-    host = next((h for h in candidates if h), "localhost")
-    # sanitize: lettres, chiffres, '-', pas d'espaces/underscores
-    host = re.sub(r"[^a-zA-Z0-9\-]", "-", host).strip("-").lower() or "localhost"
-    # paperspace gradient public domain
-    return f"https://{host}.paperspacegradient.com:8501"
-
-def maybe_start_streamlit(reports_dir: str, logs_dir: str, project_root: str):
-    """
-    - installe streamlit/plotly/pyarrow si absents
-    - démarre streamlit en arrière-plan (port 8501) si pas déjà lancé
-    - écrit un pidfile dans logs_dir/streamlit.pid
-    - écrit l’URL dans dash/dashboard_url.txt (localhost + publique supposée)
-    """
-    # ensure deps
-    try:
-        from tools.ensure_deps import ensure
-    except Exception:
-        sys.path.insert(0, os.path.abspath(os.path.join(project_root)))
-        from tools.ensure_deps import ensure
-
-    need = {"streamlit": "streamlit", "plotly": "plotly", "pyarrow": "pyarrow"}
-    ensure(need)  # installe silencieusement si manquant
-
-    # app path
-    app_path = os.path.join(project_root, "dash", "app_streamlit.py")
-    if not os.path.isfile(app_path):
+    setup_py = os.path.join(project_root, "tools", "setup_dashboard.py")
+    if not os.path.isfile(setup_py):
+        print("[DASH] setup_dashboard.py introuvable, skip.")
         return
-
-    pidfile = os.path.join(logs_dir, "streamlit.pid")
-
-    # écrire/mettre à jour le fichier URL (même si déjà lancé)
-    url_file = os.path.join(project_root, "dash", "dashboard_url.txt")
-    os.makedirs(os.path.dirname(url_file), exist_ok=True)
-    public_url = _guess_public_base_url()
-    with open(url_file, "w", encoding="utf-8") as f:
-        f.write("http://localhost:8501\n")
-        f.write(f"{public_url}\n")
-
-    # déjà lancé ?
-    if os.path.isfile(pidfile):
-        try:
-            with open(pidfile, "r") as f: pid = int(f.read().strip())
-            os.kill(pid, 0)  # process existe -> ne pas relancer
-            return
-        except Exception:
-            try: os.remove(pidfile)
-            except Exception: pass
-
-    # démarrage
+    env = os.environ.copy()
+    env["SCALP_REPORTS_DIR"] = reports_dir
     try:
-        env = os.environ.copy()
-        env["STREAMLIT_BROWSER_GATHER_USAGE_STATS"] = "false"
-        env["SCALP_REPORTS_DIR"] = reports_dir
-        proc = subprocess.Popen(
-            [sys.executable, "-m", "streamlit", "run", app_path,
-             "--server.headless", "true",
-             "--server.address", "0.0.0.0",
-             "--server.port", "8501"],
-            stdout=open(os.path.join(logs_dir, "streamlit.out"), "a"),
-            stderr=open(os.path.join(logs_dir, "streamlit.err"), "a"),
-            env=env,
-            preexec_fn=os.setsid
-        )
-        with open(pidfile, "w") as f:
-            f.write(str(proc.pid))
-        print(f"[DASH] Streamlit démarré sur port 8501 (PID {proc.pid}). URL: {public_url}")
-    except Exception as e:
-        print(f"[DASH] Échec démarrage Streamlit: {e}")
+        subprocess.check_call([sys.executable, setup_py], env=env)
+    except subprocess.CalledProcessError as e:
+        print(f"[DASH] setup_dashboard.py a échoué (code {e.returncode}). Voir logs dans {logs_dir}.")
 
-# ---------------- main: promotion + TOP + dash ----------------
+# ---------------- main: promotion + TOP + dashboard --------------------
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", default=DEFAULT_CONFIG)
@@ -218,7 +151,7 @@ def main():
         log.info(f"Aucune stratégie candidate ({source}).")
         print_topk_in_console(os.path.join(reports_dir, "summary.json"), risk_mode, k=args.top_k)
         if not args.no_dash:
-            maybe_start_streamlit(reports_dir, logs_dir, project_root)
+            ensure_dashboard(project_root, reports_dir, logs_dir)
         return
 
     now = int(time.time()); changes = []
@@ -244,7 +177,7 @@ def main():
         log.info("Aucun candidat après filtrage risk_mode.")
         print_topk_in_console(os.path.join(reports_dir, "summary.json"), risk_mode, k=args.top_k)
         if not args.no_dash:
-            maybe_start_streamlit(reports_dir, logs_dir, project_root)
+            ensure_dashboard(project_root, reports_dir, logs_dir)
         return
 
     for key, s in filt.items():
@@ -270,9 +203,10 @@ def main():
         log.info("Promotion idempotente: aucun changement.")
     log.info(f"Écrit : {args.dest}")
 
+    # TOP console + auto-setup dashboard
     print_topk_in_console(os.path.join(reports_dir, "summary.json"), risk_mode, k=args.top_k)
     if not args.no_dash:
-        maybe_start_streamlit(reports_dir, logs_dir, project_root)
+        ensure_dashboard(project_root, reports_dir, logs_dir)
 
 if __name__ == "__main__":
     main()
