@@ -1,7 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import List
-
 from engine.config.loader import load_config
 from engine.config.watchlist import load_watchlist
 from engine.live.scheduler import Scheduler
@@ -26,12 +25,10 @@ def run_config_from_yaml() -> RunConfig:
     wl = cfg.get("watchlist", {}) or {}
     mt = cfg.get("maintainer", {}) or {}
     auto_cfg = cfg.get("auto") or {}
-
     wl_doc = load_watchlist()
     syms = [(d.get("symbol") or "").replace("_", "").upper()
             for d in (wl_doc.get("top") or []) if d.get("symbol")] or ["BTCUSDT","ETHUSDT","SOLUSDT"]
     tfs = [str(x) for x in (wl.get("backfill_tfs") or ["1m","5m","15m"])]
-
     return RunConfig(
         symbols=syms,
         timeframes=tfs,
@@ -66,4 +63,4 @@ class Orchestrator:
         if self.cfg.auto:
             self.state.auto_actions(limit=self.cfg.limit, cooldown=self.cfg.cooldown_secs)
         for (s, tf) in self.state.ready_pairs():
-            pass  # placeholder signaux
+            pass
