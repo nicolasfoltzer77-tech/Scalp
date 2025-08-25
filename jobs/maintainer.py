@@ -14,11 +14,12 @@ from typing import Dict, List, Set, Tuple
 from engine.config.loader import load_config
 from engine.config.watchlist import load_watchlist
 from engine.config.strategies import load_strategies
+from engine.backtest.loader_csv import load_csv_ohlcv  # pour vérifier la fraicheur des données
 
 ROOT = Path(__file__).resolve().parents[1]
 log = logging.getLogger("maintainer")
 
-# --------- couleurs / rendu compact ----------
+# --------- couleurs / rendu ----------
 COLORS = {
     "black": "\x1b[30m",
     "red": "\x1b[31m",
@@ -26,6 +27,19 @@ COLORS = {
     "orange": "\x1b[33m",
     "reset": "\x1b[0m",
 }
+
+_TF_MIN = {"1m":1, "5m":5, "15m":15, "1h":60, "4h":240, "1d":1440}
+
+def _tf_minutes(tf: str) -> int:
+    return _TF_MIN.get(str(tf), 1)
+
+def _ttl_mult_cfg() -> Dict[str, int]:
+    try:
+        cfg = load_config()
+        mt = cfg.get("maintainer", {}) or {}
+        return {str(k): int(v) for k, v in (mt.get("ttl_mult") or {}).items()}
+    except Exception:
+        return {}
 
 def _short_sym(s: str) -> str:
     s = s.upper().replace("_", "")
@@ -36,47 +50,11 @@ def _color_block(color: str, text: str) -> str:
     r = COLORS["reset"]
     return f"{c}{text}{r}"
 
-def _render_status_table(symbols: List[str], tfs: List[str],
-                         todo: Set[tuple[str, str]], strategies: dict) -> str:
-    header = ["PAIR"] + [tf for tf in tfs]
-    rows = []
-    present = {(k.split(":")[0], k.split(":")[1]) for k in strategies.keys()}
-    expired = {(k.split(":")[0], k.split(":")[1]) for k, v in strategies.items() if v.get("expired")}
-
-    for s in symbols:
-        line = [_short_sym(s)]
-        for tf in tfs:
-            key = (s, tf)
-            if key in todo:
-                cell = _color_block("orange", "UPD")
-            elif key in expired:
-                cell = _color_block("red", "OLD")
-            elif key in present:
-                cell = _color_block("green", "OK ")
-            else:
-                cell = _color_block("black", "-- ")
-            line.append(cell)
-        rows.append(line)
-
-    widths = [max(len(str(r[i])) for r in ([header] + rows)) for i in range(len(header))]
-    def fmt(row): return " | ".join(str(row[i]).ljust(widths[i]) for i in range(len(header)))
-    table = [fmt(header), fmt(["-" * w for w in widths]), *[fmt(r) for r in rows]]
-    return "\n".join(table)
-
-def _paint_live_table(symbols: List[str], tfs: List[str]) -> None:
-    """Dessine le tableau sur stdout (sans passer par le logger) pour un rendu 'live'."""
-    try:
-        strategies = load_strategies()
-        todo = set(_expired_pairs(tfs))
-        table = _render_status_table(symbols, tfs, todo, strategies)
-        # Effacer l'écran + curseur en haut
-        sys.stdout.write("\x1b[2J\x1b[H")
-        sys.stdout.write("[maintainer] État (PAIR×TF)\n")
-        sys.stdout.write(table + "\n")
-        sys.stdout.flush()
-    except Exception:
-        # si souci, on ne casse pas la boucle
-        pass
+def _center(text: str, width: int) -> str:
+    pad = max(0, width - len(text))
+    left = pad // 2
+    right = pad - left
+    return " " * left + text + " " * right
 
 # ------------------------ logging ------------------------
 
@@ -97,7 +75,7 @@ def _setup_logging() -> None:
     log.addHandler(fh); log.addHandler(ch)
     log.info("Logger prêt • fichier=%s", logs_dir / "maintainer.log")
 
-# ------------------------ helpers ------------------------
+# ------------------------ helpers conf/fs ------------------------
 
 def run_cmd(args: List[str]) -> tuple[int, str, str]:
     """Lance une commande en capturant stdout/stderr. Retourne (rc, out, err)."""
@@ -114,8 +92,115 @@ def _symbols_top(top: int | None) -> List[str]:
             for d in (wl.get("top") or []) if d.get("symbol")]
     return syms if not top else syms[:top]
 
+# ------------------------ statut data/strat ------------------------
+
+def _last_bar_ts_ms(data_dir: str, symbol: str, tf: str) -> int | None:
+    """Dernier timestamp (ms) disponible dans le CSV, sinon None."""
+    try:
+        rows = load_csv_ohlcv(data_dir, symbol, tf, max_rows=1)  # fin uniquement
+        if rows:
+            return int(rows[-1][0])
+    except Exception:
+        pass
+    return None
+
+def _data_is_fresh(now_ms: int, last_ms: int | None, tf: str) -> bool:
+    """Data 'fraîche' si la dernière bougie ≤ 2×TF."""
+    if last_ms is None:
+        return False
+    tf_ms = _tf_minutes(tf) * 60_000
+    return (now_ms - last_ms) <= (2 * tf_ms)
+
+def _strat_is_valid(strategies: Dict[str, Dict], symbol: str, tf: str) -> bool:
+    k = f"{symbol}:{tf}"
+    s = strategies.get(k)
+    return bool(s) and not bool(s.get("expired"))
+
+def _status_cell(symbol: str, tf: str, strategies: Dict[str, Dict], data_dir: str, ttl_mult: Dict[str,int]) -> tuple[str,str]:
+    """
+    Renvoie (label, color) :
+      ⬛ ('MIS','black')   = données manquantes
+      🟥 ('OLD','red')    = données présentes mais trop vieilles
+      🟧 ('DAT','orange') = données ok, stratégie absente/expirée
+      🟩 ('OK ','green')  = données + stratégie valides
+    """
+    now = int(time.time() * 1000)
+    last_ms = _last_bar_ts_ms(data_dir, symbol, tf)
+    has_data = last_ms is not None
+    fresh = _data_is_fresh(now, last_ms, tf)
+
+    if not has_data:
+        return ("MIS","black")
+    if not fresh:
+        return ("OLD","red")
+    if _strat_is_valid(strategies, symbol, tf):
+        return ("OK ","green")
+    return ("DAT","orange")
+
+# ------------------------ rendering tableau ------------------------
+
+def _render_status_table(symbols: List[str], tfs: List[str],
+                         strategies: dict, data_dir: str) -> str:
+    header = ["PAIR"] + tfs
+    rows: List[List[str]] = []
+
+    for s in symbols:
+        line = [_short_sym(s)]
+        for tf in tfs:
+            lbl, color = _status_cell(s, tf, strategies, data_dir, _ttl_mult_cfg())
+            cell = _color_block(color, lbl)
+            line.append(cell)
+        rows.append(line)
+
+    # largeur visible (ignore codes ANSI)
+    def visible_len(x: str) -> int:
+        import re
+        return len(re.sub(r"\x1b\[[0-9;]*m", "", x))
+
+    widths = [max(visible_len(r[i]) for r in ([header] + rows)) for i in range(len(header))]
+
+    def fmt(row: List[str]) -> str:
+        out = []
+        import re
+        for i, v in enumerate(row):
+            w = widths[i]
+            if "\x1b[" in v:
+                plain = re.sub(r"\x1b\[[0-9;]*m", "", v)
+                pad = _center(plain, w)
+                # reconstruire: couleur + texte centré + reset (le libellé coloré est toujours de la forme <color>TXT<reset>)
+                start = v[:v.find(plain)] if plain in v else ""
+                v = f"{start}{pad}{COLORS['reset']}"
+            else:
+                v = _center(v, w)
+            out.append(v)
+        return " | ".join(out)
+
+    bar = [ "-" * w for w in widths ]
+    table = [fmt(header), fmt(bar), *[fmt(r) for r in rows]]
+    return "\n".join(table)
+
+def _paint_live_table(symbols: List[str], tfs: List[str]) -> None:
+    """Affichage 'live' (stdout) sans passer par le logger."""
+    try:
+        cfg = load_config()
+        data_dir = str((cfg.get("runtime") or {}).get("data_dir") or "/notebooks/scalp_data/data")
+        strategies = load_strategies()
+        table = _render_status_table(symbols, tfs, strategies, data_dir)
+        sys.stdout.write("\x1b[2J\x1b[H")  # clear + home
+        sys.stdout.write("[maintainer] État (PAIR×TF)\n")
+        sys.stdout.write(table + "\n")
+        sys.stdout.flush()
+    except Exception:
+        pass
+
+# ------------------------ calcul expirés/manquants ------------------------
+
 def _expired_pairs(tfs: List[str]) -> List[Tuple[str, str]]:
-    """(symbol, tf) expirés ou manquants par rapport à strategies.yml et watchlist."""
+    """
+    (symbol, tf) expirés/à créer par rapport à strategies.yml et watchlist.
+    NB: ce calcul ne sert plus au rendu (qui lit les CSV), mais reste utile pour
+    prioriser l'ordre de backfill si besoin.
+    """
     all_ = load_strategies()
     need: List[Tuple[str, str]] = []
     present = {(k.split(":")[0], k.split(":")[1]) for k in all_.keys()}
@@ -197,33 +282,33 @@ def run_once(top: int, score_tf: str, tfs: List[str], limit: int,
              live_interval: float) -> None:
     log.info("=== RUN ONCE === top=%s score_tf=%s tfs=%s limit=%s", top, score_tf, tfs, limit)
 
+    # 1) refresh + backfill global rapide
     refresh_watchlist(top=top, score_tf=score_tf, backfill_tfs=tfs, limit=limit)
 
+    # 2) lecture watchlist + premier rendu
     syms = _symbols_top(top)
     if not syms:
         log.warning("Watchlist vide — stop.")
         return
 
-    # premier rendu
-    todo = [(s, tf) for (s, tf) in _expired_pairs(tfs) if s in syms]
+    cfg = load_config()
+    data_dir = str((cfg.get("runtime") or {}).get("data_dir") or "/notebooks/scalp_data/data")
     try:
         strat = load_strategies()
-        table = _render_status_table(syms, tfs, set(todo), strat)
+        table = _render_status_table(syms, tfs, strat, data_dir)
         log.info("\n%s", table)
     except Exception:
         pass
     if live_table:
         _paint_live_table(syms, tfs)
 
+    # 3) backfill séquentiel 1→N et TF croisés
     touched = False
     last_live = time.time()
-
     for s in syms:
         for tf in tfs:
-            if (s, tf) in todo:
-                ok = backfill_symbol_tf(s, tf, limit=limit)
-                touched = touched or ok
-            # rafraîchissement live périodique
+            ok = backfill_symbol_tf(s, tf, limit=limit)
+            touched = touched or ok
             if live_table and (time.time() - last_live) >= live_interval:
                 _paint_live_table(syms, tfs)
                 last_live = time.time()
@@ -232,11 +317,12 @@ def run_once(top: int, score_tf: str, tfs: List[str], limit: int,
     if live_table:
         _paint_live_table(syms, tfs)
 
+    # 4) backtest + promote si on a touché des données
     if touched:
         log.info("backtest → promote…")
         backtest_and_promote()
     else:
-        log.info("rien d'expiré — skip backtest.")
+        log.info("rien de nouveau — skip backtest.")
         _summary_strategies()
 
 # ------------------------ CLI ------------------------
@@ -266,7 +352,7 @@ def main(argv=None) -> int:
     ap.add_argument("--interval", type=int, default=None, help="intervalle boucle (sec)")
     ap.add_argument("--once", action="store_true", help="exécute une seule passe et sort")
     ap.add_argument("--sleep-between", type=float, default=None, help="pause entre backfills (sec)")
-    ap.add_argument("--live-table", action="store_true", help="active le tableau live (sinon lecture depuis config)")
+    ap.add_argument("--live-table", action="store_true", help="active le tableau live (sinon lecture config)")
     ap.add_argument("--no-live-table", action="store_true", help="force la désactivation du live")
     ap.add_argument("--live-interval", type=float, default=None, help="rafraîchissement du live (sec)")
 
@@ -280,7 +366,6 @@ def main(argv=None) -> int:
     interval = ns.interval if ns.interval is not None else base["interval"]
     sleep_between = ns.sleep_between if ns.sleep_between is not None else base["sleep_between"]
 
-    # live-table : priorité aux flags CLI
     if ns.live_table: live = True
     elif ns.no_live_table: live = False
     else: live = base["live"]
