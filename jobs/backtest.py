@@ -64,9 +64,13 @@ def main():
     ap.add_argument("--from-watchlist", action="store_true")
     ap.add_argument("--tfs", type=str, default=None, help="TF entrées (ex: 1m,3m,5m)")
     ap.add_argument("--limit", type=int, default=None)
+    # JSON split/unique
     ap.add_argument("--schema-json", type=str, default=None, help="JSON unique (legacy)")
     ap.add_argument("--schema-backtest", type=str, default=None, help="JSON backtest (split)")
     ap.add_argument("--schema-entries", type=str, default=None, help="JSON entrées (split)")
+    # Export signaux
+    ap.add_argument("--export-signals", action="store_true", help="Écrit des .parquet par paire/TF")
+    ap.add_argument("--signals-dir", type=str, default=None, help="Répertoire d’export des signaux (défaut: reports/signals)")
     args = ap.parse_args()
 
     cfg = load_yaml(args.config)
@@ -88,6 +92,7 @@ def main():
     )
     schema_back, schema_entries = load_combined_or_split(args.schema_json, args.schema_backtest, args.schema_entries)
 
+    # Assets & TF
     assets = discover_pairs(reports_dir, topN) if args.from_watchlist else (schema_back.get("assets") or discover_pairs(reports_dir, topN))
     dir_tfs = schema_back["timeframes"]["direction"]
     entry_tfs_all = schema_back["timeframes"]["entries"]
@@ -97,6 +102,9 @@ def main():
     out = {"strategies": {}}
     table_rows = []
 
+    # répertoire des signaux
+    signals_dir = args.signals_dir or os.path.join(reports_dir, "signals")
+
     for pair in assets:
         for tf in entry_tfs:
             try:
@@ -105,6 +113,7 @@ def main():
                 log.warning(f"[{pair}:{tf}] CSV KO: {e}"); continue
             if df_entry.empty or len(df_entry) < 200: continue
 
+            # Régime multi‑TF
             df_by_tf = {}
             for rtf in dir_tfs:
                 try: df_by_tf[rtf] = load_csv(data_dir, pair, rtf, backfill_limit*5)
@@ -112,13 +121,54 @@ def main():
             if not df_by_tf: continue
 
             p_buy = compute_regime_score_multi_tf(df_by_tf, schema_back)
+            # réaligner grossièrement par longueur (fallback robuste)
             p_buy = p_buy.reindex(range(len(p_buy))).reindex_like(df_entry, method="ffill")
 
+            # Entrées + exécution (retourne métriques + equity curve)
             df_exec = pd.concat([df_entry, build_entries_frame(df_entry, schema_entries)], axis=1)
-            m = run_backtest_exec(df_exec, p_buy, schema_back, schema_entries)
+            metrics = run_backtest_exec(df_exec, p_buy, schema_back, schema_entries)
 
-            table_rows.append({"pair": pair, "tf": tf, **m})
-            if not pass_policy(m, risk_mode): continue
+            # Table pour visu
+            table_rows.append({"pair": pair, "tf": tf, **metrics})
+
+            # Export Parquet (optionnel) — écrit même si la stratégie ne passe pas le filtre
+            if args.export_signals:
+                try:
+                    # reconstruire un état/hystérésis identique à run_backtest_exec pour export
+                    from engine.strategies.twolayer_scalp import hysteresis_state
+                    state = hysteresis_state(p_buy, schema_back["regime_layer"]["hysteresis"]).reindex_like(df_entry, method="ffill")
+                    sig_df = pd.DataFrame({
+                        "timestamp": df_entry["timestamp"].astype("int64"),
+                        "symbol": pair,
+                        "tf": tf,
+                        "p_buy": p_buy.reindex_like(df_entry, method="ffill").values,
+                        "state": state.values,
+                        "entry_long": df_exec["entry_long"].values,
+                        "entry_set": df_exec.get("entry_set", pd.Series(index=df_exec.index, data="")).values,
+                        "sl": df_exec["sl"].values,
+                        "tp": df_exec["tp"].values,
+                        "close": df_exec["close"].values,
+                        "high": df_exec["high"].values,
+                        "low": df_exec["low"].values,
+                    })
+                    # equity (constante par barre jusqu’à sortie → on affecte le dernier equity aux dernières lignes)
+                    # on n’a pas la courbe bar-par-bar depuis run_backtest_exec; approximation: eq final seulement
+                    sig_df["equity"] = metrics.get("equity", 1.0)
+                    out_dir = os.path.join(signals_dir, pair)
+                    os.makedirs(out_dir, exist_ok=True)
+                    out_path = os.path.join(out_dir, f"{tf}.parquet")
+                    try:
+                        sig_df.to_parquet(out_path, index=False)
+                    except Exception:
+                        # fallback CSV si pyarrow/fastparquet absent
+                        out_path = os.path.join(out_dir, f"{tf}.csv")
+                        sig_df.to_csv(out_path, index=False)
+                    log.info(f"[SIG] {pair}:{tf} → {out_path}")
+                except Exception as e:
+                    log.warning(f"[SIG] export échoué {pair}:{tf}: {e}")
+
+            # Sélection (risk_mode)
+            if not pass_policy(metrics, risk_mode): continue
 
             key = f"{pair}:{tf}"
             out["strategies"][key] = {
@@ -128,25 +178,20 @@ def main():
                 "expired": False,
                 "params": {"tf": tf, "dir_tfs": dir_tfs},
                 "metrics": {
-                    "pf": round(m["pf"], 4),
-                    "mdd": round(m["mdd"], 4),
-                    "trades": int(m["trades"]),
-                    "wr": round(m["wr"], 4),
-                    "sharpe": round(m["sharpe"], 4)
+                    "pf": round(metrics["pf"], 4),
+                    "mdd": round(metrics["mdd"], 4),
+                    "trades": int(metrics["trades"]),
+                    "wr": round(metrics["wr"], 4),
+                    "sharpe": round(metrics["sharpe"], 4)
                 }
             }
-            log.info(f"[OK] {pair}:{tf} PF={m['pf']:.2f} MDD={m['mdd']:.2%} TR={m['trades']} WR={m['wr']:.2%}")
+            log.info(f"[OK] {pair}:{tf} PF={metrics['pf']:.2f} MDD={metrics['mdd']:.2%} TR={metrics['trades']} WR={metrics['wr']:.2%}")
 
+    # Sorties
     os.makedirs(reports_dir, exist_ok=True)
     with open(os.path.join(reports_dir, "strategies.yml.next"), "w", encoding="utf-8") as f:
         yaml.safe_dump(out, f, sort_keys=True, allow_unicode=True, default_flow_style=False)
-
-    summary = {
-        "generated_at": now_ts,
-        "risk_mode": risk_mode,
-        "rows": table_rows,
-        "selected": sorted(out["strategies"].keys())
-    }
+    summary = {"generated_at": now_ts, "risk_mode": risk_mode, "rows": table_rows, "selected": sorted(out["strategies"].keys())}
     with open(os.path.join(reports_dir, "summary.json"), "w", encoding="utf-8") as f:
         json.dump(summary, f, ensure_ascii=False, indent=2)
 
