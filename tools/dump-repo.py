@@ -31,8 +31,8 @@ def parse_args() -> argparse.Namespace:
     ap = argparse.ArgumentParser(description="Dump texte compact du repo scalp")
     ap.add_argument("--root", default="/notebooks/scalp",
                     help="Racine à dumper (défaut: /notebooks/scalp)")
-    ap.add_argument("--out-dir", default="/notebooks/dumps",
-                    help="Dossier de sortie du dump (défaut: /notebooks/dumps)")
+    ap.add_argument("--out-dir", default="/notebooks/scalp/dumps",
+                    help="Dossier de sortie du dump (défaut: /notebooks/scalp/dumps)")
     ap.add_argument("--max-lines", type=int, default=1200,
                     help="Nombre max de lignes par fichier (défaut: 1200)")
     ap.add_argument("--max-bytes", type=int, default=300_000,
