@@ -2,133 +2,137 @@
 # -*- coding: utf-8 -*-
 
 """
-Publication GitHub Pages SANS PROMPT.
+Publie le dashboard statique dans /docs pour GitHub Pages.
 
-- Copie les artefacts vers /docs :
-  * HTML : docs/index.html, docs/dashboard.html (déjà écrits par render_report)
-  * JSON : docs/data/{summary.json,status.json,last_errors.json}
-  * Health : docs/health.json (timestamp + commit + état)
-- Commit + push via token (env: GIT_USER, GIT_TOKEN, GIT_REPO, GIT_BRANCH)
-- N'échoue pas le process principal si pas de token ou si aucune modif
+Fait :
+- copie reports/*.json -> docs/data/
+- écrit docs/health.json (commit, horodatage, statut)
+- git add/commit/push sur la branche configurée
+
+Config attendue (variables d'env) :
+  GIT_USER      : ex. "nicolasfoltzer77-tech"
+  GIT_EMAIL     : ex. "you@example.com" (optionnel)
+  GIT_TOKEN     : PAT GitHub (scope repo)
+  GIT_REPO      : nom du repo (ex. "scalp")
+  GIT_BRANCH    : "main" (par défaut)
+Optionnel :
+  PAGES_URL_OUT : chemin fichier où écrire l'URL finale (ex. docs/pages_url.txt)
+
+Hypothèses :
+- On exécute ce script à la racine du repo (cwd=<repo>)
+- Git origin est GitHub
+- Pages est configuré sur Branch: main, Folder: /docs
 """
 
 from __future__ import annotations
-import os, sys, shutil, subprocess, json, time
+import json, os, subprocess, sys, time, shutil
 from pathlib import Path
 
-os.environ["GIT_TERMINAL_PROMPT"] = "0"
+REPO_ROOT   = Path.cwd()
+REPORTS_DIR = REPO_ROOT / "reports"            # <- tes jobs écrivent ici
+DOCS_DIR    = REPO_ROOT / "docs"
+DATA_DIR    = DOCS_DIR / "data"
+DOCS_DIR.mkdir(parents=True, exist_ok=True)
+DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-def sh(args: list[str], cwd: Path, check: bool = True) -> subprocess.CompletedProcess:
-    return subprocess.run(args, cwd=str(cwd), text=True, capture_output=True, check=check)
+GIT_USER   = os.environ.get("GIT_USER", "").strip()
+GIT_EMAIL  = os.environ.get("GIT_EMAIL", f"{GIT_USER}@users.noreply.github.com")
+GIT_TOKEN  = os.environ.get("GIT_TOKEN", "").strip()
+GIT_REPO   = os.environ.get("GIT_REPO", REPO_ROOT.name).strip()
+GIT_BRANCH = os.environ.get("GIT_BRANCH", "main").strip()
+PAGES_URL_OUT = os.environ.get("PAGES_URL_OUT", str(DOCS_DIR / "pages_url.txt"))
 
-def time_utc() -> str:
-    return time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime())
+def sh(args: list[str], cwd: Path | None = None, check: bool = True) -> str:
+    res = subprocess.run(args, cwd=str(cwd) if cwd else None,
+                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                         text=True, check=check)
+    return res.stdout.strip()
 
-def write_health(docs_dir: Path, push_status: str) -> None:
-    health_path = docs_dir / "health.json"
-    commit = "unknown"
+def git_config():
+    if GIT_USER:
+        sh(["git", "config", "user.name", GIT_USER], cwd=REPO_ROOT)
+    if GIT_EMAIL:
+        sh(["git", "config", "user.email", GIT_EMAIL], cwd=REPO_ROOT)
+
+def git_remote_with_token():
+    # récupère l'URL origin et injecte le token si besoin
     try:
-        out = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            cwd=str(docs_dir.parent),
-            capture_output=True, text=True, check=True
-        )
-        commit = out.stdout.strip()
-    except Exception:
-        pass
-    payload = {
-        "generated_at": time_utc(),
-        "commit": commit,
-        "status": push_status,
-    }
-    health_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-    print(f"[publish] health.json écrit → {health_path}")
-
-def main() -> None:
-    repo_root = Path(__file__).resolve().parents[1]   # <repo>
-    docs_dir  = repo_root / "docs"
-    data_dir  = docs_dir / "data"
-    docs_dir.mkdir(parents=True, exist_ok=True)
-    data_dir.mkdir(parents=True, exist_ok=True)
-
-    # --- copier JSON depuis reports ---
-    reports_candidates = [
-        Path("/notebooks/scalp_data/reports"),
-        repo_root / "scalp_data" / "reports",
-    ]
-    reports_dir = next((p for p in reports_candidates if p.exists()), None)
-    if reports_dir:
-        for name in ("summary.json", "status.json", "last_errors.json"):
-            src, dst = reports_dir / name, data_dir / name
-            if src.exists():
-                shutil.copy2(src, dst)
-                print(f"[publish] Copié {src} -> {dst}")
-    else:
-        print("[publish] Aucun reports_dir trouvé, skip JSON.")
-
-    # --- infos Git ---
-    user   = os.environ.get("GIT_USER", "").strip()
-    token  = os.environ.get("GIT_TOKEN", "").strip()
-    repo   = os.environ.get("GIT_REPO", "Scalp").strip()
-    branch = os.environ.get("GIT_BRANCH", "main").strip()
-
-    if not user or not token:
-        print("[publish] GIT_USER/GIT_TOKEN absents -> push ignoré (local OK).")
-        write_health(docs_dir, "local-only")
+        url = sh(["git", "remote", "get-url", "origin"], cwd=REPO_ROOT)
+    except Exception as e:
+        print(f"[publish] pas d'origin git ? {e}")
         return
-
-    origin_url = f"https://x-access-token:{token}@github.com/{user}/{repo}.git"
-
-    # --- config Git ---
-    try:
-        try: sh(["git","config","user.email"], repo_root)
-        except subprocess.CalledProcessError:
-            sh(["git","config","user.email",f"{user}@users.noreply.github.com"], repo_root)
-        try: sh(["git","config","user.name"], repo_root)
-        except subprocess.CalledProcessError:
-            sh(["git","config","user.name",user], repo_root)
-
-        rem = sh(["git","remote"], repo_root, check=False).stdout.split()
-        if "origin" in rem:
-            sh(["git","remote","set-url","origin",origin_url], repo_root)
+    if "github.com" not in url:
+        print(f"[publish] origin n'est pas GitHub: {url}")
+        return
+    if GIT_TOKEN and "@" not in url:
+        # https://<token>@github.com/user/repo.git
+        if url.startswith("https://"):
+            url = url.replace("https://", f"https://{GIT_TOKEN}@", 1)
+            sh(["git", "remote", "set-url", "origin", url], cwd=REPO_ROOT)
+            print("[publish] remote origin mis à jour (token)")
         else:
-            sh(["git","remote","add","origin",origin_url], repo_root)
-    except subprocess.CalledProcessError as e:
-        print("[publish] ⚠️ config git échouée:", e.stderr.strip())
-        write_health(docs_dir, "git-config-error")
-        return
+            print("[publish] URL origin non-https, je ne touche pas:", url)
 
-    # --- stage docs ---
-    try: sh(["git","add","docs"], repo_root)
-    except subprocess.CalledProcessError as e:
-        print("[publish] ⚠️ git add échoué:", e.stderr.strip())
-        write_health(docs_dir, "git-add-error")
-        return
+def copy_reports():
+    # Fichiers possibles côté pipeline
+    candidates = [
+        "status.json", "summary.json", "last_errors.json",
+        "strategies.yml.next", "strategies.yml",   # si tu veux les exposer
+    ]
+    copied = []
+    for name in candidates:
+        src = REPORTS_DIR / name
+        if src.exists():
+            dst = DATA_DIR / name
+            shutil.copy2(src, dst)
+            copied.append(name)
+    print(f"[publish] copiés vers docs/data/: {copied}" if copied else "[publish] aucun JSON trouvé à copier (ok au premier run).")
 
-    # --- commit si changements ---
-    if subprocess.run(["git","diff","--cached","--quiet"], cwd=str(repo_root)).returncode == 0:
-        print("[publish] Aucun changement.")
-        write_health(docs_dir, "no-changes")
-        return
-
-    try: sh(["git","commit","-m",f"pages: update at {time_utc()}"], repo_root)
-    except subprocess.CalledProcessError as e:
-        print("[publish] ⚠️ git commit échoué:", e.stderr.strip())
-        write_health(docs_dir, "git-commit-error")
-        return
-
-    # --- push ---
+def write_health(status: str = "ok"):
+    # récupère le dernier commit court
     try:
-        sh(["git","push","origin",f"HEAD:{branch}"], repo_root)
-        print("[publish] ✅ Push OK.")
-        write_health(docs_dir, "push-ok")
-    except subprocess.CalledProcessError as e:
-        print("[publish] ❌ Push KO:", e.stderr.strip())
-        write_health(docs_dir, "push-failed")
+        commit = sh(["git", "rev-parse", "--short", "HEAD"], cwd=REPO_ROOT)
+    except Exception:
+        commit = "unknown"
+    payload = {
+        "generated_at": int(time.time()),
+        "commit": commit,
+        "status": status
+    }
+    (DOCS_DIR / "health.json").write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    print("[publish] écrit docs/health.json")
+
+def pages_url():
+    # URL standard GitHub Pages
+    owner = GIT_USER or "owner"
+    repo  = GIT_REPO or REPO_ROOT.name
+    return f"https://{owner}.github.io/{repo}/"
+
+def git_add_commit_push():
+    # add/commit/push
+    try:
+        sh(["git", "add", "docs"], cwd=REPO_ROOT)
+        sh(["git", "commit", "-m", "chore(pages): publish dashboard"], cwd=REPO_ROOT, check=False)
+        sh(["git", "push", "origin", GIT_BRANCH], cwd=REPO_ROOT)
+        print("[publish] push terminé.")
+    except Exception as e:
+        print(f"[publish] push ignoré: {e}")
+
+def main():
+    print(f"[publish] repo={REPO_ROOT}")
+    git_config()
+    git_remote_with_token()
+    copy_reports()
+    write_health("ok")
+    git_add_commit_push()
+    url = pages_url()
+    Path(PAGES_URL_OUT).write_text(url, encoding="utf-8")
+    print(f"[publish] Pages URL: {url}  (écrit dans {PAGES_URL_OUT})")
 
 if __name__ == "__main__":
     try:
         main()
-    except Exception as exc:
-        print(f"[publish] FATAL: {exc}")
+    except Exception as e:
+        write_health(f"error: {e}")
+        print(f"[publish] FATAL: {e}")
         sys.exit(1)
