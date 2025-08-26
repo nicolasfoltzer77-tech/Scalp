@@ -2,34 +2,33 @@
 # -*- coding: utf-8 -*-
 
 """
-Génère un dashboard HTML statique depuis summary.json / strategies.yml(.next)
-ET écrit une URL "console" prête à copier (dashboard_url.txt) pour ouverture sur iPhone.
-
-- Auto-réparation des libs (plotly/altair/pyarrow/pandas)
-- Sorties:
+Génère un dashboard HTML statique et écrit une URL console copiable.
+Sorties:
   /notebooks/scalp_data/reports/dashboard.html
   /notebooks/scalp_data/reports/dashboard_url.txt
 """
 
 from __future__ import annotations
-import os, sys, json, yaml, importlib, subprocess
+import os, sys, json, yaml, importlib, subprocess, re
 from datetime import datetime
 
-# --------- chemins par défaut
+# --------- chemins / fichiers
 REPORTS_DIR = os.getenv("SCALP_REPORTS_DIR", "/notebooks/scalp_data/reports")
 SUMMARY     = os.path.join(REPORTS_DIR, "summary.json")
 STRAT_NEXT  = os.path.join(REPORTS_DIR, "strategies.yml.next")
 STRAT_CURR  = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "engine", "config", "strategies.yml"))
+CONFIG_YAML = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "engine", "config", "config.yaml"))
 OUT_HTML    = os.path.join(REPORTS_DIR, "dashboard.html")
 OUT_URLTXT  = os.path.join(REPORTS_DIR, "dashboard_url.txt")
+
 TOP_K       = int(os.getenv("SCALP_DASH_TOPK", "20"))
 
+# --------- utils log
 def _log(msg: str):
     print(f"[render] {msg}")
 
-# --------- bootstrap libs nécessaires
+# --------- auto-install libs
 NEEDED = ["plotly", "altair", "pyarrow", "pandas"]
-
 def _ensure_libs():
     missing = []
     for pkg in NEEDED:
@@ -45,6 +44,7 @@ def _ensure_libs():
     except subprocess.CalledProcessError as e:
         _log(f"pip install failed (code {e.returncode}) — fallback si possible.")
 
+# --------- helpers chargement
 def _load_json(path):
     if not os.path.isfile(path): return {}
     with open(path, "r", encoding="utf-8") as f: return json.load(f)
@@ -53,6 +53,7 @@ def _load_yaml(path, missing_ok=True):
     if missing_ok and not os.path.isfile(path): return {}
     with open(path, "r", encoding="utf-8") as f: return yaml.safe_load(f) or {}
 
+# --------- score / rendu fallback
 def _score(r):
     pf = float(r.get("pf", 0)); mdd = float(r.get("mdd", 1))
     sh = float(r.get("sharpe", 0)); wr = float(r.get("wr", 0))
@@ -74,38 +75,73 @@ def _render_simple_table(rows_sorted, top_k: int):
         )
     return f"<table border='1' cellspacing='0' cellpadding='6'>{head}{''.join(body)}</table>"
 
-def _build_console_url() -> str:
+# --------- détection NOTEBOOK_ID (fiable)
+def _guess_notebook_id() -> str | None:
     """
-    Construit l'URL console Gradient pour ouvrir le fichier HTML côté Files.
-    Utilise SCALP_NOTEBOOK_ID si présent, sinon essaie d'inférer depuis le cwd.
+    Ordre de priorité:
+    1) env SCALP_NOTEBOOK_ID
+    2) engine/config/config.yaml -> runtime.notebook_id
+    3) JUPYTERHUB_SERVICE_PREFIX ou NB_PREFIX qui contiennent souvent /nbooks/<id>/
     """
     nb_id = os.getenv("SCALP_NOTEBOOK_ID")
-    if not nb_id:
-        # inférer depuis cwd: /notebooks ou /storage/nbs/<id>/...
-        parts = os.getcwd().split("/")
-        cand = [p for p in parts if len(p) >= 8 and p.isalnum()]
-        nb_id = cand[-1] if cand else None
-    if not nb_id:
-        # dernier recours: placeholder à éditer si besoin
-        nb_id = "<ton-id-notebook>"
-    # NB: sous console.paperspace.com, chemin Files = /files/<relpath depuis /notebooks>
-    # notre fichier est sous /notebooks/scalp_data/reports/dashboard.html
-    return f"https://console.paperspace.com/nbooks/{nb_id}/files/scalp_data/reports/dashboard.html"
+    if nb_id:
+        return nb_id
+
+    # depuis config.yaml si présent
+    try:
+        cfg = _load_yaml(CONFIG_YAML, missing_ok=True) or {}
+        rt = cfg.get("runtime", {}) if isinstance(cfg, dict) else {}
+        nb_id = rt.get("notebook_id")
+        if nb_id:
+            return str(nb_id).strip()
+    except Exception:
+        pass
+
+    # env JupyterHub/Gradient
+    for var in ("JUPYTERHUB_SERVICE_PREFIX", "NB_PREFIX"):
+        val = os.getenv(var, "")
+        m = re.search(r"/nbooks/([^/]+)/", val)
+        if m:
+            return m.group(1)
+
+    return None
+
+def _build_console_urls() -> list[str]:
+    """
+    Renvoie une liste d’URLs possibles, la 1re est la bonne si notebook_id connu:
+      https://console.paperspace.com/nbooks/<NOTEBOOK_ID>/files/scalp_data/reports/dashboard.html
+    En plus, on ajoute un fallback "éditeur" si jamais /files/ est bloqué.
+    """
+    urls = []
+    nb_id = _guess_notebook_id()
+    rel = "scalp_data/reports/dashboard.html"  # chemin depuis /notebooks/
+
+    if nb_id:
+        urls.append(f"https://console.paperspace.com/nbooks/{nb_id}/files/{rel}")
+        # Fallback éditeur (ouvre dans l'IDE; visible partout)
+        urls.append(f"https://console.paperspace.com/nbooks/{nb_id}?file=%2F{rel}")
+    else:
+        # si on ne connaît pas l'ID, on met un placeholder explicite
+        urls.append("https://console.paperspace.com/nbooks/<NOTEBOOK_ID>/files/scalp_data/reports/dashboard.html")
+        urls.append("https://console.paperspace.com/nbooks/<NOTEBOOK_ID>?file=%2Fscalp_data%2Freports%2Fdashboard.html")
+
+    return urls
 
 def _write_url_hint():
     os.makedirs(REPORTS_DIR, exist_ok=True)
-    url = _build_console_url()
+    urls = _build_console_urls()
     with open(OUT_URLTXT, "w", encoding="utf-8") as f:
-        f.write(url + "\n")
-    _log(f"URL console écrite → {OUT_URLTXT}")
+        for u in urls:
+            f.write(u + "\n")
+    _log(f"URL(s) console écrite(s) → {OUT_URLTXT}")
 
+# --------- génération
 def generate():
     os.makedirs(REPORTS_DIR, exist_ok=True)
 
-    # 1) S'assurer des libs
     _ensure_libs()
 
-    # 2) Imports post-install
+    # imports post-install
     try:
         import pandas as pd
     except Exception:
@@ -121,17 +157,14 @@ def generate():
         PLOTLY_OK = False
         _log("plotly indisponible — fallback table HTML simple.")
 
-    # 3) Charger données
     sm = _load_json(SUMMARY)
     rows = sm.get("rows", [])
     risk_mode = sm.get("risk_mode", "normal")
-
     rows_sorted = sorted(rows, key=_score, reverse=True)
-    now = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
 
-    # 4) TOP K
+    # TOP K
     if PLOTLY_OK and rows_sorted:
-        import numpy as np  # noqa: F401
+        import numpy as np  # noqa
         df_top = pd.DataFrame([{
             "RANK": i+1,
             "PAIR": r["pair"],
@@ -145,15 +178,14 @@ def generate():
         table_fig = go.Figure(data=[go.Table(
             header=dict(values=list(df_top.columns),
                         fill_color="#1f2937", font=dict(color="white"), align="left"),
-            cells=dict(values=[df_top[c] for c in df_top.columns],
-                       align="left")
+            cells=dict(values=[df_top[c] for c in df_top.columns], align="left")
         )])
         table_fig.update_layout(margin=dict(l=0,r=0,t=10,b=0))
         top_html = table_fig.to_html(full_html=False, include_plotlyjs="cdn")
     else:
         top_html = _render_simple_table(rows_sorted, TOP_K) if rows_sorted else "<div>Aucun résultat TOP.</div>"
 
-    # 5) Heatmap PF par paire/TF
+    # Heatmap PF
     if PLOTLY_OK and rows_sorted:
         df_hm = pd.DataFrame([{"pair": r["pair"], "tf": r["tf"], "pf": r.get("pf",0)} for r in rows_sorted])
         order = ["1m","3m","5m","15m","30m","1h","4h","1d"]
@@ -169,7 +201,7 @@ def generate():
     else:
         heatmap_html = "<div>Heatmap indisponible (plotly absent ou aucune donnée).</div>"
 
-    # 6) Tables candidates/actives (HTML simple)
+    # Tables candidates/actives
     def _to_rows(d: dict):
         out = []
         for k,v in (d or {}).items():
@@ -201,7 +233,6 @@ def generate():
     cand_html = _rows_to_html(cand_rows)
     curr_html = _rows_to_html(curr_rows)
 
-    # 7) Assembler HTML
     html = f"""<!DOCTYPE html>
 <html lang="fr"><head>
 <meta charset="utf-8"/>
@@ -239,7 +270,7 @@ small {{ color:#6b7280; }}
         f.write(html)
     _log(f"Dashboard écrit → {OUT_HTML}")
 
-    # 8) URL hint (toujours écrit, même s'il n'y a pas encore de données)
+    # URL(s) prêtes à copier (toujours)
     _write_url_hint()
 
 if __name__ == "__main__":
