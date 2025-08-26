@@ -2,57 +2,94 @@
 # -*- coding: utf-8 -*-
 
 """
-SCALP — Génère le dashboard HTML + auto-refresh,
-écrit dans /docs/index.html et /docs/dashboard.html,
-puis déclenche la publication GitHub Pages (tools.publish_pages).
+SCALP — Génère le dashboard HTML (+ auto-refresh) dans /docs
+puis déclenche la publication GitHub Pages via:  python -m tools.publish_pages
+
+- Lit (si présents) : engine/config/config.yaml, reports/status.json,
+  reports/summary.json, reports/last_errors.json
+- Écrit : docs/index.html et docs/dashboard.html
+- N'échoue pas si la publication GitHub échoue (log et continue)
 """
 
 from __future__ import annotations
-import os, sys, json, time
+import os
+import sys
+import json
+import time
+import subprocess
 from pathlib import Path
+from typing import Any, Dict
 
-# ---------- Réglages ----------
-AUTO_REFRESH_SECS = int(os.environ.get("AUTO_REFRESH_SECS", "5"))  # auto-refresh HTML
+# ------------------------------------------------------------
+# Réglages
+# ------------------------------------------------------------
+AUTO_REFRESH_SECS = int(os.environ.get("AUTO_REFRESH_SECS", "5"))  # meta refresh
 
-# ---------- Chemins ----------
-REPO_ROOT = Path(__file__).resolve().parents[1]         # <repo>
-DOCS_DIR  = REPO_ROOT / "docs"                           # Pages sert /docs
+# ------------------------------------------------------------
+# Chemins
+# ------------------------------------------------------------
+REPO_ROOT: Path = Path(__file__).resolve().parents[1]   # <repo>
+DOCS_DIR: Path  = REPO_ROOT / "docs"
 DOCS_DIR.mkdir(parents=True, exist_ok=True)
 
-# reports_dir: on tente engine/config/config.yaml, sinon fallback standard
-def _guess_reports_dir() -> Path:
-    cfg_p = REPO_ROOT / "engine" / "config" / "config.yaml"
-    try:
-        import yaml  # léger
-        if cfg_p.exists():
-            rt = yaml.safe_load(cfg_p.read_text(encoding="utf-8")) or {}
-            rt = (rt or {}).get("runtime", {})
-            if isinstance(rt, dict) and rt.get("reports_dir"):
-                return Path(rt["reports_dir"])
-    except Exception:
-        pass
-    # fallback simple
-    return Path("/notebooks/scalp_data/reports")
+CFG_PATH: Path  = REPO_ROOT / "engine" / "config" / "config.yaml"
 
-REPORTS_DIR = _guess_reports_dir()
-
-# ---------- IO util ----------
-def load_json(p: Path, missing_ok: bool = True):
-    if missing_ok and not p.exists():
+# ------------------------------------------------------------
+# Helpers IO
+# ------------------------------------------------------------
+def load_yaml(path: Path) -> Dict[str, Any]:
+    if not path.exists():
         return {}
-    with p.open("r", encoding="utf-8") as f:
-        return json.load(f)
+    try:
+        import yaml
+    except Exception:
+        return {}
+    try:
+        with path.open("r", encoding="utf-8") as f:
+            return yaml.safe_load(f) or {}
+    except Exception:
+        return {}
+
+def load_json(path: Path) -> Dict[str, Any]:
+    if not path.exists():
+        return {}
+    try:
+        with path.open("r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
 
 def now_utc_str() -> str:
     return time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()) + " UTC"
 
+def guess_reports_dir() -> Path:
+    cfg = load_yaml(CFG_PATH)
+    rt  = cfg.get("runtime", {}) if isinstance(cfg, dict) else {}
+    v   = rt.get("reports_dir")
+    if isinstance(v, str) and v.strip():
+        return Path(v)
+    # fallbacks usuels
+    cands = [
+        Path("/notebooks/scalp_data/reports"),
+        REPO_ROOT / "scalp_data" / "reports",
+    ]
+    for p in cands:
+        if p.exists():
+            return p
+    return cands[0]
+
+REPORTS_DIR: Path = guess_reports_dir()
+
+# ------------------------------------------------------------
+# Rendu HTML
+# ------------------------------------------------------------
 def _badge(label: str, val, color: str) -> str:
     return (f"<span style='display:inline-block;margin:4px 8px;padding:4px 10px;"
-            f"border-radius:14px;background:{color};color:#fff;font-weight:600;'>"
+            f"border-radius:14px;background:{color};color:#fff;font-weight:600'>"
             f"{label}: {val}</span>")
 
-# ---------- Rendu HTML (auto-refresh inclus) ----------
-def render_html(cfg: dict, status: dict, summary: dict, last: dict) -> str:
+def render_html(cfg: Dict[str, Any], status: Dict[str, Any],
+                summary: Dict[str, Any], last: Dict[str, Any]) -> str:
     rt = (cfg.get("runtime") or {}) if isinstance(cfg, dict) else {}
     risk_mode = (rt.get("risk_mode") or "normal").lower()
     tf_list   = list(rt.get("tf_list", ["1m","5m","15m"]))
@@ -61,37 +98,36 @@ def render_html(cfg: dict, status: dict, summary: dict, last: dict) -> str:
     matrix = status.get("matrix", []) or []
     rows   = summary.get("rows", []) or []
 
+    # tri simple du TOP 20
     rows_sorted = sorted(
         rows,
         key=lambda r: (r.get("pf",0)*2 + r.get("sharpe",0)*0.5 + r.get("wr",0)*0.5 - r.get("mdd",1)*1.5),
         reverse=True
     )[:20]
 
-    H = []
+    H: list[str] = []
     H.append("<!doctype html>")
     H.append("<meta charset='utf-8'>")
     H.append("<meta name='viewport' content='width=device-width,initial-scale=1'>")
-    H.append(f"<meta http-equiv='refresh' content='{AUTO_REFRESH_SECS}'>")  # << auto-refresh
+    H.append(f"<meta http-equiv='refresh' content='{AUTO_REFRESH_SECS}'>")  # auto-refresh
     H.append("<title>SCALP — Dashboard</title>")
     H.append("""
     <style>
-      body { font-family: system-ui,-apple-system,Segoe UI,Roboto,sans-serif; margin:24px; color:#111;}
-      h1 { font-size:32px; margin:0 0 12px 0;}
-      h2 { margin:0 0 10px 0;}
-      .card { border:1px solid #e8e8e8; border-radius:10px; padding:16px 18px; margin:18px 0;}
-      table { border-collapse: collapse; width:100%;}
-      th,td { border:1px solid #eee; padding:6px 8px; text-align:left;}
-      th { background:#fafafa;}
-      .MIS{color:#666;font-weight:700;} .OLD{color:#d90000;font-weight:700;}
-      .DAT{color:#b88600;font-weight:700;} .OK{color:#0a910a;font-weight:700;}
-      small{color:#6b7280;} .muted{color:#6b7280;font-size:12px;}
-      .mono{font-family:ui-monospace,Menlo,Consolas,monospace;}
+      body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;margin:24px;color:#111}
+      h1{font-size:32px;margin:0 0 12px} h2{margin:0 0 10px}
+      .card{border:1px solid #e8e8e8;border-radius:10px;padding:16px 18px;margin:18px 0}
+      table{border-collapse:collapse;width:100%} th,td{border:1px solid #eee;padding:6px 8px;text-align:left}
+      th{background:#fafafa}
+      .MIS{color:#666;font-weight:700}.OLD{color:#d90000;font-weight:700}
+      .DAT{color:#b88600;font-weight:700}.OK{color:#0a910a;font-weight:700}
+      small{color:#6b7280}.muted{color:#6b7280;font-size:12px}
+      .mono{font-family:ui-monospace,Menlo,Consolas,monospace}
     </style>
     """)
     H.append(f"<h1>SCALP — Dashboard <small>({now_utc_str()})</small></h1>")
     H.append(f"<div class='muted'>Auto-refresh: {AUTO_REFRESH_SECS}s · risk_mode: {risk_mode}</div>")
 
-    # --- Statut data ---
+    # Statut data
     H.append('<div class="card"><h2>Statut des données (pair × TF)</h2>')
     H.append(_badge("MIS", counts.get("MIS",0), "#6b7280"))
     H.append(_badge("OLD", counts.get("OLD",0), "#d90000"))
@@ -110,7 +146,7 @@ def render_html(cfg: dict, status: dict, summary: dict, last: dict) -> str:
         H.append("<div>Aucune matrice (status.json manquant ou vide).</div>")
     H.append("</div>")
 
-    # --- TOP 20 ---
+    # TOP 20
     H.append(f'<div class="card"><h2>TOP 20 (policy={risk_mode})</h2>')
     if rows_sorted:
         H.append("<table><thead><tr><th>#</th><th>PAIR</th><th>TF</th><th>PF</th><th>MDD</th><th>TR</th><th>WR</th><th>Sharpe</th></tr></thead><tbody>")
@@ -123,10 +159,10 @@ def render_html(cfg: dict, status: dict, summary: dict, last: dict) -> str:
         H.append("<div>Aucun résultat TOP.</div>")
     H.append("</div>")
 
-    # --- Dernières actions ---
+    # Dernières actions
     H.append('<div class="card"><h2>Dernières actions</h2>')
     if last:
-        H.append("<pre class='mono' style='white-space:pre-wrap;background:#fafafa;padding:10px;border-radius:8px;border:1px solid #eee;'>")
+        H.append("<pre class='mono' style='white-space:pre-wrap;background:#fafafa;padding:10px;border-radius:8px;border:1px solid #eee'>")
         H.append(json.dumps(last, ensure_ascii=False, indent=2))
         H.append("</pre>")
     else:
@@ -139,37 +175,42 @@ def render_html(cfg: dict, status: dict, summary: dict, last: dict) -> str:
       (function(){
         const stamp = Date.now();
         document.querySelectorAll("a[href]").forEach(a=>{
-          try{ const u=new URL(a.href,location.href); u.searchParams.set("_t",stamp); a.href=u; }catch(e){}
+          try{const u=new URL(a.href,location.href);u.searchParams.set("_t",stamp);a.href=u}catch(e){}
         });
       })();
-    </script>""")
-
+    </script>
+    """)
     return "\n".join(H)
 
-# ---------- Main ----------
+# ------------------------------------------------------------
+# Main
+# ------------------------------------------------------------
 def main():
-    # cfg minimal (si tu veux, tu peux y copier la conf)
-    cfg = {"runtime": {}}  # on garde léger
+    # 1) cfg minimale (si besoin on pourra la peupler)
+    cfg = load_yaml(CFG_PATH)
 
-    # lire data
+    # 2) lire data
     status  = load_json(REPORTS_DIR / "status.json")
     summary = load_json(REPORTS_DIR / "summary.json")
     last    = load_json(REPORTS_DIR / "last_errors.json")
 
-    # render
+    # 3) render
     html = render_html(cfg, status, summary, last)
 
-    # écrire /docs
+    # 4) écrire /docs
     index_path = DOCS_DIR / "index.html"
     dash_path  = DOCS_DIR / "dashboard.html"
     index_path.write_text(html, encoding="utf-8")
     dash_path.write_text(html,  encoding="utf-8")
     print(f"[render] Dashboard écrit → {index_path}")
 
-    # publier (git) : passe par l’outil dédié (robuste, copies JSON)
+    # 5) publication GitHub Pages (via module dédié, évite soucis d'import)
     try:
-        from tools.publish_pages import main as publish_pages_main
-        publish_pages_main()
+        subprocess.run(
+            [sys.executable, "-m", "tools.publish_pages"],
+            cwd=str(REPO_ROOT),
+            check=True
+        )
     except Exception as e:
         print(f"[render] publication GitHub Pages ignorée: {e}")
 
