@@ -17,6 +17,7 @@ def _hash(path: str) -> str:
     if not os.path.isfile(path):
         return ""
     with open(path, "rb") as f:
+        import hashlib
         return hashlib.md5(f.read()).hexdigest()
 
 def main():
@@ -41,7 +42,6 @@ def main():
     print("[render-guard] summary modifié → génération HTML…")
     subprocess.check_call([sys.executable, script], env=env, cwd=PROJECT_ROOT)
 
-    # mise à jour du hash
     if cur:
         with open(guard, "w", encoding="utf-8") as f:
             f.write(cur)
