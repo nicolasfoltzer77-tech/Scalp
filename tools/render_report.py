@@ -7,7 +7,7 @@ import pathlib
 
 # chemin du dossier docs (à la racine du repo GitHub)
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
-DOCS_DIR = REPO_ROOT / "docs"
+DOCS_DIR = REPO_ROOT / "scalp/docs"
 DOCS_DIR.mkdir(exist_ok=True)  # crée docs/ si absent
 
 # --- Réglage auto-refresh (en secondes) ---
