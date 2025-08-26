@@ -139,7 +139,7 @@ def render():
     return "\n".join(html)
 
 def main():
-    out = os.path.join(REPO_ROOT, "dashboard.html")  # à la racine
+    out = os.path.join(DOCS_DIR, "dashboard.html")  # à la racine
     os.makedirs(os.path.dirname(out), exist_ok=True)
     with open(out, "w", encoding="utf-8") as f:
         f.write(render())
