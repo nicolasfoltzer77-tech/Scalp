@@ -2,27 +2,46 @@
 # -*- coding: utf-8 -*-
 
 """
-Génère un tableau de bord HTML statique (auto‑contenu) depuis summary.json et strategies.yml(.next)
+Génère un tableau de bord HTML statique (auto-contenu) depuis summary.json et strategies.yml(.next)
 Sortie: /notebooks/scalp_data/reports/dashboard.html
-- Top K par score + PF/Sharpe/MDD/Trades
-- Heatmap PF par paire/TF
-- Détail par paire: courbe equity si disponible (optionnel)
+
+Cette version s'auto-répare :
+- Vérifie/installe à la volée: plotly, altair, pyarrow
+- N'importe plotly seulement après installation si besoin
 """
 
 from __future__ import annotations
-import os, json, yaml, math
-import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
+import os, sys, json, yaml, importlib, subprocess
 from datetime import datetime
 
+# --------- chemins par défaut
 REPORTS_DIR = os.getenv("SCALP_REPORTS_DIR", "/notebooks/scalp_data/reports")
 SUMMARY = os.path.join(REPORTS_DIR, "summary.json")
 STRAT_NEXT = os.path.join(REPORTS_DIR, "strategies.yml.next")
-STRAT_CURR = os.path.join(os.path.dirname(__file__), "..", "engine", "config", "strategies.yml")
-
+STRAT_CURR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "engine", "config", "strategies.yml"))
 OUT_HTML = os.path.join(REPORTS_DIR, "dashboard.html")
 TOP_K = int(os.getenv("SCALP_DASH_TOPK", "20"))
+
+def _log(msg: str):
+    print(f"[render] {msg}")
+
+# --------- bootstrap libs nécessaires (plotly/altair/pyarrow)
+NEEDED = ["plotly", "altair", "pyarrow", "pandas"]
+
+def _ensure_libs():
+    missing = []
+    for pkg in NEEDED:
+        try:
+            importlib.import_module(pkg)
+        except Exception:
+            missing.append(pkg)
+    if not missing:
+        return
+    _log(f"install pkgs via pip: {missing}")
+    try:
+        subprocess.check_call([sys.executable, "-m", "pip", "install"] + missing)
+    except subprocess.CalledProcessError as e:
+        _log(f"pip install failed (code {e.returncode}) — le rendu utilisera des fallbacks si possible.")
 
 def _load_json(path):
     if not os.path.isfile(path): return {}
@@ -37,103 +56,123 @@ def _score(r):
     sh = float(r.get("sharpe", 0)); wr = float(r.get("wr", 0))
     return pf*2.0 + sh*0.5 + wr*0.5 - mdd*1.5
 
-def _heatmap_df(rows):
-    if not rows: return pd.DataFrame(columns=["pair","tf","pf"])
-    df = pd.DataFrame([{"pair": r["pair"], "tf": r["tf"], "pf": r.get("pf",0)} for r in rows])
-    # ordre TF
-    order = ["1m","3m","5m","15m","30m","1h","4h","1d"]
-    df["tf"] = pd.Categorical(df["tf"], categories=order, ordered=True)
-    return df.pivot_table(index="pair", columns="tf", values="pf", aggfunc="max")
+def _html_escape(s: str) -> str:
+    return (s.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;")
+            .replace('"',"&quot;").replace("'","&#39;"))
 
-def _render_table(df):
-    if df.empty:
-        return go.Figure().to_html(full_html=False, include_plotlyjs="cdn")
-    fig = go.Figure(data=[go.Table(
-        header=dict(values=list(df.columns),
-                    fill_color="#1f2937", font=dict(color="white"), align="left"),
-        cells=dict(values=[df[c] for c in df.columns],
-                   fill_color=[[("#e5f5e0" if "PASS" in str(v) else "white") for v in df.iloc[:,0]]] + 
-                              [[ "white" for _ in df.index ] for _ in df.columns[1:]],
-                   align="left"))
-    ])
-    fig.update_layout(margin=dict(l=0,r=0,t=10,b=0))
-    return fig.to_html(full_html=False, include_plotlyjs="cdn")
+def _render_simple_table(rows_sorted):
+    # Fallback très simple en HTML si plotly indisponible
+    head = "<tr><th>RANK</th><th>PAIR</th><th>TF</th><th>PF</th><th>MDD</th><th>TR</th><th>WR</th><th>Sharpe</th></tr>"
+    body = []
+    for i, r in enumerate(rows_sorted[:TOP_K], 1):
+        body.append(
+            f"<tr><td>{i}</td><td>{_html_escape(r['pair'])}</td><td>{_html_escape(r['tf'])}</td>"
+            f"<td>{float(r.get('pf',0)):.3f}</td><td>{float(r.get('mdd',0))*100:.1f}%</td>"
+            f"<td>{int(r.get('trades',0))}</td><td>{float(r.get('wr',0))*100:.1f}%</td>"
+            f"<td>{float(r.get('sharpe',0)):.3f}</td></tr>"
+        )
+    return f"<table border='1' cellspacing='0' cellpadding='6'>{head}{''.join(body)}</table>"
 
 def generate():
     os.makedirs(REPORTS_DIR, exist_ok=True)
+
+    # 1) S'assurer des libs (plotly, altair, pyarrow, pandas)
+    _ensure_libs()
+
+    # 2) Imports (post-install)
+    try:
+        import pandas as pd
+    except Exception:
+        _log("pandas indisponible — abandon rendu.")
+        return
+
+    try:
+        px = importlib.import_module("plotly.express")
+        go = importlib.import_module("plotly.graph_objects")
+        PLOTLY_OK = True
+    except Exception:
+        PLOTLY_OK = False
+        _log("plotly indisponible — fallback table HTML simple.")
+
+    # 3) Charger données
     sm = _load_json(SUMMARY)
     rows = sm.get("rows", [])
     risk_mode = sm.get("risk_mode", "normal")
 
-    # TOP K
     rows_sorted = sorted(rows, key=_score, reverse=True)
-    top = rows_sorted[:TOP_K]
-    df_top = pd.DataFrame([{
-        "RANK": i+1,
-        "PAIR": r["pair"],
-        "TF": r["tf"],
-        "PF": round(float(r.get("pf",0)), 3),
-        "MDD": f"{float(r.get('mdd',0))*100:.1f}%",
-        "TR": int(r.get("trades",0)),
-        "WR": f"{float(r.get('wr',0))*100:.1f}%",
-        "Sharpe": round(float(r.get("sharpe",0)), 3),
-    } for i, r in enumerate(top)])
+    now = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
 
-    # Annoter PASS/FAIL si policy connue (copiée de jobs/promote.py)
-    POLICY = {
-        "conservative": {"pf": 1.4, "mdd": 0.15, "trades": 35},
-        "normal":       {"pf": 1.3, "mdd": 0.20, "trades": 30},
-        "aggressive":   {"pf": 1.2, "mdd": 0.30, "trades": 25},
-    }
-    pol = POLICY.get(risk_mode, POLICY["normal"])
-    status = []
-    for r in rows_sorted[:TOP_K]:
-        why = []
-        if r.get("pf",0) < pol["pf"]:         why.append(f"PF {r.get('pf',0):.2f}<{pol['pf']:.2f}")
-        if r.get("mdd",1) > pol["mdd"]:       why.append(f"MDD {r.get('mdd',1):.2%}>{pol['mdd']:.0%}")
-        if r.get("trades",0) < pol["trades"]: why.append(f"TR {r.get('trades',0)}<{pol['trades']}")
-        status.append("PASS" if not why else "FAIL: " + "; ".join(why))
-    if not df_top.empty:
-        df_top["Status"] = status
-
-    # Heatmap PF
-    df_hm = _heatmap_df(rows)
-    if not df_hm.empty:
-        hm = px.imshow(df_hm, color_continuous_scale="RdYlGn", origin="lower",
-                       labels=dict(color="PF"), aspect="auto")
-        hm.update_layout(margin=dict(l=0,r=0,t=30,b=0))
-        heatmap_html = hm.to_html(full_html=False, include_plotlyjs="cdn")
+    # 4) TOP K
+    if PLOTLY_OK and rows_sorted:
+        import numpy as np
+        df_top = pd.DataFrame([{
+            "RANK": i+1,
+            "PAIR": r["pair"],
+            "TF": r["tf"],
+            "PF": round(float(r.get("pf",0)), 3),
+            "MDD": float(r.get("mdd",0))*100.0,
+            "TR": int(r.get("trades",0)),
+            "WR": float(r.get("wr",0))*100.0,
+            "Sharpe": round(float(r.get("sharpe",0)), 3),
+        } for i, r in enumerate(rows_sorted[:TOP_K])])
+        table_fig = go.Figure(data=[go.Table(
+            header=dict(values=list(df_top.columns),
+                        fill_color="#1f2937", font=dict(color="white"), align="left"),
+            cells=dict(values=[df_top[c] for c in df_top.columns],
+                       align="left")
+        )])
+        table_fig.update_layout(margin=dict(l=0,r=0,t=10,b=0))
+        top_html = table_fig.to_html(full_html=False, include_plotlyjs="cdn")
     else:
-        heatmap_html = "<div>Pas de données pour la heatmap PF.</div>"
+        top_html = _render_simple_table(rows_sorted) if rows_sorted else "<div>Aucun résultat TOP.</div>"
 
-    # Liste des stratégies candidates / actives
-    yml_next = _load_yaml(STRAT_NEXT)
-    yml_curr = _load_yaml(os.path.abspath(STRAT_CURR))
-    cand = yml_next.get("strategies", {}) if isinstance(yml_next, dict) else {}
-    curr = yml_curr.get("strategies", {}) if isinstance(yml_curr, dict) else {}
+    # 5) Heatmap PF par paire/TF (si plotly OK)
+    if PLOTLY_OK and rows_sorted:
+        df_hm = pd.DataFrame([{"pair": r["pair"], "tf": r["tf"], "pf": r.get("pf",0)} for r in rows_sorted])
+        order = ["1m","3m","5m","15m","30m","1h","4h","1d"]
+        df_hm["tf"] = pd.Categorical(df_hm["tf"], categories=order, ordered=True)
+        pt = df_hm.pivot_table(index="pair", columns="tf", values="pf", aggfunc="max")
+        if not pt.empty:
+            hm = px.imshow(pt, color_continuous_scale="RdYlGn", origin="lower",
+                           labels=dict(color="PF"), aspect="auto")
+            hm.update_layout(margin=dict(l=0,r=0,t=30,b=0))
+            heatmap_html = hm.to_html(full_html=False, include_plotlyjs=False)
+        else:
+            heatmap_html = "<div>Pas de données pour la heatmap PF.</div>"
+    else:
+        heatmap_html = "<div>Heatmap indisponible (plotly absent ou aucune donnée).</div>"
 
-    def _to_df(d):
-        rows_ = []
+    # 6) Listes candidates/actives (en table simple)
+    def _to_rows(d: dict):
+        out = []
         for k,v in (d or {}).items():
             pair, tf = (k.split(":")+[""])[:2]
             met = v.get("metrics", {})
-            rows_.append({
-                "PAIR": pair, "TF": tf,
-                "name": v.get("name",""),
+            out.append({
+                "PAIR": pair, "TF": tf, "name": v.get("name",""),
                 "PF": met.get("pf",0), "MDD": met.get("mdd",0), "TR": met.get("trades",0),
                 "WR": met.get("wr",0), "Sharpe": met.get("sharpe",0),
                 "created_at": v.get("created_at",""), "expires_at": v.get("expires_at",""),
                 "expired": v.get("expired", False)
             })
-        return pd.DataFrame(rows_)
-    df_cand = _to_df(cand)
-    df_curr = _to_df(curr)
+        return out
 
-    # HTML assemble
-    now = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
-    top_html = _render_table(df_top) if not df_top.empty else "<div>Aucun résultat TOP.</div>"
-    cand_html = _render_table(df_cand.sort_values(['PAIR','TF'])) if not df_cand.empty else "<div>Aucune stratégie candidate.</div>"
-    curr_html = _render_table(df_curr.sort_values(['PAIR','TF'])) if not df_curr.empty else "<div>Aucune stratégie promue.</div>"
+    yml_next = _load_yaml(STRAT_NEXT)
+    yml_curr = _load_yaml(STRAT_CURR)
+    cand_rows = _to_rows(yml_next.get("strategies", {}) if isinstance(yml_next, dict) else {})
+    curr_rows = _to_rows(yml_curr.get("strategies", {}) if isinstance(yml_curr, dict) else {})
+
+    def _rows_to_html(rows):
+        if not rows: return "<div>Aucune stratégie.</div>"
+        cols = ["PAIR","TF","name","PF","MDD","TR","WR","Sharpe","created_at","expires_at","expired"]
+        head = "<tr>" + "".join(f"<th>{c}</th>" for c in cols) + "</tr>"
+        body = []
+        for r in rows:
+            body.append("<tr>" + "".join(f"<td>{_html_escape(str(r.get(c,'')))}</td>" for c in cols) + "</tr>")
+        return f"<div style='overflow:auto'><table border='1' cellspacing='0' cellpadding='6'>{head}{''.join(body)}</table></div>"
+
+    cand_html = _rows_to_html(cand_rows)
+    curr_html = _rows_to_html(curr_rows)
 
     html = f"""<!DOCTYPE html>
 <html lang="fr"><head>
@@ -170,7 +209,11 @@ small {{ color:#6b7280; }}
 """
     with open(OUT_HTML, "w", encoding="utf-8") as f:
         f.write(html)
-    print(f"[render] Dashboard écrit → {OUT_HTML}")
+    _log(f"Dashboard écrit → {OUT_HTML}")
 
 if __name__ == "__main__":
-    generate()
+    try:
+        generate()
+    except Exception as e:
+        _log(f"erreur fatale: {e}")
+        sys.exit(1)
