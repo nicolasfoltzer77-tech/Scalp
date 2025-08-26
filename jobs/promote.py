@@ -7,8 +7,6 @@ from copy import deepcopy
 from typing import Dict
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-
-# utils
 sys.path.append(PROJECT_ROOT)
 from engine.utils.io_safe import atomic_write_text, backup_last_good
 from engine.utils.logging_setup import setup_logger
@@ -51,14 +49,12 @@ def print_top(reports_dir: str, risk_mode: str, k:int=12, logger=None):
     try:
         sm = json.load(open(path, "r", encoding="utf-8"))
     except Exception:
-        if logger: logger.info("summary.json introuvable")
-        else: print("[TOP] summary.json introuvable")
-        return
+        if logger: logger.info("summary.json introuvable"); return
+        print("[TOP] summary.json introuvable"); return
     rows = sm.get("rows", [])
     if not rows:
-        if logger: logger.info("Aucun résultat en base.")
-        else: print("[TOP] Aucun résultat en base.")
-        return
+        if logger: logger.info("Aucun résultat en base."); return
+        print("[TOP] Aucun résultat en base."); return
     pol = POLICY.get(risk_mode, POLICY["normal"])
     rows.sort(key=_score_row, reverse=True)
     passed = sum(1 for r in rows if _pass(r,pol))
@@ -106,7 +102,6 @@ def main():
         _call_render_guard(PROJECT_ROOT)
         return
 
-    # expiry des actives
     now = int(time.time())
     changes = []
     for key, strat in list(cur.items()):
@@ -127,7 +122,6 @@ def main():
 
     if not filt:
         dest_obj["strategies"] = cur
-        # backup last-good puis écriture atomique
         backup_last_good(args.dest)
         atomic_write_text(dump_yaml(dest_obj), args.dest)
         logger.info(json.dumps({"event":"promote","status":"no_pass_after_policy"}, ensure_ascii=False))
@@ -135,7 +129,6 @@ def main():
         _call_render_guard(PROJECT_ROOT)
         return
 
-    # merge “meilleure ou plus récente”
     for key, s in filt.items():
         try: _, tf = key.split(":")
         except ValueError:
@@ -162,14 +155,11 @@ def main():
                 cur[key] = deepcopy(s); changes.append({"REPLACE": key})
 
     dest_obj["strategies"] = cur
-    # backup + écriture atomique
     backup_last_good(args.dest)
     atomic_write_text(dump_yaml(dest_obj), args.dest)
 
     logger.info(json.dumps({"event":"promote","status":"done","changes":changes}, ensure_ascii=False))
     print_top(reports_dir, risk_mode, k=args.top_k, logger=logger)
-
-    # rendu debouncé
     _call_render_guard(PROJECT_ROOT)
 
 if __name__ == "__main__":
