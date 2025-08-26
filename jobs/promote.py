@@ -15,7 +15,6 @@ POLICY = {
     "aggressive":   {"pf": 1.2, "mdd": 0.30, "trades": 25},
 }
 
-# ---------------- YAML utils ----------------
 def load_yaml(path, missing_ok=False):
     if missing_ok and not os.path.isfile(path): return {}
     with open(path, "r", encoding="utf-8") as f: return yaml.safe_load(f) or {}
@@ -25,7 +24,6 @@ def save_yaml(obj, path):
     with open(path, "w", encoding="utf-8") as f:
         yaml.safe_dump(obj, f, sort_keys=True, allow_unicode=True, default_flow_style=False)
 
-# ---------------- Timeframe helpers ----------------
 def tf_minutes(tf: str) -> int:
     if tf.endswith("m"): return int(tf[:-1])
     if tf.endswith("h"): return int(tf[:-1]) * 60
@@ -40,93 +38,74 @@ def better_than(a: dict, b: dict) -> bool:
     if a.get("mdd", 1) != b.get("mdd", 1): return a.get("mdd", 1) < b.get("mdd", 1)
     return a.get("sharpe", 0) > b.get("sharpe", 0)
 
-# ---------------- Logging ----------------
 def setup_logger(logs_dir: str) -> logging.Logger:
     os.makedirs(logs_dir, exist_ok=True)
     path = os.path.join(logs_dir, "promote.log")
     logger = logging.getLogger("promote")
-    logger.setLevel(logging.INFO)
-    logger.handlers.clear()
-    fh = logging.FileHandler(path)
-    sh = logging.StreamHandler(sys.stdout)
+    logger.setLevel(logging.INFO); logger.handlers.clear()
+    fh = logging.FileHandler(path); sh = logging.StreamHandler(sys.stdout)
     fmt = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
     fh.setFormatter(fmt); sh.setFormatter(fmt)
-    logger.addHandler(fh); logger.addHandler(sh)
-    return logger
+    logger.addHandler(fh); logger.addHandler(sh); return logger
 
-# ---------------- TOP K console (sans dépendances) ----------------
+# ---- TOP console
 RISK_POLICIES = POLICY
-
 def _score_row(r: Dict) -> float:
-    pf = float(r.get("pf", 0))
-    mdd = float(r.get("mdd", 1))
-    sh  = float(r.get("sharpe", 0))
-    wr  = float(r.get("wr", 0))
+    pf=float(r.get("pf",0)); mdd=float(r.get("mdd",1))
+    sh=float(r.get("sharpe",0)); wr=float(r.get("wr",0))
     return pf*2.0 + sh*0.5 + wr*0.5 - mdd*1.5
 
-def _pass_policy(r: Dict, mode: str) -> bool:
-    pol = RISK_POLICIES.get(mode, RISK_POLICIES["normal"])
-    return (r.get("pf",0) >= pol["pf"]) and (r.get("mdd",1) <= pol["mdd"]) and (r.get("trades",0) >= pol["trades"])
+def _pass(r, pol):
+    return (r.get("pf",0)>=pol["pf"]) and (r.get("mdd",1)<=pol["mdd"]) and (r.get("trades",0)>=pol["trades"])
 
-def _explain_fail(r: Dict, mode: str) -> str:
-    pol = RISK_POLICIES.get(mode, RISK_POLICIES["normal"])
-    why = []
-    if r.get("pf",0) < pol["pf"]:         why.append(f"PF {r.get('pf',0):.2f}<{pol['pf']:.2f}")
-    if r.get("mdd",1) > pol["mdd"]:       why.append(f"MDD {r.get('mdd',1):.2%}>{pol['mdd']:.0%}")
-    if r.get("trades",0) < pol["trades"]: why.append(f"TR {r.get('trades',0)}<{pol['trades']}")
-    return "; ".join(why) if why else "OK"
+def _explain_fail(r, pol):
+    why=[]
+    if r.get("pf",0)<pol["pf"]: why.append(f"PF {r.get('pf',0):.2f}<{pol['pf']:.2f}")
+    if r.get("mdd",1)>pol["mdd"]: why.append(f"MDD {r.get('mdd',1):.2%}>{pol['mdd']:.0%}")
+    if r.get("trades",0)<pol["trades"]: why.append(f"TR {r.get('trades',0)}<{pol['trades']}")
+    return "OK" if not why else "; ".join(why)
 
-def print_topk_in_console(summary_path: str, risk_mode: str, k:int=12):
+def print_top(reports_dir: str, risk_mode: str, k:int=12):
+    path = os.path.join(reports_dir, "summary.json")
     try:
-        with open(summary_path, "r", encoding="utf-8") as f:
-            sm = json.load(f)
+        sm = json.load(open(path, "r", encoding="utf-8"))
     except Exception:
-        print("[TOP] summary.json introuvable — lance d'abord le backtest.")
-        return
-    rows: List[Dict] = sm.get("rows", [])
-    if not rows:
-        print("[TOP] Aucun résultat en base.")
-        return
+        print("[TOP] summary.json introuvable"); return
+    rows = sm.get("rows", [])
+    if not rows: print("[TOP] Aucun résultat en base."); return
+    pol = RISK_POLICIES.get(risk_mode, RISK_POLICIES["normal"])
     rows.sort(key=_score_row, reverse=True)
     hdr = f"TOP {k} — meilleurs backtests (policy={risk_mode})"
     print("\n" + "="*len(hdr)); print(hdr); print("="*len(hdr))
     print("RANK | PAIR:TF | PF | MDD | TR | WR | Sharpe | Note | Status")
-    for i, r in enumerate(rows[:k], 1):
-        status = "PASS" if _pass_policy(r, risk_mode) else f"FAIL ({_explain_fail(r, risk_mode)})"
+    for i,r in enumerate(rows[:k],1):
+        status = "PASS" if _pass(r,pol) else f"FAIL ({_explain_fail(r,pol)})"
+        note = _score_row(r)
         print(f"{i:>4} | {r['pair']}:{r['tf']:>3} | {r.get('pf',0):>4.2f} | "
               f"{r.get('mdd',0):>4.0%} | {r.get('trades',0):>3} | {r.get('wr',0):>4.0%} | "
-              f"{r.get('sharpe',0):>5.2f} | {_score_row(r):>4.2f} | {status}")
-    passed = sum(1 for r in rows if _pass_policy(r, risk_mode))
+              f"{r.get('sharpe',0):>5.2f} | {note:>4.2f} | {status}")
+    passed = sum(1 for r in rows if _pass(r,pol))
     print(f"[TOP] Résumé: {passed} PASS / {len(rows)} total")
 
-# ---------------- Dashboard auto-setup (installe & lance) --------------
-def ensure_dashboard(project_root: str, reports_dir: str, logs_dir: str):
-    """
-    Appelle tools/setup_dashboard.py — idempotent:
-      - installe streamlit/plotly/pyarrow/altair/pydeck si manquants
-      - démarre Streamlit (port 8501) s’il n’est pas déjà lancé
-      - écrit dash/dashboard_url.txt avec 2 lignes (localhost + publique)
-    """
-    setup_py = os.path.join(project_root, "tools", "setup_dashboard.py")
-    if not os.path.isfile(setup_py):
-        print("[DASH] setup_dashboard.py introuvable, skip.")
+def render_html_dashboard(project_root: str, reports_dir: str):
+    render_py = os.path.join(project_root, "tools", "render_report.py")
+    if not os.path.isfile(render_py):
+        print("[render] tools/render_report.py introuvable, skip.")
         return
     env = os.environ.copy()
     env["SCALP_REPORTS_DIR"] = reports_dir
     try:
-        subprocess.check_call([sys.executable, setup_py], env=env)
+        subprocess.check_call([sys.executable, render_py], env=env)
     except subprocess.CalledProcessError as e:
-        print(f"[DASH] setup_dashboard.py a échoué (code {e.returncode}). Voir logs dans {logs_dir}.")
+        print(f"[render] échec génération HTML (code {e.returncode}).")
 
-# ---------------- main: promotion + TOP + dashboard --------------------
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", default=DEFAULT_CONFIG)
-    ap.add_argument("--source", default=None, help="strategies.yml.next (déduit si absent)")
+    ap.add_argument("--source", default=None)
     ap.add_argument("--dest", default=DEFAULT_DEST)
     ap.add_argument("--backup", action="store_true", help="(ignoré, compat bot.py)")
-    ap.add_argument("--no-dash", action="store_true", help="Ne pas lancer Streamlit")
-    ap.add_argument("--top-k", type=int, default=12, help="Nb de lignes à afficher dans le TOP console")
+    ap.add_argument("--top-k", type=int, default=12)
     args = ap.parse_args()
 
     cfg = load_yaml(args.config)
@@ -139,24 +118,19 @@ def main():
     project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     log = setup_logger(logs_dir)
 
-    # source par défaut si None
     source = args.source or os.path.join(reports_dir, "strategies.yml.next")
-
-    nxt = load_yaml(source, missing_ok=True)
-    cand = nxt.get("strategies", {})
-    dest_obj = load_yaml(args.dest, missing_ok=True)
-    cur = dest_obj.get("strategies", {})
+    nxt = load_yaml(source, missing_ok=True); cand = nxt.get("strategies", {})
+    dest_obj = load_yaml(args.dest, missing_ok=True); cur = dest_obj.get("strategies", {})
 
     if not cand:
         log.info(f"Aucune stratégie candidate ({source}).")
-        print_topk_in_console(os.path.join(reports_dir, "summary.json"), risk_mode, k=args.top_k)
-        if not args.no_dash:
-            ensure_dashboard(project_root, reports_dir, logs_dir)
+        print_top(reports_dir, risk_mode, k=args.top_k)
+        render_html_dashboard(project_root, reports_dir)
         return
 
     now = int(time.time()); changes = []
 
-    # Expirer existantes si lifetime dépassé
+    # expiry
     for key, strat in list(cur.items()):
         try: _, tf = key.split(":")
         except ValueError: continue
@@ -175,9 +149,8 @@ def main():
     if not filt:
         dest_obj["strategies"] = cur; save_yaml(dest_obj, args.dest)
         log.info("Aucun candidat après filtrage risk_mode.")
-        print_topk_in_console(os.path.join(reports_dir, "summary.json"), risk_mode, k=args.top_k)
-        if not args.no_dash:
-            ensure_dashboard(project_root, reports_dir, logs_dir)
+        print_top(reports_dir, risk_mode, k=args.top_k)
+        render_html_dashboard(project_root, reports_dir)
         return
 
     for key, s in filt.items():
@@ -192,21 +165,24 @@ def main():
             cur[key] = deepcopy(s); changes.append(f"ADD {key} PF={s['metrics']['pf']:.2f}")
         else:
             newer = int(s.get("created_at") or 0) > int(old.get("created_at") or 0)
-            better = better_than(s.get("metrics", {}), old.get("metrics", {}))
+            better = (
+                s.get("metrics", {}).get("pf", 0) > old.get("metrics", {}).get("pf", 0)
+                or (
+                    s.get("metrics", {}).get("pf", 0) == old.get("metrics", {}).get("pf", 0)
+                    and s.get("metrics", {}).get("mdd", 1) < old.get("metrics", {}).get("mdd", 1)
+                )
+                or s.get("metrics", {}).get("sharpe", 0) > old.get("metrics", {}).get("sharpe", 0)
+            )
             if (newer and better) or (old.get("expired", False) and better):
                 cur[key] = deepcopy(s); changes.append(f"REPLACE {key}")
 
     dest_obj["strategies"] = cur; save_yaml(dest_obj, args.dest)
-    if changes:
-        for c in changes: log.info(c)
-    else:
-        log.info("Promotion idempotente: aucun changement.")
+    for c in changes or ["Promotion idempotente: aucun changement."]:
+        log.info(c)
     log.info(f"Écrit : {args.dest}")
 
-    # TOP console + auto-setup dashboard
-    print_topk_in_console(os.path.join(reports_dir, "summary.json"), risk_mode, k=args.top_k)
-    if not args.no_dash:
-        ensure_dashboard(project_root, reports_dir, logs_dir)
+    print_top(reports_dir, risk_mode, k=args.top_k)
+    render_html_dashboard(project_root, reports_dir)
 
 if __name__ == "__main__":
     main()
