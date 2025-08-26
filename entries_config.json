@@ -1,0 +1,20 @@
+{
+  "schema_version": "scalp-entries/1.0",
+  "entry_sets": {
+    "pullback_trend": {
+      "context": {"min_buy_prob": 0.60, "min_adx": 0},
+      "signals": {"rsi_cross": {"length": 7, "level": 50, "direction": "up"}},
+      "risk": {"sl_atr_mult": 1.2, "tp_atr_mult": 1.8}
+    },
+    "breakout": {
+      "context": {"min_buy_prob": 0.55, "min_adx": 20},
+      "signals": {"close_above_high_n": 20},
+      "risk": {"tp_atr_mult": 1.5}
+    }
+  },
+  "common": {
+    "vwap": {"session": "daily"},
+    "bbands": {"length": 20, "stddev": 2.0},
+    "timeout_bars": 25
+  }
+}
