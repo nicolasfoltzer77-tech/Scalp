@@ -1,0 +1,156 @@
+SCALP — Processus principaux (lancement via: python bot.py)
+
+Vue d’ensemble (processus et rôles)
+
+P0) Bootstrap deps (synchrone, court)
+- sitecustomize.py + fallback dans bot.py installent/valident les libs critiques (pyyaml, plotly, pyngrok, etc.).
+- Objectif: garantir qu’aucune import error n’interrompe le reste.
+
+P1) HTTP Server (daemon local)
+- Commande: python -m http.server <html_port> –bind 0.0.0.0
+- Sert le répertoire RACINE du repo (dashboard.html).
+- Démarré une seule fois; idempotent (pidfile .httpserver.pid).
+- Fréquence: n/a (serveur permanent).
+- Logs: httpserver.out / httpserver.err (à la racine).
+
+P2) Tunnel ngrok (daemon)
+- Script: tools/start_ngrok.py (auto-install pyngrok, applique authtoken si fourni).
+- Crée un tunnel HTTP vers localhost:<html_port>.
+- Écrit ngrok_url.txt avec l’URL publique.
+- Fréquence: n/a (processus long-vivant, relancé au boot du bot).
+- Logs: ngrok.out / ngrok.err (à la racine).
+
+P3) Rendu initial dashboard (one-shot au boot, puis à chaque promotion)
+- Script: tools/render_report.py
+- Lit reports/summary.json et strategies.yml(.next/.actives), génère ./dashboard.html
+- Écrit ./dashboard_url.txt (localhost + ngrok si dispo).
+- Fréquence: 1 fois au lancement + à chaque jobs/promote.py réussi.
+- Robustesse: auto-install plotly/altair/pyarrow/pandas si manquent.
+
+P4) Orchestrateur “Maintainer” (boucle principale)
+- Script: jobs/maintainer.py (processus long-vivant).
+- Rôle: cadence globale du pipeline données → backtest → promotion → rendu.
+- Fréquence: boucle toutes les 60 s (par défaut); ajustable dans le code si besoin.
+
+Détail du Maintainer (boucle 60 s)
+
+Étape M1) Refresh Watchlist + Backfill
+	•	jobs/refresh_pairs.py
+	•	Utilise runtime.topN et runtime.tf_list (ex: [1m,5m,15m]) + backfill_limit.
+	•	Objectif: s’assurer que ≥80% des paires “TOP N” aient des CSV frais pour tous les TF.
+	•	Fréquence: à CHAQUE tour de boucle maintainer (toutes 60 s).
+	•	Temps d’exec: dépend du réseau/API et du nombre de paires×TF.
+	•	Tolérance pannes: si l’API rate ou si <80% complets, log warning et on réessaye au tour suivant.
+
+Étape M2) Garde-fous de fraîcheur
+	•	Contrôle “age” de chaque CSV vs age_mult × TF.
+	•	États (pour information interne / logs): MIS (absent), OLD (stale), DAT (frais sans stratégie promue), OK (frais + stratégie active).
+	•	Fréquence: à chaque boucle.
+	•	Action: si trop de OLD/MIS, maintainer retente backfill au prochain tour (pas de backtest inutile).
+
+Étape M3) Backtest conditionnel
+	•	jobs/backtest.py –from-watchlist –tfs 
+	•	Déclenché si la condition “données prêtes” est vraie (typiquement ≥80% paires × TF prêts).
+	•	Parallélisme interne recommandé: multi-process ou multi-thread par paire/TF (selon implémentation actuelle).
+	•	Fréquence: au premier tour avec données prêtes, puis aux tours suivants si de nouvelles données/TF requièrent recalcul (ou sur règle: toutes N minutes).
+	•	Sorties: reports/summary.json (agrégé), reports/strategies.yml.next (candidats).
+	•	Log: scalp_data/logs/maintainer.log (ou logs dédiés backtest).
+
+Étape M4) Promotion
+	•	jobs/promote.py –source reports/strategies.yml.next
+	•	Filtrage selon runtime.risk_mode:
+conservative: PF≥1.4, MDD≤15%, trades≥35
+normal:       PF≥1.3, MDD≤20%, trades≥30
+aggressive:   PF≥1.2, MDD≤30%, trades≥25
+	•	Fusion vers engine/config/strategies.yml:
+	•	remplace une paire:TF si plus récente et meilleure (PF/MDD/Sharpe),
+	•	marque expired=true si dépasse lifetime (age_mult × TF),
+	•	idempotent (aucune modif si rien de mieux/plus frais).
+	•	À la fin de promote:
+	•	Appelle tools/render_report.py → regénère ./dashboard.html et ./dashboard_url.txt
+	•	Vérifie/démarre http.server si besoin (dans certaines variantes)
+	•	Fréquence: après chaque backtest réussi (si .next existe).
+
+Étape M5) Logs + état
+	•	Logs principaux:
+/notebooks/scalp_data/logs/maintainer.log
+/notebooks/scalp_data/logs/promote.log
+	•	Fichiers de sortie visibles pour la visu:
+./dashboard.html
+./dashboard_url.txt
+ngrok_url.txt
+	•	termboard console: désactivé par défaut (termboard_enabled=false); sinon résumé 1-ligne.
+
+Cadences, latences et variables de fréquence
+	•	Maintainer (boucle): 60 s (valeur de base). Peut être 30–120 s selon charge.
+	•	Refresh/Backfill: à chaque tour; “stabilité” obtenue quand 80% des paires×TF sont fraiches.
+	•	Backtest: conditionnel; on évite de relancer si pas de nouveaux CSV utiles; possibilité d’imposer une fenêtre mini (ex: ne pas relancer plus d’1 fois toutes les N minutes) si la charge est forte.
+	•	Promotion: déclenchée juste après un backtest qui a produit des candidats; sinon skip.
+	•	Rendu HTML: une fois après promotion (ou à la demande initiale du bot au boot).
+	•	HTTP server/ngrok: démarrés au boot; ne sont pas relancés à chaque tour (idempotents).
+
+Parallélisme et ressources
+	•	HTTP server (P1) et ngrok (P2): deux processus indépendants, très faibles en CPU/RAM.
+	•	Maintainer (P4): 1 processus; il séquence des sous-commandes (refresh, backtest, promote).
+	•	Backtest (M3): c’est l’étape lourde. Stratégie recommandée:
+	•	paralléliser par paire ou par TF (pool de workers),
+	•	limiter N workers (ex: N = min(8, nb_coeurs)).
+	•	Promotion (M4): léger (IO + YAML + quelques filtres).
+	•	Rendu HTML: léger/modéré (Plotly peut consommer un peu si très gros tableaux/heatmaps).
+	•	I/O disque: surveiller la taille de scalp_data; purger les vieux CSV si besoin.
+
+Synchronisation et points d’attente
+	•	Maintainer attend la fin de refresh/backfill avant d’évaluer le seuil 80%.
+	•	Si seuil atteint, lance backtest et attend sa fin.
+	•	À la fin du backtest, si strategies.yml.next présent/non vide, lance promote et attend sa fin.
+	•	Après promote, le rendu HTML est synchrone (dashboard prêt immédiatement après).
+	•	Entre deux tours, maintainer dort (sleep) jusqu’au prochain tick (60 s).
+
+Gestion des erreurs et idempotence
+	•	Si refresh/backfill échoue partiellement → log warning, pas de crash, on retente au tour suivant.
+	•	Si backtest plante → pas de .next; promote sera skip; maintainer continue au tour suivant.
+	•	Si promote n’a aucun candidat (“FAIL policy”) → rien n’est promu; dashboard peut tout de même montrer le TOP et “Aucun candidat”.
+	•	Rendus:
+tools/render_report.py auto-installe les libs manquantes; si Plotly indispo → fallback HTML simple (pas de crash).
+	•	HTTP server/ngrok:
+démarrage idempotent (kill/verify si déjà actif); en cas d’échec ngrok (token absent), seulement l’URL localhost sera listée.
+
+Paramètres clés (config.yaml → runtime)
+	•	data_dir: dossier des CSV OHLCV (ex: /notebooks/scalp_data/data)
+	•	reports_dir: dossier des outputs backtest/promotion (ex: /notebooks/scalp_data/reports)
+	•	tf_list: TF utilisés pour le backfill et l’orchestrateur (ex: [“1m”,“5m”,“15m”])
+	•	age_mult: multiplicateur d’âge → lifetime/expiry (k × TF)
+	•	topN: taille de la watchlist dynamique (ex: 10)
+	•	backfill_limit: nb de bougies à télécharger (ex: 1500–5000)
+	•	risk_mode: conservative | normal | aggressive (critères de promotion)
+	•	exec_enabled: false (sécurité; aucune exécution réelle tant que false)
+	•	html_port: port du mini serveur HTTP (défaut 8888) pour servir ./dashboard.html
+
+Fichiers d’état et sorties essentielles
+	•	reports/summary.json: base de données des résultats backtest (agrégé par paire/TF)
+	•	reports/strategies.yml.next: candidats bruts (lecture par promote)
+	•	engine/config/strategies.yml: stratégies promues actives (lu par orchestrator/exécuteur)
+	•	./dashboard.html: dashboard Plotly à la racine (toujours régénéré après promote)
+	•	./dashboard_url.txt: URLs à ouvrir (localhost et ngrok si dispo)
+	•	./ngrok_url.txt: URL publique courante fournie par tools/start_ngrok.py
+
+Sécurité et garde-fous exec (présents/à compléter)
+	•	exec_enabled=false par défaut (aucun ordre réel).
+	•	Garde-fous à insérer côté exécution (quand activée):
+	•	min equity, max exposure, cooldown entre ordres, max_daily_loss_pct, max_daily_trades.
+	•	Orchestrator ne doit jamais envoyer d’ordres si strategies.yml est vide/expiré.
+
+Recommandations de fréquence/capacité (pratique)
+	•	Notebook standard (2–4 vCPU): boucle maintainer 60–90 s; backfill_limit 1500–3000; topN 10.
+	•	Notebook plus musclé (8 vCPU+): boucle 30–60 s; backfill_limit 3000–5000; pool backtest 4–8 workers.
+	•	Le seuil 80% “données prêtes” évite les backtests inutiles; ajuster si besoin (70–90%).
+
+Cycle type en 8 lignes (résumé opérationnel)
+	1.	bot.py démarre deps + http.server + ngrok + rendu initial HTML.
+	2.	maintainer boucle toutes 60 s.
+	3.	refresh_pairs (topN, tf_list, limit) met à jour CSV.
+	4.	contrôle fraîcheur; si <80% prêts → on log et on retente au tour suivant.
+	5.	si ≥80% prêts → backtest (multi-paires/TF), écrit summary.json + strategies.yml.next.
+	6.	promote filtre selon risk_mode, met à jour strategies.yml, marque expiry.
+	7.	render_report régénère dashboard.html et dashboard_url.txt.
+	8.	boucle suivante → le système s’auto-ajuste en continu.
