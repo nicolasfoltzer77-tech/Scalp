@@ -12,9 +12,6 @@ def retry(fn: Callable[..., Any],
           exceptions: Iterable[Type[BaseException]] = (Exception,),
           on_retry: Callable[[int, BaseException], None] | None = None,
           *args, **kwargs) -> Any:
-    """
-    Exécute fn avec retry/backoff. Renvoie le résultat ou relance la dernière exception.
-    """
     att = 0
     cur_delay = delay
     while True:
