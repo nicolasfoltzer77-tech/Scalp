@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
 # jobs/maintainer.py
-from __future__ import annotations
+# -- ensure repo root on sys.path (for 'engine' imports)
+import os, sys, pathlib
+_REPO_ROOT = str(pathlib.Path(__file__).resolve().parents[1])  # /notebooks/scalp
+if _REPO_ROOT not in sys.path:
+    sys.path.insert(0, _REPO_ROOT)
+# ------------------------------------------------------------from __future__ import annotations
 
 import argparse
 import logging
 from logging.handlers import RotatingFileHandler
 import subprocess
-import sys
 import time
 from pathlib import Path
 from typing import Dict, List, Set, Tuple
