@@ -2,19 +2,17 @@
 # -*- coding: utf-8 -*-
 
 """
-Utilitaires I/O sûrs : écriture atomique, verrous, backups last-good.
+I/O sûres : écriture atomique, verrous, backups last-good.
 """
 
 from __future__ import annotations
 import os, json, time, tempfile, shutil
 
 try:
-    import fcntl  # POSIX
+    import fcntl  # POSIX only
     HAS_FCNTL = True
 except Exception:
     HAS_FCNTL = False
-
-# ---------- Verrou fichier (context manager)
 
 class file_lock:
     def __init__(self, path: str):
@@ -34,15 +32,13 @@ class file_lock:
             if self.fd is not None:
                 os.close(self.fd)
 
-# ---------- Écritures atomiques
-
 def _atomic_write_bytes(data: bytes, path: str):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     dir_ = os.path.dirname(path)
     with tempfile.NamedTemporaryFile(dir=dir_, prefix=".tmp_", delete=False) as tf:
         tf.write(data)
         tmp = tf.name
-    os.replace(tmp, path)  # atomique sur POSIX
+    os.replace(tmp, path)
 
 def atomic_write_text(text: str, path: str, encoding="utf-8"):
     _atomic_write_bytes(text.encode(encoding), path)
@@ -50,8 +46,6 @@ def atomic_write_text(text: str, path: str, encoding="utf-8"):
 def atomic_write_json(obj, path: str, ensure_ascii=False):
     data = json.dumps(obj, ensure_ascii=ensure_ascii).encode("utf-8")
     _atomic_write_bytes(data, path)
-
-# ---------- Backups last-good
 
 def backup_last_good(path: str):
     if not os.path.isfile(path):
