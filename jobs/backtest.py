@@ -228,7 +228,8 @@ def run():
         },
         "rows": rows
     }
-
+    meta_for_debug = summary_obj.get("meta", {})
+    write_debug_artifacts(rows, top_k=20, meta=meta_for_debug)
     backup_last_good(summary_path)
     atomic_write_json(summary_obj, summary_path)
 
