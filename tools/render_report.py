@@ -3,6 +3,12 @@
 
 from __future__ import annotations
 import os, json, time, yaml
+import pathlib
+
+# chemin du dossier docs (à la racine du repo GitHub)
+REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
+DOCS_DIR = REPO_ROOT / "docs"
+DOCS_DIR.mkdir(exist_ok=True)  # crée docs/ si absent
 
 # --- Réglage auto-refresh (en secondes) ---
 AUTO_REFRESH_SECS = 2  # tu peux passer à 3/10/etc.
