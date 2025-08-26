@@ -2,34 +2,31 @@
 # -*- coding: utf-8 -*-
 
 """
-Affiche l'URL console Paperspace pour ouvrir dashboard.html directement.
-Utilisable même depuis iPhone (pas besoin de clic droit).
+Écrit dans un fichier texte l’URL console Paperspace pour ouvrir dashboard.html.
 """
 
 import os
 
-# Dossier où est généré le dashboard
 REPORT_PATH = "/notebooks/scalp_data/reports/dashboard.html"
+HINT_FILE = "/notebooks/scalp_data/reports/dashboard_url.txt"
 
 def main():
-    # 1) Id du notebook (Gradient met ça dans le chemin de travail)
     cwd = os.getcwd()
-    # cwd ressemble à: /notebooks ou /storage/nbs/<id>/...
     nb_id = None
     parts = cwd.split("/")
     for p in parts:
-        if len(p) >= 8 and p.isalnum():  # id style nqx4afejs9
+        if len(p) >= 8 and p.isalnum():
             nb_id = p
     if not nb_id:
-        nb_id = "<ton-id-manuel>"  # fallback
+        nb_id = "<ton-id-manuel>"
 
-    # 2) Construire l’URL console
     url = f"https://console.paperspace.com/nbooks/{nb_id}/files/scalp_data/reports/dashboard.html"
 
-    print("="*60)
-    print(" 📊 Ouvrir ton dashboard ici (copier/coller dans Safari) :")
-    print(url)
-    print("="*60)
+    os.makedirs(os.path.dirname(HINT_FILE), exist_ok=True)
+    with open(HINT_FILE, "w", encoding="utf-8") as f:
+        f.write(url + "\n")
+
+    print(f"[HINT] URL écrite dans {HINT_FILE}")
 
 if __name__ == "__main__":
     main()
