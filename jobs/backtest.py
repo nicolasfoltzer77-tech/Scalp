@@ -31,6 +31,37 @@ SUMMARY_JSON   = lambda rd: os.path.join(rd, "summary.json")
 WATCHLIST_YML  = lambda rd: os.path.join(rd, "watchlist.yml")
 EXPS_DIR       = lambda rd: os.path.join(rd, "experiments")
 
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+DEBUG_TXT = os.path.join(PROJECT_ROOT, "debug.txt")
+DEBUG_HTML = os.path.join(PROJECT_ROOT, "debug.html")
+
+def _score(row):
+    # même logique simple que le dashboard
+    pf=float(row.get("pf",0)); mdd=float(row.get("mdd",1)); sh=float(row.get("sharpe",0)); wr=float(row.get("wr",0))
+    return pf*2.0 + sh*0.5 + wr*0.5 - mdd*1.5
+
+def write_debug_artifacts(rows, top_k=20, meta=None):
+    rows_sorted = sorted(rows, key=_score, reverse=True)
+    # TXT
+    lines = []
+    lines.append("RANK | PAIR | TF | PF | MDD | TR | WR | Sharpe | Note")
+    for i, r in enumerate(rows_sorted[:top_k], 1):
+        note = _score(r)
+        lines.append(f"{i:>4} | {r['pair']:<8} | {r['tf']:<4} | {r['pf']:.3f} | {r['mdd']:.1%} | "
+                     f"{r['trades']:>3} | {r['wr']:.1%} | {r['sharpe']:.2f} | {note:.2f}")
+    if meta:
+        lines.append("")
+        lines.append(f"meta: {json.dumps(meta, ensure_ascii=False)}")
+    with open(DEBUG_TXT, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines))
+
+    # HTML mini (optionnel)
+    html = ["<!doctype html><meta charset='utf-8'><title>SCALP Debug</title><pre>"]
+    html.extend(lines)
+    html.append("</pre>")
+    with open(DEBUG_HTML, "w", encoding="utf-8") as f:
+        f.write("\n".join(html))
+
 def load_yaml(path, missing_ok=False):
     if missing_ok and not os.path.isfile(path): return {}
     with open(path, "r", encoding="utf-8") as f: return yaml.safe_load(f) or {}
