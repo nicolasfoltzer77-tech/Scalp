@@ -4,8 +4,8 @@
 """
 Génère un dashboard HTML statique et écrit une URL console copiable.
 Sorties:
-  /notebooks/scalp_data/reports/dashboard.html
-  /notebooks/scalp_data/reports/dashboard_url.txt
+  ./dashboard.html
+  ./dashboard_url.txt
 """
 
 from __future__ import annotations
@@ -13,17 +13,20 @@ import os, sys, json, yaml, importlib, subprocess, re
 from datetime import datetime
 
 # --------- chemins / fichiers
-REPORTS_DIR = os.getenv("SCALP_REPORTS_DIR", "/notebooks/scalp_data/reports")
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+REPORTS_DIR  = os.getenv("SCALP_REPORTS_DIR", "/notebooks/scalp_data/reports")
+
 SUMMARY     = os.path.join(REPORTS_DIR, "summary.json")
 STRAT_NEXT  = os.path.join(REPORTS_DIR, "strategies.yml.next")
-STRAT_CURR  = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "engine", "config", "strategies.yml"))
-CONFIG_YAML = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "engine", "config", "config.yaml"))
-OUT_HTML    = os.path.join(REPORTS_DIR, "dashboard.html")
-OUT_URLTXT  = os.path.join(REPORTS_DIR, "dashboard_url.txt")
+STRAT_CURR  = os.path.join(PROJECT_ROOT, "engine", "config", "strategies.yml")
+CONFIG_YAML = os.path.join(PROJECT_ROOT, "engine", "config", "config.yaml")
 
-TOP_K       = int(os.getenv("SCALP_DASH_TOPK", "20"))
+# 👉 sorties désormais à la racine du repo
+OUT_HTML   = os.path.join(PROJECT_ROOT, "dashboard.html")
+OUT_URLTXT = os.path.join(PROJECT_ROOT, "dashboard_url.txt")
 
-# --------- utils log
+TOP_K = int(os.getenv("SCALP_DASH_TOPK", "20"))
+
 def _log(msg: str):
     print(f"[render] {msg}")
 
@@ -44,7 +47,6 @@ def _ensure_libs():
     except subprocess.CalledProcessError as e:
         _log(f"pip install failed (code {e.returncode}) — fallback si possible.")
 
-# --------- helpers chargement
 def _load_json(path):
     if not os.path.isfile(path): return {}
     with open(path, "r", encoding="utf-8") as f: return json.load(f)
@@ -75,60 +77,36 @@ def _render_simple_table(rows_sorted, top_k: int):
         )
     return f"<table border='1' cellspacing='0' cellpadding='6'>{head}{''.join(body)}</table>"
 
-# --------- détection NOTEBOOK_ID (fiable)
+# --------- détection NOTEBOOK_ID
 def _guess_notebook_id() -> str | None:
-    """
-    Ordre de priorité:
-    1) env SCALP_NOTEBOOK_ID
-    2) engine/config/config.yaml -> runtime.notebook_id
-    3) JUPYTERHUB_SERVICE_PREFIX ou NB_PREFIX qui contiennent souvent /nbooks/<id>/
-    """
     nb_id = os.getenv("SCALP_NOTEBOOK_ID")
-    if nb_id:
-        return nb_id
-
-    # depuis config.yaml si présent
+    if nb_id: return nb_id
     try:
         cfg = _load_yaml(CONFIG_YAML, missing_ok=True) or {}
         rt = cfg.get("runtime", {}) if isinstance(cfg, dict) else {}
         nb_id = rt.get("notebook_id")
-        if nb_id:
-            return str(nb_id).strip()
+        if nb_id: return str(nb_id).strip()
     except Exception:
         pass
-
-    # env JupyterHub/Gradient
     for var in ("JUPYTERHUB_SERVICE_PREFIX", "NB_PREFIX"):
         val = os.getenv(var, "")
         m = re.search(r"/nbooks/([^/]+)/", val)
-        if m:
-            return m.group(1)
-
+        if m: return m.group(1)
     return None
 
 def _build_console_urls() -> list[str]:
-    """
-    Renvoie une liste d’URLs possibles, la 1re est la bonne si notebook_id connu:
-      https://console.paperspace.com/nbooks/<NOTEBOOK_ID>/files/scalp_data/reports/dashboard.html
-    En plus, on ajoute un fallback "éditeur" si jamais /files/ est bloqué.
-    """
     urls = []
     nb_id = _guess_notebook_id()
-    rel = "scalp_data/reports/dashboard.html"  # chemin depuis /notebooks/
-
+    rel = "dashboard.html"  # car sorti à la racine
     if nb_id:
         urls.append(f"https://console.paperspace.com/nbooks/{nb_id}/files/{rel}")
-        # Fallback éditeur (ouvre dans l'IDE; visible partout)
         urls.append(f"https://console.paperspace.com/nbooks/{nb_id}?file=%2F{rel}")
     else:
-        # si on ne connaît pas l'ID, on met un placeholder explicite
-        urls.append("https://console.paperspace.com/nbooks/<NOTEBOOK_ID>/files/scalp_data/reports/dashboard.html")
-        urls.append("https://console.paperspace.com/nbooks/<NOTEBOOK_ID>?file=%2Fscalp_data%2Freports%2Fdashboard.html")
-
+        urls.append("https://console.paperspace.com/nbooks/<NOTEBOOK_ID>/files/dashboard.html")
+        urls.append("https://console.paperspace.com/nbooks/<NOTEBOOK_ID>?file=%2Fdashboard.html")
     return urls
 
 def _write_url_hint():
-    os.makedirs(REPORTS_DIR, exist_ok=True)
     urls = _build_console_urls()
     with open(OUT_URLTXT, "w", encoding="utf-8") as f:
         for u in urls:
@@ -137,11 +115,7 @@ def _write_url_hint():
 
 # --------- génération
 def generate():
-    os.makedirs(REPORTS_DIR, exist_ok=True)
-
     _ensure_libs()
-
-    # imports post-install
     try:
         import pandas as pd
     except Exception:
@@ -162,13 +136,12 @@ def generate():
     risk_mode = sm.get("risk_mode", "normal")
     rows_sorted = sorted(rows, key=_score, reverse=True)
 
-    # TOP K
+    # Table TOP
     if PLOTLY_OK and rows_sorted:
         import numpy as np  # noqa
         df_top = pd.DataFrame([{
             "RANK": i+1,
-            "PAIR": r["pair"],
-            "TF": r["tf"],
+            "PAIR": r["pair"], "TF": r["tf"],
             "PF": round(float(r.get("pf",0)), 3),
             "MDD": float(r.get("mdd",0))*100.0,
             "TR": int(r.get("trades",0)),
@@ -201,76 +174,23 @@ def generate():
     else:
         heatmap_html = "<div>Heatmap indisponible (plotly absent ou aucune donnée).</div>"
 
-    # Tables candidates/actives
-    def _to_rows(d: dict):
-        out = []
-        for k,v in (d or {}).items():
-            pair, tf = (k.split(":")+[""])[:2]
-            met = v.get("metrics", {})
-            out.append({
-                "PAIR": pair, "TF": tf, "name": v.get("name",""),
-                "PF": met.get("pf",0), "MDD": met.get("mdd",0), "TR": met.get("trades",0),
-                "WR": met.get("wr",0), "Sharpe": met.get("sharpe",0),
-                "created_at": v.get("created_at",""), "expires_at": v.get("expires_at",""),
-                "expired": v.get("expired", False)
-            })
-        return out
-
-    yml_next = _load_yaml(STRAT_NEXT)
-    yml_curr = _load_yaml(STRAT_CURR)
-    cand_rows = _to_rows(yml_next.get("strategies", {}) if isinstance(yml_next, dict) else {})
-    curr_rows = _to_rows(yml_curr.get("strategies", {}) if isinstance(yml_curr, dict) else {})
-
-    def _rows_to_html(rows):
-        if not rows: return "<div>Aucune stratégie.</div>"
-        cols = ["PAIR","TF","name","PF","MDD","TR","WR","Sharpe","created_at","expires_at","expired"]
-        head = "<tr>" + "".join(f"<th>{c}</th>" for c in cols) + "</tr>"
-        body = []
-        for r in rows:
-            body.append("<tr>" + "".join(f"<td>{_html_escape(str(r.get(c,'')))}</td>" for c in cols) + "</tr>")
-        return f"<div style='overflow:auto'><table border='1' cellspacing='0' cellpadding='6'>{head}{''.join(body)}</table></div>"
-
-    cand_html = _rows_to_html(cand_rows)
-    curr_html = _rows_to_html(curr_rows)
-
+    # Assembler HTML
     html = f"""<!DOCTYPE html>
 <html lang="fr"><head>
 <meta charset="utf-8"/>
 <title>SCALP — Dashboard backtest</title>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<style>
-body {{ font-family: system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial; margin:20px; }}
-h1,h2 {{ color:#111827; }}
-small {{ color:#6b7280; }}
-.section {{ margin: 24px 0; }}
-.card {{ border:1px solid #e5e7eb; border-radius:8px; padding:16px; }}
-</style>
 </head>
 <body>
-<h1>SCALP — Dashboard backtest <small>({datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")})</small></h1>
-<div class="section card">
-  <h2>TOP {TOP_K} (policy={risk_mode})</h2>
-  {top_html}
-</div>
-<div class="section card">
-  <h2>Heatmap PF par paire × TF</h2>
-  {heatmap_html}
-</div>
-<div class="section card">
-  <h2>Stratégies candidates (strategies.yml.next)</h2>
-  {cand_html}
-</div>
-<div class="section card">
-  <h2>Stratégies actives (engine/config/strategies.yml)</h2>
-  {curr_html}
-</div>
+<h1>SCALP — Dashboard <small>({datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")})</small></h1>
+<div>{top_html}</div>
+<div>{heatmap_html}</div>
 </body></html>
 """
     with open(OUT_HTML, "w", encoding="utf-8") as f:
         f.write(html)
     _log(f"Dashboard écrit → {OUT_HTML}")
 
-    # URL(s) prêtes à copier (toujours)
     _write_url_hint()
 
 if __name__ == "__main__":
