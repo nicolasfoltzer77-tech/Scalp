@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 import os, sys, json, time, yaml
-from dataclasses import dataclass
 from typing import List, Dict, Tuple, Optional
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
@@ -16,11 +15,13 @@ from engine.strategies.base import Metrics, StrategyBase
 from engine.strategies import registry as strat_registry
 from tools.exp_tracker import new_run_id, log_event
 
-CONFIG_YAML   = os.path.join(PROJECT_ROOT, "engine", "config", "config.yaml")
-STRATS_NEXT   = lambda rd: os.path.join(rd, "strategies.yml.next")
-SUMMARY_JSON  = lambda rd: os.path.join(rd, "summary.json")
-WATCHLIST_YML = lambda rd: os.path.join(rd, "watchlist.yml")
-EXPS_DIR      = lambda rd: os.path.join(rd, "experiments")
+CONFIG_YAML    = os.path.join(PROJECT_ROOT, "engine", "config", "config.yaml")
+BACKTEST_JSON  = os.path.join(PROJECT_ROOT, "backtest_config.json")
+ENTRIES_JSON   = os.path.join(PROJECT_ROOT, "entries_config.json")
+STRATS_NEXT    = lambda rd: os.path.join(rd, "strategies.yml.next")
+SUMMARY_JSON   = lambda rd: os.path.join(rd, "summary.json")
+WATCHLIST_YML  = lambda rd: os.path.join(rd, "watchlist.yml")
+EXPS_DIR       = lambda rd: os.path.join(rd, "experiments")
 
 def load_yaml(path, missing_ok=False):
     if missing_ok and not os.path.isfile(path): return {}
@@ -29,6 +30,11 @@ def load_yaml(path, missing_ok=False):
 def save_yaml(obj, path):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     atomic_write_text(yaml.safe_dump(obj, sort_keys=True, allow_unicode=True, default_flow_style=False), path)
+
+def load_json(path, missing_ok=True):
+    if missing_ok and not os.path.isfile(path): return {}
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
 
 def ohlcv_path(data_dir: str, pair: str, tf: str) -> str:
     return os.path.join(data_dir, "ohlcv", pair, f"{tf}.csv")
@@ -91,30 +97,62 @@ def process_pair_tf(data_dir: str, pair: str, tf: str, strat_name: str, strat_pa
 def run():
     cfg = load_yaml(CONFIG_YAML, missing_ok=True)
     rt = cfg.get("runtime", {}) if isinstance(cfg, dict) else {}
-    data_dir = rt.get("data_dir", "/notebooks/scalp_data/data")
-    reports_dir = rt.get("reports_dir", "/notebooks/scalp_data/reports")
-    tf_list = rt.get("tf_list", ["1m","5m","15m"])
-    topN = int(rt.get("topN", 10))
 
-    # stratégie (runtime.strategy_name / runtime.strategy_params)
-    strat_name = (rt.get("strategy_name") or "ema_atr_v1").strip()
-    strat_params = rt.get("strategy_params") or {}
+    data_dir    = rt.get("data_dir", "/notebooks/scalp_data/data")
+    reports_dir = rt.get("reports_dir", "/notebooks/scalp_data/reports")
+    tf_list     = list(rt.get("tf_list", ["1m","5m","15m"]))
+    topN        = int(rt.get("topN", 10))
+
+    bt_cfg = load_json(BACKTEST_JSON, missing_ok=True) or {}
+    en_cfg = load_json(ENTRIES_JSON,  missing_ok=True) or {}
+
+    assets_json = list(bt_cfg.get("assets", []) or [])
+    tfs_json    = list(bt_cfg.get("timeframes", []) or [])
+    if tfs_json: tf_list = tfs_json
+
+    strat_name   = (rt.get("strategy_name") or "ema_atr_v1").strip()
+    strat_params = dict(rt.get("strategy_params") or {})
 
     logs_dir = os.path.join(os.path.dirname(data_dir), "logs")
     os.makedirs(logs_dir, exist_ok=True)
     log = setup_logger("backtest", os.path.join(logs_dir, "backtest.log"))
-
     run_id = new_run_id()
-    log_event(EXPS_DIR(reports_dir), run_id, {"event":"start", "strategy": strat_name, "params": strat_params, "tf_list": tf_list, "topN": topN})
 
-    pairs = load_watchlist(reports_dir, topN=topN)
+    if assets_json:
+        pairs = assets_json[:topN] if topN else assets_json
+        src = "backtest_config.assets"
+    else:
+        pairs = load_watchlist(reports_dir, topN=topN)
+        src = "watchlist.yml"
     if not pairs:
-        log.info({"event":"no_watchlist"}); 
-        log_event(EXPS_DIR(reports_dir), run_id, {"event":"no_watchlist"})
+        log.info({"event":"no_pairs","src":src})
+        log_event(EXPS_DIR(reports_dir), run_id, {"event":"no_pairs","src":src})
         return
 
+    constraints = (bt_cfg.get("constraints") or {})
+    min_trades = int(constraints.get("min_trades", 0))
+    min_pf     = float(constraints.get("min_pf", 0.0))
+
+    costs       = (bt_cfg.get("costs") or {})
+    walkf       = (bt_cfg.get("walk_forward") or {})
+    opti        = (bt_cfg.get("optimization") or {})
+
+    log_event(EXPS_DIR(reports_dir), run_id, {
+        "event":"start",
+        "strategy": strat_name,
+        "params": strat_params,
+        "pairs_src": src,
+        "pairs": pairs,
+        "tf_list": tf_list,
+        "constraints": constraints,
+        "costs": costs,
+        "walk_forward": walkf,
+        "optimization": opti,
+        "entries_cfg_present": bool(en_cfg),
+    })
+
     rows: List[Dict] = []
-    cands: Dict[str, Dict] = {}
+    cands_all: Dict[str, Dict] = {}
 
     from multiprocessing import cpu_count
     max_workers = min(8, (cpu_count() or 2))
@@ -126,22 +164,51 @@ def run():
         for fut in as_completed(tasks):
             try:
                 row, (key, cand) = fut.result()
-                rows.append(row); cands[key] = cand
+                rows.append(row)
+                cands_all[key] = cand
             except Exception as e:
                 log.info({"event":"pair_tf_error","err":str(e)})
                 log_event(EXPS_DIR(reports_dir), run_id, {"event":"pair_tf_error", "err": str(e)})
 
+    cands = {}
+    if cands_all:
+        for k, v in cands_all.items():
+            met = v.get("metrics", {})
+            if int(met.get("trades", 0)) < min_trades:
+                continue
+            if float(met.get("pf", 0.0)) < min_pf:
+                continue
+            cands[k] = v
+
     summary_path = SUMMARY_JSON(reports_dir)
-    next_path = STRATS_NEXT(reports_dir)
+    next_path    = STRATS_NEXT(reports_dir)
+
+    summary_obj = {
+        "generated_at": int(time.time()),
+        "risk_mode": rt.get("risk_mode","normal"),
+        "meta": {
+            "pairs_src": src, "pairs": pairs, "tf_list": tf_list,
+            "constraints": constraints, "costs": costs,
+            "walk_forward": walkf, "optimization": opti,
+            "entries_cfg_present": bool(en_cfg),
+            "strategy": {"name": strat_name, "params": strat_params},
+        },
+        "rows": rows
+    }
 
     backup_last_good(summary_path)
-    atomic_write_json({"generated_at": int(time.time()), "risk_mode": rt.get("risk_mode","normal"), "rows": rows}, summary_path)
+    atomic_write_json(summary_obj, summary_path)
 
     backup_last_good(next_path)
     save_yaml({"strategies": cands}, next_path)
 
-    log.info({"event":"done","rows":len(rows),"cands":len(cands)})
-    log_event(EXPS_DIR(reports_dir), run_id, {"event":"done", "rows": len(rows), "cands": len(cands)})
+    log.info({"event":"done","rows":len(rows),"cands_total":len(cands_all),"cands_after_constraints":len(cands)})
+    log_event(EXPS_DIR(reports_dir), run_id, {
+        "event":"done",
+        "rows": len(rows),
+        "cands_total": len(cands_all),
+        "cands_after_constraints": len(cands)
+    })
 
 if __name__ == "__main__":
     try:
