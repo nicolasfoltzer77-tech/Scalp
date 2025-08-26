@@ -48,7 +48,6 @@ def setup_logger(logs_dir: str) -> logging.Logger:
     fh.setFormatter(fmt); sh.setFormatter(fmt)
     logger.addHandler(fh); logger.addHandler(sh); return logger
 
-# ---- TOP console
 RISK_POLICIES = POLICY
 def _score_row(r: Dict) -> float:
     pf=float(r.get("pf",0)); mdd=float(r.get("mdd",1))
@@ -87,24 +86,24 @@ def print_top(reports_dir: str, risk_mode: str, k:int=12):
     passed = sum(1 for r in rows if _pass(r,pol))
     print(f"[TOP] Résumé: {passed} PASS / {len(rows)} total")
 
-def render_html_dashboard(project_root: str, reports_dir: str):
-    render_py = os.path.join(project_root, "tools", "render_report.py")
-    if not os.path.isfile(render_py):
-        print("[render] tools/render_report.py introuvable, skip.")
+def _call_script(project_root: str, script_relpath: str, env_extra=None):
+    path = os.path.join(project_root, script_relpath)
+    if not os.path.isfile(path):
+        print(f"[render-call] {script_relpath} introuvable, skip.")
         return
     env = os.environ.copy()
-    env["SCALP_REPORTS_DIR"] = reports_dir
+    if env_extra: env.update(env_extra)
     try:
-        subprocess.check_call([sys.executable, render_py], env=env)
+        subprocess.check_call([sys.executable, path], env=env)
     except subprocess.CalledProcessError as e:
-        print(f"[render] échec génération HTML (code {e.returncode}).")
+        print(f"[render-call] {script_relpath} a échoué (code {e.returncode}).")
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", default=DEFAULT_CONFIG)
     ap.add_argument("--source", default=None)
     ap.add_argument("--dest", default=DEFAULT_DEST)
-    ap.add_argument("--backup", action="store_true", help="(ignoré, compat bot.py)")
+    ap.add_argument("--backup", action="store_true", help="(compat)")
     ap.add_argument("--top-k", type=int, default=12)
     args = ap.parse_args()
 
@@ -125,7 +124,9 @@ def main():
     if not cand:
         log.info(f"Aucune stratégie candidate ({source}).")
         print_top(reports_dir, risk_mode, k=args.top_k)
-        render_html_dashboard(project_root, reports_dir)
+        # Rendus (HTML si présent, puis images)
+        _call_script(project_root, os.path.join("tools","render_report.py"), env_extra={"SCALP_REPORTS_DIR": reports_dir})
+        _call_script(project_root, os.path.join("tools","render_report_images.py"), env_extra={"SCALP_REPORTS_DIR": reports_dir})
         return
 
     now = int(time.time()); changes = []
@@ -135,7 +136,7 @@ def main():
         try: _, tf = key.split(":")
         except ValueError: continue
         created = int(strat.get("created_at") or now)
-        exp = strat.get("expires_at") or (created + lifetime_minutes(tf, age_mult)*60)
+        exp = strat.get("expires_at") or (created + (age_mult*tf_minutes(tf))*60)
         if now >= exp and not strat.get("expired", False):
             strat["expired"] = True; strat["expires_at"] = exp; changes.append(f"EXPIRE {key}")
 
@@ -150,14 +151,15 @@ def main():
         dest_obj["strategies"] = cur; save_yaml(dest_obj, args.dest)
         log.info("Aucun candidat après filtrage risk_mode.")
         print_top(reports_dir, risk_mode, k=args.top_k)
-        render_html_dashboard(project_root, reports_dir)
+        _call_script(project_root, os.path.join("tools","render_report.py"), env_extra={"SCALP_REPORTS_DIR": reports_dir})
+        _call_script(project_root, os.path.join("tools","render_report_images.py"), env_extra={"SCALP_REPORTS_DIR": reports_dir})
         return
 
     for key, s in filt.items():
         try: _, tf = key.split(":")
         except ValueError: log.warning(f"Clé invalide {key}"); continue
         created = int(s.get("created_at") or now)
-        s["expires_at"] = created + lifetime_minutes(tf, age_mult)*60
+        s["expires_at"] = created + (age_mult*tf_minutes(tf))*60
         s["expired"] = False
 
         old = cur.get(key)
@@ -182,7 +184,8 @@ def main():
     log.info(f"Écrit : {args.dest}")
 
     print_top(reports_dir, risk_mode, k=args.top_k)
-    render_html_dashboard(project_root, reports_dir)
+    _call_script(project_root, os.path.join("tools","render_report.py"), env_extra={"SCALP_REPORTS_DIR": reports_dir})
+    _call_script(project_root, os.path.join("tools","render_report_images.py"), env_extra={"SCALP_REPORTS_DIR": reports_dir})
 
 if __name__ == "__main__":
     main()
