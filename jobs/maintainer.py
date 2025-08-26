@@ -1,403 +1,164 @@
 #!/usr/bin/env python3
-# jobs/maintainer.py
+# -*- coding: utf-8 -*-
+
+from __future__ import annotations
+import os, sys, pathlib, time, json, yaml, subprocess, traceback
+from typing import Dict, List, Tuple
+
 # -- ensure repo root on sys.path (for 'engine' imports)
-import os, sys, pathlib
 _REPO_ROOT = str(pathlib.Path(__file__).resolve().parents[1])  # /notebooks/scalp
 if _REPO_ROOT not in sys.path:
     sys.path.insert(0, _REPO_ROOT)
-# ------------------------------------------------------------from __future__ import annotations
 
-import argparse
-import logging
-from logging.handlers import RotatingFileHandler
-import subprocess
-import time
-from pathlib import Path
-from typing import Dict, List, Set, Tuple
+import sitecustomize  # bootstrap global
 
-from engine.config.loader import load_config
-from engine.config.watchlist import load_watchlist
-from engine.config.strategies import load_strategies
-from engine.backtest.loader_csv import load_csv_ohlcv, find_csv_path  # pour vérifier la fraicheur des données
+from engine.config.loader import load_config  # ton loader existant si présent, sinon lecture yaml locale
 
-ROOT = Path(__file__).resolve().parents[1]
-log = logging.getLogger("maintainer")
+CFG_PATH = os.path.join(_REPO_ROOT, "engine", "config", "config.yaml")
+REPORTS_DIR = None
+DATA_DIR = None
 
-# --------- couleurs / rendu ----------
-COLORS = {
-    "black": "\x1b[30m",
-    "red": "\x1b[31m",
-    "green": "\x1b[32m",
-    "orange": "\x1b[33m",
-    "reset": "\x1b[0m",
-}
+def _read_yaml(path):
+    with open(path, "r", encoding="utf-8") as f:
+        return yaml.safe_load(f) or {}
 
-_TF_MIN = {"1m":1, "5m":5, "15m":15, "1h":60, "4h":240, "1d":1440}
+def _now_ms():
+    return int(time.time() * 1000)
 
-def _tf_minutes(tf: str) -> int:
-    return _TF_MIN.get(str(tf), 1)
+def list_pairs_from_watchlist(reports_dir: str) -> List[str]:
+    wpath = os.path.join(reports_dir, "watchlist.yml")
+    if not os.path.isfile(wpath): return []
+    doc = _read_yaml(wpath)
+    pairs = doc.get("pairs") or doc.get("watchlist") or []
+    return [p for p in pairs if isinstance(p, str)]
 
-def _ttl_mult_cfg() -> Dict[str, int]:
+def ohlcv_path(pair: str, tf: str) -> str:
+    return os.path.join(DATA_DIR, "ohlcv", pair, f"{tf}.csv")
+
+def file_age_minutes(path: str) -> float:
     try:
-        cfg = load_config()
-        mt = cfg.get("maintainer", {}) or {}
-        return {str(k): int(v) for k, v in (mt.get("ttl_mult") or {}).items()}
-    except Exception:
-        return {}
+        mtime = os.path.getmtime(path)
+        return (time.time() - mtime) / 60.0
+    except FileNotFoundError:
+        return float("inf")
 
-def _short_sym(s: str) -> str:
-    s = s.upper().replace("_", "")
-    return s[:-4] if s.endswith("USDT") else s
+def tf_minutes(tf: str) -> int:
+    # ex: "1m", "5m", "15m"
+    assert tf.endswith("m")
+    return int(tf[:-1])
 
-def _color_block(color: str, text: str) -> str:
-    c = COLORS.get(color, "")
-    r = COLORS["reset"]
-    return f"{c}{text}{r}"
-
-def _center(text: str, width: int) -> str:
-    pad = max(0, width - len(text))
-    left = pad // 2
-    right = pad - left
-    return " " * left + text + " " * right
-
-# ------------------------ logging ------------------------
-
-def _setup_logging() -> None:
-    if log.handlers:
-        return
-    cfg = load_config()
-    rt = cfg.get("runtime", {})
-    logs_dir = Path(rt.get("logs_dir") or "/notebooks/scalp_data/logs")
-    logs_dir.mkdir(parents=True, exist_ok=True)
-    fh = RotatingFileHandler(str(logs_dir / "maintainer.log"),
-                             maxBytes=10 * 1024 * 1024, backupCount=5)
-    fh.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
-    ch = logging.StreamHandler()
-    ch.setFormatter(logging.Formatter("[maintainer] %(levelname)s: %(message)s"))
-    log.setLevel(logging.INFO)
-    fh.setLevel(logging.INFO); ch.setLevel(logging.INFO)
-    log.addHandler(fh); log.addHandler(ch)
-    log.info("Logger prêt • fichier=%s", logs_dir / "maintainer.log")
-
-# ------------------------ helpers conf/fs ------------------------
-
-def run_cmd(args: List[str]) -> tuple[int, str, str]:
-    """Lance une commande en capturant stdout/stderr. Retourne (rc, out, err)."""
-    p = subprocess.run(args, cwd=str(ROOT), capture_output=True, text=True)
-    out = (p.stdout or "").strip()
-    err = (p.stderr or "").strip()
-    if out: log.info("stdout: %s", out)
-    if err: log.warning("stderr: %s", err)
-    return p.returncode, out, err
-
-def _symbols_top(top: int | None) -> List[str]:
-    wl = load_watchlist()
-    syms = [(d.get("symbol") or "").replace("_", "").upper()
-            for d in (wl.get("top") or []) if d.get("symbol")]
-    return syms if not top else syms[:top]
-
-# ------------------------ statut data/strat ------------------------
-
-_MIS_REPORTED = set()
-
-def _last_bar_ts_ms(data_dir: str, symbol: str, tf: str) -> int | None:
+def compute_status(pairs: List[str], tf_list: List[str], age_mult: int) -> Dict:
     """
-    Dernier timestamp (ms) ; trace 1 fois un warning si fichier introuvable
-    pour aider au diagnostic.
+    Renvoie:
+      {
+        "generated_at": ts,
+        "counts": {"MIS":X,"OLD":Y,"DAT":Z,"OK":K},
+        "matrix": [{"pair":"BTCUSDT","1m":"DAT","5m":"OK","15m":"OLD"}, ...],
+        "notes": "MIS=no data · OLD=stale · DAT=data no strat · OK=ready"
+      }
     """
-    rows = load_csv_ohlcv(data_dir, symbol, tf, max_rows=1)
-    if rows:
-        return int(rows[-1][0])
+    counts = {"MIS":0,"OLD":0,"DAT":0,"OK":0}
+    matrix = []
 
-    key = (symbol, tf)
-    if key not in _MIS_REPORTED:
-        _MIS_REPORTED.add(key)
-        guessed = find_csv_path(data_dir, symbol, tf)
-        msg = f"CSV introuvable pour {symbol}:{tf}"
-        if guessed:
-            msg += f" (dernier essai: {guessed})"
-        else:
-            msg += " (aucun chemin candidat trouvé)"
-        log.warning(msg)
-    return None
+    # lire strategies.yml pour savoir quelles paires/TF sont "promues"
+    strats_path = os.path.join(_REPO_ROOT, "engine", "config", "strategies.yml")
+    promoted = {}
+    if os.path.isfile(strats_path):
+        doc = _read_yaml(strats_path) or {}
+        for k, v in (doc.get("strategies") or {}).items():
+            promoted[k] = v
 
-def _data_is_fresh(now_ms: int, last_ms: int | None, tf: str) -> bool:
-    """Data 'fraîche' si la dernière bougie ≤ 2×TF."""
-    if last_ms is None:
-        return False
-    tf_ms = _tf_minutes(tf) * 60_000
-    return (now_ms - last_ms) <= (2 * tf_ms)
-
-def _strat_is_valid(strategies: Dict[str, Dict], symbol: str, tf: str) -> bool:
-    k = f"{symbol}:{tf}"
-    s = strategies.get(k)
-    return bool(s) and not bool(s.get("expired"))
-
-def _status_cell(symbol: str, tf: str, strategies: Dict[str, Dict], data_dir: str, ttl_mult: Dict[str,int]) -> tuple[str,str]:
-    """
-    Renvoie (label, color) :
-      ⬛ ('MIS','black')   = données manquantes
-      🟥 ('OLD','red')    = données présentes mais trop vieilles
-      🟧 ('DAT','orange') = données ok, stratégie absente/expirée
-      🟩 ('OK ','green')  = données + stratégie valides
-    """
-    now = int(time.time() * 1000)
-    last_ms = _last_bar_ts_ms(data_dir, symbol, tf)
-    has_data = last_ms is not None
-    fresh = _data_is_fresh(now, last_ms, tf)
-
-    if not has_data:
-        return ("MIS","black")
-    if not fresh:
-        return ("OLD","red")
-    if _strat_is_valid(strategies, symbol, tf):
-        return ("OK ","green")
-    return ("DAT","orange")
-
-# ------------------------ rendering tableau ------------------------
-
-def _render_status_table(symbols: List[str], tfs: List[str],
-                         strategies: dict, data_dir: str) -> str:
-    header = ["PAIR"] + tfs
-    rows: List[List[str]] = []
-
-    for s in symbols:
-        line = [_short_sym(s)]
-        for tf in tfs:
-            lbl, color = _status_cell(s, tf, strategies, data_dir, _ttl_mult_cfg())
-            cell = _color_block(color, lbl)
-            line.append(cell)
-        rows.append(line)
-
-    # largeur visible (ignore codes ANSI)
-    def visible_len(x: str) -> int:
-        import re
-        return len(re.sub(r"\x1b\[[0-9;]*m", "", x))
-
-    widths = [max(visible_len(r[i]) for r in ([header] + rows)) for i in range(len(header))]
-
-    def fmt(row: List[str]) -> str:
-        out = []
-        import re
-        for i, v in enumerate(row):
-            w = widths[i]
-            if "\x1b[" in v:
-                plain = re.sub(r"\x1b\[[0-9;]*m", "", v)
-                pad = _center(plain, w)
-                # reconstruire: couleur + texte centré + reset (le libellé coloré est toujours de la forme <color>TXT<reset>)
-                start = v[:v.find(plain)] if plain in v else ""
-                v = f"{start}{pad}{COLORS['reset']}"
+    for pair in pairs:
+        row = {"pair": pair}
+        for tf in tf_list:
+            path = ohlcv_path(pair, tf)
+            if not os.path.isfile(path):
+                st = "MIS"
             else:
-                v = _center(v, w)
-            out.append(v)
-        return " | ".join(out)
+                age_m = file_age_minutes(path)
+                lifetime_m = age_mult * tf_minutes(tf)
+                key = f"{pair}:{tf}"
+                has_strat = key in promoted and not promoted[key].get("expired", False)
+                if age_m > lifetime_m:
+                    st = "OLD"
+                elif has_strat:
+                    st = "OK"
+                else:
+                    st = "DAT"
+            counts[st] += 1
+            row[tf] = st
+        matrix.append(row)
 
-    bar = [ "-" * w for w in widths ]
-    table = [fmt(header), fmt(bar), *[fmt(r) for r in rows]]
-    return "\n".join(table)
-
-def _paint_live_table(symbols: List[str], tfs: List[str]) -> None:
-    """Affichage 'live' (stdout) sans passer par le logger."""
-    try:
-        cfg = load_config()
-        data_dir = str((cfg.get("runtime") or {}).get("data_dir") or "/notebooks/scalp_data/data")
-        strategies = load_strategies()
-        table = _render_status_table(symbols, tfs, strategies, data_dir)
-        sys.stdout.write("\x1b[2J\x1b[H")  # clear + home
-        sys.stdout.write("[maintainer] État (PAIR×TF)\n")
-        sys.stdout.write(table + "\n")
-        sys.stdout.flush()
-    except Exception:
-        pass
-
-# ------------------------ calcul expirés/manquants ------------------------
-
-def _expired_pairs(tfs: List[str]) -> List[Tuple[str, str]]:
-    """
-    (symbol, tf) expirés/à créer par rapport à strategies.yml et watchlist.
-    NB: ce calcul ne sert plus au rendu (qui lit les CSV), mais reste utile pour
-    prioriser l'ordre de backfill si besoin.
-    """
-    all_ = load_strategies()
-    need: List[Tuple[str, str]] = []
-    present = {(k.split(":")[0], k.split(":")[1]) for k in all_.keys()}
-
-    for k, v in all_.items():
-        s, tf = k.split(":")
-        if v.get("expired"):
-            need.append((s, tf))
-
-    wl_syms = set(_symbols_top(None))
-    for s in wl_syms:
-        for tf in tfs:
-            if (s, tf) not in present:
-                need.append((s, tf))
-
-    out, seen = [], set()
-    for x in need:
-        if x not in seen:
-            out.append(x); seen.add(x)
-    return out
-
-# ------------------------ actions ------------------------
-
-def refresh_watchlist(top: int, score_tf: str, backfill_tfs: List[str], limit: int) -> None:
-    rc, _, _ = run_cmd([
-        sys.executable, "-m", "jobs.refresh_pairs",
-        "--timeframe", score_tf,
-        "--top", str(top),
-        "--backfill-tfs", ",".join(backfill_tfs),
-        "--limit", str(limit),
-    ])
-    if rc != 0:
-        log.warning("refresh_pairs RC=%s (continue)", rc)
-
-def backfill_symbol_tf(symbol: str, tf: str, limit: int) -> bool:
-    rc, _, _ = run_cmd([
-        sys.executable, "-m", "jobs.refresh_pairs",
-        "--timeframe", tf,
-        "--top", "0",
-        "--backfill-tfs", tf,
-        "--limit", str(limit),
-    ])
-    ok = (rc == 0)
-    if ok:  log.info("backfill OK: %s:%s", symbol, tf)
-    else:   log.warning("backfill FAIL: %s:%s (rc=%s)", symbol, tf, rc)
-    return ok
-
-def backtest_and_promote() -> None:
-    rc, _, _ = run_cmd([sys.executable, "-m", "jobs.backtest",
-                        "--from-watchlist", "--tfs", "1m,5m,15m,1h"])
-    if rc != 0:
-        log.warning("backtest RC=%s", rc)
-    draft = "/notebooks/scalp_data/reports/strategies.yml.next"
-    rc, _, _ = run_cmd([sys.executable, "-m", "jobs.promote", "--draft", draft])
-    if rc != 0:
-        log.warning("promote RC=%s", rc)
-    _summary_strategies()
-
-def _summary_strategies() -> None:
-    try:
-        strat: Dict[str, Dict] = load_strategies()
-        total = len(strat)
-        expired = sum(1 for v in strat.values() if v.get("expired"))
-        by_tf: Dict[str, int] = {}
-        for k in strat.keys():
-            try: _, tf = k.split(":")
-            except ValueError: tf = "?"
-            by_tf[tf] = by_tf.get(tf, 0) + 1
-        tf_str = ", ".join(f"{tf}:{n}" for tf, n in sorted(by_tf.items()))
-        log.info("STRATEGIES • total=%d • expirées=%d • par_tf=(%s)", total, expired, tf_str)
-    except Exception as e:
-        log.warning("summary strategies impossible: %s", e)
-
-# ------------------------ pipeline ------------------------
-
-def run_once(top: int, score_tf: str, tfs: List[str], limit: int,
-             sleep_between_secs: float,
-             live_table: bool,
-             live_interval: float) -> None:
-    log.info("=== RUN ONCE === top=%s score_tf=%s tfs=%s limit=%s", top, score_tf, tfs, limit)
-
-    # 1) refresh + backfill global rapide
-    refresh_watchlist(top=top, score_tf=score_tf, backfill_tfs=tfs, limit=limit)
-
-    # 2) lecture watchlist + premier rendu
-    syms = _symbols_top(top)
-    if not syms:
-        log.warning("Watchlist vide — stop.")
-        return
-
-    cfg = load_config()
-    data_dir = str((cfg.get("runtime") or {}).get("data_dir") or "/notebooks/scalp_data/data")
-    try:
-        strat = load_strategies()
-        table = _render_status_table(syms, tfs, strat, data_dir)
-        log.info("\n%s", table)
-    except Exception:
-        pass
-    if live_table:
-        _paint_live_table(syms, tfs)
-
-    # 3) backfill séquentiel 1→N et TF croisés
-    touched = False
-    last_live = time.time()
-    for s in syms:
-        for tf in tfs:
-            ok = backfill_symbol_tf(s, tf, limit=limit)
-            touched = touched or ok
-            if live_table and (time.time() - last_live) >= live_interval:
-                _paint_live_table(syms, tfs)
-                last_live = time.time()
-            time.sleep(max(0.0, sleep_between_secs))
-
-    if live_table:
-        _paint_live_table(syms, tfs)
-
-    # 4) backtest + promote si on a touché des données
-    if touched:
-        log.info("backtest → promote…")
-        backtest_and_promote()
-    else:
-        log.info("rien de nouveau — skip backtest.")
-        _summary_strategies()
-
-# ------------------------ CLI ------------------------
-
-def _cfg_vals():
-    cfg = load_config()
-    wl = cfg.get("watchlist", {})
-    mt = cfg.get("maintainer", {})
     return {
-        "top": int(wl.get("top", 10)),
-        "score_tf": str(wl.get("score_tf", "5m")),
-        "tfs": [str(x) for x in (wl.get("backfill_tfs") or ["1m", "5m", "15m"])],
-        "limit": int(wl.get("backfill_limit", 1500)),
-        "interval": int(mt.get("interval_secs", 43200)),
-        "sleep_between": float(mt.get("sleep_between_secs", 0.5)),
-        "live": bool(mt.get("live_table", True)),
-        "live_interval": float(mt.get("live_interval_secs", 2.0)),
+        "generated_at": int(time.time()),
+        "counts": counts,
+        "matrix": matrix,
+        "notes": "MIS=no data · OLD=stale · DAT=data present, no active strategy · OK=fresh data + active strategy"
     }
 
-def main(argv=None) -> int:
-    _setup_logging()
-    ap = argparse.ArgumentParser(description="Mainteneur TOP‑N watchlist + backfill + backtest/promotion (tableau live)")
-    ap.add_argument("--top", type=int, default=None)
-    ap.add_argument("--score-tf", type=str, default=None)
-    ap.add_argument("--tfs", type=str, default=None)
-    ap.add_argument("--limit", type=int, default=None)
-    ap.add_argument("--interval", type=int, default=None, help="intervalle boucle (sec)")
-    ap.add_argument("--once", action="store_true", help="exécute une seule passe et sort")
-    ap.add_argument("--sleep-between", type=float, default=None, help="pause entre backfills (sec)")
-    ap.add_argument("--live-table", action="store_true", help="active le tableau live (sinon lecture config)")
-    ap.add_argument("--no-live-table", action="store_true", help="force la désactivation du live")
-    ap.add_argument("--live-interval", type=float, default=None, help="rafraîchissement du live (sec)")
+def write_json(obj, path):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(obj, f, ensure_ascii=False, indent=2)
 
-    ns = ap.parse_args(argv)
+def run_module(modname: str, *args, detach: bool=False) -> Tuple[int, str]:
+    env = os.environ.copy()
+    env["PYTHONPATH"] = _REPO_ROOT + (":" + env.get("PYTHONPATH","") if env.get("PYTHONPATH") else "")
+    cmd = [sys.executable, "-m", modname, *args]
+    try:
+        if detach:
+            subprocess.Popen(cmd, cwd=_REPO_ROOT, env=env)
+            return 0, ""
+        else:
+            cp = subprocess.run(cmd, cwd=_REPO_ROOT, env=env, capture_output=True, text=True)
+            return cp.returncode, (cp.stderr or "")
+    except Exception as e:
+        return 1, repr(e)
 
-    base = _cfg_vals()
-    top = ns.top if ns.top is not None else base["top"]
-    score_tf = ns.score_tf if ns.score_tf is not None else base["score_tf"]
-    tfs = [t.strip() for t in (ns.tfs or ",".join(base["tfs"])).split(",") if t.strip()]
-    limit = ns.limit if ns.limit is not None else base["limit"]
-    interval = ns.interval if ns.interval is not None else base["interval"]
-    sleep_between = ns.sleep_between if ns.sleep_between is not None else base["sleep_between"]
+def main():
+    global REPORTS_DIR, DATA_DIR
+    cfg = _read_yaml(CFG_PATH)  # si pas de loader spécifique
+    rt = cfg.get("runtime", {}) if isinstance(cfg, dict) else {}
+    DATA_DIR = rt.get("data_dir", "/notebooks/scalp_data/data")
+    REPORTS_DIR = rt.get("reports_dir", "/notebooks/scalp_data/reports")
 
-    if ns.live_table: live = True
-    elif ns.no_live_table: live = False
-    else: live = base["live"]
-    live_interval = ns.live_interval if ns.live_interval is not None else base["live_interval"]
+    tf_list = list(rt.get("tf_list", ["1m","5m","15m"]))
+    age_mult = int(rt.get("age_mult", 5))
+    pairs = list_pairs_from_watchlist(REPORTS_DIR)
 
-    if ns.once:
-        run_once(top, score_tf, tfs, limit, sleep_between, live, live_interval)
-        return 0
+    # 1) refresh déjà assuré ailleurs dans ton bot (sinon appeller jobs.refresh ici)
 
-    while True:
-        try:
-            run_once(top, score_tf, tfs, limit, sleep_between, live, live_interval)
-        except Exception:
-            log.exception("erreur maintainer")
-        time.sleep(max(300, interval))
+    # 2) backtest
+    rc_bt, err_bt = run_module("jobs.backtest")
+    # 3) promote (SANS --draft)
+    src_next = os.path.join(REPORTS_DIR, "strategies.yml.next")
+    rc_pr, err_pr = run_module("jobs.promote", "--source", src_next)
+
+    # 4) calcul statut & persist
+    stat = compute_status(pairs, tf_list, age_mult)
+    write_json(stat, os.path.join(REPORTS_DIR, "status.json"))
+
+    # 5) trace erreurs récentes pour le dashboard
+    last = {
+        "ts": int(time.time()),
+        "backtest_rc": rc_bt, "backtest_err": err_bt.strip(),
+        "promote_rc": rc_pr, "promote_err": err_pr.strip(),
+    }
+    write_json(last, os.path.join(REPORTS_DIR, "last_errors.json"))
+
+    # 6) affichage terminal compact (comme ton termboard)
+    def col(s): 
+        return {"MIS":"\x1b[90mMIS\x1b[0m","OLD":"\x1b[31mOLD\x1b[0m","DAT":"\x1b[33mDAT\x1b[0m","OK":"\x1b[32mOK\x1b[0m"}[s]
+    print("[maintainer] État (PAIR×TF)")
+    print("PAIR | " + " | ".join(f"{tf:>3}" for tf in tf_list))
+    print("-----|" + "|".join("---" for _ in tf_list))
+    for row in stat["matrix"]:
+        print(f"{row['pair']:<4} | " + " | ".join(col(row[tf]) for tf in tf_list))
+    print(f"[maintainer] INFO: backtest RC={rc_bt} · promote RC={rc_pr}")
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    try:
+        main()
+    except Exception:
+        print("[maintainer] FATAL:\n" + traceback.format_exc())
+        sys.exit(1)
