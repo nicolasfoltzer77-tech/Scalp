@@ -1,42 +1,110 @@
-# Stratégie de trading
+SCALP — Spécification Stratégies
+================================
 
-Ce document décrit la logique de trading utilisée par le bot **Scalp**. Elle vise un scalping court terme sur les futures USDT‑M de Bitget.
+1) Critères de sélection selon risk_mode
+----------------------------------------
 
-## Principes généraux
+- conservative:
+  PF ≥ 1.4
+  MDD ≤ 15%
+  trades ≥ 35
 
-- ne traiter que des actifs liquides à fort momentum ;
-- suivre la tendance dominante et éviter les marchés plats ;
-- utiliser des confirmations multi‑unités de temps pour limiter les faux signaux ;
-- dimensionner chaque position selon un pourcentage fixe du capital ;
-- couper rapidement les pertes et laisser courir les gains via un suivi dynamique.
+- normal:
+  PF ≥ 1.3
+  MDD ≤ 20%
+  trades ≥ 30
 
-## Sélection des paires
+- aggressive:
+  PF ≥ 1.2
+  MDD ≤ 30%
+  trades ≥ 25
 
-1. `scan_pairs` récupère les tickers Bitget et filtre ceux qui possèdent un volume quotidien suffisant et un spread réduit.
-2. `select_active_pairs` affine la liste en conservant les paires présentant le plus de **momentum** :
-   - croisement entre EMA20 et EMA50 ;
-   - ATR élevé pour privilégier les actifs volatils.
+Notes :
+- PF = Profit Factor (gain/perte)
+- MDD = Max Drawdown (drawdown max)
+- trades = nombre de trades réalisés pendant le backtest
 
-## Génération du signal
+2) Paramètres mesurés (summary.json)
+------------------------------------
+Chaque backtest écrit dans reports/summary.json une liste de lignes (rows) contenant :
+- pair : symbole (ex: BTCUSDT)
+- tf : timeframe (1m, 5m, 15m…)
+- pf : Profit Factor
+- mdd : Max Drawdown (0.18 = 18%)
+- trades : nombre de trades
+- wr : Win rate (0.55 = 55%)
+- sharpe : ratio Sharpe
+- note : score interne utilisé pour trier les stratégies
 
-`generate_signal` produit un signal d’entrée long ou court lorsque les conditions suivantes sont réunies :
+3) Format strategies.yml.next
+-----------------------------
 
-- prix au‑dessus ou en dessous du **VWAP** et des EMA20/50 selon la direction recherchée ;
-- **RSI(14)** traversant les niveaux 40/60 avec confirmation d’un **RSI 15 min** et de la pente de l’**EMA 1 h** ;
-- **MACD** alignée avec la tendance et **EMA** longue en filtrage global ;
-- hausse d’**OBV** ou volume supérieur à la moyenne ;
-- cassure du dernier **swing high/low** ;
-- éventuel filtre d’**order book imbalance** et de ratio de ticks.
+/notebooks/scalp_data/reports/strategies.yml.next
 
-Les distances de stop et de take profit sont calculées à partir de l’**ATR**, ce qui permet également de dimensionner la taille de position via `calc_position_size`.
+strategies:
+  "<PAIRUSDT>:<TF>":
+    name: "ema_atr_v1"
+    ema_fast: 12
+    ema_slow: 34
+    atr_period: 14
+    trail_atr_mult: 2.0
+    risk_pct_equity: 0.5
+    created_at: <timestamp>
+    expires_at: <timestamp>
+    expired: false
+    metrics:
+      pf: 1.34
+      mdd: 0.18
+      trades: 42
+      wr: 0.55
+      sharpe: 1.10
 
-## Gestion du risque
+4) Format strategies.yml (promu)
+--------------------------------
+engine/config/strategies.yml
 
-La classe `RiskManager` applique plusieurs garde‑fous :
+- Reprend le format ci-dessus.
+- Ne garde que les stratégies qui passent les critères du risk_mode.
+- Met à jour si une meilleure stratégie ou plus récente est trouvée.
+- Marque expired=true si dépassée.
 
-- limite de perte quotidienne (`max_daily_loss_pct`) et optionnellement de gain (`max_daily_profit_pct`) déclenchant un *kill switch* ;
-- suivi des séries de gains/pertes pour ajuster le pourcentage de risque par trade ;
-- pause forcée en cas de pertes consécutives prolongées ;
-- contrôle du nombre maximal de positions ouvertes.
+5) Lifetime (expiry)
+--------------------
 
-Ces règles combinées visent à protéger le capital tout en conservant une exposition opportuniste au marché.
+Durée de vie = age_mult × TF
+Exemple avec age_mult=5 :
+- 1m → 5 minutes
+- 5m → 25 minutes
+- 15m → 75 minutes
+
+Après ce délai, expired=true et la stratégie doit être remplacée par une nouvelle.
+
+6) Split JSON
+-------------
+
+- backtest_config.json
+  Paramètres pour recherche, optimisation et walk-forward :
+  - Grilles EMA/ATR/MACD/RSI
+  - Coûts (fees, slippage)
+  - Contraintes globales (min trades, min PF)
+  - Méthode optimisation (optuna, grid)
+
+- entries_config.json
+  Paramètres pour les sets d’entrées (signaux) :
+  - pullback_trend, breakout, mean_reversion
+  - context (probabilités min, ADX, volume, ATR)
+  - signaux (RSI, MACD, VWAP, BB, candles…)
+  - risk (SL, TP, trail, timeout_bars)
+
+Ces 2 fichiers permettent de séparer :
+- la recherche et validation (backtest_config.json)
+- la logique de déclenchement opérationnelle (entries_config.json)
+
+7) Promotion
+------------
+
+- Source : strategies.yml.next
+- Filtrage : appliquer critères risk_mode
+- Fusion : engine/config/strategies.yml
+- Logs : scalp_data/logs/promote.log
+- Rendu : dashboard.html mis à jour automatiquement
