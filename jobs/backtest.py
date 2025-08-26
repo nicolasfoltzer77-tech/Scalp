@@ -1,10 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+"""
+Backtest plug-in (version légère sans multiprocessing)
+- Charge config.yaml + backtest_config.json + entries_config.json
+- Détermine paires/TF
+- Exécute la stratégie plugin
+- Applique contraintes min_trades / min_pf aux candidats
+- Écrit summary.json + strategies.yml.next + trace JSONL
+"""
+
 from __future__ import annotations
 import os, sys, json, time, yaml
 from typing import List, Dict, Tuple, Optional
-from concurrent.futures import ProcessPoolExecutor, as_completed
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.append(PROJECT_ROOT)
@@ -85,24 +93,17 @@ def load_watchlist(reports_dir: str, topN: int | None = None) -> List[str]:
     pairs = [p for p in pairs if isinstance(p, str)]
     return pairs[:topN] if topN else pairs
 
-def process_pair_tf(data_dir: str, pair: str, tf: str, strat_name: str, strat_params: Optional[dict]) -> Tuple[Dict, Tuple[str, Dict]]:
-    strat = strat_registry.create(strat_name, strat_params)
-    df = load_csv_fast(ohlcv_path(data_dir, pair, tf))
-    met = strat.backtest(df)
-    now_ts = int(time.time())
-    row = make_row(pair, tf, met)
-    key, cand = make_candidate(pair, tf, strat, met, now_ts)
-    return row, (key, cand)
-
 def run():
+    # 1) runtime
     cfg = load_yaml(CONFIG_YAML, missing_ok=True)
     rt = cfg.get("runtime", {}) if isinstance(cfg, dict) else {}
 
-    data_dir    = rt.get("data_dir", "/notebooks/scalp_data/data")
-    reports_dir = rt.get("reports_dir", "/notebooks/scalp_data/reports")
+    data_dir    = rt.get("data_dir", "./data")
+    reports_dir = rt.get("reports_dir", "./reports")
     tf_list     = list(rt.get("tf_list", ["1m","5m","15m"]))
     topN        = int(rt.get("topN", 10))
 
+    # 2) JSON configs
     bt_cfg = load_json(BACKTEST_JSON, missing_ok=True) or {}
     en_cfg = load_json(ENTRIES_JSON,  missing_ok=True) or {}
 
@@ -113,11 +114,13 @@ def run():
     strat_name   = (rt.get("strategy_name") or "ema_atr_v1").strip()
     strat_params = dict(rt.get("strategy_params") or {})
 
+    # 3) loggers
     logs_dir = os.path.join(os.path.dirname(data_dir), "logs")
     os.makedirs(logs_dir, exist_ok=True)
     log = setup_logger("backtest", os.path.join(logs_dir, "backtest.log"))
     run_id = new_run_id()
 
+    # 4) paires
     if assets_json:
         pairs = assets_json[:topN] if topN else assets_json
         src = "backtest_config.assets"
@@ -129,6 +132,7 @@ def run():
         log_event(EXPS_DIR(reports_dir), run_id, {"event":"no_pairs","src":src})
         return
 
+    # 5) contraintes
     constraints = (bt_cfg.get("constraints") or {})
     min_trades = int(constraints.get("min_trades", 0))
     min_pf     = float(constraints.get("min_pf", 0.0))
@@ -151,35 +155,33 @@ def run():
         "entries_cfg_present": bool(en_cfg),
     })
 
+    # 6) boucle séquentielle
     rows: List[Dict] = []
     cands_all: Dict[str, Dict] = {}
 
-    from multiprocessing import cpu_count
-    max_workers = min(8, (cpu_count() or 2))
-    tasks = []
-    with ProcessPoolExecutor(max_workers=max_workers) as ex:
-        for pair in pairs:
-            for tf in tf_list:
-                tasks.append(ex.submit(process_pair_tf, data_dir, pair, tf, strat_name, strat_params))
-        for fut in as_completed(tasks):
+    for pair in pairs:
+        for tf in tf_list:
             try:
-                row, (key, cand) = fut.result()
-                rows.append(row)
+                strat = strat_registry.create(strat_name, strat_params)
+                df = load_csv_fast(ohlcv_path(data_dir, pair, tf))
+                met = strat.backtest(df)
+                now_ts = int(time.time())
+                rows.append(make_row(pair, tf, met))
+                key, cand = make_candidate(pair, tf, strat, met, now_ts)
                 cands_all[key] = cand
             except Exception as e:
-                log.info({"event":"pair_tf_error","err":str(e)})
-                log_event(EXPS_DIR(reports_dir), run_id, {"event":"pair_tf_error", "err": str(e)})
+                log.info({"event":"pair_tf_error","pair":pair,"tf":tf,"err":str(e)})
+                log_event(EXPS_DIR(reports_dir), run_id, {"event":"pair_tf_error","pair":pair,"tf":tf,"err":str(e)})
 
+    # 7) appliquer contraintes
     cands = {}
-    if cands_all:
-        for k, v in cands_all.items():
-            met = v.get("metrics", {})
-            if int(met.get("trades", 0)) < min_trades:
-                continue
-            if float(met.get("pf", 0.0)) < min_pf:
-                continue
-            cands[k] = v
+    for k, v in cands_all.items():
+        met = v.get("metrics", {})
+        if int(met.get("trades", 0)) < min_trades: continue
+        if float(met.get("pf", 0.0)) < min_pf: continue
+        cands[k] = v
 
+    # 8) sorties
     summary_path = SUMMARY_JSON(reports_dir)
     next_path    = STRATS_NEXT(reports_dir)
 
@@ -204,10 +206,9 @@ def run():
 
     log.info({"event":"done","rows":len(rows),"cands_total":len(cands_all),"cands_after_constraints":len(cands)})
     log_event(EXPS_DIR(reports_dir), run_id, {
-        "event":"done",
-        "rows": len(rows),
-        "cands_total": len(cands_all),
-        "cands_after_constraints": len(cands)
+        "event":"done","rows":len(rows),
+        "cands_total":len(cands_all),
+        "cands_after_constraints":len(cands)
     })
 
 if __name__ == "__main__":
