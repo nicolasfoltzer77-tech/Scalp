@@ -1,76 +1,31 @@
-# engine/config/config.yml
-# ========================
-# ⚙️ Configuration centrale (versionnée) – secrets (API keys) restent dans .env
-
 runtime:
   data_dir: /notebooks/scalp_data/data
   reports_dir: /notebooks/scalp_data/reports
-  logs_dir: /notebooks/scalp_data/logs
-  tmp_dir: /notebooks/scalp_data/tmp
-  termboard_enabled: false   # ⟵ coupe l'affichage “MIS/OLD/DAT/OK”
 
-exchange:
-  name: bitget
-  base_url: https://api.bitget.com
-  paper: true                 # false = réel, true = paper/sandbox si dispo
-  rate_limit_ms: 200
+  # timeframes utilisés dans la pipeline
+  tf_list: [ "1m", "5m", "15m" ]
+  age_mult: 5                  # lifetime = age_mult × TF
+  topN: 10                     # taille de la watchlist dynamique
+  refresh_interval_secs: 5     # affichage orchestrator
+  backfill_limit: 1500         # nb bougies à (re)télécharger
 
-watchlist:
-  top: 10                     # nb de paires conservées
-  score_tf: 5m               # TF pour scorer la watchlist (vol/volatilité)
-  backfill_tfs: [1m, 5m, 15m]# TF à backfiller à chaque cycle
-  backfill_limit: 1500       # nb max de bougies par appel
+  # mode de risque (impacte la promotion des stratégies)
+  risk_mode: "conservative"    # conservative | normal | aggressive
 
-maintainer:
-  interval_secs: 43200       # relance du cycle complet (12h)
-  sleep_between_secs: 0.5    # pause entre backfills pour limiter le rate‑limit
-
-  # Affichage "live" du tableau PAIR×TF dans le terminal
-  live_table: true
-  live_interval_secs: 2.0
-
-  # Multiplicateur de durée de vie des stratégies (TTL = mult × TF)
-  # ex: 1m × 240 = 240 minutes ≈ 4h
-  ttl_mult:
-    1m: 240
-    5m: 240
-    15m: 192
-    1h: 168
-    4h: 90
-    1d: 60
-
-strategies:
-  # Valeurs par défaut pour la stratégie baseline (EMA/ATR)
-  risk_default_pct: 1.0
-  ema_fast: 9
-  ema_slow: 21
-  atr_period: 14
-  trail_atr_mult: 2.0
-
-notify:
-  telegram: true
-  console: true
-  discord: false
-
-dash:
-  port: 8501
-  auto_open_browser: false
-
-runtime:
-  data_dir: /notebooks/scalp_data/data
-  reports_dir: /notebooks/scalp_data/reports
-  tf_list: ["1m","5m","15m"]
-  age_mult: 5
-  topN: 10
-  backfill_limit: 1500
-  risk_mode: aggressive
+  # exécution désactivée par défaut
   exec_enabled: false
-  html_port: 8888
 
-  # stratégie par défaut pour le backtest
+  # stratégie par défaut (plugin)
   strategy_name: "ema_atr_v1"
+
+  # paramètres de la stratégie
   strategy_params:
     ema_fast: 12
     ema_slow: 34
-    atr_period: 14
     lookahead_bars: 10
+
+    # coûts & exécution (valeurs réalistes Bitget)
+    maker_fee_rate: 0.0002      # 0.02% (2 bps)
+    taker_fee_rate: 0.0008      # 0.08% (8 bps)
+    prefer_maker: true          # on tente toujours post-only
+    slippage_bps: 5.0           # 0.05% (5 bps)
