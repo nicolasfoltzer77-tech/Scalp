@@ -15,9 +15,7 @@ if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 import sitecustomize  # déclenche le bootstrap global (PATH, __init__.py, deps)
 
-from __future__ import annotations
 import os, sys, subprocess, time, yaml
-import sitecustomize  # auto-bootstrap: PATH + deps + dossiers
 
 PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
 CONFIG_YAML  = os.path.join(PROJECT_ROOT, "engine", "config", "config.yaml")
