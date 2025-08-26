@@ -2,217 +2,381 @@
 # -*- coding: utf-8 -*-
 
 """
-SCALP — Génère le dashboard HTML (+ auto-refresh) dans /docs
-puis déclenche la publication GitHub Pages via:  python -m tools.publish_pages
+SCALP — Génère un dashboard HTML dynamique (vanilla JS) dans /docs :
+- Charge status.json, summary.json, last_errors.json, health.json côté navigateur
+- Affiche Health, compteurs MIS/OLD/DAT/OK, Heatmap pair×TF
+- TOP filtrable (search pair, filtres TF, min PF, max MDD, min trades), tri par colonnes
+- Auto-refresh avec compte à rebours + bouton Refresh
+- À la fin, déclenche tools.publish_pages (copie JSON + push sur GitHub Pages)
 
-- Lit (si présents) : engine/config/config.yaml, reports/status.json,
-  reports/summary.json, reports/last_errors.json
-- Écrit : docs/index.html et docs/dashboard.html
-- N'échoue pas si la publication GitHub échoue (log et continue)
+Pré-requis côté pipeline :
+- jobs/maintainer.py écrit reports/{status.json,last_errors.json}
+- jobs/backtest.py écrit reports/summary.json
+- tools/publish_pages.py copie ces JSON dans docs/data/ et pousse
 """
 
 from __future__ import annotations
-import os
-import sys
-import json
-import time
-import subprocess
+import os, sys, subprocess
 from pathlib import Path
-from typing import Any, Dict
 
-# ------------------------------------------------------------
-# Réglages
-# ------------------------------------------------------------
-AUTO_REFRESH_SECS = int(os.environ.get("AUTO_REFRESH_SECS", "5"))  # meta refresh
+AUTO_REFRESH_SECS = int(os.environ.get("AUTO_REFRESH_SECS", "5"))
 
-# ------------------------------------------------------------
-# Chemins
-# ------------------------------------------------------------
-REPO_ROOT: Path = Path(__file__).resolve().parents[1]   # <repo>
-DOCS_DIR: Path  = REPO_ROOT / "docs"
+REPO_ROOT = Path(__file__).resolve().parents[1]
+DOCS_DIR  = REPO_ROOT / "docs"
 DOCS_DIR.mkdir(parents=True, exist_ok=True)
 
-CFG_PATH: Path  = REPO_ROOT / "engine" / "config" / "config.yaml"
+HTML = f"""<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SCALP — Dashboard</title>
+<style>
+  :root {{
+    --ok:#0a910a; --dat:#b88600; --old:#d90000; --mis:#6b7280;
+    --muted:#6b7280; --border:#e8e8e8; --bg:#fafafa;
+  }}
+  body {{ font-family: system-ui,-apple-system,Segoe UI,Roboto,sans-serif; margin: 20px; color:#111; }}
+  h1 {{ font-size: 28px; margin: 0 0 10px; }}
+  h2 {{ font-size: 20px; margin: 0 0 10px; }}
+  .row {{ display:flex; gap:16px; flex-wrap:wrap; align-items:center; }}
+  .card {{ border:1px solid var(--border); border-radius:10px; padding:14px 16px; margin:16px 0; background:#fff; }}
+  .pill {{ display:inline-block; margin:4px 8px; padding:4px 10px; border-radius:14px; color:#fff; font-weight:600; }}
+  .pill.ok  {{ background: var(--ok);  }}
+  .pill.dat {{ background: var(--dat); }}
+  .pill.old {{ background: var(--old); }}
+  .pill.mis {{ background: var(--mis); }}
 
-# ------------------------------------------------------------
-# Helpers IO
-# ------------------------------------------------------------
-def load_yaml(path: Path) -> Dict[str, Any]:
-    if not path.exists():
-        return {}
-    try:
-        import yaml
-    except Exception:
-        return {}
-    try:
-        with path.open("r", encoding="utf-8") as f:
-            return yaml.safe_load(f) or {}
-    except Exception:
-        return {}
+  .muted {{ color: var(--muted); font-size:12px; }}
+  .mono {{ font-family: ui-monospace,Menlo,Consolas,monospace; }}
 
-def load_json(path: Path) -> Dict[str, Any]:
-    if not path.exists():
-        return {}
-    try:
-        with path.open("r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
-        return {}
+  .grid-2 {{ display:grid; grid-template-columns:1fr; gap:16px; }}
+  @media (min-width: 980px) {{ .grid-2 {{ grid-template-columns:1fr 1fr; }} }}
 
-def now_utc_str() -> str:
-    return time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()) + " UTC"
+  table {{ border-collapse: collapse; width: 100%; }}
+  th, td {{ border:1px solid #eee; padding:6px 8px; text-align:left; }}
+  th {{ background: var(--bg); cursor: pointer; user-select: none; }}
+  th.sort-asc::after  {{ content:" \\25B2"; }}
+  th.sort-desc::after {{ content:" \\25BC"; }}
 
-def guess_reports_dir() -> Path:
-    cfg = load_yaml(CFG_PATH)
-    rt  = cfg.get("runtime", {}) if isinstance(cfg, dict) else {}
-    v   = rt.get("reports_dir")
-    if isinstance(v, str) and v.strip():
-        return Path(v)
-    # fallbacks usuels
-    cands = [
-        Path("/notebooks/scalp_data/reports"),
-        REPO_ROOT / "scalp_data" / "reports",
-    ]
-    for p in cands:
-        if p.exists():
-            return p
-    return cands[0]
+  .status-OK  {{ color: var(--ok);  font-weight:700; }}
+  .status-DAT {{ color: var(--dat); font-weight:700; }}
+  .status-OLD {{ color: var(--old); font-weight:700; }}
+  .status-MIS {{ color: var(--mis); font-weight:700; }}
 
-REPORTS_DIR: Path = guess_reports_dir()
+  .controls .block {{ margin-right: 16px; }}
+  .controls input[type="number"] {{ width: 90px; }}
+  .controls label {{ margin-right: 8px; }}
 
-# ------------------------------------------------------------
-# Rendu HTML
-# ------------------------------------------------------------
-def _badge(label: str, val, color: str) -> str:
-    return (f"<span style='display:inline-block;margin:4px 8px;padding:4px 10px;"
-            f"border-radius:14px;background:{color};color:#fff;font-weight:600'>"
-            f"{label}: {val}</span>")
+  .health-ok    {{ color: var(--ok);  font-weight:700; }}
+  .health-warn  {{ color: var(--dat); font-weight:700; }}
+  .health-bad   {{ color: var(--old); font-weight:700; }}
+</style>
 
-def render_html(cfg: Dict[str, Any], status: Dict[str, Any],
-                summary: Dict[str, Any], last: Dict[str, Any]) -> str:
-    rt = (cfg.get("runtime") or {}) if isinstance(cfg, dict) else {}
-    risk_mode = (rt.get("risk_mode") or "normal").lower()
-    tf_list   = list(rt.get("tf_list", ["1m","5m","15m"]))
+<h1>SCALP — Dashboard <span id="now" class="muted"></span></h1>
+<div class="row">
+  <div class="muted">Auto-refresh: <b>{AUTO_REFRESH_SECS}s</b> · <span id="countdown" class="muted"></span></div>
+  <button id="btnRefresh">Refresh</button>
+</div>
 
-    counts = status.get("counts", {}) or {}
-    matrix = status.get("matrix", []) or []
-    rows   = summary.get("rows", []) or []
+<div class="grid-2">
+  <div class="card" id="healthCard">
+    <h2>Health</h2>
+    <div id="healthBody" class="mono muted">Chargement…</div>
+  </div>
 
-    # tri simple du TOP 20
-    rows_sorted = sorted(
-        rows,
-        key=lambda r: (r.get("pf",0)*2 + r.get("sharpe",0)*0.5 + r.get("wr",0)*0.5 - r.get("mdd",1)*1.5),
-        reverse=True
-    )[:20]
+  <div class="card">
+    <h2>Compteurs</h2>
+    <div id="counters">
+      <span class="pill mis" id="MIS">MIS: 0</span>
+      <span class="pill old" id="OLD">OLD: 0</span>
+      <span class="pill dat" id="DAT">DAT: 0</span>
+      <span class="pill ok"  id="OK">OK: 0</span>
+    </div>
+    <div class="muted" style="margin-top:6px">MIS: no data · OLD: stale · DAT: fresh CSV, no active strategy · OK: fresh CSV + active strategy</div>
+  </div>
+</div>
 
-    H: list[str] = []
-    H.append("<!doctype html>")
-    H.append("<meta charset='utf-8'>")
-    H.append("<meta name='viewport' content='width=device-width,initial-scale=1'>")
-    H.append(f"<meta http-equiv='refresh' content='{AUTO_REFRESH_SECS}'>")  # auto-refresh
-    H.append("<title>SCALP — Dashboard</title>")
-    H.append("""
-    <style>
-      body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;margin:24px;color:#111}
-      h1{font-size:32px;margin:0 0 12px} h2{margin:0 0 10px}
-      .card{border:1px solid #e8e8e8;border-radius:10px;padding:16px 18px;margin:18px 0}
-      table{border-collapse:collapse;width:100%} th,td{border:1px solid #eee;padding:6px 8px;text-align:left}
-      th{background:#fafafa}
-      .MIS{color:#666;font-weight:700}.OLD{color:#d90000;font-weight:700}
-      .DAT{color:#b88600;font-weight:700}.OK{color:#0a910a;font-weight:700}
-      small{color:#6b7280}.muted{color:#6b7280;font-size:12px}
-      .mono{font-family:ui-monospace,Menlo,Consolas,monospace}
-    </style>
-    """)
-    H.append(f"<h1>SCALP — Dashboard <small>({now_utc_str()})</small></h1>")
-    H.append(f"<div class='muted'>Auto-refresh: {AUTO_REFRESH_SECS}s · risk_mode: {risk_mode}</div>")
+<div class="card">
+  <h2>Heatmap (pair × TF)</h2>
+  <div id="heatmap">Chargement…</div>
+</div>
 
-    # Statut data
-    H.append('<div class="card"><h2>Statut des données (pair × TF)</h2>')
-    H.append(_badge("MIS", counts.get("MIS",0), "#6b7280"))
-    H.append(_badge("OLD", counts.get("OLD",0), "#d90000"))
-    H.append(_badge("DAT", counts.get("DAT",0), "#b88600"))
-    H.append(_badge("OK",  counts.get("OK",0),  "#0a910a"))
-    if matrix:
-        H.append("<div style='height:8px'></div>")
-        H.append("<table><thead><tr><th>PAIR</th>"+ "".join(f"<th>{tf}</th>" for tf in tf_list) +"</tr></thead><tbody>")
-        for row in matrix:
-            H.append("<tr><td><b>{}</b></td>{}</tr>".format(
-                row.get("pair","?"),
-                "".join(f"<td class='{row.get(tf,'MIS')}'>{row.get(tf,'MIS')}</td>" for tf in tf_list)
-            ))
-        H.append("</tbody></table>")
-    else:
-        H.append("<div>Aucune matrice (status.json manquant ou vide).</div>")
-    H.append("</div>")
+<div class="card">
+  <h2>TOP résultats</h2>
 
-    # TOP 20
-    H.append(f'<div class="card"><h2>TOP 20 (policy={risk_mode})</h2>')
-    if rows_sorted:
-        H.append("<table><thead><tr><th>#</th><th>PAIR</th><th>TF</th><th>PF</th><th>MDD</th><th>TR</th><th>WR</th><th>Sharpe</th></tr></thead><tbody>")
-        for i, r in enumerate(rows_sorted, 1):
-            H.append(f"<tr><td>{i}</td><td>{r.get('pair')}</td><td>{r.get('tf')}</td>"
-                     f"<td>{r.get('pf',0):.3f}</td><td>{r.get('mdd',0):.1%}</td><td>{r.get('trades',0)}</td>"
-                     f"<td>{r.get('wr',0):.1%}</td><td>{r.get('sharpe',0):.2f}</td></tr>")
-        H.append("</tbody></table>")
-    else:
-        H.append("<div>Aucun résultat TOP.</div>")
-    H.append("</div>")
+  <div class="controls row" style="margin-bottom:10px">
+    <div class="block">
+      <label>Pair :</label>
+      <input type="text" id="filterPair" placeholder="ex: BTC" />
+    </div>
+    <div class="block">
+      <label>TF :</label>
+      <label><input type="checkbox" class="tfChk" value="1m" checked>1m</label>
+      <label><input type="checkbox" class="tfChk" value="3m">3m</label>
+      <label><input type="checkbox" class="tfChk" value="5m" checked>5m</label>
+      <label><input type="checkbox" class="tfChk" value="15m" checked>15m</label>
+      <label><input type="checkbox" class="tfChk" value="30m">30m</label>
+    </div>
+    <div class="block">
+      <label>min PF :</label>
+      <input type="number" id="minPF" step="0.01" value="1.20">
+    </div>
+    <div class="block">
+      <label>max MDD % :</label>
+      <input type="number" id="maxMDD" step="1" value="30">
+    </div>
+    <div class="block">
+      <label>min trades :</label>
+      <input type="number" id="minTR" step="1" value="25">
+    </div>
+    <div class="block">
+      <button id="btnApply">Appliquer filtres</button>
+      <button id="btnReset">Reset</button>
+    </div>
+  </div>
 
-    # Dernières actions
-    H.append('<div class="card"><h2>Dernières actions</h2>')
-    if last:
-        H.append("<pre class='mono' style='white-space:pre-wrap;background:#fafafa;padding:10px;border-radius:8px;border:1px solid #eee'>")
-        H.append(json.dumps(last, ensure_ascii=False, indent=2))
-        H.append("</pre>")
-    else:
-        H.append("<div>Aucune info (last_errors.json manquant).</div>")
-    H.append("</div>")
+  <div id="topTableWrap">Chargement…</div>
+</div>
 
-    # Cache-buster pour liens internes éventuels
-    H.append("""
-    <script>
-      (function(){
-        const stamp = Date.now();
-        document.querySelectorAll("a[href]").forEach(a=>{
-          try{const u=new URL(a.href,location.href);u.searchParams.set("_t",stamp);a.href=u}catch(e){}
-        });
-      })();
-    </script>
-    """)
-    return "\n".join(H)
+<div class="card">
+  <h2>Dernières actions</h2>
+  <pre id="lastErrors" class="mono" style="white-space:pre-wrap;background:#fafafa;padding:10px;border-radius:8px;border:1px solid #eee;">Chargement…</pre>
+</div>
 
-# ------------------------------------------------------------
-# Main
-# ------------------------------------------------------------
+<script>
+const AUTO_REFRESH_SECS = {AUTO_REFRESH_SECS};
+let countdown = AUTO_REFRESH_SECS;
+
+function ts() {{
+  const d = new Date();
+  return d.toISOString().replace('T',' ').substring(0,19) + " UTC";
+}}
+
+function setNow() {{
+  document.getElementById('now').textContent = "(" + ts() + ")";
+}}
+
+function tickCountdown() {{
+  countdown -= 1;
+  if (countdown <= 0) {{
+    window.location.reload();
+    return;
+  }}
+  document.getElementById('countdown').textContent = "reload dans " + countdown + "s";
+}}
+
+function badgeStatusCell(st) {{
+  const cls = "status-" + st;
+  return `<td class="${{cls}}">${{st}}</td>`;
+}}
+
+function renderCounters(counts) {{
+  for (const k of ["MIS","OLD","DAT","OK"]) {{
+    const el = document.getElementById(k);
+    el.textContent = `${{k}}: ${{counts[k]||0}}`;
+  }}
+}}
+
+function renderHeatmap(matrix, tf_list) {{
+  if (!matrix || matrix.length === 0) {{
+    document.getElementById('heatmap').innerHTML = "<div class='muted'>Aucune matrice (status.json manquant).</div>";
+    return;
+  }}
+  let html = "<table><thead><tr><th>PAIR</th>";
+  for (const tf of tf_list) html += `<th>${{tf}}</th>`;
+  html += "</tr></thead><tbody>";
+  for (const row of matrix) {{
+    html += `<tr><td><b>${{row.pair}}</b></td>`;
+    for (const tf of tf_list) {{
+      const st = row[tf] || "MIS";
+      html += badgeStatusCell(st);
+    }}
+    html += "</tr>";
+  }}
+  html += "</tbody></table>";
+  document.getElementById('heatmap').innerHTML = html;
+}}
+
+let sortState = {{ col: "score", dir: "desc" }};
+
+function sortRows(rows, col, dir) {{
+  const m = dir === "asc" ? 1 : -1;
+  return rows.slice().sort((a,b) => {{
+    const va = a[col] ?? 0; const vb = b[col] ?? 0;
+    return (va > vb ? 1 : va < vb ? -1 : 0) * m;
+  }});
+}}
+
+function scoreRow(r) {{
+  const pf = +r.pf||0, mdd = +r.mdd||0, sh=+r.sharpe||0, wr=+r.wr||0;
+  return pf*2.0 + sh*0.5 + wr*0.5 - mdd*1.5;
+}}
+
+function getFilters() {{
+  const q = document.getElementById('filterPair').value.trim().toUpperCase();
+  const tfs = Array.from(document.querySelectorAll('.tfChk:checked')).map(x=>x.value);
+  const minPF = parseFloat(document.getElementById('minPF').value || "0");
+  const maxMDD = parseFloat(document.getElementById('maxMDD').value || "100");
+  const minTR = parseInt(document.getElementById('minTR').value || "0");
+  return {{ q, tfs, minPF, maxMDD, minTR }};
+}}
+
+function applyFilters(rows) {{
+  const f = getFilters();
+  return rows.filter(r => {{
+    const okPair = !f.q || (r.pair||"").toUpperCase().includes(f.q);
+    const okTF   = f.tfs.length===0 || f.tfs.includes(r.tf);
+    const okPF   = (+r.pf||0) >= f.minPF;
+    const okMDD  = (+r.mdd||0) <= (f.maxMDD/100.0);
+    const okTR   = (+r.trades||0) >= f.minTR;
+    return okPair && okTF && okPF && okMDD && okTR;
+  }});
+}}
+
+function renderTopTable(allRows) {{
+  // enrichir d'un score
+  const rows = allRows.map(r => Object.assign({{}}, r, {{ score: scoreRow(r) }}));
+  const filtered = applyFilters(rows);
+
+  const cols = [
+    {{key:"rank", label:"#"}},
+    {{key:"pair", label:"PAIR"}},
+    {{key:"tf", label:"TF"}},
+    {{key:"pf", label:"PF"}},
+    {{key:"mdd", label:"MDD"}},
+    {{key:"trades", label:"TR"}},
+    {{key:"wr", label:"WR"}},
+    {{key:"sharpe", label:"Sharpe"}},
+    {{key:"score", label:"Note"}}
+  ];
+
+  const sorted = sortRows(filtered, sortState.col, sortState.dir);
+
+  let html = "<table><thead><tr>";
+  for (const c of cols) {{
+    const cls = (sortState.col===c.key) ? ("sort-" + sortState.dir) : "";
+    html += `<th data-col="${{c.key}}" class="${{cls}}">${{c.label}}</th>`;
+  }}
+  html += "</tr></thead><tbody>";
+
+  sorted.slice(0, 100).forEach((r,i) => {{
+    html += "<tr>";
+    html += `<td>${{i+1}}</td>`;
+    html += `<td>${{r.pair}}</td>`;
+    html += `<td>${{r.tf}}</td>`;
+    html += `<td>${{(+r.pf).toFixed(3)}}`;
+    html += `</td><td>${{((+r.mdd)*100).toFixed(1)}}%`;
+    html += `</td><td>${{r.trades||0}}`;
+    html += `</td><td>${{((+r.wr)*100).toFixed(1)}}%`;
+    html += `</td><td>${{(+r.sharpe).toFixed(2)}}`;
+    html += `</td><td>${{(+r.score).toFixed(2)}}`;
+    html += "</td></tr>";
+  }});
+  html += "</tbody></table>";
+
+  const wrap = document.getElementById('topTableWrap');
+  wrap.innerHTML = html;
+
+  // activer tri
+  wrap.querySelectorAll("th").forEach(th => {{
+    th.addEventListener("click", () => {{
+      const col = th.dataset.col;
+      if (!col) return;
+      if (sortState.col === col) {{
+        sortState.dir = (sortState.dir === "asc") ? "desc" : "asc";
+      }} else {{
+        sortState.col = col; sortState.dir = "desc";
+      }}
+      renderTopTable(allRows);
+    }});
+  }});
+}}
+
+async function loadJSON(path) {{
+  // cache-buster pour forcer le rafraîchissement
+  const url = path + "?_t=" + Date.now();
+  const r = await fetch(url);
+  if (!r.ok) throw new Error("HTTP "+r.status+" on "+path);
+  return await r.json();
+}}
+
+async function refreshAll() {{
+  setNow();
+  countdown = AUTO_REFRESH_SECS;
+
+  try {{
+    // charge JSON depuis docs/data/
+    const [status, summary, last, health] = await Promise.all([
+      loadJSON("data/status.json").catch(_ => ({{}})),
+      loadJSON("data/summary.json").catch(_ => ({{}})),
+      loadJSON("data/last_errors.json").catch(_ => ({{}})),
+      loadJSON("health.json").catch(_ => ({{}})),
+    ]);
+
+    // HEALTH
+    const hb = document.getElementById('healthBody');
+    if (Object.keys(health).length) {{
+      const st = (health.status||"").toLowerCase();
+      const cls = st.includes("ok") ? "health-ok" : (st.includes("local")||st.includes("no-change")?"health-warn":"health-bad");
+      hb.innerHTML = `
+        <div>generated_at: <b>${{health.generated_at||"?"}}</b></div>
+        <div>commit: <span class="mono">${{(health.commit||"").substring(0,10)}}</span></div>
+        <div>status: <span class="${{cls}}">${{health.status}}</span></div>
+      `;
+    }} else {{
+      hb.textContent = "health.json manquant (ok si premier run).";
+    }}
+
+    // Compteurs + Heatmap
+    const counts = (status.counts||{{}});
+    renderCounters(counts);
+    const tf_list = (status.matrix&&status.matrix[0]) ? Object.keys(status.matrix[0]).filter(k=>k!=="pair") : ["1m","5m","15m"];
+    renderHeatmap(status.matrix||[], tf_list);
+
+    // TOP table
+    renderTopTable(summary.rows||[]);
+
+    // Dernières actions
+    const le = document.getElementById("lastErrors");
+    le.textContent = JSON.stringify(last, null, 2);
+
+  }} catch (e) {{
+    console.error(e);
+  }}
+}}
+
+document.getElementById('btnRefresh').addEventListener('click', () => {{
+  window.location.reload();
+}});
+document.getElementById('btnApply').addEventListener('click', () => renderTopTable(window._lastRows||[]));
+document.getElementById('btnReset').addEventListener('click', () => {{
+  document.getElementById('filterPair').value = "";
+  document.querySelectorAll('.tfChk').forEach(ch => ch.checked = (["1m","5m","15m"].includes(ch.value)));
+  document.getElementById('minPF').value = "1.20";
+  document.getElementById('maxMDD').value = "30";
+  document.getElementById('minTR').value = "25";
+  refreshAll();
+}});
+
+// Tick
+setNow(); refreshAll();
+setInterval(tickCountdown, 1000);
+</script>
+"""
+
 def main():
-    # 1) cfg minimale (si besoin on pourra la peupler)
-    cfg = load_yaml(CFG_PATH)
+    # Écrit la page (UI dynamique, pas de data embarquée)
+    out1 = DOCS_DIR / "index.html"
+    out2 = DOCS_DIR / "dashboard.html"
+    out1.write_text(HTML, encoding="utf-8")
+    out2.write_text(HTML, encoding="utf-8")
+    print(f"[render] Écrit → {out1}")
 
-    # 2) lire data
-    status  = load_json(REPORTS_DIR / "status.json")
-    summary = load_json(REPORTS_DIR / "summary.json")
-    last    = load_json(REPORTS_DIR / "last_errors.json")
-
-    # 3) render
-    html = render_html(cfg, status, summary, last)
-
-    # 4) écrire /docs
-    index_path = DOCS_DIR / "index.html"
-    dash_path  = DOCS_DIR / "dashboard.html"
-    index_path.write_text(html, encoding="utf-8")
-    dash_path.write_text(html,  encoding="utf-8")
-    print(f"[render] Dashboard écrit → {index_path}")
-
-    # 5) publication GitHub Pages (via module dédié, évite soucis d'import)
+    # Déclenche la publication (copie des JSON + health.json + push)
     try:
-        subprocess.run(
-            [sys.executable, "-m", "tools.publish_pages"],
-            cwd=str(REPO_ROOT),
-            check=True
-        )
+        subprocess.run([sys.executable, "-m", "tools.publish_pages"],
+                       cwd=str(REPO_ROOT), check=True)
     except Exception as e:
-        print(f"[render] publication GitHub Pages ignorée: {e}")
+        print(f"[render] Publication ignorée: {e}")
 
 if __name__ == "__main__":
     try:
