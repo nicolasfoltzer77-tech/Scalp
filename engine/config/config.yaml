@@ -2,30 +2,36 @@ runtime:
   data_dir: /notebooks/scalp_data/data
   reports_dir: /notebooks/scalp_data/reports
 
-  # timeframes utilisés dans la pipeline
   tf_list: [ "1m", "5m", "15m" ]
-  age_mult: 5                  # lifetime = age_mult × TF
-  topN: 10                     # taille de la watchlist dynamique
-  refresh_interval_secs: 5     # affichage orchestrator
-  backfill_limit: 1500         # nb bougies à (re)télécharger
+  age_mult: 5
+  topN: 10
+  refresh_interval_secs: 5
+  backfill_limit: 1500
 
-  # mode de risque (impacte la promotion des stratégies)
-  risk_mode: "conservative"    # conservative | normal | aggressive
-
-  # exécution désactivée par défaut
+  risk_mode: "conservative"      # conservative | normal | aggressive
   exec_enabled: false
+  html_port: 8888
 
-  # stratégie par défaut (plugin)
   strategy_name: "ema_atr_v1"
 
-  # paramètres de la stratégie
-  strategy_params:
-    ema_fast: 12
-    ema_slow: 34
-    lookahead_bars: 10
+  # Paramètres communs (frais/slippage identiques pour tous les modes)
+  strategy_params_base:
+    maker_fee_rate: 0.0002       # 0.02% (2 bps)
+    taker_fee_rate: 0.0008       # 0.08% (8 bps)
+    prefer_maker: true
+    slippage_bps: 5.0            # 0.05%
 
-    # coûts & exécution (valeurs réalistes Bitget)
-    maker_fee_rate: 0.0002      # 0.02% (2 bps)
-    taker_fee_rate: 0.0008      # 0.08% (8 bps)
-    prefer_maker: true          # on tente toujours post-only
-    slippage_bps: 5.0           # 0.05% (5 bps)
+  # Overrides selon le risk_mode
+  strategy_profiles:
+    conservative:
+      ema_fast: 9
+      ema_slow: 34
+      lookahead_bars: 14
+    normal:
+      ema_fast: 12
+      ema_slow: 34
+      lookahead_bars: 10
+    aggressive:
+      ema_fast: 12
+      ema_slow: 26
+      lookahead_bars: 6
