@@ -2,12 +2,13 @@
 # -*- coding: utf-8 -*-
 
 """
-Génère un tableau de bord HTML statique (auto-contenu) depuis summary.json et strategies.yml(.next)
-Sortie: /notebooks/scalp_data/reports/dashboard.html
+Génère un dashboard HTML statique depuis summary.json / strategies.yml(.next)
+ET écrit une URL "console" prête à copier (dashboard_url.txt) pour ouverture sur iPhone.
 
-Cette version s'auto-répare :
-- Vérifie/installe à la volée: plotly, altair, pyarrow
-- N'importe plotly seulement après installation si besoin
+- Auto-réparation des libs (plotly/altair/pyarrow/pandas)
+- Sorties:
+  /notebooks/scalp_data/reports/dashboard.html
+  /notebooks/scalp_data/reports/dashboard_url.txt
 """
 
 from __future__ import annotations
@@ -16,16 +17,17 @@ from datetime import datetime
 
 # --------- chemins par défaut
 REPORTS_DIR = os.getenv("SCALP_REPORTS_DIR", "/notebooks/scalp_data/reports")
-SUMMARY = os.path.join(REPORTS_DIR, "summary.json")
-STRAT_NEXT = os.path.join(REPORTS_DIR, "strategies.yml.next")
-STRAT_CURR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "engine", "config", "strategies.yml"))
-OUT_HTML = os.path.join(REPORTS_DIR, "dashboard.html")
-TOP_K = int(os.getenv("SCALP_DASH_TOPK", "20"))
+SUMMARY     = os.path.join(REPORTS_DIR, "summary.json")
+STRAT_NEXT  = os.path.join(REPORTS_DIR, "strategies.yml.next")
+STRAT_CURR  = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "engine", "config", "strategies.yml"))
+OUT_HTML    = os.path.join(REPORTS_DIR, "dashboard.html")
+OUT_URLTXT  = os.path.join(REPORTS_DIR, "dashboard_url.txt")
+TOP_K       = int(os.getenv("SCALP_DASH_TOPK", "20"))
 
 def _log(msg: str):
     print(f"[render] {msg}")
 
-# --------- bootstrap libs nécessaires (plotly/altair/pyarrow)
+# --------- bootstrap libs nécessaires
 NEEDED = ["plotly", "altair", "pyarrow", "pandas"]
 
 def _ensure_libs():
@@ -41,7 +43,7 @@ def _ensure_libs():
     try:
         subprocess.check_call([sys.executable, "-m", "pip", "install"] + missing)
     except subprocess.CalledProcessError as e:
-        _log(f"pip install failed (code {e.returncode}) — le rendu utilisera des fallbacks si possible.")
+        _log(f"pip install failed (code {e.returncode}) — fallback si possible.")
 
 def _load_json(path):
     if not os.path.isfile(path): return {}
@@ -60,11 +62,10 @@ def _html_escape(s: str) -> str:
     return (s.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;")
             .replace('"',"&quot;").replace("'","&#39;"))
 
-def _render_simple_table(rows_sorted):
-    # Fallback très simple en HTML si plotly indisponible
+def _render_simple_table(rows_sorted, top_k: int):
     head = "<tr><th>RANK</th><th>PAIR</th><th>TF</th><th>PF</th><th>MDD</th><th>TR</th><th>WR</th><th>Sharpe</th></tr>"
     body = []
-    for i, r in enumerate(rows_sorted[:TOP_K], 1):
+    for i, r in enumerate(rows_sorted[:top_k], 1):
         body.append(
             f"<tr><td>{i}</td><td>{_html_escape(r['pair'])}</td><td>{_html_escape(r['tf'])}</td>"
             f"<td>{float(r.get('pf',0)):.3f}</td><td>{float(r.get('mdd',0))*100:.1f}%</td>"
@@ -73,17 +74,43 @@ def _render_simple_table(rows_sorted):
         )
     return f"<table border='1' cellspacing='0' cellpadding='6'>{head}{''.join(body)}</table>"
 
+def _build_console_url() -> str:
+    """
+    Construit l'URL console Gradient pour ouvrir le fichier HTML côté Files.
+    Utilise SCALP_NOTEBOOK_ID si présent, sinon essaie d'inférer depuis le cwd.
+    """
+    nb_id = os.getenv("SCALP_NOTEBOOK_ID")
+    if not nb_id:
+        # inférer depuis cwd: /notebooks ou /storage/nbs/<id>/...
+        parts = os.getcwd().split("/")
+        cand = [p for p in parts if len(p) >= 8 and p.isalnum()]
+        nb_id = cand[-1] if cand else None
+    if not nb_id:
+        # dernier recours: placeholder à éditer si besoin
+        nb_id = "<ton-id-notebook>"
+    # NB: sous console.paperspace.com, chemin Files = /files/<relpath depuis /notebooks>
+    # notre fichier est sous /notebooks/scalp_data/reports/dashboard.html
+    return f"https://console.paperspace.com/nbooks/{nb_id}/files/scalp_data/reports/dashboard.html"
+
+def _write_url_hint():
+    os.makedirs(REPORTS_DIR, exist_ok=True)
+    url = _build_console_url()
+    with open(OUT_URLTXT, "w", encoding="utf-8") as f:
+        f.write(url + "\n")
+    _log(f"URL console écrite → {OUT_URLTXT}")
+
 def generate():
     os.makedirs(REPORTS_DIR, exist_ok=True)
 
-    # 1) S'assurer des libs (plotly, altair, pyarrow, pandas)
+    # 1) S'assurer des libs
     _ensure_libs()
 
-    # 2) Imports (post-install)
+    # 2) Imports post-install
     try:
         import pandas as pd
     except Exception:
         _log("pandas indisponible — abandon rendu.")
+        _write_url_hint()
         return
 
     try:
@@ -104,7 +131,7 @@ def generate():
 
     # 4) TOP K
     if PLOTLY_OK and rows_sorted:
-        import numpy as np
+        import numpy as np  # noqa: F401
         df_top = pd.DataFrame([{
             "RANK": i+1,
             "PAIR": r["pair"],
@@ -124,9 +151,9 @@ def generate():
         table_fig.update_layout(margin=dict(l=0,r=0,t=10,b=0))
         top_html = table_fig.to_html(full_html=False, include_plotlyjs="cdn")
     else:
-        top_html = _render_simple_table(rows_sorted) if rows_sorted else "<div>Aucun résultat TOP.</div>"
+        top_html = _render_simple_table(rows_sorted, TOP_K) if rows_sorted else "<div>Aucun résultat TOP.</div>"
 
-    # 5) Heatmap PF par paire/TF (si plotly OK)
+    # 5) Heatmap PF par paire/TF
     if PLOTLY_OK and rows_sorted:
         df_hm = pd.DataFrame([{"pair": r["pair"], "tf": r["tf"], "pf": r.get("pf",0)} for r in rows_sorted])
         order = ["1m","3m","5m","15m","30m","1h","4h","1d"]
@@ -142,7 +169,7 @@ def generate():
     else:
         heatmap_html = "<div>Heatmap indisponible (plotly absent ou aucune donnée).</div>"
 
-    # 6) Listes candidates/actives (en table simple)
+    # 6) Tables candidates/actives (HTML simple)
     def _to_rows(d: dict):
         out = []
         for k,v in (d or {}).items():
@@ -174,6 +201,7 @@ def generate():
     cand_html = _rows_to_html(cand_rows)
     curr_html = _rows_to_html(curr_rows)
 
+    # 7) Assembler HTML
     html = f"""<!DOCTYPE html>
 <html lang="fr"><head>
 <meta charset="utf-8"/>
@@ -188,7 +216,7 @@ small {{ color:#6b7280; }}
 </style>
 </head>
 <body>
-<h1>SCALP — Dashboard backtest <small>({now})</small></h1>
+<h1>SCALP — Dashboard backtest <small>({datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")})</small></h1>
 <div class="section card">
   <h2>TOP {TOP_K} (policy={risk_mode})</h2>
   {top_html}
@@ -210,6 +238,9 @@ small {{ color:#6b7280; }}
     with open(OUT_HTML, "w", encoding="utf-8") as f:
         f.write(html)
     _log(f"Dashboard écrit → {OUT_HTML}")
+
+    # 8) URL hint (toujours écrit, même s'il n'y a pas encore de données)
+    _write_url_hint()
 
 if __name__ == "__main__":
     try:
