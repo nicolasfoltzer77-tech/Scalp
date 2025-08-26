@@ -1,0 +1,26 @@
+{
+  "schema_version": "scalp-backtest/1.0",
+  "assets": ["BTCUSDT","ETHUSDT","SOLUSDT","BNBUSDT","XRPUSDT","ADAUSDT"],
+  "timeframes": ["1m","5m","15m"],
+  "walk_forward": {
+    "enabled": false,
+    "train_days": 90,
+    "test_days": 30,
+    "segments": 6
+  },
+  "costs": {
+    "maker_fee_rate": 0.0002,
+    "taker_fee_rate": 0.0008,
+    "slippage_bps": 5.0
+  },
+  "optimization": {
+    "engine": "optuna",
+    "enabled": false,
+    "n_trials": 100,
+    "timeout_sec": 1800
+  },
+  "constraints": {
+    "min_trades": 25,
+    "min_pf": 1.2
+  }
+}
