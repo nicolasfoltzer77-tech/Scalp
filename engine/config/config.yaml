@@ -55,3 +55,22 @@ notify:
 dash:
   port: 8501
   auto_open_browser: false
+
+runtime:
+  data_dir: /notebooks/scalp_data/data
+  reports_dir: /notebooks/scalp_data/reports
+  tf_list: ["1m","5m","15m"]
+  age_mult: 5
+  topN: 10
+  backfill_limit: 1500
+  risk_mode: aggressive
+  exec_enabled: false
+  html_port: 8888
+
+  # stratégie par défaut pour le backtest
+  strategy_name: "ema_atr_v1"
+  strategy_params:
+    ema_fast: 12
+    ema_slow: 34
+    atr_period: 14
+    lookahead_bars: 10
