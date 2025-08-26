@@ -7,7 +7,7 @@ SCALP — bot launcher (point d'entrée unique)
 
 from __future__ import annotations
 import os, sys, subprocess, time, yaml
-import tools.sitecustomize  # auto-bootstrap: PATH + deps + dossiers
+import sitecustomize  # auto-bootstrap: PATH + deps + dossiers
 
 PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
 CONFIG_YAML  = os.path.join(PROJECT_ROOT, "engine", "config", "config.yaml")
