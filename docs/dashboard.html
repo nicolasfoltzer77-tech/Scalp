@@ -1,0 +1,51 @@
+<!doctype html>
+<meta charset='utf-8'>
+<meta http-equiv='refresh' content='2'>
+<title>SCALP — Dashboard</title>
+
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 24px; color:#111;}
+      h1 { font-size: 32px; margin: 0 0 12px 0;}
+      .card { border:1px solid #e8e8e8; border-radius:10px; padding:16px 18px; margin:18px 0; }
+      table { border-collapse: collapse; width: 100%; }
+      th, td { border: 1px solid #eee; padding: 6px 8px; text-align: left; }
+      th { background: #fafafa; }
+      .MIS { color:#666; font-weight:700; }
+      .OLD { color:#d90000; font-weight:700; }
+      .DAT { color:#b88600; font-weight:700; }
+      .OK  { color:#0a910a; font-weight:700; }
+      small { color:#6b7280; }
+      .muted { color:#6b7280; font-size:12px; }
+    </style>
+    
+<h1>SCALP — Dashboard <small>(2025-08-26 18:01:17 UTC)</small></h1>
+<div class='muted'>Auto-refresh: 2s · risk_mode: conservative</div>
+<div class="card"><h2>Statut des données (pair × TF)</h2>
+<span style="display:inline-block;margin:4px 8px;padding:4px 10px;border-radius:14px;background:#6b7280;color:#fff;font-weight:600;">MIS: 0</span>
+<span style="display:inline-block;margin:4px 8px;padding:4px 10px;border-radius:14px;background:#d90000;color:#fff;font-weight:600;">OLD: 0</span>
+<span style="display:inline-block;margin:4px 8px;padding:4px 10px;border-radius:14px;background:#b88600;color:#fff;font-weight:600;">DAT: 0</span>
+<span style="display:inline-block;margin:4px 8px;padding:4px 10px;border-radius:14px;background:#0a910a;color:#fff;font-weight:600;">OK: 0</span>
+<div>Aucune matrice (status.json manquant).</div>
+</div>
+<div class="card"><h2>TOP 20 (policy=conservative)</h2>
+<div>Aucun résultat TOP.</div>
+</div>
+<div class="card"><h2>Dernières actions</h2>
+<div>Aucune info (last_errors.json manquant).</div>
+</div>
+
+    <script>
+      // Ajoute un cache-buster si l'utilisateur navigue via des liens internes
+      (function(){
+        const links = document.querySelectorAll("a[href]");
+        const stamp = Date.now();
+        links.forEach(a => {
+          try {
+            const u = new URL(a.href, window.location.href);
+            u.searchParams.set("_t", stamp);
+            a.href = u.toString();
+          } catch(e){}
+        });
+      })();
+    </script>
+    
