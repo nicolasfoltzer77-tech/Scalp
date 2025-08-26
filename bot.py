@@ -5,13 +5,15 @@
 SCALP — bot launcher (point d'entrée unique)
 """
 
-# --- ensure repo root on sys.path + force sitecustomize load ---
+# 1) __future__ doit être en premier
+from __future__ import annotations
+
+# 2) bootstrap: ajouter la racine du repo au sys.path puis charger sitecustomize
 import os, sys, pathlib
 REPO_ROOT = str(pathlib.Path(__file__).resolve().parent)
 if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
-import sitecustomize  # déclenche le bootstrap (PATH, __init__.py, deps)
-# ----------------------------------------------------------------
+import sitecustomize  # déclenche le bootstrap global (PATH, __init__.py, deps)
 
 from __future__ import annotations
 import os, sys, subprocess, time, yaml
