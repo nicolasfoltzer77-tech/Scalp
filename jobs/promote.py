@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import annotations
-import argparse, os, sys, time, logging, yaml, json, subprocess
+import argparse, os, sys, time, logging, yaml, json, subprocess, signal
 from copy import deepcopy
 from typing import Dict, List
 
@@ -30,8 +30,7 @@ def tf_minutes(tf: str) -> int:
     if tf.endswith("d"): return int(tf[:-1]) * 1440
     raise ValueError(f"TF non supporté: {tf}")
 
-def lifetime_minutes(tf: str, k: int) -> int:
-    return k * tf_minutes(tf)
+def lifetime_minutes(tf: str, k: int) -> int: return k * tf_minutes(tf)
 
 def better_than(a: dict, b: dict) -> bool:
     if a.get("pf", 0) != b.get("pf", 0): return a.get("pf", 0) > b.get("pf", 0)
@@ -50,15 +49,14 @@ def setup_logger(logs_dir: str) -> logging.Logger:
 
 RISK_POLICIES = POLICY
 def _score_row(r: Dict) -> float:
-    pf=float(r.get("pf",0)); mdd=float(r.get("mdd",1))
-    sh=float(r.get("sharpe",0)); wr=float(r.get("wr",0))
+    pf=float(r.get("pf",0)); mdd=float(r.get("mdd",1)); sh=float(r.get("sharpe",0)); wr=float(r.get("wr",0))
     return pf*2.0 + sh*0.5 + wr*0.5 - mdd*1.5
 
 def _pass(r, pol):
     return (r.get("pf",0)>=pol["pf"]) and (r.get("mdd",1)<=pol["mdd"]) and (r.get("trades",0)>=pol["trades"])
 
 def _explain_fail(r, pol):
-    why=[]
+    why=[]; 
     if r.get("pf",0)<pol["pf"]: why.append(f"PF {r.get('pf',0):.2f}<{pol['pf']:.2f}")
     if r.get("mdd",1)>pol["mdd"]: why.append(f"MDD {r.get('mdd',1):.2%}>{pol['mdd']:.0%}")
     if r.get("trades",0)<pol["trades"]: why.append(f"TR {r.get('trades',0)}<{pol['trades']}")
@@ -66,8 +64,7 @@ def _explain_fail(r, pol):
 
 def print_top(reports_dir: str, risk_mode: str, k:int=12):
     path = os.path.join(reports_dir, "summary.json")
-    try:
-        sm = json.load(open(path, "r", encoding="utf-8"))
+    try: sm = json.load(open(path, "r", encoding="utf-8"))
     except Exception:
         print("[TOP] summary.json introuvable"); return
     rows = sm.get("rows", [])
@@ -86,32 +83,59 @@ def print_top(reports_dir: str, risk_mode: str, k:int=12):
     passed = sum(1 for r in rows if _pass(r,pol))
     print(f"[TOP] Résumé: {passed} PASS / {len(rows)} total")
 
-def _call_script(project_root: str, script_relpath: str, env_extra=None):
-    path = os.path.join(project_root, script_relpath)
-    if not os.path.isfile(path):
-        print(f"[render-call] {script_relpath} introuvable, skip.")
-        return
-    env = os.environ.copy()
-    if env_extra: env.update(env_extra)
+# ---- rendu HTML
+def _render_html(project_root: str, reports_dir: str):
+    script = os.path.join(project_root, "tools", "render_report.py")
+    if not os.path.isfile(script):
+        print("[render] tools/render_report.py introuvable"); return
+    env = os.environ.copy(); env["SCALP_REPORTS_DIR"] = reports_dir
     try:
-        subprocess.check_call([sys.executable, path], env=env)
+        subprocess.check_call([sys.executable, script], env=env)
     except subprocess.CalledProcessError as e:
-        print(f"[render-call] {script_relpath} a échoué (code {e.returncode}).")
+        print(f"[render] échec génération HTML (code {e.returncode}).")
+
+# ---- mini serveur HTTP pour ngrok (idempotent)
+def _ensure_http_server(project_root: str, cfg_rt: dict):
+    port = int(cfg_rt.get("html_port", 8888))
+    pidfile = os.path.join(project_root, ".httpserver.pid")
+    # déjà lancé ?
+    if os.path.isfile(pidfile):
+        try:
+            pid = int(open(pidfile).read().strip())
+            os.kill(pid, 0)
+            print(f"[serve] http.server déjà actif (PID {pid}, port {port})")
+            return
+        except Exception:
+            try: os.remove(pidfile)
+            except Exception: pass
+    # lancer
+    try:
+        out = open(os.path.join(project_root, "httpserver.out"), "a")
+        err = open(os.path.join(project_root, "httpserver.err"), "a")
+        proc = subprocess.Popen(
+            [sys.executable, "-m", "http.server", str(port), "--bind", "0.0.0.0"],
+            cwd=project_root, stdout=out, stderr=err, preexec_fn=os.setsid
+        )
+        with open(pidfile, "w") as f: f.write(str(proc.pid))
+        print(f"[serve] http.server lancé (PID {proc.pid}) → http://localhost:{port}/dashboard.html")
+        # Si NGROK_URL est posé, tools/render_report.py écrira aussi l’URL publique dans dashboard_url.txt
+    except Exception as e:
+        print(f"[serve] échec démarrage http.server: {e}")
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", default=DEFAULT_CONFIG)
     ap.add_argument("--source", default=None)
     ap.add_argument("--dest", default=DEFAULT_DEST)
-    ap.add_argument("--backup", action="store_true", help="(compat)")
+    ap.add_argument("--backup", action="store_true")
     ap.add_argument("--top-k", type=int, default=12)
     args = ap.parse_args()
 
     cfg = load_yaml(args.config)
     rt = cfg.get("runtime", {})
     risk_mode = rt.get("risk_mode", "normal")
-    age_mult = int(rt.get("age_mult", 5))
-    data_dir = rt.get("data_dir", "/notebooks/scalp_data/data")
+    age_mult  = int(rt.get("age_mult", 5))
+    data_dir  = rt.get("data_dir", "/notebooks/scalp_data/data")
     reports_dir = rt.get("reports_dir", "/notebooks/scalp_data/reports")
     logs_dir = os.path.join(os.path.dirname(data_dir), "logs")
     project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -124,9 +148,8 @@ def main():
     if not cand:
         log.info(f"Aucune stratégie candidate ({source}).")
         print_top(reports_dir, risk_mode, k=args.top_k)
-        # Rendus (HTML si présent, puis images)
-        _call_script(project_root, os.path.join("tools","render_report.py"), env_extra={"SCALP_REPORTS_DIR": reports_dir})
-        _call_script(project_root, os.path.join("tools","render_report_images.py"), env_extra={"SCALP_REPORTS_DIR": reports_dir})
+        _render_html(project_root, reports_dir)
+        _ensure_http_server(project_root, rt)
         return
 
     now = int(time.time()); changes = []
@@ -136,7 +159,7 @@ def main():
         try: _, tf = key.split(":")
         except ValueError: continue
         created = int(strat.get("created_at") or now)
-        exp = strat.get("expires_at") or (created + (age_mult*tf_minutes(tf))*60)
+        exp = strat.get("expires_at") or (created + lifetime_minutes(tf, age_mult)*60)
         if now >= exp and not strat.get("expired", False):
             strat["expired"] = True; strat["expires_at"] = exp; changes.append(f"EXPIRE {key}")
 
@@ -151,15 +174,15 @@ def main():
         dest_obj["strategies"] = cur; save_yaml(dest_obj, args.dest)
         log.info("Aucun candidat après filtrage risk_mode.")
         print_top(reports_dir, risk_mode, k=args.top_k)
-        _call_script(project_root, os.path.join("tools","render_report.py"), env_extra={"SCALP_REPORTS_DIR": reports_dir})
-        _call_script(project_root, os.path.join("tools","render_report_images.py"), env_extra={"SCALP_REPORTS_DIR": reports_dir})
+        _render_html(project_root, reports_dir)
+        _ensure_http_server(project_root, rt)
         return
 
     for key, s in filt.items():
         try: _, tf = key.split(":")
         except ValueError: log.warning(f"Clé invalide {key}"); continue
         created = int(s.get("created_at") or now)
-        s["expires_at"] = created + (age_mult*tf_minutes(tf))*60
+        s["expires_at"] = created + lifetime_minutes(tf, age_mult)*60
         s["expired"] = False
 
         old = cur.get(key)
@@ -184,8 +207,8 @@ def main():
     log.info(f"Écrit : {args.dest}")
 
     print_top(reports_dir, risk_mode, k=args.top_k)
-    _call_script(project_root, os.path.join("tools","render_report.py"), env_extra={"SCALP_REPORTS_DIR": reports_dir})
-    _call_script(project_root, os.path.join("tools","render_report_images.py"), env_extra={"SCALP_REPORTS_DIR": reports_dir})
+    _render_html(project_root, reports_dir)
+    _ensure_http_server(project_root, rt)
 
 if __name__ == "__main__":
     main()
