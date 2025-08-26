@@ -5,16 +5,22 @@ runtime:
   tf_list: [ "1m", "5m", "15m" ]
   age_mult: 5
   topN: 10
-  refresh_interval_secs: 2
+  refresh_interval_secs: 5
   backfill_limit: 1500
 
-  auto_refresh: true
-  refresh_every_secs: 30       # cadence du worker refresh
-  min_fresh_ratio: 0.8         # % de paires fraiches requis pour lancer backtest
-  backtest_cooldown_secs: 120  # délai mini entre deux backtests
   risk_mode: "conservative"      # conservative | normal | aggressive
   exec_enabled: false
   html_port: 8888
+
+  # === parallélisme backtest ===
+  backtest_max_workers: 4        # nb de workers CPU (ProcessPool)
+  backtest_chunk_size: 32        # nb de (pair,tf) par lot envoyé aux workers
+
+  # === orchestrateur asynchrone ===
+  auto_refresh: true
+  refresh_every_secs: 30         # cadence worker refresh
+  min_fresh_ratio: 0.8           # % cellules fraîches (DAT+OK) requis pour lancer backtest
+  backtest_cooldown_secs: 120    # délai mini entre 2 backtests
 
   strategy_name: "ema_atr_v1"
 
