@@ -2,38 +2,33 @@
 # -*- coding: utf-8 -*-
 
 """
-SCALP — Génère un dashboard HTML dynamique dans /docs
-et publie sur GitHub Pages (copie JSON + health.json + push).
+SCALP — Génère un dashboard HTML dans /docs et publie via tools.publish_pages
+(les fichiers restent dans <repo>/tools/).
 
 Robustesse :
-- Ajoute les chemins candidats dans sys.path
-- Essaye importlib (tools.publish_pages -> main())
-- Sinon cherche publish_pages.py dans plusieurs emplacements et exécute
-- Journalise tous les chemins testés
+- Force l’ajout de <repo> ET <repo>/tools dans sys.path
+- Importe from tools import publish_pages as pub puis pub.main()
+- Fallback : exécution directe <repo>/tools/publish_pages.py
 """
 
 from __future__ import annotations
-import os, sys, subprocess, importlib, traceback
+import os, sys, subprocess, traceback
 from pathlib import Path
 
-# ----------------- Réglages -----------------
 AUTO_REFRESH_SECS = int(os.environ.get("AUTO_REFRESH_SECS", "5"))
 
-# ----------------- Chemins de base -----------------
-THIS_FILE  = Path(__file__).resolve()
-REPO_ROOT  = THIS_FILE.parents[1]              # <repo>
-DOCS_DIR   = REPO_ROOT / "docs"
+# --- chemins de base ---
+THIS_FILE = Path(__file__).resolve()
+REPO_ROOT = THIS_FILE.parents[1]             # <repo>
+DOCS_DIR  = REPO_ROOT / "docs"
 DOCS_DIR.mkdir(parents=True, exist_ok=True)
 
-# Certains dumps ont la structure <repo>/scalp/...
-POSSIBLE_ROOTS = [REPO_ROOT, REPO_ROOT / "scalp"]
+# -> Variante 2 : on force l’import depuis <repo>/tools
+TOOLS_DIR = REPO_ROOT / "tools"
+for p in (REPO_ROOT, TOOLS_DIR):
+    if p.exists() and str(p) not in sys.path:
+        sys.path.insert(0, str(p))
 
-# Assurer sys.path propre
-for root in POSSIBLE_ROOTS:
-    if root.exists() and str(root) not in sys.path:
-        sys.path.insert(0, str(root))
-
-# ----------------- HTML (UI dynamique) -----------------
 HTML = f"""<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -64,11 +59,7 @@ HTML = f"""<!doctype html>
 </div>
 
 <div class="grid-2">
-  <div class="card" id="healthCard">
-    <h2>Health</h2>
-    <div id="healthBody" class="mono muted">Chargement…</div>
-  </div>
-
+  <div class="card" id="healthCard"><h2>Health</h2><div id="healthBody" class="mono muted">Chargement…</div></div>
   <div class="card">
     <h2>Compteurs</h2>
     <div id="counters">
@@ -115,7 +106,7 @@ function tick(){{countdown-=1;if(countdown<=0)location.reload();document.getElem
 document.getElementById('btnRefresh').addEventListener('click',()=>location.reload());
 
 function badge(st){{return `<td class="status-${{st}}">${{st}}</td>`;}}
-function counters(c){{for(const k of ["MIS","OLD","DAT","OK"]){{const el=document.getElementById(k);el.textContent=`${{k}}: ${{c[k]||0}}`;}}}}
+function counters(c){{for(const k of ["MIS","OLD","DAT","OK"]){{document.getElementById(k).textContent=`${{k}}: ${{c[k]||0}}`;}}}}
 function heatmap(matrix,tf){{if(!matrix||!matrix.length){{document.getElementById('heatmap').innerHTML="<div class='muted'>Aucune matrice.</div>";return;}}
   let h="<table><thead><tr><th>PAIR</th>"+tf.map(t=>`<th>${{t}}</th>`).join("")+"</tr></thead><tbody>";
   for(const row of matrix){{h+=`<tr><td><b>${{row.pair}}</b></td>`;for(const t of tf){{h+=badge(row[t]||"MIS");}}h+="</tr>";}}
@@ -144,8 +135,9 @@ async function refreshAll(){{setNow();let status={{}},summary={{}},last={{}},hea
   const hb=document.getElementById('healthBody');if(Object.keys(health).length){{const st=(health.status||"").toLowerCase();const cls=st.includes("ok")?"health-ok":(st.includes("local")||st.includes("no-change")?"health-warn":"health-bad");
     hb.innerHTML=`<div>generated_at: <b>${{health.generated_at||"?"}}</b></div><div>commit: <span class="mono">${{(health.commit||"").substring(0,10)}}</span></div><div>status: <span class="${{cls}}">${{health.status}}</span></div>`;}}
   else hb.textContent="health.json manquant (ok si premier run).";
-  counters(status.counts||{{}});const tf=(status.matrix&&status.matrix[0])?Object.keys(status.matrix[0]).filter(k=>k!=="pair"):["1m","5m","15m"];heatmap(status.matrix||[],tf);
-  renderTop(summary.rows||[]);document.getElementById('lastErrors').textContent=JSON.stringify(last,null,2);
+  const counts=(status.counts||{{}});counters(counts);
+  const tf=(status.matrix&&status.matrix[0])?Object.keys(status.matrix[0]).filter(k=>k!=="pair"):["1m","5m","15m"];heatmap(status.matrix||[],tf);
+  renderTop((summary.rows||[]));document.getElementById('lastErrors').textContent=JSON.stringify(last,null,2);
 }}
 document.getElementById('btnApply').addEventListener('click',()=>refreshAll());
 document.getElementById('btnReset').addEventListener('click',()=>{{document.getElementById('filterPair').value="";document.querySelectorAll('.tfChk').forEach(ch=>ch.checked=(["1m","5m","15m"].includes(ch.value)));document.getElementById('minPF').value="1.20";document.getElementById('maxMDD').value="30";document.getElementById('minTR').value="25";refreshAll();}});
@@ -153,65 +145,34 @@ setNow();refreshAll();setInterval(tick,1000);
 </script>
 """
 
-# ----------------- Publication robuste -----------------
-def _try_import_and_run():
-    """
-    Essaie : import tools.publish_pages et appelle main().
-    Retourne True si exécuté, False sinon.
-    """
-    try:
-        mod = importlib.import_module("tools.publish_pages")
-        if hasattr(mod, "main"):
-            print("[render] publish via import tools.publish_pages …")
-            mod.main()
-            return True
-    except Exception:
-        traceback.print_exc()
-    return False
-
-def _try_run_script():
-    """
-    Cherche un fichier publish_pages.py dans plusieurs emplacements et l'exécute.
-    Retourne True si exécuté, False sinon.
-    """
-    candidates = [
-        REPO_ROOT / "tools" / "publish_pages.py",
-        REPO_ROOT / "scalp" / "tools" / "publish_pages.py",
-    ]
-    print("[render] candidats publish_pages:", ", ".join(str(p) for p in candidates))
-    for p in candidates:
-        if p.exists():
-            print(f"[render] publish via fichier: {p}")
-            try:
-                subprocess.run([sys.executable, str(p)], cwd=str(REPO_ROOT), check=True)
-                return True
-            except Exception:
-                traceback.print_exc()
-    return False
-
 def _publish():
-    # 1) import direct si possible
-    if _try_import_and_run():
-        return
-    # 2) sinon exécution d’un fichier trouvé
-    if _try_run_script():
-        return
-    # 3) dernier recours : -m (utile si package bien installé)
+    # Import direct (Variante 2)
     try:
-        print("[render] publish via -m tools.publish_pages …")
-        subprocess.run([sys.executable, "-m", "tools.publish_pages"], cwd=str(REPO_ROOT), check=True)
-    except Exception:
+        from tools import publish_pages as pub
+        print("[render] publish via import tools.publish_pages …")
+        pub.main()
+        return
+    except Exception as e:
+        print(f"[render] import direct échoué: {e}")
         traceback.print_exc()
-        print("[render] ⚠️ Publication ignorée (module introuvable).")
 
-# ----------------- Main -----------------
+    # Fallback: exécution fichier
+    candidate = TOOLS_DIR / "publish_pages.py"
+    print(f"[render] fallback fichier: {candidate}")
+    if candidate.exists():
+        try:
+            subprocess.run([sys.executable, str(candidate)],
+                           cwd=str(REPO_ROOT), check=True)
+            return
+        except Exception:
+            traceback.print_exc()
+
+    print("[render] ⚠️ Publication ignorée (module/fichier introuvable).")
+
 def main():
-    # écrire HTML
     (DOCS_DIR / "index.html").write_text(HTML, encoding="utf-8")
     (DOCS_DIR / "dashboard.html").write_text(HTML, encoding="utf-8")
     print(f"[render] Écrit → {DOCS_DIR / 'index.html'}")
-
-    # publier (robuste)
     _publish()
 
 if __name__ == "__main__":
