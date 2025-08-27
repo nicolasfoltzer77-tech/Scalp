@@ -9,19 +9,17 @@ Fait :
 - écrit docs/health.json (commit, horodatage, statut)
 - git add/commit/push sur la branche configurée
 
-Config attendue (variables d'env) :
-  GIT_USER      : ex. "nicolasfoltzer77-tech"
-  GIT_EMAIL     : ex. "you@example.com" (optionnel)
-  GIT_TOKEN     : PAT GitHub (scope repo)
-  GIT_REPO      : nom du repo (ex. "scalp")
-  GIT_BRANCH    : "main" (par défaut)
-Optionnel :
-  PAGES_URL_OUT : chemin fichier où écrire l'URL finale (ex. docs/pages_url.txt)
+Config (variables d'env) :
+  GIT_USER    : ex. "nicolasfoltzer77-tech"
+  GIT_EMAIL   : ex. "you@example.com" (optionnel)
+  GIT_TOKEN   : PAT GitHub (scope repo)
+  GIT_REPO    : nom du repo (ex. "scalp")
+  GIT_BRANCH  : "main" (défaut)
+  PAGES_URL_OUT (optionnel) : chemin pour écrire l’URL (défaut docs/pages_url.txt)
 
 Hypothèses :
-- On exécute ce script à la racine du repo (cwd=<repo>)
-- Git origin est GitHub
-- Pages est configuré sur Branch: main, Folder: /docs
+- Exécution depuis la racine du repo (cwd=<repo>)
+- Pages activé: Settings → Pages → Source = Branch main, Folder /docs
 """
 
 from __future__ import annotations
@@ -29,7 +27,7 @@ import json, os, subprocess, sys, time, shutil
 from pathlib import Path
 
 REPO_ROOT   = Path.cwd()
-REPORTS_DIR = REPO_ROOT / "reports"            # <- tes jobs écrivent ici
+REPORTS_DIR = REPO_ROOT / "reports"
 DOCS_DIR    = REPO_ROOT / "docs"
 DATA_DIR    = DOCS_DIR / "data"
 DOCS_DIR.mkdir(parents=True, exist_ok=True)
@@ -55,7 +53,6 @@ def git_config():
         sh(["git", "config", "user.email", GIT_EMAIL], cwd=REPO_ROOT)
 
 def git_remote_with_token():
-    # récupère l'URL origin et injecte le token si besoin
     try:
         url = sh(["git", "remote", "get-url", "origin"], cwd=REPO_ROOT)
     except Exception as e:
@@ -64,20 +61,15 @@ def git_remote_with_token():
     if "github.com" not in url:
         print(f"[publish] origin n'est pas GitHub: {url}")
         return
-    if GIT_TOKEN and "@" not in url:
-        # https://<token>@github.com/user/repo.git
-        if url.startswith("https://"):
-            url = url.replace("https://", f"https://{GIT_TOKEN}@", 1)
-            sh(["git", "remote", "set-url", "origin", url], cwd=REPO_ROOT)
-            print("[publish] remote origin mis à jour (token)")
-        else:
-            print("[publish] URL origin non-https, je ne touche pas:", url)
+    if GIT_TOKEN and "@" not in url and url.startswith("https://"):
+        url = url.replace("https://", f"https://{GIT_TOKEN}@", 1)
+        sh(["git", "remote", "set-url", "origin", url], cwd=REPO_ROOT)
+        print("[publish] remote origin mis à jour (token)")
 
 def copy_reports():
-    # Fichiers possibles côté pipeline
     candidates = [
         "status.json", "summary.json", "last_errors.json",
-        "strategies.yml.next", "strategies.yml",   # si tu veux les exposer
+        "strategies.yml.next", "strategies.yml",
     ]
     copied = []
     for name in candidates:
@@ -86,30 +78,24 @@ def copy_reports():
             dst = DATA_DIR / name
             shutil.copy2(src, dst)
             copied.append(name)
-    print(f"[publish] copiés vers docs/data/: {copied}" if copied else "[publish] aucun JSON trouvé à copier (ok au premier run).")
+    print(f"[publish] copiés vers docs/data/: {copied}" if copied
+          else "[publish] aucun JSON à copier (ok au premier run).")
 
 def write_health(status: str = "ok"):
-    # récupère le dernier commit court
     try:
         commit = sh(["git", "rev-parse", "--short", "HEAD"], cwd=REPO_ROOT)
     except Exception:
         commit = "unknown"
-    payload = {
-        "generated_at": int(time.time()),
-        "commit": commit,
-        "status": status
-    }
+    payload = {"generated_at": int(time.time()), "commit": commit, "status": status}
     (DOCS_DIR / "health.json").write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     print("[publish] écrit docs/health.json")
 
 def pages_url():
-    # URL standard GitHub Pages
     owner = GIT_USER or "owner"
     repo  = GIT_REPO or REPO_ROOT.name
     return f"https://{owner}.github.io/{repo}/"
 
 def git_add_commit_push():
-    # add/commit/push
     try:
         sh(["git", "add", "docs"], cwd=REPO_ROOT)
         sh(["git", "commit", "-m", "chore(pages): publish dashboard"], cwd=REPO_ROOT, check=False)
