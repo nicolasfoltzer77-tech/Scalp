@@ -2,182 +2,416 @@
 # -*- coding: utf-8 -*-
 
 """
-SCALP — Génère un dashboard HTML dans /docs et publie via tools.publish_pages
-(les fichiers restent dans <repo>/tools/).
+tools/render_report.py
 
-Robustesse :
-- Force l’ajout de <repo> ET <repo>/tools dans sys.path
-- Importe from tools import publish_pages as pub puis pub.main()
-- Fallback : exécution directe <repo>/tools/publish_pages.py
+Génère un dashboard statique (index.html) dans <REPO_PATH>/docs/
++ push automatique vers GitHub Pages (via tools.publish_pages).
+
+Points clés:
+- Auto-refresh 5 s (compte à rebours + bouton "Refresh")
+- Cartes "Health" / "Compteurs" avec placeholders si pas de data
+- Heatmap PF pair × TF (Plotly), sinon placeholder graphique
+- TOP résultats avec filtre pair/TF côté client
+- Lecture des JSON depuis <REPO_PATH>/reports/
+- Copie/push des artefacts vers /docs/ via publish_pages
+
+ENV utiles:
+  REPO_PATH=/notebooks/scalp         # défaut
+  GIT_USER / GIT_TOKEN / GIT_REPO    # pour publish_pages
 """
 
 from __future__ import annotations
-import os, sys, subprocess, traceback
+import json, os, sys, time, traceback
 from pathlib import Path
+from datetime import datetime, timezone
 
-AUTO_REFRESH_SECS = int(os.environ.get("AUTO_REFRESH_SECS", "5"))
+# -----------------------------------------------------------------------------
+# Helpers
+# -----------------------------------------------------------------------------
 
-# --- chemins de base ---
-THIS_FILE = Path(__file__).resolve()
-REPO_ROOT = THIS_FILE.parents[1]             # <repo>
-DOCS_DIR  = REPO_ROOT / "docs"
+REPO_PATH = Path(os.environ.get("REPO_PATH", "/notebooks/scalp")).resolve()
+DOCS_DIR  = REPO_PATH / "docs"
+DATA_DIR  = DOCS_DIR / "data"
+REPORTS_DIR = REPO_PATH / "reports"
 DOCS_DIR.mkdir(parents=True, exist_ok=True)
+DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-# -> Variante 2 : on force l’import depuis <repo>/tools
-TOOLS_DIR = REPO_ROOT / "tools"
-for p in (REPO_ROOT, TOOLS_DIR):
-    if p.exists() and str(p) not in sys.path:
-        sys.path.insert(0, str(p))
+def _load_json(p: Path):
+    try:
+        if not p.exists():
+            return None
+        return json.loads(p.read_text(encoding="utf-8"))
+    except Exception:
+        return None
 
-HTML = f"""<!doctype html>
+def _ts_utc_now() -> int:
+    return int(time.time())
+
+def _ts_to_iso_utc(ts: int | float | None) -> str:
+    if not ts:
+        return "—"
+    return datetime.fromtimestamp(int(ts), tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+
+def _age_human(ts: int | float | None) -> str:
+    if not ts:
+        return "n/a"
+    delta = max(0, _ts_utc_now() - int(ts))
+    if delta < 60:
+        return f"{delta}s"
+    if delta < 3600:
+        m = delta // 60
+        return f"{m} min"
+    h = delta // 3600
+    return f"{h} h"
+
+def _safe_get(d: dict | None, *keys, default=None):
+    cur = d or {}
+    for k in keys:
+        if not isinstance(cur, dict):
+            return default
+        cur = cur.get(k)
+    return cur if cur is not None else default
+
+# -----------------------------------------------------------------------------
+# Lecture données
+# -----------------------------------------------------------------------------
+
+def read_inputs():
+    # status.json: photo MIS/OLD/DAT/OK
+    status = _load_json(REPORTS_DIR / "status.json") or {}
+    # summary.json: résumé backtest (top, heatmap, etc.)
+    summary = _load_json(REPORTS_DIR / "summary.json") or {}
+    # health.json: généré au publish
+    health = _load_json(DOCS_DIR / "health.json") or {}
+
+    # Compteurs
+    counts = {
+        "MIS": int(_safe_get(status, "counts", "MIS", default=0) or 0),
+        "OLD": int(_safe_get(status, "counts", "OLD", default=0) or 0),
+        "DAT": int(_safe_get(status, "counts", "DAT", default=0) or 0),
+        "OK":  int(_safe_get(status, "counts", "OK",  default=0) or 0),
+    }
+    # Fraîcheur (pour la bannière)
+    generated_at = _safe_get(summary, "generated_at", default=None)
+    risk_mode    = _safe_get(summary, "risk_mode", default="n/a")
+    walkf        = _safe_get(summary, "meta", "walk_forward", default={})
+    opti         = _safe_get(summary, "meta", "optuna", default={})
+    rows         = _safe_get(summary, "rows", default=[]) or []
+
+    # Pour heatmap: on attend des lignes avec pair, tf, pf
+    heat_rows = []
+    for r in rows:
+        pair = r.get("pair") or r.get("symbol") or r.get("pair_tf", "").split(":")[0]
+        tf   = r.get("tf")   or (r.get("pair_tf", "").split(":")[1] if ":" in r.get("pair_tf","") else None)
+        pf   = r.get("metrics", {}).get("pf") or r.get("pf")
+        if pair and tf and pf is not None:
+            try:
+                heat_rows.append((pair, tf, float(pf)))
+            except Exception:
+                pass
+
+    # Liste pairs / tfs pour filtre TOP
+    pairs = sorted({p for p, _, _ in heat_rows}) if heat_rows else sorted({r.get("pair") for r in rows if r.get("pair")})
+    tfs   = sorted({t for _, t, _ in heat_rows}) if heat_rows else sorted({r.get("tf") for r in rows if r.get("tf")})
+
+    payload = {
+        "status": status,
+        "summary": summary,
+        "health": health,
+        "counts": counts,
+        "rows": rows,
+        "heat_rows": heat_rows,
+        "pairs": [p for p in pairs if p],
+        "tfs":   [t for t in tfs   if t],
+        "generated_at": generated_at,
+        "risk_mode": risk_mode,
+        "walk_forward": walkf,
+        "optuna": opti,
+    }
+    return payload
+
+# -----------------------------------------------------------------------------
+# Rendu HTML
+# -----------------------------------------------------------------------------
+
+PLOTLY_CDN = "https://cdn.plot.ly/plotly-2.27.0.min.js"
+
+def render_html(data: dict) -> str:
+    counts = data["counts"]
+    rows   = data["rows"]
+    heat   = data["heat_rows"]
+    pairs  = data["pairs"]
+    tfs    = data["tfs"]
+
+    now_iso = _ts_to_iso_utc(_ts_utc_now())
+    gen_iso = _ts_to_iso_utc(data.get("generated_at"))
+    gen_age = _age_human(data.get("generated_at"))
+
+    # prépare données heatmap pour JS
+    # on crée un dict {pair: {tf: pf}}
+    heat_map = {}
+    for p, tf, pf in heat:
+        heat_map.setdefault(p, {})[tf] = pf
+
+    # Top K (limité pour lisibilité)
+    # score par défaut: PF desc, WR desc, -MDD
+    def _score(r):
+        m = r.get("metrics", {})
+        pf   = m.get("pf") or 0.0
+        wr   = m.get("wr") or 0.0
+        mdd  = m.get("mdd") or 0.0
+        # simple score
+        return (float(pf), float(wr), -float(mdd))
+
+    top_rows = sorted(rows, key=_score, reverse=True)[:50]
+
+    # JS: on injecte heat_map, pairs, tfs, et top_rows pour filtres client
+    def js_json_safe(obj):
+        return json.dumps(obj, ensure_ascii=False)
+
+    html = f"""
+<!DOCTYPE html>
+<html lang="fr">
+<head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>SCALP — Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="{PLOTLY_CDN}"></script>
 <style>
-  :root {{ --ok:#0a910a; --dat:#b88600; --old:#d90000; --mis:#6b7280; --muted:#6b7280; --border:#e8e8e8; --bg:#fafafa; }}
-  body {{ font-family: system-ui,-apple-system,Segoe UI,Roboto,sans-serif; margin: 20px; color:#111; }}
-  h1 {{ font-size: 28px; margin: 0 0 10px; }} h2 {{ font-size: 20px; margin: 0 0 10px; }}
-  .row {{ display:flex; gap:16px; flex-wrap:wrap; align-items:center; }}
-  .card {{ border:1px solid var(--border); border-radius:10px; padding:14px 16px; margin:16px 0; background:#fff; }}
-  .pill {{ display:inline-block; margin:4px 8px; padding:4px 10px; border-radius:14px; color:#fff; font-weight:600; }}
-  .pill.ok  {{ background: var(--ok); }} .pill.dat {{ background: var(--dat); }} .pill.old {{ background: var(--old); }} .pill.mis {{ background: var(--mis); }}
-  .muted {{ color: var(--muted); font-size:12px; }} .mono {{ font-family: ui-monospace,Menlo,Consolas,monospace; }}
-  .grid-2 {{ display:grid; grid-template-columns:1fr; gap:16px; }} @media (min-width:980px){{ .grid-2 {{ grid-template-columns:1fr 1fr; }} }}
-  table {{ border-collapse: collapse; width: 100%; }} th,td {{ border:1px solid #eee; padding:6px 8px; text-align:left; }}
-  th {{ background: var(--bg); cursor: pointer; user-select:none; }}
-  th.sort-asc::after {{ content:" \\25B2"; }} th.sort-desc::after {{ content:" \\25BC"; }}
-  .status-OK{{color:var(--ok);font-weight:700}} .status-DAT{{color:var(--dat);font-weight:700}}
-  .status-OLD{{color:var(--old);font-weight:700}} .status-MIS{{color:var(--mis);font-weight:700}}
-  .controls .block{{margin-right:16px}} .controls input[type="number"]{{width:90px}} .controls label{{margin-right:8px}}
-  .health-ok{{color:var(--ok);font-weight:700}} .health-warn{{color:var(--dat);font-weight:700}} .health-bad{{color:var(--old);font-weight:700}}
+  :root {{
+    --bg:#0b0f14; --card:#121820; --text:#e6edf3; --muted:#9aa6b2;
+    --ok:#2aa745; --dat:#c89d28; --old:#d0443e; --mis:#7b8a97; --chip:#1f2937;
+    --accent:#3b82f6; --border:#223040;
+  }}
+  html,body {{ background:var(--bg); color:var(--text); font:16px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Arial; margin:0; padding:0; }}
+  .wrap {{ max-width:1100px; margin:0 auto; padding:20px; }}
+  h1 {{ font-size:2.1rem; margin:10px 0 8px; }}
+  small.muted {{ color:var(--muted); }}
+  .row {{ display:grid; grid-template-columns: 1fr; gap:16px; }}
+  @media (min-width: 900px) {{
+    .row-2 {{ grid-template-columns: 1fr 1fr; }}
+  }}
+  .card {{ background:var(--card); border:1px solid var(--border); border-radius:10px; padding:18px; }}
+  .title {{ font-size:1.25rem; margin:0 0 10px; }}
+  .chips span {{ display:inline-block; background:var(--chip); padding:6px 10px; border-radius:999px; margin-right:8px; font-weight:600; }}
+  .chips .mis {{ background:var(--mis); color:#081217; }}
+  .chips .old {{ background:var(--old); color:#fff; }}
+  .chips .dat {{ background:var(--dat); color:#0b0f14; }}
+  .chips .ok  {{ background:var(--ok);  color:#0b0f14; }}
+  .muted {{ color:var(--muted); }}
+  .flex {{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; }}
+  button.refresh {{ background:var(--accent); color:white; border:0; padding:6px 12px; border-radius:8px; cursor:pointer; }}
+  table {{ width:100%; border-collapse:collapse; }}
+  th,td {{ padding:8px 10px; border-bottom:1px solid var(--border); }}
+  th {{ text-align:left; color:var(--muted); font-weight:600; }}
+  tr:hover td {{ background:#0f141c; }}
+  .right {{ text-align:right; }}
+  .placeholder {{ border:1px dashed var(--border); color:var(--muted); padding:18px; border-radius:10px; }}
+  .badge {{ padding:3px 8px; border-radius:6px; font-weight:700; }}
+  .badge.ok  {{ background:var(--ok);  color:#0b0f14; }}
+  .badge.dat {{ background:var(--dat); color:#0b0f14; }}
+  .badge.old {{ background:var(--old); color:#fff;    }}
+  .badge.mis {{ background:var(--mis); color:#081217;}}
 </style>
-
-<h1>SCALP — Dashboard <span id="now" class="muted"></span></h1>
-<div class="row">
-  <div class="muted">Auto-refresh: <b>{AUTO_REFRESH_SECS}s</b> · <span id="countdown" class="muted"></span></div>
-  <button id="btnRefresh">Refresh</button>
-</div>
-
-<div class="grid-2">
-  <div class="card" id="healthCard"><h2>Health</h2><div id="healthBody" class="mono muted">Chargement…</div></div>
-  <div class="card">
-    <h2>Compteurs</h2>
-    <div id="counters">
-      <span class="pill mis" id="MIS">MIS: 0</span>
-      <span class="pill old" id="OLD">OLD: 0</span>
-      <span class="pill dat" id="DAT">DAT: 0</span>
-      <span class="pill ok"  id="OK">OK: 0</span>
-    </div>
-    <div class="muted" style="margin-top:6px">MIS: no data · OLD: stale · DAT: fresh CSV, no active strategy · OK: fresh CSV + active strategy</div>
+</head>
+<body>
+<div class="wrap">
+  <h1>SCALP — Dashboard <small class="muted">({now_iso})</small></h1>
+  <div class="flex" style="margin:6px 0 18px;">
+    <div class="muted">Auto-refresh: <b id="rf-interval">5s</b> · reload dans <span id="rf-count">5</span>s</div>
+    <button class="refresh" onclick="location.reload()">Refresh</button>
   </div>
-</div>
 
-<div class="card"><h2>Heatmap (pair × TF)</h2><div id="heatmap">Chargement…</div></div>
-
-<div class="card">
-  <h2>TOP résultats</h2>
-  <div class="controls row" style="margin-bottom:10px">
-    <div class="block"><label>Pair :</label><input type="text" id="filterPair" placeholder="ex: BTC" /></div>
-    <div class="block"><label>TF :</label>
-      <label><input type="checkbox" class="tfChk" value="1m" checked>1m</label>
-      <label><input type="checkbox" class="tfChk" value="3m">3m</label>
-      <label><input type="checkbox" class="tfChk" value="5m" checked>5m</label>
-      <label><input type="checkbox" class="tfChk" value="15m" checked>15m</label>
-      <label><input type="checkbox" class="tfChk" value="30m">30m</label>
+  <div class="row row-2">
+    <div class="card">
+      <div class="title">Health</div>
+      <div id="health">
+        <div><span class="muted">generated_at:</span> <b>{_safe_get(data,'health','generated_at',default='—')}</b></div>
+        <div><span class="muted">commit:</span> <b>{_safe_get(data,'health','commit',default='—')}</b></div>
+        <div><span class="muted">status:</span> <b style="color:var(--ok);">{_safe_get(data,'health','status',default='pending')}</b></div>
+      </div>
     </div>
-    <div class="block"><label>min PF :</label><input type="number" id="minPF" step="0.01" value="1.20"></div>
-    <div class="block"><label>max MDD % :</label><input type="number" id="maxMDD" step="1" value="30"></div>
-    <div class="block"><label>min trades :</label><input type="number" id="minTR" step="1" value="25"></div>
-    <div class="block"><button id="btnApply">Appliquer filtres</button><button id="btnReset">Reset</button></div>
-  </div>
-  <div id="topTableWrap">Chargement…</div>
-</div>
 
-<div class="card"><h2>Dernières actions</h2>
-  <pre id="lastErrors" class="mono" style="white-space:pre-wrap;background:#fafafa;padding:10px;border-radius:8px;border:1px solid #eee;">Chargement…</pre>
+    <div class="card">
+      <div class="title">Compteurs</div>
+      <div class="chips">
+        <span class="mis">MIS: {counts['MIS']}</span>
+        <span class="old">OLD: {counts['OLD']}</span>
+        <span class="dat">DAT: {counts['DAT']}</span>
+        <span class="ok">OK: {counts['OK']}</span>
+      </div>
+      <div class="muted" style="margin-top:8px;">
+        MIS: no data · OLD: stale · DAT: fresh CSV, no active strategy · OK: fresh CSV + active strategy
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px;">
+    <div class="title">Heatmap (pair × TF)</div>
+    <div id="heat" class="placeholder">Matrice en préparation… en attente des premiers résultats/metrics.</div>
+  </div>
+
+  <div class="card" style="margin-top:16px;">
+    <div class="title">TOP résultats</div>
+    <div class="flex" style="margin-bottom:10px;">
+      <label>Pair :
+        <select id="f_pair">
+          <option value="">(toutes)</option>
+          {"".join(f'<option value="{p}">{p}</option>' for p in pairs)}
+        </select>
+      </label>
+      <label>TF :
+        <select id="f_tf">
+          <option value="">(tous)</option>
+          {"".join(f'<option value="{t}">{t}</option>' for t in tfs)}
+        </select>
+      </label>
+    </div>
+    <div id="top_table"></div>
+  </div>
+
+  <div class="muted" style="margin:20px 0 6px;">
+    <small>Dernier backtest: <b>{gen_iso}</b> (age: {gen_age}) · risk_mode: <b>{data.get('risk_mode','n/a')}</b></small>
+  </div>
 </div>
 
 <script>
-const AUTO_REFRESH_SECS = {AUTO_REFRESH_SECS};
-let countdown = AUTO_REFRESH_SECS;
-function ts(){{const d=new Date();return d.toISOString().replace('T',' ').substring(0,19)+' UTC';}}
-function setNow(){{document.getElementById('now').textContent='('+ts()+')';}}
-function tick(){{countdown-=1;if(countdown<=0)location.reload();document.getElementById('countdown').textContent='reload dans '+countdown+'s';}}
-document.getElementById('btnRefresh').addEventListener('click',()=>location.reload());
+  // ---- Auto-refresh 5s
+  let left = 5;
+  const span = document.getElementById('rf-count');
+  setInterval(() => {{
+    left = Math.max(0, left-1);
+    if (span) span.textContent = left;
+    if (left === 0) location.reload();
+  }}, 1000);
 
-function badge(st){{return `<td class="status-${{st}}">${{st}}</td>`;}}
-function counters(c){{for(const k of ["MIS","OLD","DAT","OK"]){{document.getElementById(k).textContent=`${{k}}: ${{c[k]||0}}`;}}}}
-function heatmap(matrix,tf){{if(!matrix||!matrix.length){{document.getElementById('heatmap').innerHTML="<div class='muted'>Aucune matrice.</div>";return;}}
-  let h="<table><thead><tr><th>PAIR</th>"+tf.map(t=>`<th>${{t}}</th>`).join("")+"</tr></thead><tbody>";
-  for(const row of matrix){{h+=`<tr><td><b>${{row.pair}}</b></td>`;for(const t of tf){{h+=badge(row[t]||"MIS");}}h+="</tr>";}}
-  h+="</tbody></table>";document.getElementById('heatmap').innerHTML=h;
-}}
-let sortState={{col:"score",dir:"desc"}};
-function score(r){{const pf=+r.pf||0,mdd=+r.mdd||0,sh=+r.sharpe||0,wr=+r.wr||0;return pf*2+sh*0.5+wr*0.5-mdd*1.5;}}
-function filters(){{const q=document.getElementById('filterPair').value.trim().toUpperCase();
-  const tfs=[...document.querySelectorAll('.tfChk:checked')].map(x=>x.value);const minPF=+document.getElementById('minPF').value||0;
-  const maxMDD=(+document.getElementById('maxMDD').value||100)/100.0;const minTR=+document.getElementById('minTR').value||0;
-  return {{q,tfs,minPF,maxMDD,minTR}};
-}}
-function apply(rows){{const f=filters();return rows.filter(r=>{{const okPair=!f.q||(r.pair||"").toUpperCase().includes(f.q);const okTF=f.tfs.length===0||f.tfs.includes(r.tf);
-  return okPair && ((+r.pf||0)>=f.minPF) && ((+r.mdd||0)<=f.maxMDD) && ((+r.trades||0)>=f.minTR);}});}}
-function sortRows(rows,col,dir){{const m=dir==="asc"?1:-1;return rows.slice().sort((a,b)=>(((a[col]??0)>(b[col]??0))?1:(a[col]??0)<(b[col]??0)?-1:0)*m);}}
-function renderTop(rowsAll){{const rows=rowsAll.map(r=>Object.assign({{}},r,{{score:score(r)}}));const data=apply(rows);
-  const cols=[{{key:"rank",label:"#"}},{{key:"pair",label:"PAIR"}},{{key:"tf",label:"TF"}},{{key:"pf",label:"PF"}},{{key:"mdd",label:"MDD"}},{{key:"trades",label:"TR"}},{{key:"wr",label:"WR"}},{{key:"sharpe",label:"Sharpe"}},{{key:"score",label:"Note"}}];
-  const sorted=sortRows(data,sortState.col,sortState.dir);
-  let h="<table><thead><tr>";for(const c of cols){{const cls=(sortState.col===c.key)?("sort-"+sortState.dir):"";h+=`<th data-col="${{c.key}}" class="${{cls}}">${{c.label}}</th>`;}}h+="</tr></thead><tbody>";
-  sorted.slice(0,100).forEach((r,i)=>{{h+=`<tr><td>${{i+1}}</td><td>${{r.pair}}</td><td>${{r.tf}}</td><td>${{(+r.pf).toFixed(3)}}</td><td>${{((+r.mdd)*100).toFixed(1)}}%</td><td>${{r.trades||0}}</td><td>${{((+r.wr)*100).toFixed(1)}}%</td><td>${{(+r.sharpe).toFixed(2)}}</td><td>${{(+r.score).toFixed(2)}}</td></tr>`;}});h+="</tbody></table>";
-  const w=document.getElementById('topTableWrap');w.innerHTML=h;w.querySelectorAll("th").forEach(th=>th.addEventListener("click",()=>{{const col=th.dataset.col;if(!col)return;
-    (sortState.col===col)?(sortState.dir=(sortState.dir==="asc"?"desc":"asc")):(sortState.col=col,sortState.dir="desc");renderTop(rowsAll);}}));
-}}
-async function j(path){{const u=path+"?_t="+Date.now();const r=await fetch(u);if(!r.ok)throw new Error("HTTP "+r.status+" "+path);return await r.json();}}
-async function refreshAll(){{setNow();let status={{}},summary={{}},last={{}},health={{}};try{{[status,summary,last,health]=await Promise.all([j("data/status.json").catch(_=>({{}})),j("data/summary.json").catch(_=>({{}})),j("data/last_errors.json").catch(_=>({{}})),j("health.json").catch(_=>({{}}))]);}}catch(e){{console.error(e);}}
-  const hb=document.getElementById('healthBody');if(Object.keys(health).length){{const st=(health.status||"").toLowerCase();const cls=st.includes("ok")?"health-ok":(st.includes("local")||st.includes("no-change")?"health-warn":"health-bad");
-    hb.innerHTML=`<div>generated_at: <b>${{health.generated_at||"?"}}</b></div><div>commit: <span class="mono">${{(health.commit||"").substring(0,10)}}</span></div><div>status: <span class="${{cls}}">${{health.status}}</span></div>`;}}
-  else hb.textContent="health.json manquant (ok si premier run).";
-  const counts=(status.counts||{{}});counters(counts);
-  const tf=(status.matrix&&status.matrix[0])?Object.keys(status.matrix[0]).filter(k=>k!=="pair"):["1m","5m","15m"];heatmap(status.matrix||[],tf);
-  renderTop((summary.rows||[]));document.getElementById('lastErrors').textContent=JSON.stringify(last,null,2);
-}}
-document.getElementById('btnApply').addEventListener('click',()=>refreshAll());
-document.getElementById('btnReset').addEventListener('click',()=>{{document.getElementById('filterPair').value="";document.querySelectorAll('.tfChk').forEach(ch=>ch.checked=(["1m","5m","15m"].includes(ch.value)));document.getElementById('minPF').value="1.20";document.getElementById('maxMDD').value="30";document.getElementById('minTR').value="25";refreshAll();}});
-setNow();refreshAll();setInterval(tick,1000);
+  // ---- Données injectées (côté client) pour filtres/plot
+  const HEAT = {js_json_safe(heat_map)};
+  const PAIRS = {js_json_safe(pairs)};
+  const TFS = {js_json_safe(tfs)};
+  const TOP_ROWS = {js_json_safe(top_rows)};
+
+  // ---- Heatmap Plotly
+  function renderHeat() {{
+    const el = document.getElementById('heat');
+    if (!el) return;
+    const pairs = PAIRS;
+    const tfs = TFS;
+    if (!pairs.length || !tfs.length) {{
+      el.className = 'placeholder';
+      el.innerText = 'Aucune matrice exploitable (pas encore de PF par pair×TF).';
+      return;
+    }}
+    const z = [];
+    for (let i=0;i<pairs.length;i++) {{
+      const row = [];
+      for (let j=0;j<tfs.length;j++) {{
+        const p = pairs[i];
+        const tf = tfs[j];
+        const v = (HEAT[p] && HEAT[p][tf] != null) ? HEAT[p][tf] : null;
+        row.push(v);
+      }}
+      z.push(row);
+    }}
+    el.className = '';
+    el.innerHTML = '';
+    const data = [{{
+      z: z, x: tfs, y: pairs, type:'heatmap', colorscale:'Viridis', hoverongaps:false,
+      colorbar: {{title:'PF', outlinewidth:0}}
+    }}];
+    const layout = {{
+      paper_bgcolor:'#121820', plot_bgcolor:'#121820',
+      font:{{color:'#e6edf3'}},
+      margin:{{l:80,r:10,t:10,b:40}}
+    }};
+    Plotly.newPlot(el, data, layout, {{responsive:true, displayModeBar:false}});
+  }}
+
+  // ---- TOP table + filtres
+  function number(x, d=2) {{
+    if (x===null||x===undefined||isNaN(x)) return '–';
+    return Number(x).toFixed(d);
+  }}
+  function badge(state) {{
+    const cls = state || '';
+    const val = (state||'').toUpperCase() || '—';
+    return `<span class="badge ${cls}">${{val}}</span>`;
+  }}
+  function renderTop() {{
+    const selPair = document.getElementById('f_pair').value;
+    const selTf = document.getElementById('f_tf').value;
+    let rows = TOP_ROWS.slice();
+    if (selPair) rows = rows.filter(r => (r.pair===selPair)||(r.symbol===selPair)||(r.pair_tf||'').startsWith(selPair+':'));
+    if (selTf)   rows = rows.filter(r => (r.tf===selTf)||(r.pair_tf||'').endsWith(':'+selTf));
+    const head = `
+      <table>
+        <thead><tr>
+          <th>Pair</th><th>TF</th><th>PF</th><th>WR</th><th>MDD</th><th>Trades</th><th>Name</th>
+        </tr></thead><tbody>`;
+    const body = rows.map(r => {{
+      const m = r.metrics||{{}};
+      const pair = r.pair || (r.pair_tf||'').split(':')[0] || r.symbol || '—';
+      const tf   = r.tf   || (r.pair_tf||'').split(':')[1] || '—';
+      return `<tr>
+        <td>${{pair}}</td>
+        <td>${{tf}}</td>
+        <td class="right">${{number(m.pf,2)}}</td>
+        <td class="right">${{number(m.wr,2)}}</td>
+        <td class="right">${{number(m.mdd,2)}}</td>
+        <td class="right">${{m.trades??'–'}}</td>
+        <td>${{r.name||'—'}}</td>
+      </tr>`;
+    }}).join('');
+    const tail = `</tbody></table>`;
+    document.getElementById('top_table').innerHTML = head + (body || `<div class="placeholder">Aucun résultat pour ce filtre.</div>`) + tail;
+  }}
+
+  document.getElementById('f_pair').addEventListener('change', renderTop);
+  document.getElementById('f_tf').addEventListener('change', renderTop);
+
+  renderHeat();
+  renderTop();
 </script>
+</body>
+</html>
 """
+    return html
 
-def _publish():
-    # Import direct (Variante 2)
+# -----------------------------------------------------------------------------
+# Publication GitHub Pages
+# -----------------------------------------------------------------------------
+
+def publish_pages():
     try:
         from tools import publish_pages as pub
         print("[render] publish via import tools.publish_pages …")
         pub.main()
         return
     except Exception as e:
-        print(f"[render] import direct échoué: {e}")
-        traceback.print_exc()
+        print(f"[render] ⚠️Publication ignorée (erreur import): {e}")
+        # trace si utile:
+        # traceback.print_exc()
 
-    # Fallback: exécution fichier
-    candidate = TOOLS_DIR / "publish_pages.py"
-    print(f"[render] fallback fichier: {candidate}")
-    if candidate.exists():
-        try:
-            subprocess.run([sys.executable, str(candidate)],
-                           cwd=str(REPO_ROOT), check=True)
-            return
-        except Exception:
-            traceback.print_exc()
-
-    print("[render] ⚠️ Publication ignorée (module/fichier introuvable).")
+# -----------------------------------------------------------------------------
+# Main
+# -----------------------------------------------------------------------------
 
 def main():
-    (DOCS_DIR / "index.html").write_text(HTML, encoding="utf-8")
-    (DOCS_DIR / "dashboard.html").write_text(HTML, encoding="utf-8")
-    print(f"[render] Écrit → {DOCS_DIR / 'index.html'}")
-    _publish()
+    data = read_inputs()
+    html = render_html(data)
+
+    index_path = DOCS_DIR / "index.html"
+    DOCS_DIR.mkdir(parents=True, exist_ok=True)
+    index_path.write_text(html, encoding="utf-8")
+    print(f"[render] Écrit → {index_path}")
+
+    # publication auto (copie JSON + push GH Pages)
+    publish_pages()
 
 if __name__ == "__main__":
     try:
         main()
     except Exception as e:
         print(f"[render] FATAL: {e}")
+        traceback.print_exc()
         sys.exit(1)
