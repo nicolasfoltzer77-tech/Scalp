@@ -43,4 +43,8 @@ if not ok:
 print("[bootstrap] ✅ imports OK")
 PY
 
+# ensure all sh/py in repo are executable
+find "$ROOT" -type f \( -name "*.sh" -o -name "*.py" \) -exec chmod +x {} \; || true
+echo "[bootstrap] chmod +x applied to *.sh and *.py"
+
 echo "[bootstrap] done."
