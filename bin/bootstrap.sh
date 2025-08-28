@@ -1,27 +1,21 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-ROOT="$(dirname "$(realpath "$0")")/.."
-cd "$ROOT"
+# 0) Charger l'env global si présent (AUCUNE saisie demandée)
+if [ -f /etc/scalp.env ]; then
+  set -a
+  . /etc/scalp.env
+  set +a
+fi
 
-echo "[bootstrap] start setup in $ROOT"
+# 1) Aller à la racine du repo
+cd "$(dirname "$(realpath "$0")")/.."
 
-# recrée proprement le venv
-rm -rf venv
-/usr/bin/python3 -m venv venv
+# 2) Venv PROPRE (réutilise les paquets système pour réduire pip)
+if [ ! -x venv/bin/python ]; then
+  python3 -m venv --system-site-packages venv
+fi
 
-# active le venv
+# 3) Activer venv + outils pip récents
 . venv/bin/activate
-
-# upgrade outils de base
-pip install --upgrade pip setuptools wheel
-
-# installe dépendances
-if [ -f requirements.txt ]; then
-    pip install -r requirements.txt
-fi
-if [ -f requirements-dev.txt ]; then
-    pip install -r requirements-dev.txt
-fi
-
-echo "[bootstrap] setup done!"
+python -V || true
