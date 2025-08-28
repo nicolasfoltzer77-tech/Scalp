@@ -1,0 +1,9 @@
+### Quick start
+
+```bash
+git clone <your-url> /opt/scalp
+cd /opt/scalp
+make setup           # crée le venv + installe deps (pins inclus)
+make render          # lance tools.render_report (patch ${cls} auto)
+# ou
+make watch           # relance toutes les 2 minutes
