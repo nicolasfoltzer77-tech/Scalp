@@ -1,9 +1,13 @@
-.PHONY: setup render dash
+.PHONY: setup render publish test
+
 setup:
 	@bin/bootstrap.sh
 
 render:
 	@bin/safe_render.sh
 
-dash:
-	@. venv/bin/activate && python jobs/dash.py
+publish:
+	@bin/git-sync.sh
+
+test:
+	@pytest -q || true
