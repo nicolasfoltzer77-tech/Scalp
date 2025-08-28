@@ -1,17 +1,15 @@
-.PHONY: setup render test dash
+.PHONY: setup render fix-exec
 
+# Tous les scripts bin/ sont exécutables dans Git
+fix-exec:
+	chmod +x bin/*.sh || true
+	git update-index --chmod=+x bin/bootstrap.sh || true
+	git update-index --chmod=+x bin/safe_render.sh || true
+
+# Prépare la machine: venv + pip de base
 setup:
-	@echo "[SETUP] Init virtualenv & install deps"
-	python3 -m venv venv
-	. venv/bin/activate && pip install -U pip setuptools wheel
-	. venv/bin/activate && pip install -r requirements.txt
-	@chmod +x bin/*.sh   # 🔥 garantit que tout bin/*.sh est exécutable
+	@bin/bootstrap.sh
 
+# Lance le rendu "safe" (logs, idempotent, use /etc/scalp.env)
 render:
-	./bin/safe_render.sh
-
-dash:
-	. venv/bin/activate && python jobs/dash.py
-
-test:
-	pytest
+	@bin/safe_render.sh
