@@ -1,18 +1,15 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
-[ -f /etc/scalp.env ] && set -a && . /etc/scalp.env && set +a
-REPO_PATH="${REPO_PATH:-/opt/scalp}"
-cd "$REPO_PATH"
-python3 -V
-# venv
+cd "$(dirname "$(realpath "$0")")/.."  # racine repo
+
+# venv idempotent
 if [ ! -x venv/bin/python ]; then
-  /usr/bin/python3 -m venv venv
+  python3 -m venv venv
 fi
-venv/bin/python -m pip install -U pip setuptools wheel
+. venv/bin/activate
+
 # deps
-if [ -f requirements.txt ]; then
-  venv/bin/python -m pip install -r requirements.txt
-fi
-# bits +x
-chmod +x bin/*.sh 2>/dev/null || true
+python -m pip install -U pip setuptools wheel
+[ -f requirements.txt ] && pip install -r requirements.txt || true
+
 echo "[bootstrap] OK"
