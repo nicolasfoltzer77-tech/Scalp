@@ -1,41 +1,20 @@
-.SILENT:
-.DEFAULT_GOAL := help
+.PHONY: setup render dash perms
 
-PY      := python3
-VENV    := venv
-ACT     := . $(VENV)/bin/activate;
-
-.PHONY: help setup perms venv install render dash clean
-
-help:
-	@echo "make setup   - chmod +x, create venv, pip install"
-	@echo "make render  - build dashboard (tools.render_report)"
-	@echo "make dash    - run jobs/dashboard.py"
-	@echo "make clean   - delete venv"
-
-# 1) permissions for all scripts
+# 1) Prépare les permissions
 perms:
-	find . -type f \( -name "*.sh" -o -name "*.py" \) -exec chmod +x {} \;
+	@chmod +x bin/*.sh || true
 
-# 2) create venv + modern pip
-$(VENV)/bin/python:
-	$(PY) -m venv $(VENV)
-	$(ACT) $(PY) -m pip install -U pip setuptools wheel
+# 2) Crée et active l'environnement + installe requirements
+setup: perms
+	@python3 -m venv venv
+	@. venv/bin/activate && pip install --upgrade pip setuptools wheel
+	@. venv/bin/activate && pip install -r requirements.txt
+	@test -f scalp.env || echo "⚠️ Missing scalp.env (create it for API keys)"
 
-# 3) install deps
-install: $(VENV)/bin/python
-	$(ACT) $(PY) -m pip install -r requirements.txt
-
-# 4) one-liner for fresh clones
-setup: perms install
-	@echo "✓ setup ok (perms + venv + deps)"
-
-# 5) commands you’ll actually run
+# 3) Lance le rendu du report
 render:
-	$(ACT) PYTHONPATH=$(PWD) SCALP_SKIP_BOOT=1 $(PY) -m tools.render_report
+	@. venv/bin/activate && PYTHONPATH=$$PWD python -m tools.render_report
 
+# 4) Lance le dashboard
 dash:
-	$(ACT) PYTHONPATH=$(PWD) $(PY) jobs/dashboard.py
-
-clean:
-	rm -rf $(VENV)
+	@. venv/bin/activate && PYTHONPATH=$$PWD python jobs/dashboard.py
