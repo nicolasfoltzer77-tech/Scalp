@@ -13,3 +13,5 @@ setup:
 # Lance le rendu "safe" (logs, idempotent, use /etc/scalp.env)
 render:
 	@bin/safe_render.sh
+render-sync:
+	@./bin/safe_render.sh
