@@ -335,7 +335,7 @@ def render_html(data: dict) -> str:
   function badge(state) {{
     const cls = state || '';
     const val = (state||'').toUpperCase() || '—';
-    cls = locals().get("cls", "bg-secondary"); cls = locals().get("cls", "bg-secondary"); return f'<span class=\"badge bg-secondary\">\2</span>';
+    cls = locals().get("cls", "bg-secondary"); cls = locals().get("cls", "bg-secondary"); return f'<span class="badge {cls}">{val}</span>';
   }}
   function renderTop() {{
     const selPair = document.getElementById('f_pair').value;
