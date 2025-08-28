@@ -1,9 +1,74 @@
-### Quick start
+SCALP — Dashboard & Bot
 
-```bash
-git clone <your-url> /opt/scalp
-cd /opt/scalp
-make setup           # crée le venv + installe deps (pins inclus)
-make render          # lance tools.render_report (patch ${cls} auto)
-# ou
-make watch           # relance toutes les 2 minutes
+Description :
+SCALP est un projet de dashboard automatisé pour la surveillance et l’analyse en continu.
+Il génère un site web statique (via GitHub Pages) à partir de données traitées, et inclut une suite de scripts et de tests pour fiabiliser le workflow.
+
+Fonctionnalités :
+- Génération automatique de rapports HTML (docs/index.html) et de fichiers de santé (docs/health.json)
+- Publication automatique sur GitHub Pages
+- Intégration continue (CI) avec GitHub Actions :
+  * exécution des scripts
+  * exécution des tests pytest
+- Scripts utilitaires (bin/*) pour automatiser le rendu, la synchro et l’installation
+- Vérification et diagnostic avec doctor.sh pour s’assurer que tout est installé correctement
+
+Installation (local / serveur) :
+1. Cloner le dépôt :
+   git clone https://github.com/nicolasfoltzer77-tech/Scalp.git /opt/scalp
+   cd /opt/scalp
+
+2. Rendre les scripts exécutables :
+   chmod +x bin/*.sh
+
+3. Lancer un rendu :
+   ./bin/safe_render.sh
+   Cela génère docs/index.html et docs/health.json
+
+4. Vérifier l’environnement :
+   ./bin/doctor.sh
+   Ce script vérifie :
+   - Python installé
+   - pip/pip3 installés
+   - pytest dispo
+   - tests qui passent
+
+Développement :
+- Lancer les tests : pytest -q
+- Ajouter de nouvelles dépendances :
+  * ajouter dans requirements.txt
+  * pip install -r requirements.txt
+
+Intégration Continue (CI) :
+Chaque push ou pull request déclenche automatiquement le workflow GitHub Actions :
+- Installation de l’environnement Python
+- Exécution des scripts (safe_render.sh)
+- Lancement des tests pytest
+- Upload des logs et artefacts en cas d’erreur
+
+Publication GitHub Pages :
+Le répertoire docs/ est publié automatiquement via GitHub Pages.
+Le dashboard est accessible ici :
+https://nicolasfoltzer77-tech.github.io/Scalp/
+
+Structure du projet :
+Scalp/
+├── bin/                  # Scripts utilitaires (safe_render, git-sync, doctor, etc.)
+├── docs/                 # Fichiers générés (HTML + JSON publiés sur Pages)
+├── logs/                 # Journaux d’exécution
+├── tests/                # Tests unitaires pytest
+├── requirements.txt      # Dépendances Python
+└── README.md             # Documentation
+
+Roadmap / À faire :
+- Rendu automatique HTML + JSON
+- Publication GitHub Pages
+- CI avec GitHub Actions
+- Tests automatiques
+- Ajouter de vraies stratégies d’analyse (trading, monitoring, etc.)
+- Intégrer API externes pour données en temps réel
+- Ajouter des dashboards avancés (heatmaps, graphiques dynamiques)
+
+Auteur :
+Projet développé et maintenu par nicolasfoltzer77-tech
+Contributions, issues et PR bienvenues !
