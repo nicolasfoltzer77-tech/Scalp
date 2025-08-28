@@ -5,7 +5,7 @@ set -Eeuo pipefail
 say(){ printf '%b\n' "$*"; }
 ok(){  say "✅ $*"; }
 ko(){  say "❌ $*"; }
-info(){say "ℹ️  $*"; }
+info(){ say "ℹ️  $*"; }
 
 # -------- anti-boucle: lock re-entrance --------
 LOCK=/tmp/scalp_doctor.lock
