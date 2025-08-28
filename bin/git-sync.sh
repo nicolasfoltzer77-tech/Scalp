@@ -1,17 +1,27 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 [ -f /etc/scalp.env ] && set -a && . /etc/scalp.env && set +a
+
 REPO_PATH="${REPO_PATH:-/opt/scalp}"
-GIT_REPO="${GIT_REPO:?set in /etc/scalp.env}"
-GIT_USER="${GIT_USER:?}"; GIT_TOKEN="${GIT_TOKEN:?}"
-BRANCH="$(git -C "$REPO_PATH" rev-parse --abbrev-ref HEAD 2>/dev/null || echo main)"
+GIT_REPO="${GIT_REPO:?owner/repo manquant dans /etc/scalp.env}"
+GIT_USER="${GIT_USER:?manquant}"; GIT_TOKEN="${GIT_TOKEN:?manquant}"
+BRANCH="${GIT_BRANCH:-$(git -C "$REPO_PATH" rev-parse --abbrev-ref HEAD 2>/dev/null || echo main)}"
 
 cd "$REPO_PATH"
-# toujours une URL remote avec token
+
+# identité commit
+git config user.name  "${GIT_COMMIT_USER:-$GIT_USER}"  || true
+git config user.email "${GIT_COMMIT_EMAIL:-bot@local}" || true
+
+# URL remote tokenisée (toujours)
 git remote set-url origin "https://${GIT_USER}:${GIT_TOKEN}@github.com/${GIT_REPO}.git" || true
 
-git add -A || true
-git commit -m "chore(auto): publish docs" || true
-git pull --rebase origin "$BRANCH" || true
+# rebase doux + commit si changements + push
+git fetch origin "$BRANCH" --quiet || true
+git pull --rebase --autostash origin "$BRANCH" || true
+if ! git diff --quiet || ! git diff --cached --quiet; then
+  git add -A
+  git commit -m "chore(auto): publish docs" || true
+fi
 git push -u origin "$BRANCH"
-echo "[publish] ✅ push OK"
+echo "[git-sync] ✅ push OK"
