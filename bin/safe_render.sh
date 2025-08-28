@@ -1,59 +1,75 @@
 #!/usr/bin/env bash
-# -----------------------------------------------------------------------------
-# SCALP safe render:
-# - finds repo root dynamically (no /opt assumptions)
-# - uses venv python if available, else system python3
-# - ensures 'tools' is importable + installs pyyaml if missing
-# - logs everything to ./logs/
-# -----------------------------------------------------------------------------
 set -Eeuo pipefail
 
-# Find repo root = parent of this script
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# resolve repo root
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+cd "$ROOT"
 
-# Optional global env (publishing etc.)
-[ -f /etc/scalp.env ] && set -a && . /etc/scalp.env && set +a
+# load env (optional)
+set -a
+[ -f /etc/scalp.env ] && . /etc/scalp.env
+[ -f .env ] && . ./.env
+set +a
 
-LOG_DIR="$ROOT/logs"
-mkdir -p "$LOG_DIR"
+LOG_DIR="$ROOT/logs"; mkdir -p "$LOG_DIR"
 LOG="$LOG_DIR/render-$(date -u +%Y%m%d-%H%M%S).log"
 
-# mirror output to console + file
+# log to file + screen
 exec > >(tee -a "$LOG") 2>&1
-echo "[safe] start render…"
-cd "$ROOT" || { echo "[safe] ERROR: ROOT '$ROOT' introuvable"; exit 2; }
+echo "[safe] start…"; echo "python: $(python3 -V)"; echo "root: $ROOT"
 
-# required file?
-if [ ! -f tools/render_report.py ]; then
-  echo "[safe] tools/render_report.py manquant"
-  exit 3
+# ensure venv here, not /venv at FS root
+if [ ! -x "$ROOT/venv/bin/python" ]; then
+  echo "[safe] venv absent → bootstrap…"
+  "$ROOT/bin/bootstrap.sh"
 fi
 
-# choose python: venv first, else system
-PY="$ROOT/venv/bin/python"
-[ -x "$PY" ] || PY="$(command -v python3 || true)"
-[ -n "${PY:-}" ] || { echo "[safe] ERROR: python introuvable"; exit 127; }
-"$PY" -V
+# activate venv
+# shellcheck disable=SC1091
+. "$ROOT/venv/bin/activate"
 
-# make 'tools' importable + minimal dep
+# --- patch ${cls} -> ${{cls}} in tools/render_report.py (idempotent) ---
+if [ -f tools/render_report.py ]; then
+  python - <<'PY'
+from pathlib import Path, re as _re
+p=Path("tools/render_report.py")
+s=p.read_text(encoding="utf-8")
+s2=_re.sub(r"\$\{(\s*cls\s*)\}", r"${{\1}}", s)
+if s2!=s:
+    p.write_text(s2, encoding="utf-8")
+    print("[safe] patched ${cls} → ${{cls}}")
+else:
+    print("[safe] patch already applied")
+PY
+else
+  echo "[safe] FATAL: tools/render_report.py manquant"; exit 3
+fi
+
+# guarantee tools is a package
 [ -f tools/__init__.py ] || : > tools/__init__.py
-export PYTHONPATH="$ROOT"
 
-"$PY" - <<'PY' || true
-import importlib, subprocess, sys
+# fix fragile optional dep: bottleneck <1.4 with numpy 1.26.x
+python - <<'PY'
 try:
-    importlib.import_module("yaml")
-except Exception:
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "pyyaml"])
+    import bottleneck, numpy
+    from packaging.version import Version
+    if Version(getattr(bottleneck,'__version__','0')) >= Version("1.4"):
+        print("[safe] forcing bottleneck<1.4 for numpy 1.26.x")
+        import subprocess, sys
+        subprocess.check_call([sys.executable,"-m","pip","install","--no-cache-dir","'bottleneck<1.4'"])
+except Exception as e:
+    print("[safe] bottleneck check skipped:", e)
 PY
 
-# render
-if "$PY" -m tools.render_report; then
+# run with explicit PYTHONPATH to be safe
+export PYTHONPATH="$ROOT"
+if python -m tools.render_report; then
   echo "[safe] ✅ rendu OK"
   rc=0
 else
-  rc=$?
-  echo "[safe] ❌ rendu KO (rc=$rc)"
+  rc=$?; echo "[safe] ❌ KO (rc=$rc)"
 fi
+
 echo "[safe] log: $LOG"
 exit $rc
