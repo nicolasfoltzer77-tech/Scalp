@@ -6,7 +6,7 @@ REPO_PATH="${REPO_PATH:-/opt/scalp}"
 LOG_DIR="${LOG_DIR:-$REPO_PATH/logs}"; mkdir -p "$LOG_DIR"
 LOG="$LOG_DIR/render-$(date -u +%Y%m%d-%H%M%S).log"
 ln -sf "$(basename "$LOG")" "$LOG_DIR/latest.log" || true
-
+/opt/scalp/bin/git-sync.sh || true
 # lock anti doublon
 LOCK=/tmp/scalp.render.lock
 exec 9>"$LOCK"
@@ -57,6 +57,8 @@ cat > docs/health.json <<JSON
 }
 JSON
 echo "[health] ✅ docs/health.json" | tee -a "$LOG"
+
+/opt/scalp/bin/git-sync.sh || true
 
 # publish si changements
 UPDATED=0; git diff --quiet -- docs/ || UPDATED=1
