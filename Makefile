@@ -1,20 +1,21 @@
-.PHONY: setup render dash perms
+.PHONY: setup render dash test perms
 
-# 1) Prépare les permissions
+# corrige les permissions des scripts
 perms:
 	@chmod +x bin/*.sh || true
 
-# 2) Crée et active l'environnement + installe requirements
+# installe l’env Python + dépendances
 setup: perms
-	@python3 -m venv venv
-	@. venv/bin/activate && pip install --upgrade pip setuptools wheel
-	@. venv/bin/activate && pip install -r requirements.txt
-	@test -f scalp.env || echo "⚠️ Missing scalp.env (create it for API keys)"
+	@./bin/bootstrap.sh
 
-# 3) Lance le rendu du report
-render:
-	@. venv/bin/activate && PYTHONPATH=$$PWD python -m tools.render_report
+# rendu du rapport (via ton safe_render)
+render: perms
+	@./bin/safe_render.sh
 
-# 4) Lance le dashboard
-dash:
-	@. venv/bin/activate && PYTHONPATH=$$PWD python jobs/dashboard.py
+# lance le dashboard
+dash: perms
+	@. venv/bin/activate && python jobs/dashboard.py
+
+# exécuter les tests
+test:
+	pytest
