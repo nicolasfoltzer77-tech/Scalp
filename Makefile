@@ -1,21 +1,17 @@
-.PHONY: setup render dash test perms
+.PHONY: setup render test dash
 
-# corrige les permissions des scripts
-perms:
-	@chmod +x bin/*.sh || true
+setup:
+	@echo "[SETUP] Init virtualenv & install deps"
+	python3 -m venv venv
+	. venv/bin/activate && pip install -U pip setuptools wheel
+	. venv/bin/activate && pip install -r requirements.txt
+	@chmod +x bin/*.sh   # 🔥 garantit que tout bin/*.sh est exécutable
 
-# installe l’env Python + dépendances
-setup: perms
-	@./bin/bootstrap.sh
+render:
+	./bin/safe_render.sh
 
-# rendu du rapport (via ton safe_render)
-render: perms
-	@./bin/safe_render.sh
+dash:
+	. venv/bin/activate && python jobs/dash.py
 
-# lance le dashboard
-dash: perms
-	@. venv/bin/activate && python jobs/dashboard.py
-
-# exécuter les tests
 test:
 	pytest
