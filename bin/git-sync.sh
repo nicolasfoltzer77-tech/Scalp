@@ -1,4 +1,4 @@
-# /opt/scalp/bin/git-sync.sh
+#!/usr/bin/env bash
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
