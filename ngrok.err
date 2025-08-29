@@ -216,3 +216,29 @@ Traceback (most recent call last):
   File "/opt/scalp/venv/lib/python3.10/site-packages/pyngrok/process.py", line 447, in _start_process
     raise PyngrokNgrokError(f"The ngrok process errored on start: {ngrok_process.startup_error}.",
 pyngrok.exception.PyngrokNgrokError: The ngrok process errored on start: authentication failed: Usage of ngrok requires a verified account and authtoken.\n\nSign up for an account: https://dashboard.ngrok.com/signup\nInstall your authtoken: https://dashboard.ngrok.com/get-started/your-authtoken\r\n\r\nERR_NGROK_4018\r\n.
+ERROR:  authentication failed: Usage of ngrok requires a verified account and authtoken.
+ERROR:  
+ERROR:  Sign up for an account: https://dashboard.ngrok.com/signup
+ERROR:  Install your authtoken: https://dashboard.ngrok.com/get-started/your-authtoken
+ERROR:  
+ERROR:  ERR_NGROK_4018
+ERROR:  https://ngrok.com/docs/errors/err_ngrok_4018
+ERROR:  
+t=2025-08-29T05:52:35+0000 lvl=eror msg="failed to reconnect session" obj=tunnels.session err="authentication failed: Usage of ngrok requires a verified account and authtoken.\n\nSign up for an account: https://dashboard.ngrok.com/signup\nInstall your authtoken: https://dashboard.ngrok.com/get-started/your-authtoken\r\n\r\nERR_NGROK_4018\r\n"
+t=2025-08-29T05:52:35+0000 lvl=eror msg="session closing" obj=tunnels.session err="authentication failed: Usage of ngrok requires a verified account and authtoken.\n\nSign up for an account: https://dashboard.ngrok.com/signup\nInstall your authtoken: https://dashboard.ngrok.com/get-started/your-authtoken\r\n\r\nERR_NGROK_4018\r\n"
+t=2025-08-29T05:52:35+0000 lvl=eror msg="terminating with error" obj=app err="authentication failed: Usage of ngrok requires a verified account and authtoken.\n\nSign up for an account: https://dashboard.ngrok.com/signup\nInstall your authtoken: https://dashboard.ngrok.com/get-started/your-authtoken\r\n\r\nERR_NGROK_4018\r\n"
+t=2025-08-29T05:52:35+0000 lvl=crit msg="command failed" err="authentication failed: Usage of ngrok requires a verified account and authtoken.\n\nSign up for an account: https://dashboard.ngrok.com/signup\nInstall your authtoken: https://dashboard.ngrok.com/get-started/your-authtoken\r\n\r\nERR_NGROK_4018\r\n"
+Traceback (most recent call last):
+  File "/opt/scalp/tools/start_ngrok.py", line 55, in <module>
+    main()
+  File "/opt/scalp/tools/start_ngrok.py", line 47, in main
+    public = ngrok.connect(port, "http")
+  File "/opt/scalp/venv/lib/python3.10/site-packages/pyngrok/ngrok.py", line 385, in connect
+    api_url = get_ngrok_process(pyngrok_config).api_url
+  File "/opt/scalp/venv/lib/python3.10/site-packages/pyngrok/ngrok.py", line 203, in get_ngrok_process
+    return process.get_process(pyngrok_config)
+  File "/opt/scalp/venv/lib/python3.10/site-packages/pyngrok/process.py", line 271, in get_process
+    return _start_process(pyngrok_config)
+  File "/opt/scalp/venv/lib/python3.10/site-packages/pyngrok/process.py", line 447, in _start_process
+    raise PyngrokNgrokError(f"The ngrok process errored on start: {ngrok_process.startup_error}.",
+pyngrok.exception.PyngrokNgrokError: The ngrok process errored on start: authentication failed: Usage of ngrok requires a verified account and authtoken.\n\nSign up for an account: https://dashboard.ngrok.com/signup\nInstall your authtoken: https://dashboard.ngrok.com/get-started/your-authtoken\r\n\r\nERR_NGROK_4018\r\n.
