@@ -1,7 +1,22 @@
+# venv & caches
+venv/
 __pycache__/
 *.pyc
-.pytest_cache/
+
+# logs / artefacts
 logs/
-venv/
 *.log
+*.err
+*.out
+
+# secrets
+*.env
+.env
+/etc/scalp.env
+
+# outils locaux
+.ngrok*
+ngrok.*__pycache__/
+
+
 *.map
