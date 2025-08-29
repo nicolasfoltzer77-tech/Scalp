@@ -1,84 +1,90 @@
+from __future__ import annotations
 import os
 import time
+import logging
 from datetime import datetime, timezone
-from engine.adapters.bitget import BitgetClient
+from typing import List
 
-def env(name, default=None, required=False):
-    v = os.getenv(name, default)
-    if required and not v:
-        raise RuntimeError(f"Missing env var: {name}")
-    return v
+import pandas as pd
 
-def now_iso():
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+from engine.adapters.bitget.client import BitgetClient
 
-def main():
-    # --- config via ENV ---
-    symbol = env("LIVE_SYMBOL", "BTCUSDT")
-    tf     = env("LIVE_TF", "1m")
-    market = env("LIVE_MARKET", "umcbl")  # futures USDT
-    dry    = env("DRY_RUN", "1") in ("1","true","True","YES","yes")
+# ---------- config ----------
+SYMBOL = os.getenv("LIVE_SYMBOL", "BTCUSDT")
+TF     = os.getenv("LIVE_TF", "1m")
+MARKET = os.getenv("LIVE_MARKET", "umcbl")   # coin-margined unified futures
+LIMIT  = int(os.getenv("LIVE_WARMUP", "200"))
+POLL_S = float(os.getenv("LIVE_POLL_SECONDS", "3"))
+DRY    = os.getenv("DRY_RUN", "true").lower() == "true"
 
-    # combien de bougies pour un premier calcul
-    warmup = int(env("WARMUP", "200"))
-    sleep_s = 1 if tf.endswith("s") else 5   # mini pause entre pulls
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S%z",
+)
 
-    print(f"[{now_iso()}] live start  symbol={symbol} tf={tf} market={market} dry_run={dry}")
+COLS = ["timestamp","open","high","low","close","volume","quote_volume"]
 
-    client = BitgetClient(market=market)
+def ts_ms_to_dt(ms: int) -> datetime:
+    return datetime.fromtimestamp(int(ms) / 1000, tz=timezone.utc)
+
+def main() -> None:
+    log = logging.getLogger("run_live")
+    log.info("live start  symbol=%s tf=%s market=%s dry_run=%s",
+             SYMBOL, TF, MARKET, DRY)
+
+    c = BitgetClient(market=MARKET)
 
     # --- warmup ---
-    df = client.fetch_ohlcv_df(symbol, tf, limit=warmup)
-    if df.empty:
-        raise RuntimeError(f"Aucune donnée OHLCV pour {symbol} {tf} ({market})")
+    rows: List[List[str]] = c.fetch_ohlcv(SYMBOL, TF, limit=LIMIT)
+    if not rows:
+        raise RuntimeError("warmup returned no data")
 
-    def last_close(dframe):
-        return float(dframe.iloc[-1]["close"])
+    # normalise -> DataFrame
+    df = pd.DataFrame(rows, columns=COLS)
+    df["timestamp"] = pd.to_datetime(df["timestamp"].astype("int64"), unit="ms", utc=True)
+    df[["open","high","low","close","volume","quote_volume"]] = df[
+        ["open","high","low","close","volume","quote_volume"]
+    ].astype("float64")
 
-    def simple_signal(dframe):
-        # Exemple ultra simple: slope des 10 dernières closes
-        w = 10 if len(dframe) >= 10 else len(dframe)
-        if w < 2: 
-            return 0
-        s = dframe["close"].astype(float).tail(w).values
-        return 1 if s[-1] > s[0]*1.0005 else (-1 if s[-1] < s[0]*0.9995 else 0)
+    last_ts = int(rows[-1][0])
+    last_close = float(rows[-1][4])
+    log.info("warmup loaded rows=%d last_close=%.4f", len(df), last_close)
 
-    print(f"[{now_iso()}] warmup loaded rows={len(df)} last_close={last_close(df):.4f}")
-
-    # --- loop ---
+    # --- live loop ---
     while True:
         try:
-            # on ne tire que quelques dernières bougies
-            tail = client.fetch_ohlcv_df(symbol, tf, limit=5)
-            if tail.empty:
-                print(f"[{now_iso()}] ⚠ no new data")
-                time.sleep(sleep_s)
+            time.sleep(POLL_S)
+            r = c.fetch_ohlcv(SYMBOL, TF, limit=1)
+            if not r:
                 continue
 
-            # concat pour garder un historique court
-            df = df.append(tail.iloc[-1], ignore_index=True)
-            if len(df) > 600:
-                df = df.iloc[-600:]
+            ts, o, h, l, cl, v, qv = r[0]
+            ts = int(ts)
 
-            sig = simple_signal(df)
-            px  = last_close(df)
-            txt = "HOLD"
-            if sig > 0:  txt = "BUY"
-            if sig < 0:  txt = "SELL"
+            if ts <= last_ts:
+                # pas encore de nouvelle bougie
+                continue
 
-            print(f"[{now_iso()}] {symbol} {tf} px={px:.4f} signal={txt} (dry={dry})")
+            # *** IMPORTANT *** : ne plus utiliser df.append !
+            # Ajout robuste d'une ligne
+            df.loc[len(df)] = [
+                pd.to_datetime(ts, unit="ms", utc=True),
+                float(o), float(h), float(l), float(cl),
+                float(v), float(qv)
+            ]
 
-            # Ici on gérerait les ordres réels si dry=False
-            # if not dry and sig != 0:
-            #     client.create_order(symbol=symbol, side=("buy" if sig>0 else "sell"),
-            #                         size=os.getenv("LIVE_SIZE","0.001"), type="market")
+            last_ts = ts
+            last_close = float(cl)
+            log.info("NEW_CANDLE ts=%s close=%.4f",
+                     ts_ms_to_dt(ts).strftime("%Y-%m-%d %H:%M:%S%z"),
+                     last_close)
 
-        except KeyboardInterrupt:
-            print(f"[{now_iso()}] stop by user")
-            break
+            # Ici tu déclenches tes signaux/ordres si besoin…
+
         except Exception as e:
-            print(f"[{now_iso()}] ERROR: {type(e).__name__}: {e}")
-        time.sleep(sleep_s)
+            log.exception("loop error: %s", e)
+            time.sleep(2)
 
 if __name__ == "__main__":
     main()
