@@ -42,103 +42,107 @@ def _normalize_rows(raw: Iterable[Iterable[Any]]) -> List[List[float]]:
     out.sort(key=lambda x: x[0])
     return out
 
-def _is_ok_dict(js: Dict[str, Any]) -> bool:
-    code = str(js.get("code"))
-    return code in ("00000", "0", "200")
+def _ok(js: Any) -> bool:
+    if isinstance(js, dict):
+        return str(js.get("code")) in ("00000", "0", "200")
+    return isinstance(js, list) and len(js) >= 1
 
 class BitgetClient:
     BASE = "https://api.bitget.com"
 
     def __init__(self, market: str = "umcbl", session: Optional[requests.Session] = None):
         self.market = market.lower().strip()
+        if self.market not in ("umcbl", "spot"):
+            raise BitgetError(f"Market inconnu: {market}")
         self.s = session or requests.Session()
         self.timeout = 10
 
         if self.market == "umcbl":
-            # 👇 Ajout des variantes v1/v2 + candles/history-candles + productType=umcbl
-            self.routes: List[Tuple[str, Dict[str, Any]]] = [
-                ("/api/v2/mix/market/candles",           {"productType": "umcbl"}),  # v2
-                ("/api/v2/mix/market/history-candles",   {"productType": "umcbl"}),  # v2 (hist)
-                ("/api/mix/v1/market/candles",           {"productType": "umcbl"}),  # v1
-                ("/api/mix/v1/market/history-candles",   {"productType": "umcbl"}),  # v1 (hist)
-            ]
-        elif self.market == "spot":
-            self.routes = [
-                ("/api/v2/spot/market/candles", {}),
-                ("/api/spot/v1/market/candles", {}),
+            # NOTE: v2 = symbol SANS suffixe + productType=umcbl
+            #       v1 = symbol AVEC suffixe + (souvent) SANS productType
+            self.variants: List[Tuple[str, Dict[str, Any], str]] = [
+                ("/api/v2/mix/market/candles",         {"productType": "umcbl"}, "plain"),
+                ("/api/v2/mix/market/history-candles", {"productType": "umcbl"}, "plain"),
+                ("/api/mix/v1/market/candles",         {},                      "suffixed"),
+                ("/api/mix/v1/market/history-candles", {},                      "suffixed"),
             ]
         else:
-            raise BitgetError(f"Market inconnu: {market}")
+            self.variants = [
+                ("/api/v2/spot/market/candles", {}, "plain"),
+                ("/api/spot/v1/market/candles", {}, "plain"),
+            ]
 
     def _get(self, path: str, params: Dict[str, Any]) -> Any:
         url = f"{self.BASE}{path}"
         r = self.s.get(url, params=params, timeout=self.timeout)
         if r.status_code != 200:
-            log.error("HTTP %s %s params=%s -> %s", r.status_code, path, params, r.text[:240])
+            log.error("HTTP %s %s params=%s -> %s", r.status_code, path, params, r.text[:260])
             raise BitgetError(f"HTTP {r.status_code}: {r.text[:300]}")
         try:
             js = r.json()
         except Exception:
             log.error("Réponse non-JSON %s ...", r.text[:200])
             raise BitgetError("Réponse non-JSON")
-
+        if isinstance(js, dict) and _ok(js):
+            return js.get("data", [])
         if isinstance(js, list):
             return js
-        if isinstance(js, dict) and _is_ok_dict(js):
-            return js.get("data", [])
         msg = js.get("msg") if isinstance(js, dict) else "unknown"
         raise BitgetError(f"API not ok: {msg} ; head={str(js)[:240]}")
+
+    def _format_symbol(self, base: str, mode: str) -> str:
+        base = base.upper()
+        if self.market == "umcbl":
+            return base if mode == "plain" else (base if base.endswith("_UMCBL") else f"{base}_UMCBL")
+        return base
 
     def fetch_ohlcv(self, symbol: str, timeframe: str = "1m", limit: int = 200) -> List[List[float]]:
         if timeframe not in TF_TO_SEC:
             raise BitgetError(f"Timeframe non supporté: {timeframe}")
         gran = TF_TO_SEC[timeframe]
 
-        sym = symbol.upper()
-        if self.market == "umcbl" and not sym.endswith("_UMCBL"):
-            sym = f"{sym}_UMCBL"
+        need = max(1, int(limit))
+        got: List[List[float]] = []
+        after_ts: Optional[int] = None
+        per_call = 200  # safe cap
 
-        max_per_call = 200
-        target = max(1, int(limit))
-        chunks: List[List[float]] = []
-
-        remaining = target
-        last_ts: Optional[int] = None
-
-        while remaining > 0:
-            req_limit = min(max_per_call, remaining)
-            params_base = {
-                "symbol": sym,
-                "granularity": gran,
-                "limit": req_limit,
-            }
+        while len(got) < need:
+            req_limit = min(per_call, need - len(got))
             last_err: Optional[Exception] = None
 
-            for path, extra in self.routes:
-                params = dict(params_base)
+            for path, extra, sym_mode in self.variants:
+                params = {
+                    "symbol": self._format_symbol(symbol, sym_mode),
+                    "granularity": gran,
+                    "limit": req_limit,
+                }
                 params.update(extra)
-                if last_ts:
-                    params["endTime"] = last_ts - 1
+                if after_ts:
+                    # backfill vers le passé
+                    params["endTime"] = after_ts - 1
                 try:
                     raw = self._get(path, params)
                     rows = _normalize_rows(raw)
                     if not rows:
                         last_err = BitgetError("Réponse vide")
                         continue
-                    last_ts = rows[0][0]
-                    chunks.extend(rows)
+                    # Bitget renvoie du +récent au +ancien, on trie déjà dans _normalize_rows
+                    after_ts = rows[0][0]
+                    got.extend(rows)
                     break
                 except Exception as e:
+                    # 2 cas courants que tu as vus :
+                    # - 400172 Parameter verification failed
+                    # - "XXX_UMCBL does not exist" quand on combine suffixe + productType
                     last_err = e
                     continue
 
-            if not chunks and last_err:
+            if not got and last_err:
                 raise BitgetError(
                     f"Aucune variante valide pour {symbol} {timeframe} "
                     f"(dernier échec: {last_err})"
                 )
 
-            remaining = target - len(chunks)
-            time.sleep(0.12)
+            time.sleep(0.12)  # anti-rate limit
 
-        return chunks[-target:]
+        return got[-need:]
