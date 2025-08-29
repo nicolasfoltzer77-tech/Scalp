@@ -1,2 +1,2 @@
-from __future__ import annotations
-from .ohlcv import OhlcvClient as BitgetClient  # compat
+from .client import BitgetClient, BitgetError
+__all__ = ["BitgetClient", "BitgetError"]
