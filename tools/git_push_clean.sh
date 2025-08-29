@@ -1,51 +1,40 @@
-# /opt/scalp/tools/git_push_clean.sh
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO_DIR="${1:-/opt/scalp}"
-ENV_MAIN="/etc/scalp.env"
-ENV_FALLBACK="/opt/scalp/.env"
+ENV_MAIN="/etc/scalp.env"; [[ -f "$ENV_MAIN" ]] && set -a && source "$ENV_MAIN" && set +a
 
-# ----- Chargement env (silencieux si absent) -----
-if [[ -f "$ENV_MAIN" ]]; then set -a; source "$ENV_MAIN"; set +a; fi
-if [[ -f "$ENV_FALLBACK" ]]; then set -a; source "$ENV_FALLBACK"; set +a; fi
+REPO_URL_CLEAN="${REPO_URL_CLEAN:-https://github.com/nicolasfoltzer77-tech/Scalp.git}"
+BRANCH="${BRANCH:-main}"
 
-# ----- Param par défaut -----
-: "${GIT_OWNER:=nicolasfoltzer77-tech}"
-: "${GIT_REPO:=Scalp}"
-: "${GIT_BRANCH:=main}"
-
-# ----- Détection token (ordre de priorité) -----
+# Optionnel: token si dispo
 TOKEN="${GIT_TOKEN:-${GH_TOKEN:-${GITHUB_TOKEN:-}}}"
-if [[ -z "${TOKEN:-}" ]] && [[ -f "$HOME/.config/scalp/github_token" ]]; then
-  TOKEN="$(sed -n '1p' "$HOME/.config/scalp/github_token" | tr -d ' \n\r')"
+REPO_URL_TOKEN="$REPO_URL_CLEAN"
+if [[ -n "${TOKEN:-}" ]]; then
+  REPO_URL_TOKEN="$(sed -E 's#https://github.com/#https://'${TOKEN}'@github.com/#' <<<"$REPO_URL_CLEAN")"
 fi
-[[ -z "${TOKEN:-}" ]] && { echo "ERR: aucun token trouvé (GIT_TOKEN / GH_TOKEN / GITHUB_TOKEN ou ~/.config/scalp/github_token)."; exit 2; }
 
-# ----- Vérifs repo -----
-cd "$REPO_DIR"
-git rev-parse --is-inside-work-tree >/dev/null 2>&1 || { echo "ERR: $REPO_DIR n'est pas un repo git."; exit 2; }
-
-# ----- Remote origin -----
-CLEAN_URL="https://github.com/${GIT_OWNER}/${GIT_REPO}.git"
-if git remote get-url origin >/dev/null 2>&1; then
-  git remote set-url origin "$CLEAN_URL"
+# Corrige/ajoute 'origin'
+if git remote get-url origin &>/dev/null; then
+  git remote set-url origin "$REPO_URL_CLEAN"
 else
-  git remote add origin "$CLEAN_URL"
+  git remote add origin "$REPO_URL_CLEAN"
 fi
 
-# ----- Branche main -----
-git fetch --all --prune || true
-git branch -M "$GIT_BRANCH"
+# Fetch/checkout
+git fetch origin || true
+git checkout "$BRANCH" 2>/dev/null || git checkout -b "$BRANCH"
 
-# ----- URL temporaire avec token (pour ce push) -----
-TOKEN_URL="https://${TOKEN}@github.com/${GIT_OWNER}/${GIT_REPO}.git"
-git remote set-url origin "$TOKEN_URL"
+# Commit seulement si nécessaire
+if [[ -n "$(git status --porcelain)" ]]; then
+  git config user.name  "${GIT_USER_NAME:-scalp-bot}"
+  git config user.email "${GIT_USER_EMAIL:-scalp-bot@local}"
+  git add -A
+  git commit -m "chore: safe push $(date -u +'%F %T UTC')"
+fi
 
-echo ">>> Pushing $GIT_BRANCH -> origin (force) …"
-git push -u origin "$GIT_BRANCH" --force
+# Push via URL tokenisée si dispo
+git remote set-url origin "$REPO_URL_TOKEN"
+git push -u origin "$BRANCH" --force
+git remote set-url origin "$REPO_URL_CLEAN"
+echo "OK: pushed to $REPO_URL_CLEAN ($BRANCH)"
 
-# ----- Restaure l’URL propre (sans token) -----
-git remote set-url origin "$CLEAN_URL"
-
-echo "OK: push terminé et remote nettoyé."
