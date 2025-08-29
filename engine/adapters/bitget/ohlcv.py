@@ -4,26 +4,34 @@ from .base import BitgetBase, BitgetError
 
 class OhlcvClient(BitgetBase):
     """
-    Client public OHLCV pour les futures linéaires (umcbl).
-    - Ne passe PAS 'limit' à l'API (certaines routes le refusent) ; on coupe côté client.
-    - Essaie plusieurs variantes de routes/params pour éviter 400172.
+    Client public OHLCV pour les futures (umcbl).
+    Bitget exige 'granularity' en secondes (int).
     """
+
+    TF_TO_SEC = {
+        "1m": 60,
+        "5m": 300,
+        "15m": 900,
+        "30m": 1800,
+        "1h": 3600,
+        "4h": 14400,
+        "1d": 86400,
+    }
 
     def _fetch_variants(self, symbol: str, tf: str) -> List[Tuple[str, Dict[str, Any]]]:
         sym = f"{symbol}_{self.market.upper()}"
-        gran = self.tf_to_granularity(tf)      # '1m', '5m', '1h', etc.
+        sec = self.TF_TO_SEC.get(tf)
+        if not sec:
+            raise BitgetError(f"Unsupported timeframe {tf}")
         return [
-            ("/api/mix/v1/market/candles",          {"symbol": sym, "granularity": gran}),
-            ("/api/mix/v1/market/candles",          {"symbol": sym, "granularity": "60"}),   # alt num
-            ("/api/mix/v1/market/history-candles",  {"symbol": sym, "granularity": gran}),
-            ("/api/mix/v1/market/history-candles",  {"symbol": sym, "granularity": "60"}),
+            ("/api/mix/v1/market/candles",         {"symbol": sym, "granularity": sec}),
+            ("/api/mix/v1/market/history-candles", {"symbol": sym, "granularity": sec}),
         ]
 
     def fetch_ohlcv(self, symbol: str, tf: str = "1m", limit: int = 200) -> List[list]:
         """
-        Retourne une liste de lignes:
-        [timestamp_ms, open, high, low, close, volume, quote_volume(None)]
-        Trie du plus ancien -> plus récent, tronqué à `limit`.
+        Retourne [timestamp_ms, open, high, low, close, volume, None]
+        Trie ancien -> récent, tronqué à limit.
         """
         last_err: Optional[Exception] = None
         data: List[list] = []
@@ -34,17 +42,15 @@ class OhlcvClient(BitgetBase):
                 payload = (js.get("data") if isinstance(js, dict) else js) or []
                 if not isinstance(payload, list):
                     raise BitgetError(f"Réponse inattendue: {js}")
-                # Bitget renvoie du plus récent -> plus ancien ; on inverse
                 rows = list(reversed(payload))
                 out: List[list] = []
                 for row in rows:
-                    # format API: [ts, open, high, low, close, volume, ...] (en str)
                     ts, o, h, l, c, v = row[:6]
                     out.append([
                         int(ts),
                         float(o), float(h), float(l), float(c),
                         float(v),
-                        None,   # quote_volume inconnu ici
+                        None,
                     ])
                 data = out
                 break
@@ -58,8 +64,4 @@ class OhlcvClient(BitgetBase):
                 f"(dernier échec: {last_err})"
             )
 
-        # Tronque côté client
-        if limit and limit > 0:
-            data = data[-limit:]
-
-        return data
+        return data[-limit:] if limit else data
