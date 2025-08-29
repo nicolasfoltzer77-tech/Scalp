@@ -1,157 +1,143 @@
-# engine/adapters/bitget.py
-# Client Bitget simple: essaie v2 d'abord, retombe sur v1 si besoin.
-from __future__ import annotations
+# -*- coding: utf-8 -*-
+"""
+Adaptateur Bitget très simple pour récupérer des bougies OHLCV.
 
+- Futures (UMCBL) : /api/mix/v1/market/candles
+    params: symbol = "<PAIR>_UMCBL", granularity=<sec>, limit=<n>
+
+- Spot : /api/spot/v1/market/candles
+    params: symbol = "<PAIR>", granularity=<sec>, limit=<n>
+
+Aucune auth requise pour ces endpoints (public).
+"""
+
+from __future__ import annotations
 import os
 import time
 import typing as T
 import requests
 
-# --- Maps timeframe -> granularity ---
-# v2 accepte '1m','5m','15m','1h','4h','1d'
-# v1 attend des secondes: 60,300,900,3600,14400,86400
-V2_GRAN = {
-    "1m": "1m",
-    "3m": "3m",
-    "5m": "5m",
-    "15m": "15m",
-    "30m": "30m",
-    "1h": "1h",
-    "4h": "4h",
-    "6h": "6h",
-    "8h": "8h",
-    "12h": "12h",
-    "1d": "1d",
+
+MAP_TF_SEC = {
+    "1m": 60,
+    "3m": 180,
+    "5m": 300,
+    "15m": 900,
+    "30m": 1800,
+    "1h": 3600,
+    "4h": 14400,
+    "1d": 86400,
 }
-V1_GRAN = {
-    "1m": "60",
-    "3m": str(3 * 60),
-    "5m": str(5 * 60),
-    "15m": str(15 * 60),
-    "30m": str(30 * 60),
-    "1h": str(60 * 60),
-    "4h": str(4 * 60 * 60),
-    "6h": str(6 * 60 * 60),
-    "8h": str(8 * 60 * 60),
-    "12h": str(12 * 60 * 60),
-    "1d": str(24 * 60 * 60),
-}
-
-def _tf_v2(tf: str) -> str:
-    if tf not in V2_GRAN:
-        raise ValueError(f"Unsupported timeframe for v2: {tf}")
-    return V2_GRAN[tf]
-
-def _tf_v1(tf: str) -> str:
-    if tf not in V1_GRAN:
-        raise ValueError(f"Unsupported timeframe for v1: {tf}")
-    return V1_GRAN[tf]
-
 
 class BitgetClient:
-    """
-    market:
-      - 'umcbl' (USDT-M futures)  -> mix endpoints
-      - 'cmcbl' (USDC-M futures) -> mix endpoints
-      - 'spbl'  (spot)           -> spot endpoints
-    Par défaut: umcbl (tes trades futur USDT-M).
-    """
-
-    def __init__(self, market: str = "umcbl", base_url: str = "https://api.bitget.com"):
+    def __init__(self, market: str = "umcbl", base_url: str | None = None, timeout: int = 15):
+        """
+        market:
+          - 'umcbl' => futures USDT margined perpetual
+          - 'spot'  => spot
+        """
         self.market = market.lower()
-        self.base_url = base_url.rstrip("/")
+        self.timeout = timeout
+        if base_url:
+            self.base_url = base_url.rstrip("/")
+        else:
+            self.base_url = "https://api.bitget.com"
 
-        # Clés éventuelles (pas nécessaires pour les bougies publiques)
-        self.access_key = os.getenv("BITGET_ACCESS_KEY") or os.getenv("BITGET_API_KEY")
-        self.secret_key = os.getenv("BITGET_SECRET_KEY") or os.getenv("BITGET_API_SECRET")
-        self.passphrase = os.getenv("BITGET_PASSPHRASE") or os.getenv("BITGET_PASS_PHRASE")
+        # routes
+        self._route_mix_candles = "/api/mix/v1/market/candles"
+        self._route_spot_candles = "/api/spot/v1/market/candles"
 
-        # simple UA pour éviter certains 403
-        self.headers = {
-            "User-Agent": "scalp-backtest/1.0",
-            "Accept": "application/json",
-        }
+    # ---------------- internal helpers ---------------- #
 
-    # ---------- HTTP helpers ----------
-    def _get(self, path: str, params: dict, timeout: int = 15) -> requests.Response:
-        url = f"{self.base_url}{path}"
-        r = requests.get(url, params=params, headers=self.headers, timeout=timeout)
-        return r
+    def _ok(self, resp: requests.Response) -> dict:
+        if 200 <= resp.status_code < 300:
+            try:
+                return resp.json()
+            except Exception:
+                pass
+        raise RuntimeError(f"HTTP {resp.status_code}: {resp.text}")
 
-    @staticmethod
-    def _ok(resp: requests.Response) -> dict:
-        if resp.status_code != 200:
-            raise RuntimeError(f"HTTP {resp.status_code}: {resp.text}")
-        # Bitget retourne {"code":"00000","data":[...],...} en v2
-        # ou {"code":"00000","data":[...]} en v1; sinon message/erreur.
-        js = resp.json()
-        code = str(js.get("code", ""))
-        if code != "00000":
-            raise RuntimeError(f"❌ API error {resp.status_code}: {resp.text}")
+    def _request(self, method: str, path: str, params: dict) -> dict:
+        url = self.base_url + path
+        r = requests.request(method.upper(), url, params=params, timeout=self.timeout)
+        js = self._ok(r)
+        # Pour les endpoints public, la structure est {"code":"00000","data":[...]} / ou code différent
+        code = js.get("code") or js.get("status") or ""
+        if code not in ("00000", "success", 200, "200"):
+            # Bitget renvoie 400172 etc si mauvais paramètre
+            # On remonte l'erreur avec le payload pour debug
+            raise RuntimeError(f"❌ API error {code}: {js}")
         return js
 
-    # ---------- Public OHLCV ----------
+    # ---------------- public API ---------------- #
+
+    def _symbol_for_market(self, pair: str) -> str:
+        pair = pair.upper().replace("-", "")
+        if self.market == "umcbl":
+            # Futures perp USDT
+            if not pair.endswith("_UMCBL"):
+                pair = f"{pair}_UMCBL"
+        return pair
+
+    def _route_for_market(self) -> str:
+        return self._route_mix_candles if self.market == "umcbl" else self._route_spot_candles
+
     def fetch_ohlcv(
         self,
         symbol: str,
         timeframe: str = "1m",
-        limit: int = 1000,
-    ) -> T.List[T.List[T.Union[int, float, str]]]:
+        limit: int = 1000
+    ) -> list[list[T.Union[str, float, int]]]:
         """
-        Retourne une liste de lignes OHLCV (timestamp_ms, open, high, low, close, volume)
-        Essaie v2 en premier; si 4xx -> fallback v1.
+        Retour brut (liste de listes) tel que renvoyé par l’API Bitget :
+        [timestamp_ms, open, high, low, close, volume, quote_volume?]
+        Sur futures, Bitget renvoie 7 champs (incluant quote_volume).
         """
+        tf_sec = MAP_TF_SEC.get(timeframe)
+        if not tf_sec:
+            raise ValueError(f"timeframe non supporté: {timeframe}")
 
-        # Normalisation symboles selon market
-        m = self.market
-        if m in ("umcbl", "cmcbl"):  # futures (mix)
-            # v2 mix: symbol = "BTCUSDT", productType="umcbl"
-            sym_v2 = symbol.replace("_UMCBL", "").replace("_CMCBL", "").replace("_SPBL", "")
-            params_v2 = {
-                "symbol": sym_v2,
-                "productType": m,
-                "granularity": _tf_v2(timeframe),
-                "limit": str(min(max(limit, 1), 1000)),
-            }
-            path_v2 = "/api/v2/mix/market/candles"
-
-            # v1 mix: symbol = "BTCUSDT_UMCBL" (ou _CMCBL) + granularity en secondes
-            sym_v1 = f"{sym_v2}_{m.upper()}"
-            params_v1 = {
-                "symbol": sym_v1,
-                "granularity": _tf_v1(timeframe),  # string exigée
-                "limit": str(min(max(limit, 1), 1000)),
-            }
-            path_v1 = "/api/mix/v1/market/candles"
-
-        elif m == "spbl":  # spot
-            # v2 spot: symbol = "BTCUSDT"
-            sym_v2 = symbol.replace("_SPBL", "")
-            params_v2 = {
-                "symbol": sym_v2,
-                "granularity": _tf_v2(timeframe),
-                "limit": str(min(max(limit, 1), 1000)),
-            }
-            path_v2 = "/api/v2/spot/market/candles"
-
-            # v1 spot: symbol = "BTCUSDT_SPBL" + seconds
-            sym_v1 = f"{sym_v2}_SPBL"
-            params_v1 = {
-                "symbol": sym_v1,
-                "granularity": _tf_v1(timeframe),
-                "limit": str(min(max(limit, 1), 1000)),
-            }
-            path_v1 = "/api/spot/v1/market/candles"
-        else:
-            raise ValueError(f"Unknown market: {self.market}")
-
-        # --- Try v2 ---
-        r2 = self._get(path_v2, params_v2)
-        if r2.status_code == 200:
-            data = self._ok(r2).get("data", [])
-            return data
-
-        # --- Fallback v1 (souvent 400172 si mauvais format) ---
-        r1 = self._get(path_v1, params_v1)
-        data = self._ok(r1).get("data", [])
+        params = {
+            "symbol": self._symbol_for_market(symbol),
+            "granularity": tf_sec,
+            "limit": max(1, min(int(limit), 1440)),  # Bitget limite à 1440
+        }
+        js = self._request("GET", self._route_for_market(), params)
+        data = js.get("data") or []
+        # Bitget renvoie généralement du +récent -> +ancien, ou l’inverse suivant l’endpoint.
+        # On normalise en triant par timestamp croissant.
+        try:
+            data = sorted(data, key=lambda row: int(row[0]))
+        except Exception:
+            pass
         return data
+
+    def fetch_ohlcv_df(
+        self,
+        symbol: str,
+        timeframe: str = "1m",
+        limit: int = 1000
+    ):
+        import pandas as pd
+        rows = self.fetch_ohlcv(symbol, timeframe=timeframe, limit=limit)
+        if not rows:
+            return pd.DataFrame(columns=["timestamp","open","high","low","close","volume","quote_volume","datetime"])
+        # Bitget renvoie des chaînes -> cast
+        df = pd.DataFrame(rows)
+        # colonnes attendues (7 champs côté mix/umcbl)
+        # 0: ts, 1: open, 2: high, 3: low, 4: close, 5: volume, 6: quote_volume (souvent)
+        mapping = {
+            0: "timestamp", 1: "open", 2: "high", 3: "low",
+            4: "close", 5: "volume", 6: "quote_volume"
+        }
+        df = df.rename(columns=mapping)
+        # force types
+        for c in ("open","high","low","close","volume"):
+            if c in df.columns:
+                df[c] = pd.to_numeric(df[c], errors="coerce")
+        if "quote_volume" in df.columns:
+            df["quote_volume"] = pd.to_numeric(df["quote_volume"], errors="coerce")
+        df["timestamp"] = pd.to_numeric(df["timestamp"], errors="coerce")
+        df["datetime"] = pd.to_datetime(df["timestamp"], unit="ms", utc=True)
+        cols = ["timestamp","open","high","low","close","volume","quote_volume","datetime"]
+        return df[[c for c in cols if c in df.columns]]
