@@ -75,7 +75,8 @@ if command -v tree >/dev/null 2>&1; then
     IGN+="$d|"
   done <<<"$(printf '%s' "$EXCL_DIRS")"
   IGN="${IGN%|}"
-  tree -a -I "$IGN" "$ROOT" >> "$OUT" 2>/dev/null || true
+  # depuis /opt/scalp
+  tree -a -I '.git|__pycache__|*.pyc|*.pyo|*.log|logs|*.egg-info|venv|*.so|.mypy_cache|.pytest_cache' > dump.txt
 else
   # Fallback find
   eval "find \"$ROOT\" $(build_prune_dirs) -print" | sed "s|^$ROOT/||" >> "$OUT"
