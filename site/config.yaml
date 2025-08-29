@@ -1,0 +1,12 @@
+data_dir: /opt/scalp_data/data         # dossier CSV
+fresh_minutes:
+  "1m": 5                               # un CSV est "frais" si <5 min
+pairs:
+  - BTCUSDT
+  - ETHUSDT
+  # ajoute-en d'autres au besoin
+tfs:
+  - "1m"
+# Marqueurs d'activité stratégie (pour le compteur OK)
+# s'il y a un fichier .active, on considère la stratégie "active"
+active_dir: /opt/scalp/site/active
