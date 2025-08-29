@@ -1,33 +1,34 @@
-#!/bin/bash
-set -e
+#!/usr/bin/env bash
+set -euo pipefail
 
-OUT="dump_full.txt"
+ROOT="${1:-/opt/scalp}"
+OUT="${2:-dump_full.txt}"
+MAX="300k"  # taille max par fichier inclus dans le dump
 
-# 1) Vide l’ancien
-> "$OUT"
+cd "$ROOT"
+: > "$OUT"
 
-# 2) Liste propre de l’arbo (sans .git, __pycache__, logs…)
-echo "### TREE" >> "$OUT"
-find . \
-  -path "./.git" -prune -o \
-  -path "./__pycache__" -prune -o \
-  -path "./logs" -prune -o \
-  -type f -print >> "$OUT"
+# -- 1) Arbo propre
+echo "### TREE ($(date -u))" >> "$OUT"
 
-# 3) Contenu des fichiers
+PRUNE='( -path "./.git" -o -path "./venv" -o -path "./.venv" -o -path "./__pycache__" -o -path "./logs" -o -path "./docs" -o -path "./notebooks/scalp_data/data" -o -path "./notebooks/scalp_data/reports" ) -prune'
+EXT='\( -iname "*.py" -o -iname "*.sh" -o -iname "*.txt" -o -iname "*.md" -o -iname "*.yml" -o -iname "*.yaml" -o -iname "*.json" -o -iname "*.ini" -o -iname "*.cfg" -o -iname "*.toml" -o -iname "*.service" \)'
+
+# Liste des fichiers inclus
+eval find . $PRUNE -o -type f $EXT -size -$MAX -print >> "$OUT"
+
+# -- 2) Contenu avec secrets masqués
 echo -e "\n\n### FILES" >> "$OUT"
-for f in $(find . \
-  -path "./.git" -prune -o \
-  -path "./__pycache__" -prune -o \
-  -path "./logs" -prune -o \
-  -type f -print); do
+
+eval find . $PRUNE -o -type f $EXT -size -$MAX -print0 | \
+while IFS= read -r -d '' f; do
   echo -e "\n--- $f ---" >> "$OUT"
-  # supprime tout ce qui ressemble à une clé (api_key, secret, token, passphrase…)
   sed -E \
-    -e 's/(api[_-]?key[^=]*=)[^ \t]+/\1[REDACTED]/Ig' \
-    -e 's/(api[_-]?secret[^=]*=)[^ \t]+/\1[REDACTED]/Ig' \
-    -e 's/(passphrase[^=]*=)[^ \t]+/\1[REDACTED]/Ig' \
+    -e 's/([A-Z_]*?(API|ACCESS)?[_-]?KEY[[:space:]]*[:=][[:space:]]*)[^"'"'"'[:space:]]+/\1[REDACTED]/Ig' \
+    -e 's/([A-Z_]*?(API)?[_-]?SECRET[[:space:]]*[:=][[:space:]]*)[^"'"'"'[:space:]]+/\1[REDACTED]/Ig' \
+    -e 's/([Pp]assphrase[[:space:]]*[:=][[:space:]]*)[^"'"'"'[:space:]]+/\1[REDACTED]/g' \
+    -e 's/([Tt]oken[[:space:]]*[:=][[:space:]]*)[^"'"'"'[:space:]]+/\1[REDACTED]/g' \
     "$f" >> "$OUT" || true
 done
 
-echo "✅ Dump complet généré dans $OUT (avec secrets masqués)"
+echo "✅ Dump écrit: $OUT"
