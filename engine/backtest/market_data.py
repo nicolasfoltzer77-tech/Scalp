@@ -1,63 +1,75 @@
 import argparse
 import pandas as pd
-from engine.adapters.bitget import Client
+from engine.adapters.bitget import BitgetClient
 
 
-def fetch_bitget(pair: str, timeframe: str, days: int, market: str = "spbl"):
+# ==============================
+# FETCH BITGET
+# ==============================
+def fetch_bitget(symbol: str, timeframe: str, days: int, market="umcbl"):
     """
-    Récupère des OHLCV depuis Bitget en respectant la limite max (1000 bougies).
-    Concatène plusieurs appels si nécessaire.
+    Récupère les données OHLCV depuis Bitget.
+    :param symbol: ex "BTCUSDT"
+    :param timeframe: "1m", "5m", "1h", ...
+    :param days: nombre de jours d’historique à télécharger
+    :param market: "umcbl" (futures USDT), "spot", "cmcbl"
+    :return: DataFrame OHLCV
     """
-    client = Client(market=market)
-    total = 60 * 24 * days if timeframe == "1m" else days  # nb de bougies demandées
-    batch = 1000  # limite max API
-    data = []
+    client = BitgetClient(market=market)
 
-    for i in range(0, total, batch):
-        limit = min(batch, total - i)
-        print(f"[Bitget] Fetching {limit} candles (offset {i})...")
-        chunk = client.fetch_ohlcv(pair, timeframe=timeframe, limit=limit)
-        if not chunk:
-            break
-        data.extend(chunk)
+    # nombre de bougies max (par défaut 1000 chez Bitget)
+    limit = 60 * 24 * days if timeframe == "1m" else 1000
 
-    return data
+    ohlcv = client.fetch_ohlcv(symbol, timeframe, limit=limit)
+
+    # Convertir en DataFrame pandas
+    df = pd.DataFrame(
+        ohlcv,
+        columns=["timestamp", "open", "high", "low", "close", "volume"],
+    )
+
+    # convertir timestamp → datetime
+    df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms")
+
+    # réordonner
+    df = df.sort_values("timestamp").reset_index(drop=True)
+
+    return df
 
 
+# ==============================
+# MAIN CLI
+# ==============================
 def main():
-    parser = argparse.ArgumentParser(description="Fetch OHLCV market data")
-    parser.add_argument("--provider", required=True, help="bitget, binance, etc.")
-    parser.add_argument("--pair", required=True, help="Trading pair e.g. BTCUSDT")
-    parser.add_argument("--tf", required=True, help="Timeframe (1m, 5m, 1h, 1d)")
-    parser.add_argument("--days", type=int, default=1, help="Nombre de jours à charger")
-    parser.add_argument("--market", default="spbl", help="Type de marché (spbl=spot, umcbl=futures)")
-    parser.add_argument("--out", required=True, help="Fichier de sortie")
-    parser.add_argument("--format", default="csv", choices=["csv", "parquet"], help="Format de sortie")
-    parser.add_argument("--verbose", action="store_true", help="Mode verbeux")
+    parser = argparse.ArgumentParser(description="Télécharge des OHLCV Bitget")
+    parser.add_argument("--provider", default="bitget", help="Nom du provider")
+    parser.add_argument("--pair", required=True, help="Ex: BTCUSDT")
+    parser.add_argument("--tf", required=True, help="Timeframe: 1m, 5m, 1h…")
+    parser.add_argument("--days", type=int, default=1, help="Nb jours d’historique")
+    parser.add_argument("--market", default="umcbl", help="Type de marché: spot, umcbl, cmcbl")
+    parser.add_argument("--out", required=True, help="Chemin du fichier de sortie")
+    parser.add_argument("--format", choices=["csv", "parquet"], default="csv")
+    parser.add_argument("--verbose", action="store_true")
 
     args = parser.parse_args()
 
-    if args.provider == "bitget":
-        data = fetch_bitget(args.pair, args.tf, args.days, args.market)
-    else:
-        raise ValueError(f"Provider {args.provider} non supporté")
-
-    if not data:
-        raise RuntimeError("Aucune donnée récupérée.")
-
-    # convertir en DataFrame
-    df = pd.DataFrame(data, columns=["timestamp", "open", "high", "low", "close", "volume"])
+    if args.provider != "bitget":
+        raise ValueError(f"Provider non supporté: {args.provider}")
 
     if args.verbose:
-        print(df.head())
+        print(f"⚡ Téléchargement {args.pair} {args.tf} {args.days}j via Bitget {args.market}")
 
-    # export
+    df = fetch_bitget(args.pair, args.tf, args.days, market=args.market)
+
     if args.format == "csv":
-        df.to_csv(args.out, index=False)
+        out_file = f"{args.out}/{args.pair}-{args.tf}.csv"
+        df.to_csv(out_file, index=False)
     else:
-        df.to_parquet(args.out, index=False)
+        out_file = f"{args.out}/{args.pair}-{args.tf}.parquet"
+        df.to_parquet(out_file, index=False)
 
-    print(f"✅ Sauvegardé {len(df)} lignes -> {args.out}")
+    if args.verbose:
+        print(f"✅ Sauvegardé -> {out_file}, {len(df)} lignes")
 
 
 if __name__ == "__main__":
