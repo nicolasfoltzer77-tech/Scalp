@@ -1,36 +1,20 @@
+[user]
+    name = ScalpBot
+    email = scalp@example.com
+
+[core]
+    editor = nano
+    autocrlf = input
+    filemode = true
+
+[color]
+    ui = auto
+
+[push]
+    default = simple
+
+[pull]
+    rebase = false
+
 [safe]
-	directory = /opt/scalp
-<<<<<<< Updated upstream
-=======
-	directory = /opt/scalp
-	directory = /opt/scalp
-	directory = /opt/scalp
-	directory = /opt/scalp
-	directory = /opt/scalp
-	directory = /opt/scalp
-	directory = /opt/scalp
-	directory = /opt/scalp
-	directory = /opt/scalp
-	directory = /opt/scalp
-	directory = /opt/scalp
-	directory = /opt/scalp
-	directory = /opt/scalp
-	directory = /opt/scalp
-	directory = /opt/scalp
-	directory = /opt/scalp
-	directory = /opt/scalp
-	directory = /opt/scalp
-	directory = /opt/scalp
-	directory = /opt/scalp
-	directory = /opt/scalp
-	directory = /opt/scalp
-	directory = /opt/scalp
-	directory = /opt/scalp
-	directory = /opt/scalp
-	directory = /opt/scalp
-	directory = /opt/scalp
-	directory = /opt/scalp
-	directory = /opt/scalp
-	directory = /opt/scalp
-	directory = /opt/scalp
->>>>>>> Stashed changes
+    directory = /opt/scalp
