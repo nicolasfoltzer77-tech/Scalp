@@ -4,7 +4,7 @@ from __future__ import annotations
 import os, time, json, pathlib, logging, subprocess, shlex
 
 from engine.watchlist import load_watchlist
-from engine.signals.strategy_bridge import init as strategies_init
+from engine.strategies.runner import load_strategies
 from engine.pipeline.runner import PipelineScheduler
 
 logging.basicConfig(
@@ -35,7 +35,7 @@ def write_heartbeat(extra: dict = None):
 
 def main():
     LOG.info("[bot] starting")
-    strategies_init()  # charge les stratégies
+    load_strategies()  # charge les stratégies
     wl = load_watchlist()
     symbols, tfs = wl["symbols"], wl["tfs"]
     LOG.info(f"[bot] bootstrap symbols: {symbols}  tfs: {tfs}")
