@@ -2,17 +2,29 @@
 from __future__ import annotations
 import os, time, json, random, threading
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from engine.utils.logger import get_logger
 
+def read_last_close(data_dir: Path, symbol: str, tf: str) -> Optional[float]:
+    p = data_dir / symbol / tf / "ohlcv.jsonl"
+    if not p.exists():
+        return None
+    try:
+        with p.open("rb") as f:
+            f.seek(0, 2)
+            size = f.tell()
+            offset = min(size, 128 * 1024)
+            f.seek(size - offset)
+            tail = f.read().decode("utf-8", errors="ignore").strip().splitlines()
+        for line in reversed(tail):
+            if not line.strip():
+                continue
+            o = json.loads(line)
+            return float(o["c"])
+    except Exception:
+        return None
+
 class Pipeline:
-    """
-    Boucle simple par (symbol, timeframe):
-    - fetch_data: simule un point OHLCV
-    - analyze: prend une décision "BUY/SELL/HOLD"
-    - execute: écrit une pseudo-ordre si exec_enabled
-    - track/record: met à jour un status et un fichier JSON de rapport
-    """
     def __init__(self, symbol: str, tf: str, data_dir: str, reports_dir: str, exec_enabled: bool):
         self.symbol, self.tf = symbol, tf
         self.data_dir = Path(data_dir); self.data_dir.mkdir(parents=True, exist_ok=True)
@@ -24,16 +36,17 @@ class Pipeline:
 
     def stop(self): self._stop.set()
 
-    # ---- étapes "métier" triviales (à remplacer par ta vraie logique) ----
     def fetch_data(self) -> Dict[str, Any]:
-        price = round(20000 + random.random()*50000, 2)
+        price = read_last_close(self.data_dir, self.symbol, self.tf)
+        if price is None:
+            price = round(20000 + random.random()*50000, 2)
         candle = {"ts": int(time.time()), "symbol": self.symbol, "tf": self.tf, "close": price}
+        # Log local du dernier "tick"
         f = self.data_dir / f"{self.symbol}_{self.tf}.jsonl"
         f.write_text((f.read_text() if f.exists() else "") + json.dumps(candle) + "\n", encoding="utf-8")
         return candle
 
     def analyze(self, candle: Dict[str, Any]) -> str:
-        # signal ultra-simple
         r = random.random()
         if r < 0.33: return "BUY"
         if r < 0.66: return "SELL"
@@ -42,18 +55,15 @@ class Pipeline:
     def execute(self, signal: str, price: float) -> Dict[str, Any] | None:
         if not self.exec_enabled or signal == "HOLD": return None
         order = {"ts": int(time.time()), "symbol": self.symbol, "tf": self.tf, "side": signal, "price": price, "qty": 1}
-        # position unique pour la démo
         if signal == "BUY": self.state["position"] = {"side":"LONG","entry":price}
         if signal == "SELL": self.state["position"] = {"side":"SHORT","entry":price}
         return order
 
     def track_and_record(self, candle: Dict[str, Any], order: Dict[str, Any] | None):
-        # met à jour PnL fictif
         if self.state["position"]:
             side = self.state["position"]["side"]; entry = self.state["position"]["entry"]
             pnl = (candle["close"]-entry) if side=="LONG" else (entry-candle["close"])
             self.state["pnl"] = pnl
-        # enregistre un mini-rapport pour le dashboard
         rpt = {
             "symbol": self.symbol, "tf": self.tf, "last_close": candle["close"],
             "position": self.state["position"], "pnl": round(self.state["pnl"],2),
@@ -61,7 +71,6 @@ class Pipeline:
         }
         (self.reports_dir / f"{self.symbol}_{self.tf}.json").write_text(json.dumps(rpt, indent=2), encoding="utf-8")
 
-    # ---- boucle principale ----
     def run(self, interval_sec: int = 10):
         self.log.info(f"START pipeline {self.symbol} {self.tf} (exec_enabled={self.exec_enabled})")
         while not self._stop.is_set():
