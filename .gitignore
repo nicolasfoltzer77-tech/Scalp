@@ -1,14 +1,19 @@
-# secrets
-.env
-*.env
-
-# data locales
-/data/
-/reports/
+# Python
 __pycache__/
 *.pyc
-*.log
+*.pyo
+*.pyd
 
-# artefacts
-/notebooks/
-.ngrok*
+# Environnement virtuel
+venv/
+.env
+
+# Fichiers générés
+dashboard.html
+docs/index.html
+
+# Fichiers temporaires
+*.log
+*.bak
+*.old
+*.swp
