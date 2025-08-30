@@ -2,21 +2,22 @@
 set -euo pipefail
 
 CSV="/opt/scalp/var/dashboard/signals.csv"
+BUILD="/opt/scalp/tools/build_dashboard.py"
 DOCS="/opt/scalp/docs"
-TOOLS="/opt/scalp/tools"
 
-echo "[publish] clean csv"
-python3 "$TOOLS/clean_csv.py" "$CSV" || true
+log(){ echo "[publish] $*"; }
 
-echo "[publish] build dashboard"
-python3 "$TOOLS/build_dashboard.py"
-
-echo "[publish] export JSON"
+# 1) Sanity
 mkdir -p "$DOCS"
-jq -R -s -f "$TOOLS/csv2json.jq" "$CSV" > "$DOCS/signals.json" || echo "[]">$DOCS/signals.json
+test -s "$CSV" || { log "no CSV -> writing empty JSON/HTML"; echo "[]" > "$DOCS/signals.json"; echo "<!doctype html><meta charset=utf-8><title>SCALP</title><body style='background:#0f141a;color:#e8eef8;font:14px sans-serif'>No data</body>" > "$DOCS/index.html"; exit 0; }
 
-echo "[publish] health"
-date +%s | awk '{print "{\"generated_at\":"$1",\"status\":\"ok\"}"}' > "$DOCS/health.json"
+# 2) Build compact HTML + signals.json (our script)
+log "build dashboard (compact)"
+/opt/scalp/tools/build_dashboard.py
 
-ls -lh "$DOCS/index.html" "$DOCS/signals.json" "$DOCS/health.json" || true
-echo "[publish] done."
+# 3) Health
+log "health"
+printf '{"ok":true,"ts":%s}\n' "$(date -u +%s)" > "$DOCS/health.json"
+
+log "done"
+
