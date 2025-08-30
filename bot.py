@@ -11,11 +11,17 @@ def _env_list(name: str, default: List[str]) -> List[str]:
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    symbols = _env_list("SCALP_SYMBOLS", ["BTCUSDT", "ETHUSDT"])
-    tfs     = _env_list("SCALP_TFS", ["1m", "5m", "15m"])
-SYMBOLS = load_pairs()  # ensure we use /opt/scalp/config/pairs.txt
-import logging
-logging.getLogger().info("Bot démarré avec %s / %s", SYMBOLS, locals().get("TFS") or locals().get("TFs") or ["1m","5m","15m"])
-    sched = PipelineScheduler(symbols=symbols, tfs=tfs, interval=5.0, logger=logging.getLogger())
-    sched.run()
+    tfs = _env_list("SCALP_TFS", ["1m","5m","15m"])
+    symbols = load_pairs()  # top 5 au démarrage, puis runner rechargera auto
 
+    interval = float(os.getenv("SCALP_INTERVAL_SEC", "5"))
+    reload_pairs_sec = float(os.getenv("SCALP_RELOAD_PAIRS_SEC", "60"))
+
+    sched = PipelineScheduler(
+        symbols=symbols,
+        tfs=tfs,
+        interval_sec=interval,
+        reload_pairs_sec=reload_pairs_sec,
+        logger=logging.getLogger("bot"),
+    )
+    sched.run()
