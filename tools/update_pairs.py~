@@ -1,0 +1,90 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""
+Met à jour /opt/scalp/config/pairs.txt avec :
+  - une base minimale (BTCUSDT, ETHUSDT, BNBUSDT, SOLUSDT, XRPUSDT)
+  - un TOP N calculé depuis le ticker 24h Binance (volume et volatilité)
+Options:
+  --top 20                (par défaut)
+  --restart-if-updated    redémarre scalp-bot.service si la liste change
+"""
+
+import os, sys, json, hashlib
+from urllib.request import urlopen
+
+BASE = ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT"]
+CONFIG_DIR = os.environ.get("SCALP_CONFIG_DIR", "/opt/scalp/config")
+PAIRS_PATH = os.path.join(CONFIG_DIR, "pairs.txt")
+
+def fetch_binance_24h():
+    url = "https://api.binance.com/api/v3/ticker/24hr"
+    with urlopen(url, timeout=10) as r:
+        return json.loads(r.read().decode("utf-8"))
+
+def score_rows(rows):
+    def keep(sym):
+        bad = ("UPUSDT","DOWNUSDT","BULLUSDT","BEARUSDT","USDUSDT","TUSDUSDT","BUSDUSDT")
+        return sym.endswith("USDT") and all(x not in sym for x in bad)
+    rows = [x for x in rows if keep(x.get("symbol",""))]
+    for x in rows:
+        try: qv = float(x.get("quoteVolume", "0"))
+        except: qv = 0.0
+        try: pc = abs(float(x.get("priceChangePercent","0")))
+        except: pc = 0.0
+        x["_score"] = qv + (1e6 * (pc/100.0))
+    rows.sort(key=lambda z: z["_score"], reverse=True)
+    return rows
+
+def sha(s: str) -> str:
+    return hashlib.sha256(s.encode("utf-8")).hexdigest()
+
+def read_old():
+    if not os.path.exists(PAIRS_PATH):
+        return ""
+    with open(PAIRS_PATH, "r", encoding="utf-8") as f:
+        return f.read().strip()
+
+def write_new(lines):
+    os.makedirs(CONFIG_DIR, exist_ok=True)
+    with open(PAIRS_PATH, "w", encoding="utf-8") as f:
+        f.write("# Une paire par ligne, USDT uniquement\n")
+        for s in lines:
+            f.write(f"{s}\n")
+
+def main():
+    top_n = 20
+    restart = False
+    for a in sys.argv[1:]:
+        if a.startswith("--top"):
+            try: top_n = int(a.split("=")[1])
+            except: pass
+        if a == "--restart-if-updated":
+            restart = True
+
+    wanted = list(dict.fromkeys(BASE))
+    try:
+        ranked = score_rows(fetch_binance_24h())
+        for x in ranked:
+            sym = x["symbol"]
+            if sym not in wanted:
+                wanted.append(sym)
+            if len(wanted) >= top_n:
+                break
+    except Exception:
+        pass
+
+    text_new = "# Une paire par ligne, USDT uniquement\n" + "\n".join(wanted) + "\n"
+    text_old = read_old()
+
+    if sha(text_new) != sha(text_old):
+        write_new(wanted)
+        print(f"[update_pairs] Écrit {len(wanted)} paires -> {PAIRS_PATH}")
+        if restart:
+            os.system("systemctl restart scalp-bot.service")
+            print("[update_pairs] scalp-bot.service redémarré (liste mise à jour).")
+    else:
+        print("[update_pairs] Aucun changement.")
+
+if __name__ == "__main__":
+    main()
