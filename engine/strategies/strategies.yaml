@@ -1,0 +1,46 @@
+# Stratégies déclaratives (faciles à ajuster)
+# Chaque stratégie renvoie un signal parmi: BUY | SELL | HOLD
+# La combinaison finale est un "vote" (majorité), configurable.
+
+version: 1
+
+combine:
+  mode: majority        # majority | all-buy | any-buy
+  min_votes: 1          # seuil minimal de votes "BUY" pour déclencher BUY en mode majority
+
+strategies:
+
+  - name: sma_cross_fast
+    description: "Croisement SMA 9/21 (rapide)"
+    tf: "1m"
+    rules:
+      - kind: indicator
+        type: sma_cross
+        fast: 9
+        slow: 21
+        bias: long        # long | short | both
+
+  - name: rsi_reversion
+    description: "RSI 14 reversion"
+    tf: "5m"
+    rules:
+      - kind: indicator
+        type: rsi
+        length: 14
+        oversold: 30       # BUY si < oversold et RSI remonte
+        overbought: 70     # SELL si > overbought et RSI baisse
+        confirmation: 1    # nb de barres de confirmation
+
+  - name: ema_trend
+    description: "Tendance EMA 50/200 + momentum"
+    tf: "15m"
+    rules:
+      - kind: indicator
+        type: ema_trend
+        fast: 50
+        slow: 200
+        momentum_min: 0.0008   # variation minimale (ratio) pour valider le signal
+
+# Notes:
+# - Le bot peut charger plusieurs TF; ici, chaque stratégie peut cibler un TF différent.
+# - L’évaluation prendra la dernière bougie disponible du TF demandé.
