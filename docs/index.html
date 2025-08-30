@@ -1,205 +1,71 @@
-
 <!DOCTYPE html>
-<html lang="fr">
-<head>
-<meta charset="utf-8">
+<html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>SCALP — Dashboard</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
-<style>
-  :root {
-    --bg:#0b0f14; --card:#121820; --text:#e6edf3; --muted:#9aa6b2;
-    --ok:#2aa745; --dat:#c89d28; --old:#d0443e; --mis:#7b8a97; --chip:#1f2937;
-    --accent:#3b82f6; --border:#223040;
-  }
-  html,body { background:var(--bg); color:var(--text); font:16px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Arial; margin:0; padding:0; }
-  .wrap { max-width:1100px; margin:0 auto; padding:20px; }
-  h1 { font-size:2.1rem; margin:10px 0 8px; }
-  small.muted { color:var(--muted); }
-  .row { display:grid; grid-template-columns: 1fr; gap:16px; }
-  @media (min-width: 900px) {
-    .row-2 { grid-template-columns: 1fr 1fr; }
-  }
-  .card { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:18px; }
-  .title { font-size:1.25rem; margin:0 0 10px; }
-  .chips span { display:inline-block; background:var(--chip); padding:6px 10px; border-radius:999px; margin-right:8px; font-weight:600; }
-  .chips .mis { background:var(--mis); color:#081217; }
-  .chips .old { background:var(--old); color:#fff; }
-  .chips .dat { background:var(--dat); color:#0b0f14; }
-  .chips .ok  { background:var(--ok);  color:#0b0f14; }
-  .muted { color:var(--muted); }
-  .flex { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
-  button.refresh { background:var(--accent); color:white; border:0; padding:6px 12px; border-radius:8px; cursor:pointer; }
-  table { width:100%; border-collapse:collapse; }
-  th,td { padding:8px 10px; border-bottom:1px solid var(--border); }
-  th { text-align:left; color:var(--muted); font-weight:600; }
-  tr:hover td { background:#0f141c; }
-  .right { text-align:right; }
-  .placeholder { border:1px dashed var(--border); color:var(--muted); padding:18px; border-radius:10px; }
-  .badge { padding:3px 8px; border-radius:6px; font-weight:700; }
-  .badge.ok  { background:var(--ok);  color:#0b0f14; }
-  .badge.dat { background:var(--dat); color:#0b0f14; }
-  .badge.old { background:var(--old); color:#fff;    }
-  .badge.mis { background:var(--mis); color:#081217;}
-</style>
-</head>
-<body>
-<div class="wrap">
-  <h1>SCALP — Dashboard <small class="muted">(2025-08-30 19:22:21 UTC)</small></h1>
-  <div class="flex" style="margin:6px 0 18px;">
-    <div class="muted">Auto-refresh: <b id="rf-interval">5s</b> · reload dans <span id="rf-count">5</span>s</div>
-    <button class="refresh" onclick="location.reload()">Refresh</button>
-  </div>
+<meta http-equiv="refresh" content="5">
 
-  <div class="row row-2">
-    <div class="card">
-      <div class="title">Health</div>
-      <div id="health">
-        <div><span class="muted">generated_at:</span> <b>1756580842</b></div>
-        <div><span class="muted">commit:</span> <b>053628ca7</b></div>
-        <div><span class="muted">status:</span> <b style="color:var(--ok);">ok</b></div>
-      </div>
+    <style>
+      :root{--bg:#0b0d12;--fg:#e6edf3;--mut:#8b949e;--card:#111520;--br:#21262d;
+            --ok:#2ea043;--warn:#d29922;--bad:#f85149;
+            --buy:#2ea043;--sell:#f85149;--hold:#6e7681}
+      *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);
+         font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu}
+      .wrap{max-width:1180px;margin:0 auto;padding:28px}
+      h1{font-size:42px;margin:6px 0 18px}
+      .sub{color:var(--mut);font-weight:600;margin-bottom:22px}
+      .cards{display:grid;grid-template-columns:1fr;gap:16px}
+      @media(min-width:900px){.cards{grid-template-columns:1fr}}
+      .card{background:var(--card);border:1px solid var(--br);border-radius:12px;padding:16px}
+      .kpis{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px}
+      .pill{border-radius:20px;padding:8px 14px;font-weight:700}
+      .mis{background:#6e768144;color:#fff}.old{background:var(--bad);color:#fff}
+      .dat{background:var(--warn);color:#000}.ok{background:var(--ok);color:#000}
+      table{width:100%;border-collapse:collapse}
+      th,td{padding:10px;border-bottom:1px solid var(--br);text-align:left}
+      th{color:var(--mut);font-weight:700}
+      .sig.buy{color:var(--buy);font-weight:800}
+      .sig.sell{color:var(--sell);font-weight:800}
+      .sig.hold{color:var(--hold);font-weight:700}
+      .hm{overflow:auto}
+      .hm table td{min-width:78px;text-align:center}
+      .cell{display:inline-block;padding:6px 10px;border-radius:10px;background:#30363d33}
+    </style>
+    
+<body><div class="wrap">
+<h1>SCALP — Dashboard</h1>
+<div class="sub">(2025-08-30 19:22:30 UTC)</div>
+
+<div class="cards">
+
+  <section class="card">
+    <h2>Compteurs</h2>
+    <div class="kpis">
+      <span class="pill mis">MIS: 0</span>
+      <span class="pill old">OLD: 0</span>
+      <span class="pill dat">DAT: 60</span>
+      <span class="pill ok">OK: 60</span>
     </div>
+    <div style="margin-top:8px;color:#8b949e">OK = dernière valeur BUY/SELL/HOLD • MIS = aucune donnée</div>
+  </section>
 
-    <div class="card">
-      <div class="title">Compteurs</div>
-      <div class="chips">
-        <span class="mis">MIS: 0</span>
-        <span class="old">OLD: 0</span>
-        <span class="dat">DAT: 0</span>
-        <span class="ok">OK: 0</span>
+  <section class="card">
+    <h2>Heatmap (pair × TF)</h2>
+    
+      <div class="hm">
+        <table>
+          <thead><tr><th>Pair \ TF</th><th>1m</th><th>5m</th><th>15m</th></tr></thead>
+          <tbody><tr><th>ADAUSDT</th><td><span class="cell hold">HOLD</span></td><td><span class="cell hold">HOLD</span></td><td><span class="cell hold">HOLD</span></td></tr><tr><th>ARBUSDT</th><td><span class="cell hold">HOLD</span></td><td><span class="cell hold">HOLD</span></td><td><span class="cell hold">HOLD</span></td></tr><tr><th>BNBUSDT</th><td><span class="cell hold">HOLD</span></td><td><span class="cell hold">HOLD</span></td><td><span class="cell hold">HOLD</span></td></tr><tr><th>BONKUSDT</th><td><span class="cell hold">HOLD</span></td><td><span class="cell hold">HOLD</span></td><td><span class="cell hold">HOLD</span></td></tr><tr><th>BTCUSDT</th><td><span class="cell hold">HOLD</span></td><td><span class="cell hold">HOLD</span></td><td><span class="cell hold">HOLD</span></td></tr><tr><th>CFXUSDT</th><td><span class="cell hold">HOLD</span></td><td><span class="cell hold">HOLD</span></td><td><span class="cell hold">HOLD</span></td></tr><tr><th>DOGEUSDT</th><td><span class="cell hold">HOLD</span></td><td><span class="cell hold">HOLD</span></td><td><span class="cell hold">HOLD</span></td></tr><tr><th>ENAUSDT</th><td><span class="cell hold">HOLD</span></td><td><span class="cell hold">HOLD</span></td><td><span class="cell hold">HOLD</span></td></tr><tr><th>ETHUSDT</th><td><span class="cell hold">HOLD</span></td><td><span class="cell hold">HOLD</span></td><td><span class="cell hold">HOLD</span></td></tr><tr><th>FDUSDUSDT</th><td><span class="cell hold">HOLD</span></td><td><span class="cell hold">HOLD</span></td><td><span class="cell hold">HOLD</span></td></tr><tr><th>LINKUSDT</th><td><span class="cell hold">HOLD</span></td><td><span class="cell hold">HOLD</span></td><td><span class="cell hold">HOLD</span></td></tr><tr><th>PENGUUSDT</th><td><span class="cell hold">HOLD</span></td><td><span class="cell hold">HOLD</span></td><td><span class="cell hold">HOLD</span></td></tr><tr><th>PEPEUSDT</th><td><span class="cell hold">HOLD</span></td><td><span class="cell hold">HOLD</span></td><td><span class="cell hold">HOLD</span></td></tr><tr><th>PLUMEUSDT</th><td><span class="cell hold">HOLD</span></td><td><span class="cell hold">HOLD</span></td><td><span class="cell hold">HOLD</span></td></tr><tr><th>PYTHUSDT</th><td><span class="cell hold">HOLD</span></td><td><span class="cell hold">HOLD</span></td><td><span class="cell hold">HOLD</span></td></tr><tr><th>SOLUSDT</th><td><span class="cell hold">HOLD</span></td><td><span class="cell hold">HOLD</span></td><td><span class="cell hold">HOLD</span></td></tr><tr><th>SUIUSDT</th><td><span class="cell hold">HOLD</span></td><td><span class="cell hold">HOLD</span></td><td><span class="cell hold">HOLD</span></td></tr><tr><th>TRXUSDT</th><td><span class="cell hold">HOLD</span></td><td><span class="cell hold">HOLD</span></td><td><span class="cell hold">HOLD</span></td></tr><tr><th>USDCUSDT</th><td><span class="cell hold">HOLD</span></td><td><span class="cell hold">HOLD</span></td><td><span class="cell hold">HOLD</span></td></tr><tr><th>XRPUSDT</th><td><span class="cell hold">HOLD</span></td><td><span class="cell hold">HOLD</span></td><td><span class="cell hold">HOLD</span></td></tr></tbody>
+        </table>
       </div>
-      <div class="muted" style="margin-top:8px;">
-        MIS: no data · OLD: stale · DAT: fresh CSV, no active strategy · OK: fresh CSV + active strategy
-      </div>
-    </div>
-  </div>
+    
+  </section>
 
-  <div class="card" style="margin-top:16px;">
-    <div class="title">Heatmap (pair × TF)</div>
-    <div id="heat" class="placeholder">Matrice en préparation… en attente des premiers résultats/metrics.</div>
-  </div>
+  <section class="card">
+    <h2>Derniers signaux</h2>
+    <table>
+      <thead><tr><th>UTC</th><th>Symbol</th><th>TF</th><th>Signal</th><th>Details</th></tr></thead>
+      <tbody><tr><td>2025-08-30 19:22:19</td><td>BTCUSDT</td><td>1m</td><td class='sig hold'>HOLD</td><td>sma_cross_fast=HOLD;rsi_reversion=HOLD;ema_trend=HOLD</td></tr><tr><td>2025-08-30 19:22:19</td><td>BTCUSDT</td><td>5m</td><td class='sig hold'>HOLD</td><td>sma_cross_fast=HOLD;rsi_reversion=HOLD;ema_trend=HOLD</td></tr><tr><td>2025-08-30 19:22:19</td><td>BTCUSDT</td><td>15m</td><td class='sig hold'>HOLD</td><td>sma_cross_fast=HOLD;rsi_reversion=HOLD;ema_trend=HOLD</td></tr><tr><td>2025-08-30 19:22:19</td><td>ETHUSDT</td><td>1m</td><td class='sig hold'>HOLD</td><td>sma_cross_fast=HOLD;rsi_reversion=HOLD;ema_trend=HOLD</td></tr><tr><td>2025-08-30 19:22:19</td><td>ETHUSDT</td><td>5m</td><td class='sig hold'>HOLD</td><td>sma_cross_fast=HOLD;rsi_reversion=HOLD;ema_trend=HOLD</td></tr><tr><td>2025-08-30 19:22:19</td><td>ETHUSDT</td><td>15m</td><td class='sig hold'>HOLD</td><td>sma_cross_fast=HOLD;rsi_reversion=HOLD;ema_trend=HOLD</td></tr><tr><td>2025-08-30 19:22:19</td><td>BNBUSDT</td><td>1m</td><td class='sig hold'>HOLD</td><td>sma_cross_fast=HOLD;rsi_reversion=HOLD;ema_trend=HOLD</td></tr><tr><td>2025-08-30 19:22:19</td><td>BNBUSDT</td><td>5m</td><td class='sig hold'>HOLD</td><td>sma_cross_fast=HOLD;rsi_reversion=HOLD;ema_trend=HOLD</td></tr><tr><td>2025-08-30 19:22:19</td><td>BNBUSDT</td><td>15m</td><td class='sig hold'>HOLD</td><td>sma_cross_fast=HOLD;rsi_reversion=HOLD;ema_trend=HOLD</td></tr><tr><td>2025-08-30 19:22:19</td><td>SOLUSDT</td><td>1m</td><td class='sig hold'>HOLD</td><td>sma_cross_fast=HOLD;rsi_reversion=HOLD;ema_trend=HOLD</td></tr><tr><td>2025-08-30 19:22:19</td><td>SOLUSDT</td><td>5m</td><td class='sig hold'>HOLD</td><td>sma_cross_fast=HOLD;rsi_reversion=HOLD;ema_trend=HOLD</td></tr><tr><td>2025-08-30 19:22:19</td><td>SOLUSDT</td><td>15m</td><td class='sig hold'>HOLD</td><td>sma_cross_fast=HOLD;rsi_reversion=HOLD;ema_trend=HOLD</td></tr><tr><td>2025-08-30 19:22:19</td><td>XRPUSDT</td><td>1m</td><td class='sig hold'>HOLD</td><td>sma_cross_fast=HOLD;rsi_reversion=HOLD;ema_trend=HOLD</td></tr><tr><td>2025-08-30 19:22:19</td><td>XRPUSDT</td><td>5m</td><td class='sig hold'>HOLD</td><td>sma_cross_fast=HOLD;rsi_reversion=HOLD;ema_trend=HOLD</td></tr><tr><td>2025-08-30 19:22:19</td><td>XRPUSDT</td><td>15m</td><td class='sig hold'>HOLD</td><td>sma_cross_fast=HOLD;rsi_reversion=HOLD;ema_trend=HOLD</td></tr><tr><td>2025-08-30 19:22:19</td><td>USDCUSDT</td><td>1m</td><td class='sig hold'>HOLD</td><td>sma_cross_fast=HOLD;rsi_reversion=HOLD;ema_trend=HOLD</td></tr><tr><td>2025-08-30 19:22:19</td><td>USDCUSDT</td><td>5m</td><td class='sig hold'>HOLD</td><td>sma_cross_fast=HOLD;rsi_reversion=HOLD;ema_trend=HOLD</td></tr><tr><td>2025-08-30 19:22:19</td><td>USDCUSDT</td><td>15m</td><td class='sig hold'>HOLD</td><td>sma_cross_fast=HOLD;rsi_reversion=HOLD;ema_trend=HOLD</td></tr><tr><td>2025-08-30 19:22:19</td><td>FDUSDUSDT</td><td>1m</td><td class='sig hold'>HOLD</td><td>sma_cross_fast=HOLD;rsi_reversion=HOLD;ema_trend=HOLD</td></tr><tr><td>2025-08-30 19:22:19</td><td>FDUSDUSDT</td><td>5m</td><td class='sig hold'>HOLD</td><td>sma_cross_fast=HOLD;rsi_reversion=HOLD;ema_trend=HOLD</td></tr><tr><td>2025-08-30 19:22:19</td><td>FDUSDUSDT</td><td>15m</td><td class='sig hold'>HOLD</td><td>sma_cross_fast=HOLD;rsi_reversion=HOLD;ema_trend=HOLD</td></tr><tr><td>2025-08-30 19:22:19</td><td>DOGEUSDT</td><td>1m</td><td class='sig hold'>HOLD</td><td>sma_cross_fast=HOLD;rsi_reversion=HOLD;ema_trend=HOLD</td></tr><tr><td>2025-08-30 19:22:19</td><td>DOGEUSDT</td><td>5m</td><td class='sig hold'>HOLD</td><td>sma_cross_fast=HOLD;rsi_reversion=HOLD;ema_trend=HOLD</td></tr><tr><td>2025-08-30 19:22:19</td><td>DOGEUSDT</td><td>15m</td><td class='sig hold'>HOLD</td><td>sma_cross_fast=HOLD;rsi_reversion=HOLD;ema_trend=HOLD</td></tr><tr><td>2025-08-30 19:22:19</td><td>PYTHUSDT</td><td>1m</td><td class='sig hold'>HOLD</td><td>sma_cross_fast=HOLD;rsi_reversion=HOLD;ema_trend=HOLD</td></tr><tr><td>2025-08-30 19:22:19</td><td>PYTHUSDT</td><td>5m</td><td class='sig hold'>HOLD</td><td>sma_cross_fast=HOLD;rsi_reversion=HOLD;ema_trend=HOLD</td></tr><tr><td>2025-08-30 19:22:19</td><td>PYTHUSDT</td><td>15m</td><td class='sig hold'>HOLD</td><td>sma_cross_fast=HOLD;rsi_reversion=HOLD;ema_trend=HOLD</td></tr><tr><td>2025-08-30 19:22:19</td><td>SUIUSDT</td><td>1m</td><td class='sig hold'>HOLD</td><td>sma_cross_fast=HOLD;rsi_reversion=HOLD;ema_trend=HOLD</td></tr><tr><td>2025-08-30 19:22:19</td><td>SUIUSDT</td><td>5m</td><td class='sig hold'>HOLD</td><td>sma_cross_fast=HOLD;rsi_reversion=HOLD;ema_trend=HOLD</td></tr><tr><td>2025-08-30 19:22:19</td><td>SUIUSDT</td><td>15m</td><td class='sig hold'>HOLD</td><td>sma_cross_fast=HOLD;rsi_reversion=HOLD;ema_trend=HOLD</td></tr><tr><td>2025-08-30 19:22:19</td><td>ENAUSDT</td><td>1m</td><td class='sig hold'>HOLD</td><td>sma_cross_fast=HOLD;rsi_reversion=HOLD;ema_trend=HOLD</td></tr><tr><td>2025-08-30 19:22:19</td><td>ENAUSDT</td><td>5m</td><td class='sig hold'>HOLD</td><td>sma_cross_fast=HOLD;rsi_reversion=HOLD;ema_trend=HOLD</td></tr><tr><td>2025-08-30 19:22:19</td><td>ENAUSDT</td><td>15m</td><td class='sig hold'>HOLD</td><td>sma_cross_fast=HOLD;rsi_reversion=HOLD;ema_trend=HOLD</td></tr><tr><td>2025-08-30 19:22:19</td><td>BONKUSDT</td><td>1m</td><td class='sig hold'>HOLD</td><td>sma_cross_fast=HOLD;rsi_reversion=HOLD;ema_trend=HOLD</td></tr><tr><td>2025-08-30 19:22:19</td><td>BONKUSDT</td><td>5m</td><td class='sig hold'>HOLD</td><td>sma_cross_fast=HOLD;rsi_reversion=HOLD;ema_trend=HOLD</td></tr><tr><td>2025-08-30 19:22:19</td><td>BONKUSDT</td><td>15m</td><td class='sig hold'>HOLD</td><td>sma_cross_fast=HOLD;rsi_reversion=HOLD;ema_trend=HOLD</td></tr><tr><td>2025-08-30 19:22:19</td><td>TRXUSDT</td><td>1m</td><td class='sig hold'>HOLD</td><td>sma_cross_fast=HOLD;rsi_reversion=HOLD;ema_trend=HOLD</td></tr><tr><td>2025-08-30 19:22:19</td><td>TRXUSDT</td><td>5m</td><td class='sig hold'>HOLD</td><td>sma_cross_fast=HOLD;rsi_reversion=HOLD;ema_trend=HOLD</td></tr><tr><td>2025-08-30 19:22:19</td><td>TRXUSDT</td><td>15m</td><td class='sig hold'>HOLD</td><td>sma_cross_fast=HOLD;rsi_reversion=HOLD;ema_trend=HOLD</td></tr><tr><td>2025-08-30 19:22:19</td><td>ADAUSDT</td><td>1m</td><td class='sig hold'>HOLD</td><td>sma_cross_fast=HOLD;rsi_reversion=HOLD;ema_trend=HOLD</td></tr><tr><td>2025-08-30 19:22:19</td><td>ADAUSDT</td><td>5m</td><td class='sig hold'>HOLD</td><td>sma_cross_fast=HOLD;rsi_reversion=HOLD;ema_trend=HOLD</td></tr><tr><td>2025-08-30 19:22:19</td><td>ADAUSDT</td><td>15m</td><td class='sig hold'>HOLD</td><td>sma_cross_fast=HOLD;rsi_reversion=HOLD;ema_trend=HOLD</td></tr><tr><td>2025-08-30 19:22:19</td><td>LINKUSDT</td><td>1m</td><td class='sig hold'>HOLD</td><td>sma_cross_fast=HOLD;rsi_reversion=HOLD;ema_trend=HOLD</td></tr><tr><td>2025-08-30 19:22:19</td><td>LINKUSDT</td><td>5m</td><td class='sig hold'>HOLD</td><td>sma_cross_fast=HOLD;rsi_reversion=HOLD;ema_trend=HOLD</td></tr><tr><td>2025-08-30 19:22:19</td><td>LINKUSDT</td><td>15m</td><td class='sig hold'>HOLD</td><td>sma_cross_fast=HOLD;rsi_reversion=HOLD;ema_trend=HOLD</td></tr><tr><td>2025-08-30 19:22:19</td><td>PEPEUSDT</td><td>1m</td><td class='sig hold'>HOLD</td><td>sma_cross_fast=HOLD;rsi_reversion=HOLD;ema_trend=HOLD</td></tr><tr><td>2025-08-30 19:22:19</td><td>PEPEUSDT</td><td>5m</td><td class='sig hold'>HOLD</td><td>sma_cross_fast=HOLD;rsi_reversion=HOLD;ema_trend=HOLD</td></tr><tr><td>2025-08-30 19:22:19</td><td>PEPEUSDT</td><td>15m</td><td class='sig hold'>HOLD</td><td>sma_cross_fast=HOLD;rsi_reversion=HOLD;ema_trend=HOLD</td></tr><tr><td>2025-08-30 19:22:19</td><td>PLUMEUSDT</td><td>1m</td><td class='sig hold'>HOLD</td><td>sma_cross_fast=HOLD;rsi_reversion=HOLD;ema_trend=HOLD</td></tr><tr><td>2025-08-30 19:22:19</td><td>PLUMEUSDT</td><td>5m</td><td class='sig hold'>HOLD</td><td>sma_cross_fast=HOLD;rsi_reversion=HOLD;ema_trend=HOLD</td></tr></tbody>
+    </table>
+  </section>
 
-  <div class="card" style="margin-top:16px;">
-    <div class="title">TOP résultats</div>
-    <div class="flex" style="margin-bottom:10px;">
-      <label>Pair :
-        <select id="f_pair">
-          <option value="">(toutes)</option>
-          
-        </select>
-      </label>
-      <label>TF :
-        <select id="f_tf">
-          <option value="">(tous)</option>
-          
-        </select>
-      </label>
-    </div>
-    <div id="top_table"></div>
-  </div>
-
-  <div class="muted" style="margin:20px 0 6px;">
-    <small>Dernier backtest: <b>—</b> (age: n/a) · risk_mode: <b>n/a</b></small>
-  </div>
 </div>
-
-<script>
-  // ---- Auto-refresh 5s
-  let left = 5;
-  const span = document.getElementById('rf-count');
-  setInterval(() => {
-    left = Math.max(0, left-1);
-    if (span) span.textContent = left;
-    if (left === 0) location.reload();
-  }, 1000);
-
-  // ---- Données injectées (côté client) pour filtres/plot
-  const HEAT = {};
-  const PAIRS = [];
-  const TFS = [];
-  const TOP_ROWS = [];
-
-  // ---- Heatmap Plotly
-  function renderHeat() {
-    const el = document.getElementById('heat');
-    if (!el) return;
-    const pairs = PAIRS;
-    const tfs = TFS;
-    if (!pairs.length || !tfs.length) {
-      el.className = 'placeholder';
-      el.innerText = 'Aucune matrice exploitable (pas encore de PF par pair×TF).';
-      return;
-    }
-    const z = [];
-    for (let i=0;i<pairs.length;i++) {
-      const row = [];
-      for (let j=0;j<tfs.length;j++) {
-        const p = pairs[i];
-        const tf = tfs[j];
-        const v = (HEAT[p] && HEAT[p][tf] != null) ? HEAT[p][tf] : null;
-        row.push(v);
-      }
-      z.push(row);
-    }
-    el.className = '';
-    el.innerHTML = '';
-    const data = [{
-      z: z, x: tfs, y: pairs, type:'heatmap', colorscale:'Viridis', hoverongaps:false,
-      colorbar: {title:'PF', outlinewidth:0}
-    }];
-    const layout = {
-      paper_bgcolor:'#121820', plot_bgcolor:'#121820',
-      font:{color:'#e6edf3'},
-      margin:{l:80,r:10,t:10,b:40}
-    };
-    Plotly.newPlot(el, data, layout, {responsive:true, displayModeBar:false});
-  }
-
-  // ---- TOP table + filtres
-  function number(x, d=2) {
-    if (x===null||x===undefined||isNaN(x)) return '–';
-    return Number(x).toFixed(d);
-  }
-  function badge(state) {
-    const cls = state || '';
-    const val = (state||'').toUpperCase() || '—';
-    cls = locals().get("cls", "bg-secondary"); cls = locals().get("cls", "bg-secondary"); return f'<span class="badge bg-secondary"></span>';
-  }
-  function renderTop() {
-    const selPair = document.getElementById('f_pair').value;
-    const selTf = document.getElementById('f_tf').value;
-    let rows = TOP_ROWS.slice();
-    if (selPair) rows = rows.filter(r => (r.pair===selPair)||(r.symbol===selPair)||(r.pair_tf||'').startsWith(selPair+':'));
-    if (selTf)   rows = rows.filter(r => (r.tf===selTf)||(r.pair_tf||'').endsWith(':'+selTf));
-    const head = `
-      <table>
-        <thead><tr>
-          <th>Pair</th><th>TF</th><th>PF</th><th>WR</th><th>MDD</th><th>Trades</th><th>Name</th>
-        </tr></thead><tbody>`;
-    const body = rows.map(r => {
-      const m = r.metrics||{};
-      const pair = r.pair || (r.pair_tf||'').split(':')[0] || r.symbol || '—';
-      const tf   = r.tf   || (r.pair_tf||'').split(':')[1] || '—';
-      return `<tr>
-        <td>${pair}</td>
-        <td>${tf}</td>
-        <td class="right">${number(m.pf,2)}</td>
-        <td class="right">${number(m.wr,2)}</td>
-        <td class="right">${number(m.mdd,2)}</td>
-        <td class="right">${m.trades??'–'}</td>
-        <td>${r.name||'—'}</td>
-      </tr>`;
-    }).join('');
-    const tail = `</tbody></table>`;
-    document.getElementById('top_table').innerHTML = head + (body || `<div class="placeholder">Aucun résultat pour ce filtre.</div>`) + tail;
-  }
-
-  document.getElementById('f_pair').addEventListener('change', renderTop);
-  document.getElementById('f_tf').addEventListener('change', renderTop);
-
-  renderHeat();
-  renderTop();
-</script>
-</body>
-</html>
+</div></body></html>
