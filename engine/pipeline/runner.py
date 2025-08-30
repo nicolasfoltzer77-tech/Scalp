@@ -1,61 +1,47 @@
-from engine.strategies.runner import load_strategies
-_STRATS, _CFG = load_strategies()
-# /opt/scalp/engine/pipeline/runner.py
-# -*- coding: utf-8 -*-
 from __future__ import annotations
-import os, time, logging
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Dict, Tuple, Optional
 
-from engine.data.loader import load_latest_ohlcv
+import time
+import logging
+from typing import List, Dict, Any, Optional
+
 from engine.signals.strategy_bridge import evaluate_for
-from engine.exchange.executor import TradeExecutor
-from engine.risk.limits import choose_action_from_signal, allowed_size_usdt, should_open
+from engine.strategies.runner import load_strategies
 
-LOG = logging.getLogger("pipeline")
+# charge toutes les stratégies
+_STRATS, _CFG = load_strategies()
+
+LOG = logging.getLogger("runner")
+
 
 class PipelineScheduler:
-    def __init__(self, max_concurrency: int = 8):
-        self.max_concurrency = max(1, int(os.environ.get("MAX_CONCURRENCY", max_concurrency)))
-        self.executor = ThreadPoolExecutor(max_workers=self.max_concurrency, thread_name_prefix="pipe")
-        self.trade = TradeExecutor()
-        self.last_bar: Dict[Tuple[str,str], int] = {}
+    def __init__(self, symbols: List[str], tfs: List[str], interval: int = 30, logger=None):
+        self.symbols = symbols
+        self.tfs = tfs
+        self.interval = interval
+        self.log = logger or LOG
 
-    def _eval_once(self, symbol: str, tf: str) -> None:
-        ohlcv = load_latest_ohlcv(symbol, tf)  # optionnel
-        last_close = None
-        last_ts = None
+    def _eval_once(self, symbol: str, tf: str, ohlcv: Optional[List[List[float]]] = None):
         try:
-            if ohlcv:
-                last_close = float(ohlcv[-1][4])
-                last_ts = int(ohlcv[-1][0])
-        except Exception:
-            pass
+            res = evaluate_for(
+                symbol=symbol,
+                tf=tf,
+                strategies=_STRATS,
+                config=_CFG,
+                ohlcv=ohlcv,
+                logger=self.log,
+            )
+            sig = res.get("combined")
+            return {"symbol": symbol, "tf": tf, "sig": sig, "details": res}
+        except Exception as e:
+            self.log.error("pipeline task error: %s", e, exc_info=True)
+            return {"symbol": symbol, "tf": tf, "sig": "ERR", "details": {}}
 
-        key = (symbol, tf)
-        if last_ts is not None and self.last_bar.get(key) == last_ts:
-            # déjà évalué ce bar
-            return
-        if last_ts is not None:
-            self.last_bar[key] = last_ts
-
-        sig, _ = strat_compute(symbol, tf, ohlcv=ohlcv, logger=LOG)
-        LOG.info(f"pipe-{symbol}-{tf} | {symbol} {tf} close={last_close} sig={sig} pnl=0.0")
-
-        act = choose_action_from_signal(sig)
-        if act != "HOLD" and should_open(symbol, act, last_close):
-            if act == "OPEN_LONG":  self.trade.open_long(symbol, tf, last_close)
-            elif act == "OPEN_SHORT": self.trade.open_short(symbol, tf, last_close)
-
-    def run_cycle(self, symbols: list[str], tfs: list[str]) -> None:
-        tasks = []
-        for sy in symbols:
-            for tf in tfs:
-                tasks.append(self.executor.submit(self._eval_once, sy, tf))
-        for f in as_completed(tasks):
-            try: f.result()
-            except Exception as e:
-                LOG.exception(f"pipeline task error: {e}")
-
-    def shutdown(self):
-        self.executor.shutdown(wait=False)
+    def run_forever(self):
+        while True:
+            cycle = []
+            for sym in self.symbols:
+                for tf in self.tfs:
+                    r = self._eval_once(sym, tf)
+                    cycle.append(r)
+            self.log.info("cycle done: %s", cycle)
+            time.sleep(self.interval)
