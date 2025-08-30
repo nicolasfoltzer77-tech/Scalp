@@ -1,0 +1,25 @@
+# engine/config/strategies.yaml
+defaults:
+  risk:
+    max_pos_usdt: 50
+    slippage_bps: 3
+    take_profit_bps: 40
+    stop_loss_bps: 30
+
+strategies:
+  # Exemple simple: croisement MM + filtre RSI
+  - name: xover_rsi
+    tf: "1m"
+    params:
+      fast: 9
+      slow: 21
+      rsi_len: 14
+      rsi_buy_below: 35
+      rsi_sell_above: 65
+
+  - name: macd_conf
+    tf: "5m"
+    params:
+      fast: 12
+      slow: 26
+      signal: 9

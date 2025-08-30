@@ -1,0 +1,39 @@
+# engine/config/config.yaml
+runtime:
+  data_dir: /opt/scalp/data
+  reports_dir: /opt/scalp/reports
+
+  # démarrage immédiat
+  symbols: ["BTCUSDT","ETHUSDT"]
+  tf_list: ["1m","5m","15m"]
+  bootstrap_symbols: ["BTCUSDT","ETHUSDT","SOLUSDT","BNBUSDT","XRPUSDT"]
+
+  # plafond threads pipelines
+  max_concurrency: 12
+
+  # Watchlist auto (USDT perp seulement)
+  watchlist:
+    max_symbols: 12
+    min_volume_usdt: 1_000_000
+    vol_window_minutes: 240
+    weight_volume: 0.6
+    weight_vol: 0.4
+    include_manual: true
+
+  manual_symbols: ["BTCUSDT","ETHUSDT"]
+
+  # Backfill (historique requis pour l'analyse) — tourne en arrière-plan
+  backfill:
+    # minutes d'historique à garantir par TF pour la première exécution
+    target_minutes:
+      "1m": 43200    # 30 jours
+      "5m": 20160    # 14 jours
+      "15m": 20160   # 14 jours
+    refresh_every_min: 15   # top-up toutes les 15 min
+    max_parallel: 2         # fetch en parallèle pour accélérer sans rate-limit
+    pause_sec: 0.2          # pause entre appels (anti rate-limit)
+
+  backfill_limit: 2000
+  risk_mode: conservative
+  exec_enabled: true
+  html_port: 8888
