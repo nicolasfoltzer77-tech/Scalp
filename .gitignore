@@ -1,4 +1,17 @@
-# venv & caches
+# secrets
+*.env
+.env
+# on garde /etc/scalp.env hors repo
+
+# caches / données locales
+/data/
+/reports/
+notebooks/
+__pycache__/
+*.pyc
+
+# artefacts locaux
+*.log# venv & caches
 venv/
 __pycache__/
 *.pyc
@@ -13,7 +26,20 @@ logs/
 *.env
 .env
 /etc/scalp.env
+# secrets
+*.env
+.env
+# on garde /etc/scalp.env hors repo
 
+# caches / données locales
+/data/
+/reports/
+notebooks/
+__pycache__/
+*.pyc
+
+# artefacts locaux
+*.log
 # outils locaux
 .ngrok*
 ngrok.*__pycache__/
