@@ -1,15 +1,2 @@
-# Core scientific stack – stay on numpy 1.26.x for ABI stability on 22.04
-numpy==1.26.4
-pandas==2.2.2
-scipy==1.15.3
-pyyaml>=6.0
-tqdm>=4.66
-optuna>=4.0
-
-# Optional speedups that broke you; keep <1.4 to avoid ARRAY_API crash
-bottleneck<1.4
-
-# Others your project used
-plotly>=6,<7
-jinja2>=3.1
-rich>=13
+# requirements.txt (minimal, propre)
+PyYAML>=6.0
