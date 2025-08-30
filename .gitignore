@@ -1,55 +1,14 @@
 # secrets
-*.env
 .env
-# on garde /etc/scalp.env hors repo
+*.env
 
-# caches / données locales
+# data locales
 /data/
 /reports/
-notebooks/
 __pycache__/
 *.pyc
-
-# artefacts locaux
-*.log# venv & caches
-venv/
-__pycache__/
-*.pyc
-
-# logs / artefacts
-logs/
 *.log
-*.err
-*.out
 
-# secrets
-*.env
-.env
-/etc/scalp.env
-# secrets
-*.env
-.env
-# on garde /etc/scalp.env hors repo
-
-# caches / données locales
-/data/
-/reports/
-notebooks/
-__pycache__/
-*.pyc
-
-# artefacts locaux
-*.log
-# outils locaux
+# artefacts
+/notebooks/
 .ngrok*
-ngrok.*__pycache__/
-
-
-*.map
-/dump_full.txt
-/tools/dump_full.txt
-/dump_full.txt
-/tools/dump_full.txt
-
-dump.txt
-tools/dump_full.txt
