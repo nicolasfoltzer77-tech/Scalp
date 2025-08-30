@@ -1,50 +1,47 @@
-#!/usr/bin/env bash
+#!/bin/bash
 set -euo pipefail
 
-# --- charge l'env si présent (exporte tout) ---
-ENV_MAIN="/etc/scalp.env"
-[[ -f "$ENV_MAIN" ]] && { set -a; source "$ENV_MAIN"; set +a; }
+# === Config ===
+OUT_JSON="/opt/scalp/site/out/dashboard.json"
+SCALP_PAGES_DIR="/opt/scalp/site/out-pages"
+SCALP_PAGES_BRANCH="gh-pages"
+REMOTE_HTTPS="https://github.com/${GITHUB_REPO}.git"
 
-# --- paramètres depuis l'env (avec défauts sûrs) ---
-: "${SCALP_PAGES_REPO:=nicolasfoltzer77-tech/nicolasfoltzer77-tech.github.io}"
-: "${SCALP_PAGES_BRANCH:=main}"
-: "${SCALP_PAGES_DIR:=/opt/scalp/site/out-pages}"
+# Charger l’env (cherche dans tes fichiers env)
+if [[ -f "$ENV_MAIN" ]]; then
+  set -a; source "$ENV_MAIN"; set +a
+elif [[ -f "$ENV_FALLBACK" ]]; then
+  set -a; source "$ENV_FALLBACK"; set +a
+fi
 
-# tokens possibles (ordre de priorité)
-TOKEN="${SCALP_GH_TOKEN:-${GITHUB_TOKEN:-${GH_TOKEN:-${GIT_TOKEN:-}}}}"
-
-if [[ -z "${TOKEN}" ]]; then
-  echo "ERROR: aucun token GitHub dans l'env (SCALP_GH_TOKEN/GITHUB_TOKEN/GH_TOKEN/GIT_TOKEN)."
+# Vérifier que le token est là
+if [[ -z "${SCALP_GH_TOKEN:-}" ]]; then
+  echo "❌ SCALP_GH_TOKEN manquant dans l’env"
   exit 1
 fi
 
-# URL propre sans stocker le token dans le remote
-REMOTE_HTTPS="https://github.com/${SCALP_PAGES_REPO}.git"
-REMOTE_AUTH="https://x-access-token:${TOKEN}@github.com/${SCALP_PAGES_REPO}.git"
-
-# --- 1) Génère le dashboard ---
+# === 1) générer dashboard.json ===
 /opt/scalp/venv/bin/python3 /opt/scalp/site/gen_dashboard.py
+echo "✅ dashboard.json généré"
 
-# --- 2) clone/prepare le repo pages ---
+# === 2) cloner le repo pages (avec token en mémoire uniquement) ===
 if [[ ! -d "${SCALP_PAGES_DIR}/.git" ]]; then
   rm -rf "${SCALP_PAGES_DIR}"
-  git clone "${REMOTE_HTTPS}" "${SCALP_PAGES_DIR}"
+  git -c http.extraHeader="Authorization: Basic $(printf "x-access-token:%s" "$SCALP_GH_TOKEN" | base64 -w0)" \
+      clone "${REMOTE_HTTPS}" "${SCALP_PAGES_DIR}"
 fi
 
 cd "${SCALP_PAGES_DIR}"
-git fetch origin || true
+git -c http.extraHeader="Authorization: Basic $(printf "x-access-token:%s" "$SCALP_GH_TOKEN" | base64 -w0)" fetch origin || true
 git checkout -B "${SCALP_PAGES_BRANCH}" || git checkout "${SCALP_PAGES_BRANCH}"
 
-# --- 3) copie les fichiers générés ---
-rsync -a --delete /opt/scalp/site/out/ ./  # ne pousse que le site
+# === 3) copier le dashboard ===
+cp "${OUT_JSON}" "${SCALP_PAGES_DIR}/dashboard.json"
+git add dashboard.json
+git commit -m "chore: update dashboard $(date -u '+%Y-%m-%d %H:%M:%S UTC')" || true
 
-# --- 4) commit + push avec auth via header (pas de token stocké) ---
-git config user.name  "${SCALP_GIT_USER:-scalp-bot}"
-git config user.email "${SCALP_GIT_EMAIL:-scalp-bot@local}"
-
-git add -A
-git commit -m "dashboard: $(date -u +'%F %T UTC')" || echo "no changes"
-
-# push sans enregistrer le token dans le remote :
-git -c http.extraHeader="Authorization: Basic $(printf "x-access-token:%s" "$TOKEN" | base64 -w0)" \
+# === 4) push avec token ===
+git -c http.extraHeader="Authorization: Basic $(printf "x-access-token:%s" "$SCALP_GH_TOKEN" | base64 -w0)" \
     push "${REMOTE_HTTPS}" "${SCALP_PAGES_BRANCH}"
+
+echo "✅ Dashboard publié sur GitHub Pages"
