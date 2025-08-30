@@ -1,30 +1,20 @@
 #!/usr/bin/env bash
 set -euo pipefail
-
-# --- Pré-requis système (Debian/Ubuntu) ---
 export DEBIAN_FRONTEND=noninteractive
+
+echo "[bootstrap] apt install…"
 apt-get update -y
 apt-get install -y python3 python3-venv python3-pip git ca-certificates
 
-# --- Dossiers projet ---
-mkdir -p /opt/scalp /opt/scalp/tools /opt/scalp/{data,reports,logs,docs}
+echo "[bootstrap] dossiers…"
+mkdir -p /opt/scalp /opt/scalp/{data,reports,logs,docs,tools}
 
-# --- Environnement virtuel ---
-if [ ! -x /opt/scalp/venv/bin/python ]; then
-  python3 -m venv /opt/scalp/venv
-fi
+echo "[bootstrap] venv…"
+/usr/bin/python3 -m venv /opt/scalp/venv
 /opt/scalp/venv/bin/python -m pip install --upgrade pip wheel
+/opt/scalp/venv/bin/pip install -r /opt/scalp/requirements.txt
 
-# --- Dépendances Python du projet ---
-# Notre code actuel n'utilise que PyYAML (le reste est standard library)
-# Ajoute ici d'autres libs si tu les utilises (pandas, requests, plotly, ccxt, etc.)
-/opt/scalp/venv/bin/python -m pip install pyyaml
-
-# --- Vérif versions ---
-echo "[bootstrap] Python:" $(/opt/scalp/venv/bin/python -V)
-echo "[bootstrap] Pip:" $(/opt/scalp/venv/bin/pip -V)
-
-# --- Services systemd (bot + pages + autosync timer) ---
+echo "[bootstrap] services systemd…"
 cat >/etc/systemd/system/scalp-bot.service <<'UNIT'
 [Unit]
 Description=Scalp Bot (multi-pipelines + GitHub Pages)
@@ -86,7 +76,5 @@ Persistent=true
 WantedBy=timers.target
 UNIT
 
-# --- Relance systemd ---
 systemctl daemon-reload
-
-echo "[bootstrap] OK."
+echo "[bootstrap] ✅ prêt."
