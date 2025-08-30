@@ -1,5 +1,3 @@
-from engine.strategies.runner import load_strategies
-_STRATS, _CFG = load_strategies()
 # /opt/scalp/engine/pipeline/runner.py
 # -*- coding: utf-8 -*-
 from __future__ import annotations
@@ -8,7 +6,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Dict, Tuple, Optional
 
 from engine.data.loader import load_latest_ohlcv
-from engine.signals.strategy_bridge import evaluate_for
+from engine.signals.strategy_bridge import compute as strat_compute
 from engine.exchange.executor import TradeExecutor
 from engine.risk.limits import choose_action_from_signal, allowed_size_usdt, should_open
 
