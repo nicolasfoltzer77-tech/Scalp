@@ -2,15 +2,55 @@ from __future__ import annotations
 
 import time
 import logging
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple, Union
 
 from engine.signals.strategy_bridge import evaluate_for
 from engine.strategies.runner import load_strategies
 
-# charge toutes les stratégies
-_STRATS, _CFG = load_strategies()
-
 LOG = logging.getLogger("runner")
+
+
+def _normalize_strats_cfg(
+    ret: Union[Tuple, List, Dict[str, Any], None]
+) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+    """
+    Rend robuste le chargement stratégies/config quel que soit
+    le format retourné par load_strategies().
+    Acceptés :
+      - (strategies, config)
+      - (strategies, config, *extra)
+      - (strategies,)
+      - {"strategies": [...], "config": {...}}
+    """
+    if ret is None:
+        return [], {}
+
+    # tuple / list
+    if isinstance(ret, (tuple, list)):
+        if len(ret) >= 2:
+            return ret[0], ret[1]
+        if len(ret) == 1:
+            return ret[0], {}
+        return [], {}
+
+    # dict-like
+    if isinstance(ret, dict):
+        strats = ret.get("strategies") or ret.get("strats") or []
+        cfg = ret.get("config") or {}
+        return strats, cfg
+
+    # fallback
+    return [], {}
+
+
+# ----- charge stratégies + config (robuste)
+try:
+    _STRATS, _CFG = _normalize_strats_cfg(load_strategies())
+    LOG.info("strategies loaded: %d | cfg keys: %s",
+             len(_STRATS), list(_CFG.keys())[:6])
+except Exception as e:
+    LOG.exception("failed to load strategies, continue with empty set: %s", e)
+    _STRATS, _CFG = [], {}
 
 
 class PipelineScheduler:
