@@ -1,70 +1,59 @@
 #!/usr/bin/env bash
-set -euo pipefail
+# Robust Project Pages publisher -> docs/index.html (branch main)
+set -Eeuo pipefail
 
-# ---------- Config ----------
-ENV_MAIN="/etc/scalp.env"
-ENV_FALLBACK="/opt/scalp/.env"
-SITE_OUT_DIR="/opt/scalp/site/out"
-PAGES_SUBDIR="${PAGES_SUBDIR:-scalp}"   # where to put files inside the Pages repo
-DRY_RUN="${DRY_RUN:-false}"
+log(){ echo "[publish] $*"; }
+fail(){ echo "⛔ $*" >&2; exit 1; }
 
-usage() {
-  echo "Usage: $0 [--dry-run]"
-}
+# ---- ENV
+set -a; source /etc/scalp.env; set +a
 
-if [[ "${1:-}" == "--dry-run" ]]; then DRY_RUN=true; fi
+REPO_DIR="${REPO_PATH:-/opt/scalp}"
+DOCS_DIR="${DOCS_DIR:-/opt/scalp/docs}"
+DASH_HTML="${DASH_HTML:-/opt/scalp/dashboard.html}"
+GIT_USER="${GIT_USER:-}"; GIT_TOKEN="${GIT_TOKEN:-}"; GIT_REPO="${GIT_REPO:-}"
 
-# ---------- Load env ----------
-if [[ -f "$ENV_MAIN" ]]; then
-  set -a; source "$ENV_MAIN"; set +a
-elif [[ -f "$ENV_FALLBACK" ]]; then
-  set -a; source "$ENV_FALLBACK"; set +a
-fi
+[[ -n "$GIT_USER" ]]  || fail "GIT_USER manquant"
+[[ -n "$GIT_TOKEN" ]] || fail "GIT_TOKEN manquant"
+[[ -n "$GIT_REPO" ]]  || fail "GIT_REPO manquant"
+[[ -d "$REPO_DIR/.git" ]] || fail "REPO_DIR n'est pas un repo git: $REPO_DIR"
 
-# Accept both GIT_* and GITHUB_*
-GIT_USER="${GIT_USER:-${GITHUB_USER:-}}"
-GIT_TOKEN="${GIT_TOKEN:-${GITHUB_TOKEN:-}}"
-GIT_REPO="${GIT_REPO:-${GITHUB_REPO:-}}"
-GIT_EMAIL="${GIT_EMAIL:-${GITHUB_EMAIL:-${GIT_USER}@users.noreply.github.com}}"
+REMOTE_URL="https://${GIT_USER}:${GIT_TOKEN}@github.com/${GIT_REPO}.git"
 
-require() { local n="$1" v="${2:-}"; [[ -n "$v" ]] || { echo "Missing required: $n"; exit 2; }; }
+git -C "$REPO_DIR" config --global --add safe.directory "$REPO_DIR" || true
+git -C "$REPO_DIR" config user.name  "$GIT_USER" || true
+git -C "$REPO_DIR" config user.email "${GIT_USER}@users.noreply.github.com" || true
+git -C "$REPO_DIR" remote set-url origin "$REMOTE_URL" || true
+git -C "$REPO_DIR" rebase --abort 2>/dev/null && log "rebase interrompu -> abort" || true
 
-require GIT_USER  "$GIT_USER"
-require GIT_TOKEN "$GIT_TOKEN"
-require GIT_REPO  "$GIT_REPO"
+# Build dashboard -> /opt/scalp/dashboard.html
+"${REPO_DIR}/venv/bin/python" "${REPO_DIR}/jobs/generate_dashboard.py"
+[[ -s "$DASH_HTML" ]] || fail "dashboard.html non généré: $DASH_HTML"
 
-# If you publish to user pages repo: ${USER}.github.io
-PAGES_REPO="${GIT_USER}.github.io"
-REMOTE_URL="https://${GIT_USER}:${GIT_TOKEN}@github.com/${GIT_USER}/${PAGES_REPO}.git"
+mkdir -p "$DOCS_DIR"
+cp -f "$DASH_HTML" "${DOCS_DIR}/index.html"
+log "copie -> ${DOCS_DIR}/index.html"
 
-# ---------- Generate dashboard JSON ----------
-/opt/scalp/venv/bin/python3 /opt/scalp/site/gen_dashboard.py
+# Commit + pull --rebase (autostash) + push
+set +e
+git -C "$REPO_DIR" add "${DOCS_DIR}/index.html"
+git -C "$REPO_DIR" commit -m "chore(pages): publish dashboard" >/dev/null 2>&1
+set -e
 
-# ---------- Prepare temp repo ----------
-WORK="/opt/scalp/site/out-pages"
-rm -rf "$WORK"
-git clone --depth=1 "$REMOTE_URL" "$WORK"
+log "pull --rebase (autostash)…"
+set +e
+git -C "$REPO_DIR" stash push -u -m "pages-autostash" >/dev/null 2>&1
+git -C "$REPO_DIR" pull --rebase origin main >/dev/null 2>&1
+git -C "$REPO_DIR" stash pop >/dev/null 2>&1
+set -e
 
-cd "$WORK"
-git config user.name  "$GIT_USER"
-git config user.email "$GIT_EMAIL"
+git -C "$REPO_DIR" add "${DOCS_DIR}/index.html" || true
+set +e
+git -C "$REPO_DIR" commit -m "chore(pages): publish dashboard" >/dev/null 2>&1
+set -e
 
-# Folder inside the pages repo
-mkdir -p "${PAGES_SUBDIR}"
-rsync -a --delete "${SITE_OUT_DIR}/" "${PAGES_SUBDIR}/"
+log "push…"
+git -C "$REPO_DIR" push origin HEAD:main
 
-# Nothing to commit? exit quietly
-if git status --porcelain | grep -q .; then
-  git add -A
-  msg="dash: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
-  git commit -m "$msg" || true
-  if [[ "$DRY_RUN" == "true" ]]; then
-    echo "[DRY] Would push to ${PAGES_REPO} in ${PAGES_SUBDIR}/"
-  else
-    git push origin main
-    echo "OK: dashboard published to https://${GIT_USER}.github.io/${PAGES_SUBDIR}/"
-  fi
-else
-  echo "No changes to publish."
-fi
-
+SITE="https://$(echo "$GIT_REPO" | cut -d/ -f1).github.io/$(basename "$REPO_DIR")/"
+log "Push OK. URL=${SITE}"
