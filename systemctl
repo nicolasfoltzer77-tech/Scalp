@@ -1,0 +1,25 @@
+#!/bin/bash
+set -euo pipefail
+
+REPO="/opt/scalp"
+cd "$REPO"
+
+# --- 1) killer les nano fantômes
+for pid in $(ps -eo pid,comm | awk '$2=="nano"{print $1}'); do
+  echo "[auto-push] kill nano $pid"
+  kill -9 "$pid" 2>/dev/null || true
+done
+
+# --- 2) virer les fichiers de lock nano
+find "$REPO" -type f -name ".*.swp" -delete
+
+# --- 3) sécuriser git (au cas où)
+git config --global --add safe.directory "$REPO" || true
+BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo main)"
+
+# --- 4) commit & push
+git add -A
+git commit -m "auto: backup $(date -u '+%F %T UTC')" || echo "[auto-push] rien à commit"
+git pull --rebase --autostash || true
+git push origin "$BRANCH"
+echo "[auto-push] done on branch $BRANCH"
