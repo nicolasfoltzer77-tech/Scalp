@@ -1,0 +1,15 @@
+# engine/config/config.yaml
+runtime:
+  data_dir: /opt/scalp/data
+  reports_dir: /opt/scalp/reports
+
+  # symboles & timeframes (tu peux en ajouter)
+  symbols: ["BTCUSDT","ETHUSDT"]
+  tf_list: ["1m","5m","15m"]
+
+  backfill_limit: 2000
+  risk_mode: conservative
+
+  # exécution locale; diffusion via GitHub Pages (docs/index.html)
+  exec_enabled: true
+  html_port: 8888
