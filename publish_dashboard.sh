@@ -1,43 +1,22 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO=/opt/scalp
-DOCS="$REPO/docs"
-DASH="$REPO/dashboard.html"
+CSV="/opt/scalp/var/dashboard/signals.csv"
+DOCS="/opt/scalp/docs"
+TOOLS="/opt/scalp/tools"
 
-echo "[publish] sanity"
-git -C "$REPO" status --porcelain=v1 || true
+echo "[publish] clean csv"
+python3 "$TOOLS/clean_csv.py" "$CSV" || true
 
-# --- gérer l'état sale avant rebase (stash auto) ---
-NEED_POP=0
-if ! git -C "$REPO" diff --quiet || ! git -C "$REPO" diff --cached --quiet; then
-  echo "[publish] worktree dirty -> git stash -u"
-  git -C "$REPO" stash push -u -m "autostash: publish_dashboard" >/dev/null 2>&1 || true
-  NEED_POP=1
-fi
-
-echo "[publish] fetch + rebase"
-git -C "$REPO" fetch origin
-# si rebase échoue, tenter un "abort" puis hard reset sur origin/main (on est en serveur)
-git -C "$REPO" rebase origin/main || { git -C "$REPO" rebase --abort || true; git -C "$REPO" reset --hard origin/main; }
-
-# --- reconstruire le dashboard ---
 echo "[publish] build dashboard"
-python3 "$REPO/tools/build_dashboard.py" >"$DASH"
+python3 "$TOOLS/build_dashboard.py"
 
-echo "[publish] copy -> docs/index.html"
+echo "[publish] export JSON"
 mkdir -p "$DOCS"
-cp -f "$DASH" "$DOCS/index.html"
+jq -R -s -f "$TOOLS/csv2json.jq" "$CSV" > "$DOCS/signals.json" || echo "[]">$DOCS/signals.json
 
-echo "[publish] commit & push"
-git -C "$REPO" add -A
-git -C "$REPO" commit -m "dashboard: auto-publish $(date -u +'%F %T') UTC" || true
-git -C "$REPO" push -u origin HEAD:main
+echo "[publish] health"
+date +%s | awk '{print "{\"generated_at\":"$1",\"status\":\"ok\"}"}' > "$DOCS/health.json"
 
-# --- réappliquer le stash si on en avait un (pour retrouver les modifs locales) ---
-if [[ "$NEED_POP" -eq 1 ]]; then
-  echo "[publish] restoring local changes (git stash pop)"
-  git -C "$REPO" stash pop || true
-fi
-
+ls -lh "$DOCS/index.html" "$DOCS/signals.json" "$DOCS/health.json" || true
 echo "[publish] done."
