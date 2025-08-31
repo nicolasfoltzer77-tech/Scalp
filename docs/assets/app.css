@@ -1,0 +1,28 @@
+:root{
+  --bg:#0d1117;--panel:#161a22;--muted:#9aa4b2;--text:#e7edf5;
+  --pill:#232a36;--ok:#22c55e;--buy:#16a34a;--sell:#dc2626;--hold:#334155;
+  --chip:#1f2937;--chiptext:#cbd5e1
+}
+html,body{margin:0;background:var(--bg);color:var(--text);font:15px/1.35 system-ui,Segoe UI,Roboto,Apple Color Emoji}
+.container{max-width:980px;margin:20px auto;padding:0 12px}
+.topbar{display:flex;gap:12px;align-items:center;padding:10px 12px;position:sticky;top:0;background:linear-gradient(180deg,rgba(13,17,23,.95),rgba(13,17,23,.75));backdrop-filter:blur(6px);z-index:10}
+.pill,.pill-group .pill{background:var(--pill);color:var(--text);border-radius:12px;padding:6px 10px;border:1px solid #243042}
+.pill.muted{color:var(--muted)}
+.pill.active{outline:2px solid #2563eb}
+.dot{width:10px;height:10px;border-radius:50%}
+.online{background:var(--ok)}
+.card{background:var(--panel);border:1px solid #263041;border-radius:12px;padding:18px;margin:14px 0}
+h2{margin:0 0 8px;font-size:22px}
+.muted{color:var(--muted);margin:0 0 10px}
+.grid{display:grid;grid-template-columns:160px repeat(3,1fr);gap:10px}
+.grid.head{font-weight:600;color:#cbd5e1;margin-bottom:6px}
+.row{display:grid;grid-template-columns:repeat(8,1fr);gap:10px;padding:6px 0;border-bottom:1px solid #263041}
+.row.head{font-weight:600;color:#cbd5e1}
+.badge{display:inline-flex;align-items:center;justify-content:center;min-width:64px;padding:6px 10px;border-radius:12px;border:1px solid #2b3445;font-weight:700}
+.badge.buy{background:#0b2f20;color:#bbf7d0;border-color:#1d4ed8}
+.badge.sell{background:#2a1313;color:#fecaca}
+.badge.hold{background:#111827;color:#9ca3af}
+.score{display:inline-flex;align-items:center;justify-content:center;min-width:32px;height:32px;border-radius:16px;background:var(--chip);color:var(--chiptext);font-weight:700;border:1px solid #2b3445}
+.btn{background:#1f2937;border:1px solid #2b3445;color:#e5e7eb;padding:6px 10px;border-radius:8px;cursor:pointer}
+.btn.danger{background:#3b1111;border-color:#dc2626}
+.table{display:flex;flex-direction:column}

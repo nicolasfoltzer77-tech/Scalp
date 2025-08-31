@@ -1,3 +1,6 @@
-# requirements.txt
-PyYAML>=6.0
-ccxt>=4.3.0
+ccxt==4.3.59
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+pydantic==2.9.2
+requests==2.32.3
+pytz==2025.1
