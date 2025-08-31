@@ -1,0 +1,30 @@
+[
+  {
+    "ok": false,
+    "status": 403,
+    "headers_kind": "ACCESS",
+    "include_query": true,
+    "error": "error code: 1010"
+  },
+  {
+    "ok": false,
+    "status": 403,
+    "headers_kind": "ACCESS",
+    "include_query": false,
+    "error": "error code: 1010"
+  },
+  {
+    "ok": false,
+    "status": 403,
+    "headers_kind": "XBITGET",
+    "include_query": true,
+    "error": "error code: 1010"
+  },
+  {
+    "ok": false,
+    "status": 403,
+    "headers_kind": "XBITGET",
+    "include_query": false,
+    "error": "error code: 1010"
+  }
+]
