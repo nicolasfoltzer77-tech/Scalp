@@ -24,7 +24,7 @@ def main():
     if os.getenv("DRY_RUN","1") == "1":
         print("[tpsl-demo] DRY_RUN=1 -> pas d’envoi réel."); return
 
-    plan = build_plan_from_env(adapter)
+    plan = build_plan_from_env()
     watcher = TpSlWatcher(adapter, om)
 
     entry = watcher.place_entry_and_tp(plan)
