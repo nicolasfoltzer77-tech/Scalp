@@ -1,20 +1,12 @@
 # tests/test_self_signals.py
-"""
-Self-test pour la couche 2 (SignalEngine + PositionTracker).
-À lancer avec :
-    pytest -s tests/test_self_signals.py
-ou simplement :
-    python3 tests/test_self_signals.py
-"""
-
 from __future__ import annotations
 from pathlib import Path
 import uuid, random, sys
 from datetime import datetime, timezone
 
 from engine.strategy_loader import load_strategy
-from engine.signals import SignalEngine
-from engine.positions import PositionTracker
+from engine.signal_engine import SignalEngine
+from engine.position_tracker import PositionTracker
 
 DAY = datetime.now(timezone.utc).strftime("%Y%m%d")
 
@@ -26,7 +18,6 @@ def get_price_atr(symbol: str) -> tuple[float, float]:
     return round(price, 2), round(atr, 2)
 
 def run_selftest() -> bool:
-    # Prépare dossiers
     for sub in ["signals", "positions", "trades", "reports"]:
         (Path("var") / sub / DAY).mkdir(parents=True, exist_ok=True)
 
@@ -45,13 +36,13 @@ def run_selftest() -> bool:
         entry, atr = get_price_atr(symbol)
 
         if symbol == "BTCUSDT":
-            score = max(rprof["min_score_buy"], 0.62)  # BUY attendu
+            score = max(rprof["min_score_buy"], 0.62)  # BUY
             allow_long, allow_short = True, False
         elif symbol == "ETHUSDT":
             score = 0.45  # HOLD
             allow_long, allow_short = True, True
         else:  # SOLUSDT
-            score = max(rprof["min_score_sell"], 0.65)  # SELL attendu
+            score = max(rprof["min_score_sell"], 0.65)  # SELL
             allow_long, allow_short = False, True
 
         sig = sig_engine.generate_and_log_signal(
