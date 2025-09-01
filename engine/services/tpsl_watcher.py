@@ -1,100 +1,162 @@
 # engine/services/tpsl_watcher.py
 from __future__ import annotations
-import os, time
+import os
 from dataclasses import dataclass
-from engine.exchanges.ccxt_bitget import CcxtBitgetAdapter, resolve_ccxt_symbol
-from engine.services.order_manager import OrderManager
-from engine.services.sizer import PositionSizer  # <- utilise le module sizer
+from typing import Optional, Dict, Any, Tuple
 
+from engine.services.order_manager import OrderManager
+from engine.exchanges.ccxt_bitget import CcxtBitgetAdapter
+
+# ---------- Plan ----------
 @dataclass
 class TpSlPlan:
     symbol: str
-    side: str
-    amount: float | None
-    entry_type: str = "market"
-    entry_price: float | None = None
-    tp_price: float | None = None
-    sl_price: float | None = None
-    reduce_only: bool = True
-    signal_risk: str = "medium"
+    side: str                 # "buy" | "sell"
+    entry_type: str           # "market" | "limit"
+    tp_price: Optional[float] # target price (limit, reduce-only)
+    sl_price: Optional[float] # stop price (best effort)
+    risk_mode: str            # "percent" | "usdt"
+    risk_pct_base: float
+    risk_usdt_base: float
+    tier: int                 # 1..3, sur-multiplicateur
+    signal_risk: str          # "low"|"medium"|"high"
 
-class TpSlWatcher:
-    def __init__(self, adapter: CcxtBitgetAdapter, om: OrderManager):
-        self.adapter = adapter; self.om = om
+# ---------- Sizer basique ----------
+class PositionSizer:
+    """
+    Calcule un montant (amount) cohérent avec le marché Bitget (via CCXT)
+    et applique un notional mini (ex: 5 USDT).
+    """
+    def __init__(self, adapter: CcxtBitgetAdapter):
+        self.adapter = adapter
 
-    def _last_price(self, symbol: str) -> float:
+    def _market_info(self, symbol: str) -> Tuple[Dict[str, Any], int, float]:
+        m = self.adapter.exchange.market(symbol)
+        amount_prec = int(m.get("precision", {}).get("amount", 0))  # souvent 0 ou 1 pour futures
+        price_prec  = float(m.get("precision", {}).get("price", 0.0001))
+        min_cost = (
+            (m.get("limits", {}) or {}).get("cost", {}) or {}
+        ).get("min")
+        return m, amount_prec, (min_cost if min_cost is not None else float(os.getenv("MIN_NOTIONAL_USDT", "5")))
+
+    def _last_px(self, symbol: str) -> float:
+        # prix: last, fallback mid
         t = self.adapter.exchange.fetch_ticker(symbol)
-        return float(t.get("last") or t.get("close") or 0.0)
+        px = t.get("last") or t.get("info", {}).get("lastPr")
+        if not px:
+            ob = self.adapter.exchange.fetch_order_book(symbol, 5)
+            bid = ob["bids"][0][0]; ask = ob["asks"][0][0]
+            px = (bid + ask) / 2
+        return float(px)
+
+    def compute(self, symbol: str, side: str, risk_mode: str,
+                risk_pct_base: float, risk_usdt_base: float,
+                tier: int) -> Tuple[float, float]:
+        """
+        Retourne (amount_final arrondi, price_ref)
+        """
+        px = self._last_px(symbol)
+        m, amount_prec, min_cost = self._market_info(symbol)
+
+        # 1) montant de base
+        mult = {1:0.5, 2:1.0, 3:1.5}.get(int(tier or 2), 1.0)
+        if (risk_mode or "").lower() == "percent":
+            bal = self.adapter.exchange.fetch_balance().get("USDT", {}).get("free", 0) or 0
+            notional = bal * float(risk_pct_base or 1.0) * 0.01 * mult
+        else:  # "usdt"
+            notional = float(risk_usdt_base or 5.0) * mult
+
+        # 2) convertir en amount et respecter min cost
+        amount = notional / px if px > 0 else 0
+        # arrondi "amount" (futures XRP: precision 1 => pas de décimales)
+        if amount_prec >= 1:
+            step = 10 ** (-amount_prec)
+            amount = int(round(amount / step)) * step
+        else:
+            # la plupart des contrats coin-m: amount entier
+            amount = int(round(amount)) or 1
+
+        # 3) bump si notional < min
+        if amount * px < min_cost:
+            bump = (min_cost / px)
+            amount = int(bump) if amount_prec == 0 else round(bump, amount_prec)
+            if amount * px < min_cost:
+                amount += 1
+
+        return float(amount), float(px)
+
+# ---------- Watcher ----------
+class TpslWatcher:
+    def __init__(self, adapter: Optional[CcxtBitgetAdapter] = None):
+        self.adapter = adapter or CcxtBitgetAdapter()
+        self.om = OrderManager(None, self.adapter)  # db=None dans la démo
+        self.sizer = PositionSizer(self.adapter)
+
+    def _tp_px(self, side: str, px: float, pct: float) -> float:
+        pct = float(pct or 0) * 0.01
+        return round(px * (1+pct if side == "buy" else 1-pct), 4)
+
+    def _sl_px(self, side: str, px: float, pct: float) -> float:
+        pct = float(pct or 0) * 0.01
+        return round(px * (1-pct if side == "buy" else 1+pct), 4)
 
     def place_entry_and_tp(self, plan: TpSlPlan):
-        o = self.om.place(plan.symbol, plan.side, plan.entry_type,
-                          plan.amount, plan.entry_price,
-                          reduce_only=False, signal_risk=plan.signal_risk)
-        if plan.tp_price:
-            tp_side = "sell" if plan.side == "buy" else "buy"
-            print(f"[tpsl] placing TP limit reduce-only @ {plan.tp_price}")
-            self.om.place(plan.symbol, tp_side, "limit",
-                          plan.amount, plan.tp_price,
-                          reduce_only=True, signal_risk=plan.signal_risk)
-        return o
+        # 1) sizing
+        amount, px_ref = self.sizer.compute(
+            plan.symbol, plan.side, plan.risk_mode,
+            plan.risk_pct_base, plan.risk_usdt_base, plan.tier
+        )
 
-    def watch_and_stop(self, plan: TpSlPlan, *, poll_ms: int = 800, timeout_s: int = 600):
-        if not plan.sl_price: return False
-        print(f"[tpsl] SL watcher armed @ {plan.sl_price}")
-        start = time.time(); sl_side = "sell" if plan.side == "buy" else "buy"
-        while (time.time() - start) < timeout_s:
-            px = self._last_price(plan.symbol)
-            if plan.side == "buy" and px <= plan.sl_price:
-                print(f"[tpsl] SL hit: {px} <= {plan.sl_price}")
-                self.om.place(plan.symbol, sl_side, "market", plan.amount,
-                              reduce_only=True, signal_risk=plan.signal_risk); return True
-            if plan.side == "sell" and px >= plan.sl_price:
-                print(f"[tpsl] SL hit: {px} >= {plan.sl_price}")
-                self.om.place(plan.symbol, sl_side, "market", plan.amount,
-                              reduce_only=True, signal_risk=plan.signal_risk); return True
-            time.sleep(max(0.1, poll_ms/1000))
-        return False
+        # 2) ENTRY (market)
+        entry = self.om.place(plan.symbol, plan.side, "market", amount, None, params={})
+        # 3) TP (limit reduce-only)
+        tp_side = "sell" if plan.side == "buy" else "buy"
+        tp_px = plan.tp_price or self._tp_px(plan.side, px_ref, float(os.getenv("TP_PCT", "0.3")))
+        self.om.place(plan.symbol, tp_side, "limit", amount, tp_px, params={"reduceOnly": True})
 
-def build_plan_from_env(adapter: CcxtBitgetAdapter) -> TpSlPlan:
-    symbol = os.getenv("SYMBOL") or resolve_ccxt_symbol()
-    side   = os.getenv("SIDE", "buy")
+        # 4) SL (best effort: on affiche l’intention, la pose d’un SL conditionnel Bitget via CCXT
+        #      dépend de params spécifiques; on évite de bloquer le flow ici)
+        if plan.sl_price:
+            try:
+                sl_side = "sell" if plan.side == "buy" else "buy"
+                # Certains comptes Bitget exigent un ordre conditionnel avec 'triggerPrice'
+                params = {"reduceOnly": True, "stopLossPrice": plan.sl_price}
+                self.om.place(plan.symbol, sl_side, "market", amount, None, params=params)
+            except Exception as e:
+                print(f"[tpsl] SL non posé (info) -> {e}")
 
-    # overrides par stratégie (optionnels)
-    mode_o = os.getenv("STRAT_SIZER_MODE")
-    pct_o  = os.getenv("STRAT_SIZER_PCT")
-    usdt_o = os.getenv("STRAT_SIZER_USDT")
-    tier_o = os.getenv("STRAT_TIER")
+        return entry
 
-    if os.getenv("AMOUNT"):
-        amount = float(os.getenv("AMOUNT"))
-    else:
-        sizer = PositionSizer(adapter)
-        if any([mode_o, pct_o, usdt_o, tier_o]):
-            amount, _ = sizer.size_with_overrides(
-                symbol,
-                mode=mode_o,
-                pct=float(pct_o) if pct_o else None,
-                usdt=float(usdt_o) if usdt_o else None,
-                tier=int(tier_o) if tier_o else None,
-            )
-        else:
-            amount, _ = sizer.size_from_config(symbol)
+# ---------- Build plan ----------
+def build_plan_from_env() -> TpSlPlan:
+    side = os.getenv("SIDE", "buy").lower()
+    symbol = os.getenv("SYMBOL", "XRP/USDT:USDT")
 
-    tp_pct = float(os.getenv("TP_PCT", "0"))
-    sl_pct = float(os.getenv("SL_PCT", "0"))
-    tp_price_env = os.getenv("TP_PRICE")
-    sl_price_env = os.getenv("SL_PRICE")
+    risk_mode = os.getenv("STRAT_SIZER_MODE", os.getenv("RISK_MODE", "usdt")).lower()
+    risk_pct_base = float(os.getenv("RISK_PCT_BASE", "1"))
+    risk_usdt_base = float(os.getenv("STRAT_SIZER_USDT", os.getenv("RISK_USDT_BASE", "5")))
+    tier = int(os.getenv("STRAT_TIER", os.getenv("RISK_TIER", "2")))
+    signal_risk = os.getenv("SIGNAL_RISK", "medium")
 
-    last_px = None
-    if (tp_pct and not tp_price_env) or (sl_pct and not sl_price_env):
-        t = adapter.exchange.fetch_ticker(symbol); last_px = float(t.get("last") or t.get("close") or 0.0)
+    tp_pct = float(os.getenv("TP_PCT", "0.3"))
+    sl_pct = float(os.getenv("SL_PCT", "0.2"))
 
-    tp_price = float(tp_price_env) if tp_price_env else (last_px*(1+tp_pct/100.0) if tp_pct and last_px else None)
-    sl_price = float(sl_price_env) if sl_price_env else (last_px*(1-sl_pct/100.0) if sl_pct and last_px else None)
+    # prix de référence provisoire (sera recalculé par PositionSizer)
+    # mais utile pour préremplir des valeurs si besoin
+    adapter = CcxtBitgetAdapter()
+    px = PositionSizer(adapter)._last_px(symbol)
+    tp = round(px * (1+tp_pct/100 if side == "buy" else 1-tp_pct/100), 4)
+    sl = round(px * (1-sl_pct/100 if side == "buy" else 1+sl_pct/100), 4)
 
-    print(f"[tpsl] plan computed: amount={amount}, tp={tp_price}, sl={sl_price}")
-    return TpSlPlan(symbol=symbol, side=side, amount=amount,
-                    entry_type=os.getenv("ENTRY_TYPE", "market"),
-                    entry_price=float(os.getenv("ENTRY_PRICE")) if os.getenv("ENTRY_PRICE") else None,
-                    tp_price=tp_price, sl_price=sl_price,
-                    reduce_only=True, signal_risk=os.getenv("SIGNAL_RISK","medium"))
+    return TpSlPlan(
+        symbol=symbol,
+        side=side,
+        entry_type="market",
+        tp_price=tp,
+        sl_price=sl,
+        risk_mode=risk_mode,
+        risk_pct_base=risk_pct_base,
+        risk_usdt_base=risk_usdt_base,
+        tier=tier,
+        signal_risk=signal_risk,
+    )
