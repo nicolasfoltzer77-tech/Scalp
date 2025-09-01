@@ -14,21 +14,18 @@ def on_tick(
     atr: float,
     allow_long: bool,
     allow_short: bool,
-    # Soit tu donnes directement un score...
     score: Optional[float] = None,
-    # ...soit des métriques de sélection + barres 1s pour affiner :
     selection_metrics: Optional[Dict] = None,
     bars_1s: Optional[List[dict]] = None,
     quality: Optional[Dict[str, float]] = None,
     notes: Optional[str] = None,
 ):
+    # si aucun score fourni, on le dérive des métriques de sélection (+affinage 1s)
     if score is None:
         base = _SCORER.score_from_selection(selection_metrics or {})
         score = _SCORER.refine_with_1s(base, bars_1s)
-
-    qual = quality or {}
+    qual = dict(quality or {})
     if selection_metrics:
-        # expose les composants pour le log/qualité
         for k in ("rsi","adx","macd_hist","obv_slope"):
             if k in selection_metrics:
                 try: qual[k] = float(selection_metrics[k])
