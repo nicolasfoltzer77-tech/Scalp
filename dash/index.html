@@ -1,78 +1,62 @@
-<!doctype html>
-<html lang="fr">
-<head>
-  <meta charset="utf-8"/>
-  <title>Scalp Dashboard</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <style>
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:20px;background:#0b0f17;color:#e6eef8}
-    .card{background:#121826;border:1px solid #2a3550;border-radius:12px;padding:16px;margin-bottom:16px}
-    h1,h2{margin:0 0 12px}
-    button{background:#2d6cdf;color:#fff;border:none;border-radius:8px;padding:8px 12px;margin-right:8px;cursor:pointer}
-    button.secondary{background:#1b2336}
-    table{width:100%;border-collapse:collapse}
-    th,td{padding:6px 8px;border-bottom:1px solid #223049}
-    th{text-align:left;color:#9fb4d9}
-    .pill{display:inline-block;padding:3px 8px;border-radius:999px;background:#1b2336;border:1px solid #304067}
-  </style>
-</head>
-<body>
-  <div class="card">
-    <h1>Scalp — Monitoring</h1>
-    <div id="state">Chargement…</div>
-    <div style="margin-top:8px">
-      <span>Mode:</span>
-      <button onclick="setState({mode:'paper'})">Paper</button>
-      <button onclick="setState({mode:'real'})">Réel</button>
-      <span style="margin-left:16px">Risque:</span>
-      <button class="secondary" onclick="setState({risk_level:1})">1</button>
-      <button class="secondary" onclick="setState({risk_level:2})">2</button>
-      <button class="secondary" onclick="setState({risk_level:3})">3</button>
-    </div>
+<!doctype html><html lang="fr"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Scalp Dashboard</title>
+<style>
+ body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#0b0f17;color:#e6eef8;margin:20px}
+ .card{background:#111827;border:1px solid #233049;border-radius:12px;padding:16px;margin-bottom:16px}
+ h1,h2{margin:0 0 10px} table{width:100%;border-collapse:collapse}
+ th,td{padding:6px 8px;border-bottom:1px solid #223049} th{text-align:left;color:#9fb4d9}
+ .pill{display:inline-block;padding:3px 8px;border-radius:999px;background:#1b2336;border:1px solid #304067;margin-right:8px}
+ button{background:#2d6cdf;color:#fff;border:none;border-radius:8px;padding:6px 10px;margin-right:6px;cursor:pointer}
+</style></head><body>
+<div class="card">
+  <h1>Scalp — Monitoring</h1>
+  <div id="state">Chargement…</div>
+  <div style="margin-top:8px">
+    <button onclick="setState({mode:'paper'})">Paper</button>
+    <button onclick="setState({mode:'real'})">Réel</button>
+    <button onclick="setState({risk_level:1})">Risque 1</button>
+    <button onclick="setState({risk_level:2})">Risque 2</button>
+    <button onclick="setState({risk_level:3})">Risque 3</button>
   </div>
-
-  <div class="card">
-    <h2>Signaux récents</h2>
-    <table id="signals"><thead><tr><th>ts</th><th>sym</th><th>side</th><th>score</th><th>qty</th><th>SL</th><th>TP</th></tr></thead><tbody></tbody></table>
-  </div>
-
-  <div class="card">
-    <h2>Positions & Trades</h2>
-    <table id="positions"><thead><tr><th>ts</th><th>position_id</th><th>sym</th><th>side</th><th>entry</th><th>qty</th><th>SL</th><th>TP1</th></tr></thead><tbody></tbody></table>
-  </div>
-
+</div>
+<div class="card">
+  <h2>Signaux récents</h2>
+  <table id="signals"><thead><tr><th>ts</th><th>sym</th><th>side</th><th>score</th><th>qty</th><th>SL</th><th>TP</th></tr></thead><tbody></tbody></table>
+</div>
+<div class="card">
+  <h2>Positions</h2>
+  <table id="positions"><thead><tr><th>ts</th><th>id</th><th>sym</th><th>side</th><th>entry</th><th>qty</th></tr></thead><tbody></tbody></table>
+</div>
 <script>
 const API = location.origin.replace(/\/$/,'') + '/api';
-
-async function fetchJSON(url, opt){ const r = await fetch(url, opt); return r.json(); }
+async function j(u,o){const r=await fetch(u,o);return r.json()}
 async function loadState(){
-  const s = await fetchJSON(API+'/state');
-  document.getElementById('state').innerHTML = `
-    <span class="pill">mode: <b>${s.mode}</b></span>
-    <span class="pill">risque: <b>${s.risk_level} (${s.risk_profile})</b></span>`;
+  const s = await j(API+'/state');
+  document.getElementById('state').innerHTML =
+    `<span class="pill">host: ${s.host}</span>
+     <span class="pill">mode: ${s.mode}</span>
+     <span class="pill">risque: ${s.risk_level} (${s.risk_profile})</span>`;
 }
 async function setState(p){
-  await fetchJSON(API+'/state',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});
-  loadState(); loadAll();
+  await j(API+'/state',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});
+  loadState();
 }
-function td(v){ return `<td>${v??''}</td>` }
-
+function td(v){return `<td>${v??''}</td>`}
 async function loadSignals(){
-  const rows = await fetchJSON(API+'/signals?limit=100');
-  const tbody = document.querySelector('#signals tbody'); tbody.innerHTML='';
-  rows.reverse().forEach(r=>{
-    tbody.innerHTML += `<tr>${td(r.ts)}${td(r.symbol)}${td(r.side)}${td(r.score?.toFixed?.(2))}${td(r.qty?.toFixed?.(6))}${td(r.risk?.sl)}${td((r.risk?.tp||[]).join(','))}</tr>`;
+  const a = await j(API+'/signals?limit=50');
+  const tb = document.querySelector('#signals tbody'); tb.innerHTML='';
+  a.slice().reverse().forEach(r=>{
+    tb.innerHTML += `<tr>${td(r.ts||r.timestamp)}${td(r.symbol)}${td(r.side)}${td((r.score??0).toFixed?.(2))}${td(r.qty)}${td(r?.risk?.sl)}${td((r?.risk?.tp||[]).join(','))}</tr>`;
   });
 }
-async function loadPositions(){
-  const rows = await fetchJSON(API+'/positions?limit=100');
-  const tbody = document.querySelector('#positions tbody'); tbody.innerHTML='';
-  rows.reverse().forEach(r=>{
-    tbody.innerHTML += `<tr>${td(r.ts)}${td(r.position_id||'')}${td(r.symbol||'')}${td(r.side||'')}${td(r.entry_price||'')}${td(r.qty||'')}${td(r.sl||'')}${td(r.tp1||'')}</tr>`;
+async function loadPos(){
+  const a = await j(API+'/positions?limit=50');
+  const tb = document.querySelector('#positions tbody'); tb.innerHTML='';
+  a.slice().reverse().forEach(r=>{
+    tb.innerHTML += `<tr>${td(r.ts)}${td(r.position_id)}${td(r.symbol)}${td(r.side)}${td(r.entry_price)}${td(r.qty)}</tr>`;
   });
 }
-async function loadAll(){ await loadSignals(); await loadPositions(); }
-loadState(); loadAll(); setInterval(loadAll, 5000);
-</script>
-</body>
-</html>
+async function tick(){await loadState();await loadSignals();await loadPos()}
+tick(); setInterval(tick,5000);
+</script></body></html>
