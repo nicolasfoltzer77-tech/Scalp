@@ -1,75 +1,21 @@
-<!doctype html>
-<html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>SCALP — Dashboard</title>
-<style>
-    :root {
-      --bg:#0b0f14; --panel:#10151c; --text:#e5e7eb; --muted:#9ca3af; --accent:#38bdf8;
-      --ok:#22c55e; --old:#f97316; --mis:#9ca3af; --dat:#eab308;
-    }
-    *{box-sizing:border-box} html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui, -apple-system, Segoe UI, Roboto, sans-serif}
-    a{color:var(--accent);text-decoration:none}
-    .wrap{max-width:1100px;margin:0 auto;padding:16px}
-    header h1{margin:0 0 6px 0;font-size:24px}
-    header .meta{color:var(--muted);font-size:12px;display:flex;gap:12px;align-items:center}
-    .tiny{opacity:.7;font-size:12px}
-    .pill{display:inline-block;padding:.15rem .5rem;border-radius:999px;font-weight:600;letter-spacing:.3px}
-    .grid{display:grid;gap:14px}
-    .card{background:var(--panel);border-radius:12px;padding:14px}
-    .kpis{display:flex;gap:10px;flex-wrap:wrap}
-    .kpi{display:flex;gap:8px;align-items:center;background:#0f172a;border-radius:999px;padding:.25rem .6rem;font-size:12px}
-    .kpi .dot{width:10px;height:10px;border-radius:50%}
-    .t{overflow:auto;border-radius:8px;border:1px solid #1f2937}
-    table{border-collapse:collapse;width:100%;min-width:560px}
-    th,td{padding:.5rem .6rem;border-bottom:1px solid #1f2937;white-space:nowrap}
-    th{text-align:left;color:#cbd5e1;background:#0f172a;position:sticky;top:0}
-    tr:hover td{background:#0e1726}
-    .right{text-align:right}
-    .muted{color:var(--muted)}
-    footer{margin:10px 0 0;color:var(--muted);font-size:12px}
-    .countdown{font-variant-numeric:tabular-nums;}
+<!doctype html><html lang="en"><meta charset="utf-8"><title>Scalp Dashboard</title>
+    <style>
+      body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,'Helvetica Neue',Arial,sans-serif;margin:20px;line-height:1.42}
+      h1{font-size:1.4rem;margin:.2rem 0}
+      .muted{color:#6b7280;font-size:.9rem}
+      th,td{border-bottom:1px solid #e5e7eb;padding:.35rem .5rem}
+      thead th{border-bottom:2px solid #9ca3af;background:#f3f4f6}
     </style>
-<div class="wrap">
-<header>
-  <h1>SCALP — Dashboard</h1>
-  <div class="meta">
-    <span class="tiny">(2025-08-31 08:22:41 UTC)</span>
-    <span class="tiny">auto-refresh <span class="countdown" id="count">10</span>s</span>
-    <span class="tiny"><a href="/signals.json">signals.json</a></span>
-  </div>
-</header>
-
-<div class="grid">
-  <div class="card">
-    <div class="kpis">
-      <div class="kpi"><span class="dot" style="background:#9ca3af"></span><b>MIS:</b> 0</div>
-      <div class="kpi"><span class="dot" style="background:#ef4444"></span><b>OLD:</b> 0</div>
-      <div class="kpi"><span class="dot" style="background:#eab308"></span><b>DAT:</b> 0</div>
-      <div class="kpi"><span class="dot" style="background:#22c55e"></span><b>OK:</b> 0</div>
-    </div>
-    <div class="tiny" style="margin-top:6px;">OK = dernière valeur BUY/SELL/HOLD • MIS = aucune donnée • OLD &gt; 30 min</div>
-  </div>
-
-  <div class="card">
-    <h3 style="margin:0 0 10px">Heatmap (pair × TF)</h3>
-    <div class='t'><table><thead><tr><th>Pair \ TF</th></tr></thead><tbody></tbody></table></div>
-  </div>
-
-  <div class="card">
-    <h3 style="margin:0 0 10px">Derniers signaux</h3>
-    <div class='t'><table><thead><tr><th>UTC</th><th>Symbol</th><th>TF</th><th>Signal</th><th>Details</th></tr></thead><tbody></tbody></table></div>
-  </div>
-</div>
-
-<footer>© SCALP · rendu côté serveur · nginx</footer>
-</div>
-
-    <script>
-    const REFRESH=10;
-    let s=REFRESH;
-    function tick(){
-      try{document.getElementById('count').textContent=s}catch(e){}
-      if(--s<0) location.reload();
-    } setInterval(tick,1000);
-    </script>
     
-</html>
+<body>
+  <h1>Scalp Dashboard</h1>
+  <div class="muted">Updated: 2025-09-02 18:54:06 UTC</div>
+  <div class="muted">TFs: 1m, 5m, 15m</div>
+  <hr>
+  
+    <table style="border-collapse:collapse;width:100%">
+      <thead><tr><th>Symbol</th><th style='text-align:center'>1m</th><th style='text-align:center'>5m</th><th style='text-align:center'>15m</th></tr></thead>
+      <tbody><tr><td><b>ETHUSDT</b></td><td style='text-align:center'><span style="display:inline-block;padding:.08rem .35rem;border-radius:.5rem;font-size:.8rem;background:#fef3c7;color:#92400e;">…</span></td><td style='text-align:center'><span style="display:inline-block;padding:.08rem .35rem;border-radius:.5rem;font-size:.8rem;background:#fef3c7;color:#92400e;">…</span></td><td style='text-align:center'><span style="display:inline-block;padding:.08rem .35rem;border-radius:.5rem;font-size:.8rem;background:#fef3c7;color:#92400e;">…</span></td></tr><tr><td><b>BTCUSDT</b></td><td style='text-align:center'><span style="display:inline-block;padding:.08rem .35rem;border-radius:.5rem;font-size:.8rem;background:#fef3c7;color:#92400e;">…</span></td><td style='text-align:center'><span style="display:inline-block;padding:.08rem .35rem;border-radius:.5rem;font-size:.8rem;background:#fef3c7;color:#92400e;">…</span></td><td style='text-align:center'><span style="display:inline-block;padding:.08rem .35rem;border-radius:.5rem;font-size:.8rem;background:#fef3c7;color:#92400e;">…</span></td></tr><tr><td><b>TAUSDT</b></td><td style='text-align:center'><span style="display:inline-block;padding:.08rem .35rem;border-radius:.5rem;font-size:.8rem;background:#fef3c7;color:#92400e;">…</span></td><td style='text-align:center'><span style="display:inline-block;padding:.08rem .35rem;border-radius:.5rem;font-size:.8rem;background:#fef3c7;color:#92400e;">…</span></td><td style='text-align:center'><span style="display:inline-block;padding:.08rem .35rem;border-radius:.5rem;font-size:.8rem;background:#fef3c7;color:#92400e;">…</span></td></tr><tr><td><b>SOMIUSDT</b></td><td style='text-align:center'><span style="display:inline-block;padding:.08rem .35rem;border-radius:.5rem;font-size:.8rem;background:#fef3c7;color:#92400e;">…</span></td><td style='text-align:center'><span style="display:inline-block;padding:.08rem .35rem;border-radius:.5rem;font-size:.8rem;background:#fef3c7;color:#92400e;">…</span></td><td style='text-align:center'><span style="display:inline-block;padding:.08rem .35rem;border-radius:.5rem;font-size:.8rem;background:#fef3c7;color:#92400e;">…</span></td></tr><tr><td><b>GORKUSDT</b></td><td style='text-align:center'><span style="display:inline-block;padding:.08rem .35rem;border-radius:.5rem;font-size:.8rem;background:#fef3c7;color:#92400e;">…</span></td><td style='text-align:center'><span style="display:inline-block;padding:.08rem .35rem;border-radius:.5rem;font-size:.8rem;background:#fef3c7;color:#92400e;">…</span></td><td style='text-align:center'><span style="display:inline-block;padding:.08rem .35rem;border-radius:.5rem;font-size:.8rem;background:#fef3c7;color:#92400e;">…</span></td></tr><tr><td><b>SOLUSDT</b></td><td style='text-align:center'><span style="display:inline-block;padding:.08rem .35rem;border-radius:.5rem;font-size:.8rem;background:#fef3c7;color:#92400e;">…</span></td><td style='text-align:center'><span style="display:inline-block;padding:.08rem .35rem;border-radius:.5rem;font-size:.8rem;background:#fef3c7;color:#92400e;">…</span></td><td style='text-align:center'><span style="display:inline-block;padding:.08rem .35rem;border-radius:.5rem;font-size:.8rem;background:#fef3c7;color:#92400e;">…</span></td></tr><tr><td><b>QUSDT</b></td><td style='text-align:center'><span style="display:inline-block;padding:.08rem .35rem;border-radius:.5rem;font-size:.8rem;background:#fef3c7;color:#92400e;">…</span></td><td style='text-align:center'><span style="display:inline-block;padding:.08rem .35rem;border-radius:.5rem;font-size:.8rem;background:#fef3c7;color:#92400e;">…</span></td><td style='text-align:center'><span style="display:inline-block;padding:.08rem .35rem;border-radius:.5rem;font-size:.8rem;background:#fef3c7;color:#92400e;">…</span></td></tr><tr><td><b>10000WHYUSDT</b></td><td style='text-align:center'><span style="display:inline-block;padding:.08rem .35rem;border-radius:.5rem;font-size:.8rem;background:#fef3c7;color:#92400e;">…</span></td><td style='text-align:center'><span style="display:inline-block;padding:.08rem .35rem;border-radius:.5rem;font-size:.8rem;background:#fef3c7;color:#92400e;">…</span></td><td style='text-align:center'><span style="display:inline-block;padding:.08rem .35rem;border-radius:.5rem;font-size:.8rem;background:#fef3c7;color:#92400e;">…</span></td></tr><tr><td><b>WLFIUSDT</b></td><td style='text-align:center'><span style="display:inline-block;padding:.08rem .35rem;border-radius:.5rem;font-size:.8rem;background:#fef3c7;color:#92400e;">…</span></td><td style='text-align:center'><span style="display:inline-block;padding:.08rem .35rem;border-radius:.5rem;font-size:.8rem;background:#fef3c7;color:#92400e;">…</span></td><td style='text-align:center'><span style="display:inline-block;padding:.08rem .35rem;border-radius:.5rem;font-size:.8rem;background:#fef3c7;color:#92400e;">…</span></td></tr><tr><td><b>MUSDT</b></td><td style='text-align:center'><span style="display:inline-block;padding:.08rem .35rem;border-radius:.5rem;font-size:.8rem;background:#fef3c7;color:#92400e;">…</span></td><td style='text-align:center'><span style="display:inline-block;padding:.08rem .35rem;border-radius:.5rem;font-size:.8rem;background:#fef3c7;color:#92400e;">…</span></td><td style='text-align:center'><span style="display:inline-block;padding:.08rem .35rem;border-radius:.5rem;font-size:.8rem;background:#fef3c7;color:#92400e;">…</span></td></tr><tr><td><b>IDOLUSDT</b></td><td style='text-align:center'><span style="display:inline-block;padding:.08rem .35rem;border-radius:.5rem;font-size:.8rem;background:#fef3c7;color:#92400e;">…</span></td><td style='text-align:center'><span style="display:inline-block;padding:.08rem .35rem;border-radius:.5rem;font-size:.8rem;background:#fef3c7;color:#92400e;">…</span></td><td style='text-align:center'><span style="display:inline-block;padding:.08rem .35rem;border-radius:.5rem;font-size:.8rem;background:#fef3c7;color:#92400e;">…</span></td></tr><tr><td><b>LINEAUSDT</b></td><td style='text-align:center'><span style="display:inline-block;padding:.08rem .35rem;border-radius:.5rem;font-size:.8rem;background:#fef3c7;color:#92400e;">…</span></td><td style='text-align:center'><span style="display:inline-block;padding:.08rem .35rem;border-radius:.5rem;font-size:.8rem;background:#fef3c7;color:#92400e;">…</span></td><td style='text-align:center'><span style="display:inline-block;padding:.08rem .35rem;border-radius:.5rem;font-size:.8rem;background:#fef3c7;color:#92400e;">…</span></td></tr></tbody>
+    </table>
+    
+</body></html>
