@@ -1,136 +1,69 @@
 <!doctype html><html lang="fr"><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Scalp Dashboard</title>
 <style>
-  :root{
-    --bg:#0b0f17;--card:#111827;--text:#e6eef8;--muted:#9fb4d9;
-    --line:#233049;--btn:#2d6cdf;--btn-active:#1db954;--btn-muted:#1b2336;
-  }
-  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font:14px/1.3 system-ui,Segoe UI,Roboto,Arial,sans-serif}
-  .wrap{max-width:1200px;margin:10px auto;padding:10px}
-  .topbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
-  .chip{background:var(--btn);color:#fff;border:none;border-radius:14px;padding:6px 10px;cursor:pointer;font-weight:600}
-  .chip.muted{background:var(--btn-muted);color:var(--muted)}
-  .chip.active{background:var(--btn-active)}
-  .pill{display:inline-flex;gap:6px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:4px}
-  .title{font-weight:800;font-size:20px;margin-right:8px}
-  .meta{color:var(--muted);font-size:12px;margin-left:auto;display:flex;gap:10px;align-items:center}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:12px}
-  table{width:100%;border-collapse:collapse} th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left}
-  th{color:var(--muted);font-weight:700;text-transform:lowercase}
+:root{--bg:#0b0f17;--card:#111827;--text:#e6eef8;--muted:#9fb4d9;--line:#233049;--btn:#2d6cdf;--btn-active:#1db954;}
+*{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif}
+.wrap{max-width:1200px;margin:10px auto;padding:10px}
+.topbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.chip{background:var(--btn);color:#fff;border:none;border-radius:14px;padding:8px 14px;font-weight:600;opacity:.9}
+.chip.muted{background:var(--muted);color:#0b0f17}
+.chip.active{background:var(--btn-active)}
+.pill{display:inline-flex;gap:6px;align-items:center;background:#0f1624;padding:8px 12px;border-radius:12px}
+.title{font-weight:800;font-size:28px;margin-right:8px}
+.meta{color:var(--muted);font-size:12px;margin-left:auto;display:flex;gap:10px;align-items:center}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-top:14px}
+h2{margin:0 0 10px 0;font-size:26px}
+table{width:100%;border-collapse:collapse}
+th,td{padding:8px;border-bottom:1px solid var(--line);text-align:left}
+th{color:var(--muted);font-weight:700;text-transform:lowercase}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px}
+.cell{background:#0f1624;border:1px solid #1b2740;border-radius:8px;padding:8px;text-align:center}
+.badge{font-size:11px;color:#9fb4d9}
 </style>
-</head><body><div class="wrap">
+</head><body>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="title">Scalp</div>
 
-  <div class="topbar">
-    <div class="title">Scalp</div>
+      <button class="chip js-mode-paper">Paper</button>
+      <button class="chip muted js-mode-real">Réel</button>
 
-    <!-- Toggle Paper/Réel -->
-    <div class="pill" id="modeBox">
-      <button class="chip" id="btnPaper">Paper</button>
-      <button class="chip muted" id="btnReal">Réel</button>
+      <div class="pill">
+        <button class="chip muted js-risk" data-risk="1">1</button>
+        <button class="chip js-risk active" data-risk="2">2</button>
+        <button class="chip muted js-risk" data-risk="3">3</button>
+      </div>
+
+      <div class="meta">
+        <span class="badge js-mode-pill">PAPER</span>
+        <span>bal <span class="js-balance">—</span></span>
+        <span>maj : <span class="js-refresh">—</span>s</span>
+      </div>
     </div>
 
-    <!-- Risque 1-2-3 -->
-    <div class="pill">
-      <button class="chip muted" id="r1">1</button>
-      <button class="chip muted" id="r2">2</button>
-      <button class="chip muted" id="r3">3</button>
+    <div class="card">
+      <h2>Signaux récents</h2>
+      <table>
+        <thead><tr><th>ts</th><th>sym</th><th>side</th><th>score</th><th>qty</th><th>sl</th><th>tp</th></tr></thead>
+        <tbody class="js-signals-body"></tbody>
+      </table>
     </div>
 
-    <!-- Infos & décompte -->
-    <div class="meta">
-      <span id="host">host…</span>
-      <span id="balance">bal –</span>
-      <span id="countdown">maj : 5s</span>
+    <div class="card">
+      <h2>Positions</h2>
+      <table>
+        <thead><tr><th>ts</th><th>id</th><th>sym</th><th>side</th><th>entry</th><th>qty</th></tr></thead>
+        <tbody class="js-positions-body"></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>Watchlist — Heatmap</h2>
+      <div class="grid js-heatmap"></div>
     </div>
   </div>
 
-  <div class="card">
-    <h2 style="margin:0 0 8px">Signaux récents</h2>
-    <table id="signalsTbl">
-      <thead><tr><th>ts</th><th>sym</th><th>side</th><th>score</th><th>qty</th><th>SL</th><th>TP</th></tr></thead>
-      <tbody></tbody>
-    </table>
-  </div>
-
-  <div class="card">
-    <h2 style="margin:0 0 8px">Positions</h2>
-    <table id="posTbl">
-      <thead><tr><th>ts</th><th>id</th><th>sym</th><th>side</th><th>entry</th><th>qty</th></tr></thead>
-      <tbody></tbody>
-    </table>
-  </div>
-
-</div>
-<script>
-  const el = id=>document.getElementById(id);
-  let state={mode:'paper',risk_level:1}, t=5, timer;
-
-  function paintHeader(s){
-    // Mode
-    const paperActive = (s.mode||'paper')==='paper';
-    el('btnPaper').classList.toggle('active',paperActive);
-    el('btnPaper').classList.toggle('muted',!paperActive);
-    el('btnReal').classList.toggle('active',!paperActive);
-    el('btnReal').classList.toggle('muted',paperActive);
-    // Risque
-    [1,2,3].forEach(k=>{
-      el('r'+k).classList.toggle('active',k===(s.risk_level||1));
-      el('r'+k).classList.toggle('muted',k!==(s.risk_level||1));
-    });
-    // Meta
-    el('host').textContent = s.host||'-';
-    el('balance').textContent = 'bal ' + (s.balance!=null? s.balance+' USDT' : '—');
-  }
-
-  function rowSig(s){
-    const tp=Array.isArray(s.tpp)?s.tpp.join(','):Array.isArray(s.tp)?s.tp.join(','):'';
-    return `<tr><td>${s.ts||''}</td><td>${s.symbol||''}</td><td>${s.side||''}</td>
-            <td>${(s.score??'').toFixed? s.score.toFixed(2):s.score||''}</td>
-            <td>${s.qty||''}</td><td>${s?.risk?.sl||s.sl||''}</td><td>${tp}</td></tr>`;
-  }
-  function rowPos(p){
-    return `<tr><td>${p.ts||''}</td><td>${p.position_id||p.id||''}</td>
-            <td>${p.symbol||''}</td><td>${p.side||''}</td>
-            <td>${p.entry||p.entry_price||''}</td><td>${p.qty||p.quantity||''}</td></tr>`;
-  }
-
-  async function fetchAll(){
-    try{
-      const st = await fetch('/api/state').then(r=>r.json());
-      state = {...state, ...st};
-      paintHeader(state);
-
-      const sigs = await fetch('/api/signals').then(r=>r.json());
-      const tbody = document.querySelector('#signalsTbl tbody');
-      tbody.innerHTML = (sigs||[]).slice(-50).reverse().map(rowSig).join('');
-
-      const pos = await fetch('/api/positions').then(r=>r.json()).catch(()=>[]);
-      const pbody = document.querySelector('#posTbl tbody');
-      pbody.innerHTML = (pos||[]).map(rowPos).join('');
-    }catch(e){ console.warn(e); }
-    // décompte
-    t = 5;
-    if(timer) clearInterval(timer);
-    el('countdown').textContent = 'maj : '+t+'s';
-    timer = setInterval(()=>{ t--; el('countdown').textContent='maj : '+t+'s'; if(t<=0){clearInterval(timer)} },1000);
-  }
-
-  // Interactions
-  el('btnPaper').onclick = ()=> updateMode('paper');
-  el('btnReal').onclick  = ()=> updateMode('real');
-  ['r1','r2','r3'].forEach((id,i)=> el(id).onclick = ()=> updateRisk(i+1));
-
-  async function updateMode(m){
-    state.mode=m; paintHeader(state);
-    try{ await fetch('/api/mode', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:m})}); }catch{}
-  }
-  async function updateRisk(r){
-    state.risk_level=r; paintHeader(state);
-    try{ await fetch('/api/risk', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({level:r})}); }catch{}
-  }
-
-  // Go
-  fetchAll(); setInterval(fetchAll, 5000);
-</script>
+  <!-- version injectée -->
+  <script src="/app.js?v=3.11" defer></script>
 </body></html>
