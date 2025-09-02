@@ -1,0 +1,21 @@
+:root{--bg:#0b0f17;--card:#111827;--muted:#9fb4d9;--text:#e6eef8;--line:#233049;--ok:#19b36b;--bad:#da4453;--pill:#1b2336;--pill-br:#304067}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+.main{max-width:1040px;margin:24px auto;padding:0 16px}
+.header{display:flex;gap:8px;align-items:center;margin-bottom:16px}
+.h1{font-size:28px;font-weight:800;letter-spacing:.3px}
+.meta{color:var(--muted);font-size:12px;margin-left:auto}
+.pills{display:flex;gap:8px;flex-wrap:wrap}
+.pill{background:var(--pill);border:1px solid var(--pill-br);border-radius:9999px;padding:6px 10px;font-weight:600;color:#cfe2ff}
+.pill.active{background:var(--ok);color:#fff;border-color:#258e60}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:12px}
+.card h2{margin:0 0 10px}
+table{width:100%;border-collapse:collapse}
+th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left}
+th{color:var(--muted);font-weight:700;text-transform:lowercase}
+.badge{display:inline-block;padding:2px 8px;border-radius:9999px;font-weight:700}
+.badge.buy{background:#103a27;color:#b8ffd8;border:1px solid #1d6a48}
+.badge.sell{background:#3a1010;color:#ffd8d8;border:1px solid #6a1d1d}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.cell{padding:10px;border-radius:8px;text-align:center;font-weight:700}
+.red{background:#3a1010;color:#ffd8d8;border:1px solid #6a1d1d}
+.green{background:#103a27;color:#b8ffd8;border:1px solid #1d6a48}
