@@ -1,68 +1,47 @@
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+import time, random
 
-# Import de tes différents modules de routes
-from routes import analyse
+app = FastAPI()
 
-app = FastAPI(
-    title="Scalp API",
-    description="API backend du bot Scalp (signaux, positions, heatmap, analyse)",
-    version="1.0.0"
-)
-
-# Middleware CORS (pour autoriser ton dashboard JS à accéder à l’API)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # tu pourras restreindre si besoin
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# --- Routes de base / état ---
 @app.get("/api/state")
-async def state():
-    return {
-        "ok": True,
-        "mode": "paper",
-        "risk_level": 2,
-        "balance": 1000.0
-    }
-
-@app.get("/api/signals")
-async def signals():
-    return [
-        {
-            "ts": 1693651200,
-            "sym": "BTCUSDT",
-            "side": "buy",
-            "score": 78,
-            "qty": 150,
-            "sl": 24500,
-            "tp": [25200, 26000]
-        }
-    ]
-
-@app.get("/api/positions")
-async def positions():
-    return [
-        {
-            "ts": 1693651800,
-            "id": "pos_001",
-            "sym": "BTCUSDT",
-            "side": "long",
-            "entry": 24800,
-            "qty": 150
-        }
-    ]
+def state():
+    return {"ok": True, "mode":"REAL", "balance": 1000, "risk_level": 2}
 
 @app.get("/api/heatmap")
-async def heatmap():
-    return [
-        {"sym": "BTCUSDT", "pct": 1.2},
-        {"sym": "ETHUSDT", "pct": -0.8},
-        {"sym": "SOLUSDT", "pct": 0.5}
-    ]
+def heatmap():
+    # 20 tickers factices 0..100
+    syms = ["LINEAUSDT","XPLUSDT","MUSDT","WLFIOUSDT","BASUSDT","BGSCTUSDT",
+            "SWEATUSDT","AVAAIUSDT","SOMIUSDT","TAUSDT","FUELUSDT","DOLOUSDT",
+            "XNYUSDT","MRTUSDT","ETHUSDT","BTCUSDT","SOLUSDT","ARBUSDT","OPUSDT","TIAUSDT"]
+    items = [{"sym": s, "pct": int(random.uniform(10, 90))} for s in syms]
+    return {"items": items}
 
-# --- Inclusion des autres routes ---
-app.include_router(analyse.router, prefix="/api")
+@app.get("/api/signals")
+def signals():
+    # quelques signaux factices
+    now = int(time.time())
+    sample = []
+    for i in range(3):
+        sample.append({
+            "ts": now - i*60,
+            "sym": random.choice(["LINEAUSDT","XPLUSDT","ETHUSDT","BTCUSDT"]),
+            "side": random.choice(["BUY","SELL"]),
+            "score": int(random.uniform(60,95)),
+            "qty": random.choice([5,10,20]),
+            "sl": 0.98,
+            "tp": 1.03
+        })
+    return sample
+
+@app.get("/api/positions")
+def positions():
+    return []
+
+@app.get("/api/analyse")
+def analyse():
+    return {
+        "best": {"sym":"XPLUSDT","score":92,"buy_above":0.245},
+        "reason": "multi-TF momentum + volume",
+        "ts": int(time.time())
+    }
