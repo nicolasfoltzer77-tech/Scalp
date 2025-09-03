@@ -1,19 +1,12 @@
-# Python
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-
-# Environnement virtuel
-venv/
-.env
-
-# Fichiers générés
-dashboard.html
-docs/index.html
-
-# Fichiers temporaires
+# build artefacts / archives
+dist/
+build/
+*.map
 *.log
-*.bak
-*.old
-*.swp
+# anciens essais front
+front401/
+old_dash/
+dash_v3/
+ui/
+# répertoires runtime serveur
+/opt/scalp/dash/
