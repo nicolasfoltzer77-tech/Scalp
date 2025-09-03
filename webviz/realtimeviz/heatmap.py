@@ -1,43 +1,60 @@
-import asyncio
-from datetime import datetime
-from fastapi import APIRouter
-from .models import HeatCell, HeatMapPayload
+from __future__ import annotations
+from fastapi import APIRouter, HTTPException
+from typing import Dict, Any, List
+from .models import HeatMapPayload, HeatCell, load_watchlist, save_watchlist, strip_quote_usdt, make_demo_payload
+import time
 
 router = APIRouter()
 
-# store[ (symbol, tf) ] = score
-_store: dict[tuple[str, str], float] = {}
-_lock = asyncio.Lock()
+_STATE: Dict[str, Any] = {
+    "payload": None,
+}
 
-
-@router.get("/heatmap", response_model=HeatMapPayload)
-async def heatmap_current():
-    async with _lock:
-        cells = [HeatCell(symbol=s, tf=tf, score=score)
-                 for (s, tf), score in _store.items()]
-    return HeatMapPayload(as_of=datetime.utcnow(), cells=cells)
-
-
-@router.post("/heatmap/update", response_model=HeatMapPayload)
-async def heatmap_update(payload: HeatMapPayload):
-    """Met à jour les scores (utile pour brancher ton moteur ou pour tester)."""
-    async with _lock:
-        for cell in payload.cells:
-            _store[(cell.symbol, cell.tf)] = float(cell.score)
-    return await heatmap_current()
-
-
-@router.post("/heatmap/demo", response_model=HeatMapPayload)
-async def heatmap_demo():
-    """Remplit la heatmap avec des valeurs de démo."""
-    demo = [
-        HeatCell(symbol="BTC/USDT", tf="1m", score=7.2),
-        HeatCell(symbol="BTC/USDT", tf="5m", score=3.1),
-        HeatCell(symbol="ETH/USDT", tf="1m", score=-4.8),
-        HeatCell(symbol="ETH/USDT", tf="5m", score=0.5),
-        HeatCell(symbol="SOL/USDT", tf="1m", score=9.3),
-        HeatCell(symbol="SOL/USDT", tf="5m", score=6.7),
-        HeatCell(symbol="XRP/USDT", tf="1m", score=-8.4),
+def _filtered_sorted(payload: HeatMapPayload) -> HeatMapPayload:
+    """Filtre par watchlist et trie décroissant par score."""
+    if not payload:
+        return HeatMapPayload(cells=[])
+    wl = set(load_watchlist())
+    cells = [
+        HeatCell(**c.model_dump(), display=strip_quote_usdt(c.pair))
+        for c in payload.cells
+        if c.pair in wl
     ]
-    payload = HeatMapPayload(as_of=datetime.utcnow(), cells=demo)
-    return await heatmap_update(payload)
+    cells.sort(key=lambda c: c.score, reverse=True)
+    return HeatMapPayload(as_of=payload.as_of, cells=cells)
+
+@router.get("/heatmap")
+def get_heatmap() -> Dict[str, Any]:
+    payload: HeatMapPayload | None = _STATE.get("payload")
+    if payload is None:
+        payload = make_demo_payload()
+        _STATE["payload"] = payload
+    filt = _filtered_sorted(payload)
+    return {"as_of": filt.as_of, "cells": [c.model_dump() for c in filt.cells]}
+
+@router.post("/heatmap")
+def post_heatmap(p: HeatMapPayload) -> Dict[str, Any]:
+    _STATE["payload"] = p
+    return {"status": "ok", "count": len(p.cells), "as_of": p.as_of}
+
+@router.post("/heatmap/seed_demo")
+def post_heatmap_seed_demo() -> Dict[str, Any]:
+    p = make_demo_payload()
+    _STATE["payload"] = p
+    return {"status": "ok", "count": len(p.cells), "as_of": p.as_of}
+
+@router.get("/watchlist")
+def get_watchlist() -> Dict[str, Any]:
+    return {"watchlist": load_watchlist()}
+
+@router.put("/watchlist")
+def put_watchlist(body: Dict[str, List[str]]) -> Dict[str, Any]:
+    pairs = body.get("watchlist", [])
+    wl = save_watchlist(pairs)
+    # Refiltrer l'état courant si présent
+    if _STATE.get("payload"):
+        _STATE["payload"] = HeatMapPayload(
+            as_of=time.time(),
+            cells=[c for c in _STATE["payload"].cells if c.pair in set(wl)]
+        )
+    return {"status": "ok", "watchlist": wl}

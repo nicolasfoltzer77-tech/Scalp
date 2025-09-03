@@ -1,37 +1,60 @@
-from typing import List, Optional, Literal
+from __future__ import annotations
 from pydantic import BaseModel, Field
-from datetime import datetime
+from typing import List, Dict
+from pathlib import Path
+import os, json, re, time, random
 
-# -------- Realtime events --------
-class Signal(BaseModel):
-    type: Literal["signal"] = "signal"
-    ts: datetime
-    symbol: str
-    side: Literal["buy", "sell"]
-    score: float
-    timeframe: str
-    rules: List[str]
+# -------- Watchlist --------
+WATCHLIST_FILE = Path(os.getenv("SCALP_WATCHLIST_FILE", "/opt/scalp/watchlist.json"))
+DEFAULT_WATCHLIST = ["BTC/USDT", "ETH/USDT", "SOL/USDT", "XRP/USDT"]
+_PAIR = re.compile(r"^[A-Z0-9]+/[A-Z0-9]+$")
 
-class Position(BaseModel):
-    type: Literal["position"] = "position"
-    ts_open: datetime
-    ts_update: datetime
-    symbol: str
-    side: Literal["long", "short"]
-    qty: float
-    avg_price: float
-    upnl: float
-    leverage: Optional[float] = None
-    stop_loss: Optional[float] = None
-    take_profit: Optional[float] = None
-    status: Literal["open", "closed"] = "open"
+def _read_json(path: Path, default):
+    try:
+        return json.loads(path.read_text())
+    except Exception:
+        return default
 
-# -------- Heatmap --------
+def load_watchlist() -> List[str]:
+    if WATCHLIST_FILE.exists():
+        wl = _read_json(WATCHLIST_FILE, DEFAULT_WATCHLIST)
+        wl = [p for p in wl if isinstance(p, str) and _PAIR.match(p)]
+        return wl or DEFAULT_WATCHLIST
+    return DEFAULT_WATCHLIST
+
+def save_watchlist(pairs: List[str]) -> List[str]:
+    pairs = [p for p in pairs if isinstance(p, str) and _PAIR.match(p)]
+    pairs = pairs or DEFAULT_WATCHLIST
+    WATCHLIST_FILE.write_text(json.dumps(pairs, indent=2))
+    return pairs
+
+def strip_quote_usdt(pair: str) -> str:
+    # "BTC/USDT" -> "BTC" ; sinon retourne la base exacte à gauche du slash
+    if "/" in pair:
+        base, quote = pair.split("/", 1)
+        return base if quote == "USDT" else pair.replace("/", "-")
+    return pair
+
+# -------- Modèles --------
 class HeatCell(BaseModel):
-    symbol: str
-    tf: str = Field(..., description="timeframe ex: 1m / 5m / 15m")
-    score: float = Field(..., ge=-10.0, le=10.0)  # -10 sell .. +10 buy
+    pair: str = Field(..., description="e.g. BTC/USDT")
+    tf: str = Field(..., description="timeframe e.g. 1m, 5m")
+    score: float = Field(..., ge=-10, le=10)
+    # champ d'aide affichage (non strict)
+    display: str | None = None
 
 class HeatMapPayload(BaseModel):
-    as_of: datetime
-    cells: List[HeatCell]
+    as_of: float = Field(default_factory=lambda: time.time())
+    cells: List[HeatCell] = Field(default_factory=list)
+
+# -------- Démo --------
+def make_demo_payload() -> HeatMapPayload:
+    wl = load_watchlist()
+    tfs = ["1m", "5m"]
+    cells: List[HeatCell] = []
+    rng = random.Random(42)
+    for p in wl:
+        for tf in tfs:
+            v = round(rng.uniform(-9.5, 9.5), 1)
+            cells.append(HeatCell(pair=p, tf=tf, score=v, display=strip_quote_usdt(p)))
+    return HeatMapPayload(cells=cells)
