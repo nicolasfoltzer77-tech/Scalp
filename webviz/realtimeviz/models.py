@@ -1,11 +1,15 @@
-from pydantic import BaseModel, Field
-from typing import List
+from datetime import datetime
+from typing import List, Literal, Optional
+from pydantic import BaseModel
 
-class HeatCell(BaseModel):
-    x: int
-    y: int
-    v: float = Field(..., description="value")
+Side = Literal["BUY", "SELL", "FLAT"]
+
+class HeatmapCell(BaseModel):
+    sym: str
+    score: float
+    side: Side = "FLAT"
+    qty: Optional[int] = None
 
 class Heatmap(BaseModel):
-    as_of: str
-    cells: List[HeatCell]
+    as_of: datetime
+    cells: List[HeatmapCell]
