@@ -1,196 +1,201 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
-from typing import Optional, List, Dict, Any, Set
+# /opt/scalp/viz_main.py  — rtviz-0.6 (no external adapter)
 from fastapi import FastAPI, Query
 from fastapi.responses import JSONResponse, HTMLResponse, PlainTextResponse
+from typing import List, Dict, Any, Optional
+import os, json, csv, time
 
-# >>> on garde l’adapter existant
-from webviz.realtimeviz.adapter import (
-    get_signals_snapshot,
-    get_history_snapshot,
-    get_heatmap_snapshot,
-    sources_info,
-)
+APP_VER = "rtviz-0.6"
 
-app = FastAPI(title="SCALP rtviz")
+DATA_DIR = "/opt/scalp/data"
+DASH_DIR = "/opt/scalp/var/dashboard"
+PATH_SIGNALS_CSV  = f"{DASH_DIR}/signals.csv"
+PATH_SIGNALS_JSON = f"{DATA_DIR}/signals.json"      # si le service csv2json l’écrit
+PATH_HISTORY_JSON = f"{DATA_DIR}/history.json"
+PATH_HEATMAP_JSON = f"{DATA_DIR}/heatmap.json"
+PATH_WATCHLIST_YAML = "/opt/scalp/reports/watchlist.yml"
 
-# ---- helpers ---------------------------------------------------------------
+app = FastAPI(title="SCALP – Visualisation")
 
-def _split_opts(value: Optional[str]) -> Optional[Set[str]]:
-    """'a,b,c' -> {'a','b','c'} ; None/'' -> None ; trim + upper pour sym, lower pour tf/side gérés en appelant."""
-    if not value:
-        return None
-    return {tok.strip() for tok in value.split(",") if tok.strip()}
+# ---------- helpers sûrs ----------
+def _read_json(path: str, default):
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return default
 
-def _normalize_item(o: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    L’adapter peut renvoyer soit {"items":[...]} soit la liste.
-    Ici on normalise le format d’un item (ts,sym,tf,side,score,entry,details).
-    """
-    # alias possibles selon versions
-    sym = o.get("sym") or o.get("symbol")
-    tf = o.get("tf") or o.get("timeframe") or o.get("tfm")
-    side = o.get("side") or o.get("signal")
-    return {
-        "ts": o.get("ts") or o.get("timestamp"),
-        "sym": sym,
-        "tf": tf,
-        "side": side,
-        "score": o.get("score", 0),
-        "entry": o.get("entry") or o.get("details"),
-        "details": o.get("details") or o.get("entry"),
-    }
+def _read_watchlist() -> List[str]:
+    # YAML minimal sans dépendance: on prend seulement des lignes '- SYM...'
+    syms = []
+    try:
+        with open(PATH_WATCHLIST_YAML, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line.startswith("- "):
+                    syms.append(line[2:].strip())
+    except Exception:
+        pass
+    return syms
 
-def _materialize_items(snapshot: Any) -> List[Dict[str, Any]]:
-    """Accepte dict {'items': [...]} ou liste brute."""
-    if isinstance(snapshot, dict):
-        items = snapshot.get("items", [])
-    else:
-        items = snapshot or []
-    return [_normalize_item(x) for x in items]
+def _signals_from_csv() -> List[Dict[str, Any]]:
+    items: List[Dict[str, Any]] = []
+    if not os.path.exists(PATH_SIGNALS_CSV):
+        return items
+    try:
+        with open(PATH_SIGNALS_CSV, "r", encoding="utf-8") as f:
+            rdr = csv.DictReader(f)
+            for row in rdr:
+                # CSV headers attendus: ts,symbol,tf,signal,details
+                ts_raw = row.get("ts", "")
+                try:
+                    ts_val = int(ts_raw)
+                except Exception:
+                    # ts ISO → on laisse tel quel (UI sait afficher string)
+                    ts_val = ts_raw
+                items.append({
+                    "ts": ts_val,
+                    "sym": row.get("symbol",""),
+                    "tf": row.get("tf",""),
+                    "side": row.get("signal",""),
+                    "score": 0,
+                    "entry": row.get("details",""),
+                    "details": row.get("details",""),
+                })
+    except Exception:
+        # si parsing échoue (fichier en cours d’écriture), on retourne vide
+        items = []
+    return items
 
-# ---- endpoints API ---------------------------------------------------------
+def _load_signals_raw() -> List[Dict[str, Any]]:
+    # priorité au JSON si présent et valide
+    j = _read_json(PATH_SIGNALS_JSON, default=None)
+    if isinstance(j, list):
+        # déjà un tableau d’objets
+        return j
+    if isinstance(j, dict) and "items" in j and isinstance(j["items"], list):
+        return j["items"]
+    # fallback CSV
+    return _signals_from_csv()
 
+def _paginate(lst: List[Any], limit: int, offset: int):
+    total = len(lst)
+    if offset < 0: offset = 0
+    if limit <= 0: limit = 200
+    return total, lst[offset: offset + limit]
+
+# ---------- endpoints ----------
 @app.get("/viz/test")
 def viz_test():
-    return {"ok": True, "ver": "rtviz-0.5"}
-
-@app.get("/viz/hello", response_class=PlainTextResponse)
-def viz_hello():
-    return "hello from rtviz"
-
-@app.get("/api/heatmap")
-def api_heatmap():
-    return get_heatmap_snapshot()
-
-@app.get("/api/history")
-def api_history(limit: int = Query(1000, ge=1, le=5000)):
-    snap = get_history_snapshot(limit=limit)
-    return snap if isinstance(snap, dict) else {"items": snap}
+    return {"ok": True, "ver": APP_VER, "hints": {
+        "produce_here": DATA_DIR, "reports_here": "/opt/scalp/reports"
+    }}
 
 @app.get("/api/signals_raw")
-def api_signals_raw(
-    include_hold: bool = Query(True),
-    limit: int = Query(200, ge=1, le=5000),
-):
-    """Liste brute (array) — utile pour /viz/demo."""
-    snap = get_signals_snapshot(limit=limit, include_hold=include_hold)
-    items = _materialize_items(snap)
-    return items
+def api_signals_raw(limit: int = 200):
+    items = _load_signals_raw()
+    return items[:max(0, limit)]
 
 @app.get("/api/signals")
 def api_signals(
-    sym: Optional[str] = Query(None, description="ex: BTCUSDT,ETHUSDT"),
-    tf: Optional[str] = Query(None, description="ex: 1m,5m,15m"),
-    side: Optional[str] = Query(None, description="HOLD|BUY|SELL"),
-    include_hold: bool = Query(True, description="inclure les HOLD"),
-    limit: int = Query(200, ge=1, le=2000),
-    offset: int = Query(0, ge=0),
+    sym: Optional[str] = Query(None, description="Ex: BTCUSDT,ETHUSDT"),
+    tf: Optional[str]  = Query(None, description="Ex: 1m,5m,15m"),
+    include_hold: bool = Query(False),
+    limit: int = 200,
+    offset: int = 0,
 ):
-    """
-    Snapshot avec filtres + pagination.
-    Renvoie: {"items":[...], "total":N, "limit":..., "offset":...}
-    """
-    snap = get_signals_snapshot(limit=5000, include_hold=include_hold)
-    items = _materialize_items(snap)
-
-    # Prépare filtres
-    sym_set = {s.upper() for s in _split_opts(sym) or []}
-    tf_set  = {t.lower() for t in _split_opts(tf)  or []}
-    side_set= {s.upper() for s in _split_opts(side) or []}
-
-    def keep(x: Dict[str, Any]) -> bool:
-        if sym_set and (x.get("sym") or "").upper() not in sym_set:
-            return False
-        if tf_set and (x.get("tf") or "").lower() not in tf_set:
-            return False
-        if side_set and (x.get("side") or "").upper() not in side_set:
-            return False
-        if not include_hold and (x.get("side") or "").upper() == "HOLD":
-            return False
-        return True
-
-    filtered = [x for x in items if keep(x)]
-    total = len(filtered)
-
+    items = _load_signals_raw()
+    # filtres
+    if sym:
+        allowed = set(s.strip().upper() for s in sym.split(",") if s.strip())
+        items = [x for x in items if x.get("sym","").upper() in allowed]
+    if tf:
+        allowed_tf = set(s.strip() for s in tf.split(",") if s.strip())
+        items = [x for x in items if x.get("tf","") in allowed_tf]
+    if not include_hold:
+        items = [x for x in items if str(x.get("side","")).upper() != "HOLD"]
     # pagination
-    start = offset
-    end = min(offset + limit, total)
-    page = filtered[start:end]
+    total, page = _paginate(items, limit, offset)
+    return {"total": total, "items": page}
 
-    return {"items": page, "total": total, "limit": limit, "offset": offset}
+@app.get("/api/history")
+def api_history(limit: int = 1000, offset: int = 0):
+    j = _read_json(PATH_HISTORY_JSON, default=None)
+    if isinstance(j, dict) and "items" in j and isinstance(j["items"], list):
+        base = j["items"]
+    elif isinstance(j, list):
+        base = j
+    else:
+        base = []
+    total, page = _paginate(base, limit, offset)
+    return {"total": total, "items": page}
 
-# ---- mini vue /viz/demo ----------------------------------------------------
+@app.get("/viz/heatmap")
+def viz_heatmap():
+    j = _read_json(PATH_HEATMAP_JSON, default=None)
+    if isinstance(j, dict) and "cells" in j:
+        return j
+    if isinstance(j, list):
+        # parfois un simple tableau de cellules
+        return {"cells": j, "source": "heatmap.json[list]"}
+    # fallback: construire une heatmap plate depuis la watchlist
+    syms = _read_watchlist()
+    cells = [{"sym": s, "strength": 0.0} for s in syms]  # 0 = neutre
+    return {"cells": cells, "source": "watchlist_fallback"}
 
-@app.get("/viz/demo", response_class=HTMLResponse)
+@app.get("/viz/demo")
 def viz_demo():
+    # petite page pour voir rapidement les signaux (inclut HOLD)
     html = """
-<!doctype html><html><head><meta charset="utf-8">
+<!doctype html><meta charset="utf-8">
 <title>SCALP • Demo</title>
 <style>
-body{background:#0b0f14;color:#e8eef5;font:14px/1.4 system-ui,Segoe UI,Roboto}
-table{border-collapse:collapse;width:100%}
-th,td{padding:.45rem .6rem;border-bottom:1px solid #223}
-thead th{position:sticky;top:0;background:#111a22}
-.badge{display:inline-block;padding:.1rem .35rem;border-radius:.35rem;background:#173;color:#9f9}
-.controls{display:flex;gap:.5rem;margin:.6rem 0}
-input,select,button{background:#0e1620;color:#e8eef5;border:1px solid #223;border-radius:.4rem;padding:.35rem .5rem}
-button{cursor:pointer}
+ body{background:#0b0f17;color:#cdd6f4;font:14px/1.35 ui-sans-serif,system-ui}
+ table{width:100%;border-collapse:collapse;margin-top:12px}
+ th,td{padding:6px 8px;border-bottom:1px solid #1e2633;white-space:nowrap}
+ th{position:sticky;top:0;background:#121826}
+ .hold{color:#88a}
+ .buy{color:#77f59b}
+ .sell{color:#ff7b7b}
+ #bar{display:flex;gap:10px;align-items:center}
+ a,button{color:#7cc4ff}
+ button{background:#1a2332;border:1px solid #283245;border-radius:6px;padding:6px 10px}
 </style>
-</head><body>
-<h3>SCALP • Demo (auto-refresh 5s)</h3>
-<div class="controls">
-  <input id="sym" placeholder="sym: BTCUSDT,ETHUSDT"/>
-  <input id="tf" placeholder="tf: 1m,5m,15m"/>
-  <select id="side">
-    <option value="">side: any</option>
-    <option>HOLD</option><option>BUY</option><option>SELL</option>
-  </select>
-  <label><input type="checkbox" id="hold" checked> include HOLD</label>
-  <button id="refresh">Refresh</button>
+<div id="bar">
+  <a href="/viz/hello">/viz/hello</a>
+  <a href="/api/signals">/api/signals</a>
+  <button onclick="load()">⟳ Refresh</button>
+  <span id="info"></span>
 </div>
-<table id="t">
-  <thead><tr><th>ts (UTC)</th><th>sym</th><th>tf</th><th>side</th><th>score</th><th>entry/details</th></tr></thead>
-  <tbody></tbody>
-</table>
+<table id="t"><thead>
+  <tr><th>ts (UTC)</th><th>sym</th><th>tf</th><th>side</th><th>entry/details</th></tr>
+</thead><tbody></tbody></table>
 <script>
-async function load() {
-  const params = new URLSearchParams();
-  const sym = document.getElementById('sym').value.trim();
-  const tf  = document.getElementById('tf').value.trim();
-  const side= document.getElementById('side').value.trim();
-  const hold= document.getElementById('hold').checked;
-  if (sym) params.set('sym', sym);
-  if (tf)  params.set('tf', tf);
-  if (side)params.set('side', side);
-  params.set('include_hold', hold ? 'true':'false');
-  params.set('limit','200');
-  const r = await fetch('/api/signals?'+params.toString());
-  if (!r.ok) { console.error('api/signals failed'); return; }
-  const data = await r.json();
-  const rows = (data.items||[]);
-  const tb = document.querySelector('#t tbody');
-  tb.innerHTML = rows.map(x => `
-    <tr>
-      <td>${x.ts||''}</td>
-      <td>${x.sym||''}</td>
-      <td>${x.tf||''}</td>
-      <td><span class="badge">${(x.side||'').toUpperCase()}</span></td>
-      <td>${x.score??''}</td>
-      <td>${x.entry||x.details||''}</td>
-    </tr>`).join('');
+async function load(){
+  const r = await fetch('/api/signals?include_hold=true&limit=200');
+  const j = await r.json();
+  const tb = document.querySelector('#t tbody'); tb.innerHTML = '';
+  (j.items||[]).forEach(x=>{
+    const tr = document.createElement('tr');
+    const ts = typeof x.ts==='number' ? new Date(x.ts*1000).toISOString().replace('T',' ').slice(0,19) : x.ts;
+    const cls = (x.side||'').toLowerCase()==='buy' ? 'buy' :
+                (x.side||'').toLowerCase()==='sell' ? 'sell' : 'hold';
+    tr.innerHTML = `<td>${ts||''}</td><td>${x.sym||''}</td><td>${x.tf||''}</td>
+                    <td class="${cls}">${x.side||''}</td><td>${x.entry||x.details||''}</td>`;
+    tb.appendChild(tr);
+  });
+  document.getElementById('info').textContent =
+    `total:${j.total||0} • loaded:${(j.items||[]).length}`;
 }
-document.getElementById('refresh').onclick = load;
-setInterval(load, 5000);
-load();
+load(); setInterval(load, 5000);
 </script>
-</body></html>
-    """.strip()
-    return HTMLResponse(content=html)
+"""
+    return HTMLResponse(html)
 
-# ---- main (dev) ------------------------------------------------------------
+# compat
+@app.get("/viz/hello")
+def viz_hello(): return PlainTextResponse("hello")
 
+# uvicorn si lancé à la main
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=8100, proxy_headers=True, log_level="info")
+    uvicorn.run("viz_main:app", host="127.0.0.1", port=8100, reload=False)
