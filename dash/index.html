@@ -1,1 +1,132 @@
-#ancien 3.15
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>SCALP • Dashboard</title>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Roboto+Mono:wght@500&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --bg:#0d1117;--panel:#131827;--muted:#8b98b7;--text:#e6edf3;
+      --line:#20263a;--accent:#4ac1ff;--green:#42d392;--red:#ff5d5d;--amber:#ffbf47;
+      --pill:#0f1b2e;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font:14px/1.5 "Inter",system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial}
+    .wrap{max-width:1100px;margin:28px auto;padding:0 16px}
+    header{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+    .brand{font-weight:800;font-size:28px;letter-spacing:.5px}
+    .ver{margin-left:auto;display:flex;gap:8px;align-items:center;color:var(--muted)}
+    .pill{background:var(--pill);border:1px solid var(--line);padding:6px 10px;border-radius:10px;color:var(--muted)}
+
+    .tabs{display:flex;gap:8px;margin:10px 0 18px}
+    .tab{padding:10px 14px;border:1px solid var(--line);background:var(--panel);border-radius:10px;color:var(--muted);cursor:pointer;user-select:none}
+    .tab.active{outline:2px solid var(--accent);color:var(--text)}
+    .grid{display:grid;grid-template-columns:1fr 340px;gap:14px}
+    @media (max-width:900px){.grid{grid-template-columns:1fr}}
+
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px}
+    .card h3{margin:2px 0 10px 0;font-size:16px}
+    .muted{color:var(--muted)}
+    .mono{font-family:"Roboto Mono",ui-monospace,SFMono-Regular,Menlo,monospace}
+
+    .table{width:100%;border-collapse:collapse;font-size:13px}
+    .table th,.table td{padding:8px 10px;border-bottom:1px dashed var(--line)}
+    .buy{color:var(--green);font-weight:600}
+    .sell{color:var(--red);font-weight:600}
+
+    /* Heatmap */
+    .hm-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+    .legend{display:flex;gap:8px;align-items:center}
+    .lg{display:flex;align-items:center;gap:6px}
+    .sw{width:14px;height:14px;border-radius:3px;border:1px solid var(--line)}
+    canvas{width:100%;aspect-ratio:4/3;background:#0b0f19;border:1px solid var(--line);border-radius:12px}
+    .hint{font-size:12px;color:var(--muted);margin-top:6px}
+    .log{height:140px;overflow:auto;background:#0b0f19;border:1px solid var(--line);border-radius:10px;padding:10px;font-size:12px;white-space:pre-wrap}
+
+    a.link{color:var(--accent);text-decoration:none}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">SCALP</div>
+      <div class="pill mono" id="mode">PAPER</div>
+      <div class="ver">
+        <span class="muted">API</span>
+        <span class="pill mono" id="apiVer">—</span>
+        <span class="pill mono" id="apiTs">—</span>
+      </div>
+    </header>
+
+    <div class="tabs">
+      <div class="tab active" data-tab="flux">Flux</div>
+      <div class="tab" data-tab="heatmap">Heatmap</div>
+      <div class="tab" data-tab="historique">Historique</div>
+    </div>
+
+    <div class="grid">
+      <!-- COL 1 -->
+      <div>
+        <!-- FLUX -->
+        <section class="card" id="view-flux">
+          <h3>Signaux récents</h3>
+          <table class="table" id="tbl-flux">
+            <thead>
+              <tr><th>ts</th><th>sym</th><th>side</th><th>score</th><th>entry</th></tr>
+            </thead>
+            <tbody>
+              <tr class="muted"><td colspan="5">En attente de données…</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <!-- HEATMAP -->
+        <section class="card" id="view-heatmap" hidden>
+          <div class="hm-head">
+            <h3>Heatmap • <span class="muted mono" id="hmAsOf">—</span></h3>
+            <div class="legend">
+              <div class="lg"><span class="sw" style="background:#132a1e;border-color:#1e4d33"></span><span class="muted">0</span></div>
+              <div class="lg"><span class="sw" style="background:#1f6f46;border-color:#1e4d33"></span><span class="muted">0.5</span></div>
+              <div class="lg"><span class="sw" style="background:#2ecc71;border-color:#1e4d33"></span><span class="muted">1.0</span></div>
+            </div>
+          </div>
+          <canvas id="heatmap"></canvas>
+          <div class="hint">Couleurs → intensité Buy (0 → 1). Passage auto toutes 3s.</div>
+        </section>
+
+        <!-- HISTORIQUE -->
+        <section class="card" id="view-historique" hidden>
+          <h3>Historique</h3>
+          <table class="table" id="tbl-hist">
+            <thead><tr><th>ts</th><th>sym</th><th>side</th><th>qty</th><th>sl</th><th>tp</th></tr></thead>
+            <tbody><tr class="muted"><td colspan="6">Aucun trade pour l’instant.</td></tr></tbody>
+          </table>
+        </section>
+      </div>
+
+      <!-- COL 2 -->
+      <aside>
+        <section class="card">
+          <h3>État API</h3>
+          <div id="statusBox" class="muted">Chargement…</div>
+          <div class="hint">Endpoints: 
+            <a class="link" href="/viz/hello" target="_blank">/viz/hello</a> ·
+            <a class="link" href="/viz/test" target="_blank">/viz/test</a> ·
+            <a class="link" href="/viz/heatmap" target="_blank">/viz/heatmap</a>
+          </div>
+        </section>
+
+        <section class="card">
+          <h3>Logs</h3>
+          <div id="logs" class="log"></div>
+        </section>
+      </aside>
+    </div>
+  </div>
+
+  <script src="/app.js?v=rtviz-ui" defer></script>
+</body>
+</html>
