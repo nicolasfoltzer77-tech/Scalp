@@ -2,15 +2,15 @@
   "symbols": [
     "ETHUSDT",
     "BTCUSDT",
-    "NEIROETHUSDT",
     "MUSDT",
-    "TAUSDT",
+    "NEIROETHUSDT",
     "HIFIUSDT",
-    "WLFIUSDT",
+    "TAUSDT",
     "ARIAUSDT",
+    "WLFIUSDT",
+    "SOMIUSDT",
     "IDOLUSDT",
     "PTBUSDT",
-    "LAUNCHCOINUSDT",
     "BAKEUSDT"
   ],
   "items": [
@@ -18,3071 +18,3089 @@
       "sym_ex": "ETH/USDT:USDT",
       "sym": "ETHUSDT",
       "base": "ETH",
-      "last": 4305.03,
-      "vol_usdt": 8669297729.4036,
-      "vol_ret": 0.000887767013180528,
-      "score": 0.634608881751733
+      "last": 4286.0,
+      "vol_usdt": 8675075214.08,
+      "vol_ret": 0.0007957462077785095,
+      "score": 0.635338054514142
     },
     {
       "sym_ex": "BTC/USDT:USDT",
       "sym": "BTCUSDT",
       "base": "BTC",
-      "last": 109745.6,
-      "vol_usdt": 6380930365.47296,
-      "vol_ret": 0.0005074692360101535,
-      "score": 0.4611676689273566
-    },
-    {
-      "sym_ex": "NEIROETH/USDT:USDT",
-      "sym": "NEIROETHUSDT",
-      "base": "NEIROETH",
-      "last": 0.06455,
-      "vol_usdt": 51203303.757999994,
-      "vol_ret": 0.010123553574087424,
-      "score": 0.40347478518269553
+      "last": 109900.0,
+      "vol_usdt": 6481206289.04,
+      "vol_ret": 0.00044964361560139105,
+      "score": 0.46795973909293553
     },
     {
       "sym_ex": "M/USDT:USDT",
       "sym": "MUSDT",
       "base": "M",
-      "last": 1.38217,
-      "vol_usdt": 543013194.2441599,
-      "vol_ret": 0.008671423964713095,
-      "score": 0.3800668386780987
+      "last": 1.36542,
+      "vol_usdt": 537593271.6336,
+      "vol_ret": 0.008304573280335605,
+      "score": 0.4114407385153234
     },
     {
-      "sym_ex": "TA/USDT:USDT",
-      "sym": "TAUSDT",
-      "base": "TA",
-      "last": 0.14406,
-      "vol_usdt": 95916661.49436,
-      "vol_ret": 0.007616547503963644,
-      "score": 0.3073862313102696
+      "sym_ex": "NEIROETH/USDT:USDT",
+      "sym": "NEIROETHUSDT",
+      "base": "NEIROETH",
+      "last": 0.06493,
+      "vol_usdt": 51988116.55864,
+      "vol_ret": 0.00887332406068921,
+      "score": 0.4035268624899959
     },
     {
       "sym_ex": "HIFI/USDT:USDT",
       "sym": "HIFIUSDT",
       "base": "HIFI",
-      "last": 0.06495,
-      "vol_usdt": 13820393.803799998,
-      "vol_ret": 0.007744202049658875,
-      "score": 0.30675404861773464
+      "last": 0.0622,
+      "vol_usdt": 13309428.6144,
+      "vol_ret": 0.007991731029716237,
+      "score": 0.36105191002615905
     },
     {
-      "sym_ex": "WLFI/USDT:USDT",
-      "sym": "WLFIUSDT",
-      "base": "WLFI",
-      "last": 0.1774,
-      "vol_usdt": 634005721.258,
-      "vol_ret": 0.006195462046030962,
-      "score": 0.28840981065392085
+      "sym_ex": "TA/USDT:USDT",
+      "sym": "TAUSDT",
+      "base": "TA",
+      "last": 0.13809,
+      "vol_usdt": 94960918.40225999,
+      "vol_ret": 0.0077359261898163915,
+      "score": 0.3551515782768304
     },
     {
       "sym_ex": "ARIA/USDT:USDT",
       "sym": "ARIAUSDT",
       "base": "ARIA",
-      "last": 0.11824,
-      "vol_usdt": 47856999.1392,
-      "vol_ret": 0.007018506223965058,
-      "score": 0.28039962063552415
+      "last": 0.12324,
+      "vol_usdt": 49428608.95128,
+      "vol_ret": 0.007310336227756833,
+      "score": 0.3327887907577539
     },
     {
-      "sym_ex": "IDOL/USDT:USDT",
-      "sym": "IDOLUSDT",
-      "base": "IDOL",
-      "last": 0.03945,
-      "vol_usdt": 328812876.6987,
-      "vol_ret": 0.0060573593093764064,
-      "score": 0.2618213505730182
-    },
-    {
-      "sym_ex": "PTB/USDT:USDT",
-      "sym": "PTBUSDT",
-      "base": "PTB",
-      "last": 0.02845,
-      "vol_usdt": 39942993.6132,
-      "vol_ret": 0.0055347925822332705,
-      "score": 0.2211523597363234
-    },
-    {
-      "sym_ex": "LAUNCHCOIN/USDT:USDT",
-      "sym": "LAUNCHCOINUSDT",
-      "base": "LAUNCHCOIN",
-      "last": 0.07173,
-      "vol_usdt": 29963015.715465993,
-      "vol_ret": 0.005134423631712904,
-      "score": 0.20462195784569512
-    },
-    {
-      "sym_ex": "BAKE/USDT:USDT",
-      "sym": "BAKEUSDT",
-      "base": "BAKE",
-      "last": 0.0456,
-      "vol_usdt": 14887379.35344,
-      "vol_ret": 0.00499042364416136,
-      "score": 0.19788145164674242
+      "sym_ex": "WLFI/USDT:USDT",
+      "sym": "WLFIUSDT",
+      "base": "WLFI",
+      "last": 0.1763,
+      "vol_usdt": 640088532.1052,
+      "vol_ret": 0.006048951547558726,
+      "score": 0.31670054701440026
     },
     {
       "sym_ex": "SOMI/USDT:USDT",
       "sym": "SOMIUSDT",
       "base": "SOMI",
-      "last": 0.4346,
-      "vol_usdt": 30886656.936,
-      "vol_ret": 0.00470868288437051,
-      "score": 0.1878425075056261
+      "last": 0.4799,
+      "vol_usdt": 38480912.9926,
+      "vol_ret": 0.006612563953564893,
+      "score": 0.3005306177706164
     },
     {
-      "sym_ex": "BGSC/USDT:USDT",
-      "sym": "BGSCUSDT",
-      "base": "BGSC",
-      "last": 0.00902,
-      "vol_usdt": 8624123.415468,
-      "vol_ret": 0.0043470551678754694,
-      "score": 0.17199463597632256
+      "sym_ex": "IDOL/USDT:USDT",
+      "sym": "IDOLUSDT",
+      "base": "IDOL",
+      "last": 0.03922,
+      "vol_usdt": 327524836.55372,
+      "vol_ret": 0.005954420103844979,
+      "score": 0.2908123829361585
     },
     {
-      "sym_ex": "ESPORTS/USDT:USDT",
-      "sym": "ESPORTSUSDT",
-      "base": "ESPORTS",
-      "last": 0.11511,
-      "vol_usdt": 26336558.14722,
-      "vol_ret": 0.004313051540561453,
-      "score": 0.17187538142439332
+      "sym_ex": "PTB/USDT:USDT",
+      "sym": "PTBUSDT",
+      "base": "PTB",
+      "last": 0.02854,
+      "vol_usdt": 39588072.8798,
+      "vol_ret": 0.005686940456201781,
+      "score": 0.25881996419856707
+    },
+    {
+      "sym_ex": "BAKE/USDT:USDT",
+      "sym": "BAKEUSDT",
+      "base": "BAKE",
+      "last": 0.0442,
+      "vol_usdt": 14321701.724200001,
+      "vol_ret": 0.004967179566341728,
+      "score": 0.22457866964446663
+    },
+    {
+      "sym_ex": "LAUNCHCOIN/USDT:USDT",
+      "sym": "LAUNCHCOINUSDT",
+      "base": "LAUNCHCOIN",
+      "last": 0.07095,
+      "vol_usdt": 29974230.56867415,
+      "vol_ret": 0.004807123338633385,
+      "score": 0.21843564852272443
     },
     {
       "sym_ex": "ALPINE/USDT:USDT",
       "sym": "ALPINEUSDT",
       "base": "ALPINE",
-      "last": 1.8699,
-      "vol_usdt": 14040529.349399999,
-      "vol_ret": 0.004099578011030598,
-      "score": 0.16257872408745955
+      "last": 1.9567,
+      "vol_usdt": 16823714.4268,
+      "vol_ret": 0.004612062743971584,
+      "score": 0.2087200025210636
     },
     {
-      "sym_ex": "PUMP/USDT:USDT",
-      "sym": "PUMPUSDT",
-      "base": "PUMP",
-      "last": 0.004204,
-      "vol_usdt": 104936680.09883201,
-      "vol_ret": 0.003431622530190647,
-      "score": 0.14244434097307798
+      "sym_ex": "ESPORTS/USDT:USDT",
+      "sym": "ESPORTSUSDT",
+      "base": "ESPORTS",
+      "last": 0.11475,
+      "vol_usdt": 26659505.578500003,
+      "vol_ret": 0.004349623531595914,
+      "score": 0.19755255211683806
+    },
+    {
+      "sym_ex": "BGSC/USDT:USDT",
+      "sym": "BGSCUSDT",
+      "base": "BGSC",
+      "last": 0.009063,
+      "vol_usdt": 8346937.493313899,
+      "vol_ret": 0.004053304982197315,
+      "score": 0.1829085519578079
     },
     {
       "sym_ex": "XNY/USDT:USDT",
       "sym": "XNYUSDT",
       "base": "XNY",
-      "last": 0.007279,
-      "vol_usdt": 19264817.790112,
-      "vol_ret": 0.0035513966045389173,
-      "score": 0.14125289220652976
+      "last": 0.007255,
+      "vol_usdt": 19098260.9321,
+      "vol_ret": 0.003592728930074148,
+      "score": 0.16285955032216082
     },
     {
-      "sym_ex": "LINEA/USDT:USDT",
-      "sym": "LINEAUSDT",
-      "base": "LINEA",
-      "last": 0.02638,
-      "vol_usdt": 11818631.32092,
-      "vol_ret": 0.0035303034051175778,
-      "score": 0.1399029834228828
+      "sym_ex": "PUMP/USDT:USDT",
+      "sym": "PUMPUSDT",
+      "base": "PUMP",
+      "last": 0.004137,
+      "vol_usdt": 103312684.83522,
+      "vol_ret": 0.0032351250953263095,
+      "score": 0.15254078918958017
     },
     {
-      "sym_ex": "SOL/USDT:USDT",
-      "sym": "SOLUSDT",
-      "base": "SOL",
-      "last": 204.002,
-      "vol_usdt": 1440069171.7868001,
-      "vol_ret": 0.0008953048833668727,
-      "score": 0.13451607224382814
-    },
-    {
-      "sym_ex": "USELESS/USDT:USDT",
-      "sym": "USELESSUSDT",
-      "base": "USELESS",
-      "last": 0.1606,
-      "vol_usdt": 6323920.504,
-      "vol_ret": 0.003392524708700514,
-      "score": 0.13407177749565194
+      "sym_ex": "RHEA/USDT:USDT",
+      "sym": "RHEAUSDT",
+      "base": "RHEA",
+      "last": 0.03097,
+      "vol_usdt": 2694536.67392,
+      "vol_ret": 0.0032773483991101514,
+      "score": 0.1474870356006385
     },
     {
       "sym_ex": "Q/USDT:USDT",
       "sym": "QUSDT",
       "base": "Q",
-      "last": 0.00882,
-      "vol_usdt": 40517947.141559996,
-      "vol_ret": 0.0031568653044334993,
-      "score": 0.12711532836364992
+      "last": 0.008964,
+      "vol_usdt": 40784710.487976,
+      "vol_ret": 0.0032144805025020873,
+      "score": 0.14728362685573898
     },
     {
-      "sym_ex": "SPK/USDT:USDT",
-      "sym": "SPKUSDT",
-      "base": "SPK",
-      "last": 0.06057,
-      "vol_usdt": 48171508.52472,
-      "vol_ret": 0.0030326064153494534,
-      "score": 0.12272909425634945
+      "sym_ex": "LINEA/USDT:USDT",
+      "sym": "LINEAUSDT",
+      "base": "LINEA",
+      "last": 0.02563,
+      "vol_usdt": 11502089.46106,
+      "vol_ret": 0.0031983982451275817,
+      "score": 0.1445320668297113
     },
     {
       "sym_ex": "MAJOR/USDT:USDT",
       "sym": "MAJORUSDT",
       "base": "MAJOR",
-      "last": 0.159,
-      "vol_usdt": 1444168.1389083,
-      "vol_ret": 0.0030860879494287504,
-      "score": 0.12161059729947488
+      "last": 0.1591,
+      "vol_usdt": 1454220.0696164898,
+      "vol_ret": 0.0030627798656841713,
+      "score": 0.13771455256328083
     },
     {
-      "sym_ex": "MERL/USDT:USDT",
-      "sym": "MERLUSDT",
-      "base": "MERL",
-      "last": 0.1594,
-      "vol_usdt": 22234961.5182,
-      "vol_ret": 0.0030475683283625525,
-      "score": 0.12152575569030416
-    },
-    {
-      "sym_ex": "SAPIEN/USDT:USDT",
-      "sym": "SAPIENUSDT",
-      "base": "SAPIEN",
-      "last": 0.15944,
-      "vol_usdt": 14060555.36944,
-      "vol_ret": 0.0029983940126549462,
-      "score": 0.11901448105667256
+      "sym_ex": "SOL/USDT:USDT",
+      "sym": "SOLUSDT",
+      "base": "SOL",
+      "last": 203.327,
+      "vol_usdt": 1453661336.6136,
+      "vol_ret": 0.0007851830948204215,
+      "score": 0.13534409097960493
     },
     {
       "sym_ex": "B2/USDT:USDT",
       "sym": "B2USDT",
       "base": "B2",
-      "last": 0.4021,
-      "vol_usdt": 2139091.58,
-      "vol_ret": 0.0030135151468034306,
-      "score": 0.11878753438641995
+      "last": 0.4026,
+      "vol_usdt": 2190161.7144,
+      "vol_ret": 0.0030070508824140084,
+      "score": 0.13524957602515775
+    },
+    {
+      "sym_ex": "USELESS/USDT:USDT",
+      "sym": "USELESSUSDT",
+      "base": "USELESS",
+      "last": 0.1579,
+      "vol_usdt": 6282134.555400001,
+      "vol_ret": 0.0029567872384919217,
+      "score": 0.13326347422991697
+    },
+    {
+      "sym_ex": "MERL/USDT:USDT",
+      "sym": "MERLUSDT",
+      "base": "MERL",
+      "last": 0.1607,
+      "vol_usdt": 21786061.01052,
+      "vol_ret": 0.002913110426676554,
+      "score": 0.13236411834801864
+    },
+    {
+      "sym_ex": "PARTI/USDT:USDT",
+      "sym": "PARTIUSDT",
+      "base": "PARTI",
+      "last": 0.1929,
+      "vol_usdt": 18694547.4066,
+      "vol_ret": 0.0028548371558936307,
+      "score": 0.1295195286630272
+    },
+    {
+      "sym_ex": "CAMP/USDT:USDT",
+      "sym": "CAMPUSDT",
+      "base": "CAMP",
+      "last": 0.07151,
+      "vol_usdt": 10629676.8902,
+      "vol_ret": 0.0028512708053684793,
+      "score": 0.12880066552681135
     },
     {
       "sym_ex": "SERAPH/USDT:USDT",
       "sym": "SERAPHUSDT",
       "base": "SERAPH",
       "last": 0.20771,
-      "vol_usdt": 1697662.43414,
-      "vol_ret": 0.003009255323817453,
-      "score": 0.1185884502575702
+      "vol_usdt": 1697865.98994,
+      "vol_ret": 0.002828609597827044,
+      "score": 0.12715979810129768
     },
     {
-      "sym_ex": "PARTI/USDT:USDT",
-      "sym": "PARTIUSDT",
-      "base": "PARTI",
-      "last": 0.1921,
-      "vol_usdt": 18013976.9476,
-      "vol_ret": 0.0029570999981835414,
-      "score": 0.11765443220885603
+      "sym_ex": "SPK/USDT:USDT",
+      "sym": "SPKUSDT",
+      "base": "SPK",
+      "last": 0.06031,
+      "vol_usdt": 48230724.44174,
+      "vol_ret": 0.0027507756157412228,
+      "score": 0.1268647403979553
     },
     {
-      "sym_ex": "FLOCK/USDT:USDT",
-      "sym": "FLOCKUSDT",
-      "base": "FLOCK",
-      "last": 0.2875,
-      "vol_usdt": 5315439.725,
-      "vol_ret": 0.00289753737202762,
-      "score": 0.1144190194606329
-    },
-    {
-      "sym_ex": "GPS/USDT:USDT",
-      "sym": "GPSUSDT",
-      "base": "GPS",
-      "last": 0.00974,
-      "vol_usdt": 4195629.672,
-      "vol_ret": 0.002885236630265949,
-      "score": 0.1138548602020623
-    },
-    {
-      "sym_ex": "RHEA/USDT:USDT",
-      "sym": "RHEAUSDT",
-      "base": "RHEA",
-      "last": 0.03205,
-      "vol_usdt": 2613708.9731,
-      "vol_ret": 0.0027538339634535633,
-      "score": 0.10854674073961305
-    },
-    {
-      "sym_ex": "ROAM/USDT:USDT",
-      "sym": "ROAMUSDT",
-      "base": "ROAM",
-      "last": 0.1401,
-      "vol_usdt": 4638415.781193138,
-      "vol_ret": 0.0027130543120080183,
-      "score": 0.10707354007515088
+      "sym_ex": "SAPIEN/USDT:USDT",
+      "sym": "SAPIENUSDT",
+      "base": "SAPIEN",
+      "last": 0.15904,
+      "vol_usdt": 13766515.759359999,
+      "vol_ret": 0.0027974122706588313,
+      "score": 0.1265862043334335
     },
     {
       "sym_ex": "XPL/USDT:USDT",
       "sym": "XPLUSDT",
       "base": "XPL",
-      "last": 0.5983,
-      "vol_usdt": 28775455.0846,
-      "vol_ret": 0.002669009933474142,
-      "score": 0.10700174471805787
+      "last": 0.6048,
+      "vol_usdt": 29886287.5584,
+      "vol_ret": 0.0027310648113212338,
+      "score": 0.12470598196667715
     },
     {
-      "sym_ex": "B/USDT:USDT",
-      "sym": "BUSDT",
-      "base": "B",
-      "last": 0.6133,
-      "vol_usdt": 5961783.812399999,
-      "vol_ret": 0.0026749811495500454,
-      "score": 0.10565886987179023
-    },
-    {
-      "sym_ex": "DOLO/USDT:USDT",
-      "sym": "DOLOUSDT",
-      "base": "DOLO",
-      "last": 0.16813,
-      "vol_usdt": 14042043.008579157,
-      "vol_ret": 0.00265550658914629,
-      "score": 0.1054477043805587
-    },
-    {
-      "sym_ex": "CAMP/USDT:USDT",
-      "sym": "CAMPUSDT",
-      "base": "CAMP",
-      "last": 0.0709,
-      "vol_usdt": 10419447.2676,
-      "vol_ret": 0.002642095425828292,
-      "score": 0.10466637680578093
+      "sym_ex": "GPS/USDT:USDT",
+      "sym": "GPSUSDT",
+      "base": "GPS",
+      "last": 0.00968,
+      "vol_usdt": 4210598.7915199995,
+      "vol_ret": 0.002705299604512896,
+      "score": 0.12176678300145233
     },
     {
       "sym_ex": "XCX/USDT:USDT",
       "sym": "XCXUSDT",
       "base": "XCX",
-      "last": 0.03853,
-      "vol_usdt": 4251227.9709,
-      "vol_ret": 0.0025827316591631494,
-      "score": 0.10189084543939143
-    },
-    {
-      "sym_ex": "OBOL/USDT:USDT",
-      "sym": "OBOLUSDT",
-      "base": "OBOL",
-      "last": 0.1104,
-      "vol_usdt": 1906264.2144,
-      "vol_ret": 0.0025634375928988424,
-      "score": 0.10096521014530103
+      "last": 0.0382,
+      "vol_usdt": 4158955.476,
+      "vol_ret": 0.00268038565591934,
+      "score": 0.12063847148491598
     },
     {
       "sym_ex": "IN/USDT:USDT",
       "sym": "INUSDT",
       "base": "IN",
-      "last": 0.06309,
-      "vol_usdt": 3886285.8310199995,
-      "vol_ret": 0.00254973511467104,
-      "score": 0.10056015805326549
+      "last": 0.06076,
+      "vol_usdt": 4072199.4840800003,
+      "vol_ret": 0.0026584858309585133,
+      "score": 0.11964380366368084
+    },
+    {
+      "sym_ex": "ROAM/USDT:USDT",
+      "sym": "ROAMUSDT",
+      "base": "ROAM",
+      "last": 0.141,
+      "vol_usdt": 4676796.567471869,
+      "vol_ret": 0.0026279768695152517,
+      "score": 0.11830829873374979
+    },
+    {
+      "sym_ex": "DOLO/USDT:USDT",
+      "sym": "DOLOUSDT",
+      "base": "DOLO",
+      "last": 0.16834,
+      "vol_usdt": 14099473.14349637,
+      "vol_ret": 0.002588200951847205,
+      "score": 0.11716439849954138
+    },
+    {
+      "sym_ex": "FLOCK/USDT:USDT",
+      "sym": "FLOCKUSDT",
+      "base": "FLOCK",
+      "last": 0.2859,
+      "vol_usdt": 5260512.5406,
+      "vol_ret": 0.002530420279651932,
+      "score": 0.11394448678362246
+    },
+    {
+      "sym_ex": "OBOL/USDT:USDT",
+      "sym": "OBOLUSDT",
+      "base": "OBOL",
+      "last": 0.1093,
+      "vol_usdt": 1919176.1841999998,
+      "vol_ret": 0.002417861671305497,
+      "score": 0.10863190694412497
+    },
+    {
+      "sym_ex": "B/USDT:USDT",
+      "sym": "BUSDT",
+      "base": "B",
+      "last": 0.612,
+      "vol_usdt": 6026699.376,
+      "vol_ret": 0.002359823610427924,
+      "score": 0.10629590503397997
     },
     {
       "sym_ex": "BAS/USDT:USDT",
       "sym": "BASUSDT",
       "base": "BAS",
-      "last": 0.021667,
-      "vol_usdt": 13618359.293329999,
-      "vol_ret": 0.00251273307079598,
-      "score": 0.0997698957921582
-    },
-    {
-      "sym_ex": "FWOG/USDT:USDT",
-      "sym": "FWOGUSDT",
-      "base": "FWOG",
-      "last": 0.03699,
-      "vol_usdt": 1025995.18104,
-      "vol_ret": 0.0024480463797877227,
-      "score": 0.09633911112002912
-    },
-    {
-      "sym_ex": "PUNDIX/USDT:USDT",
-      "sym": "PUNDIXUSDT",
-      "base": "PUNDIX",
-      "last": 0.3138,
-      "vol_usdt": 6162237.125834761,
-      "vol_ret": 0.0023733908609114983,
-      "score": 0.09374106880507456
-    },
-    {
-      "sym_ex": "CGPT/USDT:USDT",
-      "sym": "CGPTUSDT",
-      "base": "CGPT",
-      "last": 0.07604,
-      "vol_usdt": 1312243.6248918439,
-      "vol_ret": 0.0023331139691115076,
-      "score": 0.09181190721152319
-    },
-    {
-      "sym_ex": "NODE/USDT:USDT",
-      "sym": "NODEUSDT",
-      "base": "NODE",
-      "last": 0.09545,
-      "vol_usdt": 3015645.0091999997,
-      "vol_ret": 0.002309732105484054,
-      "score": 0.09100476707357913
+      "last": 0.021614,
+      "vol_usdt": 13253779.411528,
+      "vol_ret": 0.002300940662177772,
+      "score": 0.10413754560054012
     },
     {
       "sym_ex": "K/USDT:USDT",
       "sym": "KUSDT",
       "base": "K",
-      "last": 0.1549,
-      "vol_usdt": 3413188.9710000004,
-      "vol_ret": 0.0023057465381307565,
-      "score": 0.0908746050339465
+      "last": 0.1552,
+      "vol_usdt": 3428542.7552,
+      "vol_ret": 0.0022846387936462094,
+      "score": 0.10272197056208304
     },
     {
-      "sym_ex": "MAV/USDT:USDT",
-      "sym": "MAVUSDT",
-      "base": "MAV",
-      "last": 0.07377,
-      "vol_usdt": 6678614.1442974005,
-      "vol_ret": 0.002217333521232287,
-      "score": 0.08760278748676101
-    },
-    {
-      "sym_ex": "HEI/USDT:USDT",
-      "sym": "HEIUSDT",
-      "base": "HEI",
-      "last": 0.4284,
-      "vol_usdt": 3419528.45373216,
-      "vol_ret": 0.00221789716743581,
-      "score": 0.08739950013883056
-    },
-    {
-      "sym_ex": "ALCH/USDT:USDT",
-      "sym": "ALCHUSDT",
-      "base": "ALCH",
-      "last": 0.09246,
-      "vol_usdt": 3857515.3386,
-      "vol_ret": 0.002185577995524977,
-      "score": 0.08615118827905985
-    },
-    {
-      "sym_ex": "XION/USDT:USDT",
-      "sym": "XIONUSDT",
-      "base": "XION",
-      "last": 0.9328,
-      "vol_usdt": 4199111.136,
-      "vol_ret": 0.002132601372102226,
-      "score": 0.08407894331962121
-    },
-    {
-      "sym_ex": "MITO/USDT:USDT",
-      "sym": "MITOUSDT",
-      "base": "MITO",
-      "last": 0.17807,
-      "vol_usdt": 17098397.50164,
-      "vol_ret": 0.002058326738335112,
-      "score": 0.08203331035117525
-    },
-    {
-      "sym_ex": "H/USDT:USDT",
-      "sym": "HUSDT",
-      "base": "H",
-      "last": 0.03104,
-      "vol_usdt": 6755114.144,
-      "vol_ret": 0.0020754722869668514,
-      "score": 0.08199569276601375
-    },
-    {
-      "sym_ex": "VELVET/USDT:USDT",
-      "sym": "VELVETUSDT",
-      "base": "VELVET",
-      "last": 0.06552,
-      "vol_usdt": 1533010.88304,
-      "vol_ret": 0.002076686584548404,
-      "score": 0.08168227115088803
-    },
-    {
-      "sym_ex": "HNT/USDT:USDT",
-      "sym": "HNTUSDT",
-      "base": "HNT",
-      "last": 2.395,
-      "vol_usdt": 2875481.5470000003,
-      "vol_ret": 0.0020370655373052986,
-      "score": 0.08020768494485372
-    },
-    {
-      "sym_ex": "ZORA/USDT:USDT",
-      "sym": "ZORAUSDT",
-      "base": "ZORA",
-      "last": 0.06694,
-      "vol_usdt": 6798893.494782139,
-      "vol_ret": 0.002014098098746521,
-      "score": 0.07957060467706627
-    },
-    {
-      "sym_ex": "PROMPT/USDT:USDT",
-      "sym": "PROMPTUSDT",
-      "base": "PROMPT",
-      "last": 0.16316,
-      "vol_usdt": 16406229.537659708,
-      "vol_ret": 0.001973629741178377,
-      "score": 0.07863457221811913
-    },
-    {
-      "sym_ex": "HOUSE/USDT:USDT",
-      "sym": "HOUSEUSDT",
-      "base": "HOUSE",
-      "last": 0.01347,
-      "vol_usdt": 1294669.8582,
-      "vol_ret": 0.0019702455385718722,
-      "score": 0.07745469623620807
-    },
-    {
-      "sym_ex": "NEWT/USDT:USDT",
-      "sym": "NEWTUSDT",
-      "base": "NEWT",
-      "last": 0.2536,
-      "vol_usdt": 16774890.8656,
-      "vol_ret": 0.001930794844795093,
-      "score": 0.07696543309322845
-    },
-    {
-      "sym_ex": "MYRO/USDT:USDT",
-      "sym": "MYROUSDT",
-      "base": "MYRO",
-      "last": 0.02103,
-      "vol_usdt": 1773939.84666,
-      "vol_ret": 0.001946499319665602,
-      "score": 0.07654840964375782
-    },
-    {
-      "sym_ex": "BTR/USDT:USDT",
-      "sym": "BTRUSDT",
-      "base": "BTR",
-      "last": 0.05156,
-      "vol_usdt": 6649844.06456,
-      "vol_ret": 0.0019045809625164278,
-      "score": 0.07522751240207712
-    },
-    {
-      "sym_ex": "ENA/USDT:USDT",
-      "sym": "ENAUSDT",
-      "base": "ENA",
-      "last": 0.6526,
-      "vol_usdt": 182505763.58562365,
-      "vol_ret": 0.0015951050763124248,
-      "score": 0.07515621549054938
-    },
-    {
-      "sym_ex": "AVAAI/USDT:USDT",
-      "sym": "AVAAIUSDT",
-      "base": "AVAAI",
-      "last": 0.02314,
-      "vol_usdt": 1494244.07236,
-      "vol_ret": 0.001858827485004528,
-      "score": 0.07306052980344475
-    },
-    {
-      "sym_ex": "RWA/USDT:USDT",
-      "sym": "RWAUSDT",
-      "base": "RWA",
-      "last": 0.004824,
-      "vol_usdt": 1298682.0673311527,
-      "vol_ret": 0.0018477223492407485,
-      "score": 0.07260764612966486
-    },
-    {
-      "sym_ex": "ZBCN/USDT:USDT",
-      "sym": "ZBCNUSDT",
-      "base": "ZBCN",
-      "last": 0.0039262,
-      "vol_usdt": 4763894.032000001,
-      "vol_ret": 0.0018295518816701588,
-      "score": 0.07212863061117479
-    },
-    {
-      "sym_ex": "TAG/USDT:USDT",
-      "sym": "TAGUSDT",
-      "base": "TAG",
-      "last": 0.0007308,
-      "vol_usdt": 4730251.7294928,
-      "vol_ret": 0.001821704980271614,
-      "score": 0.07181585866423493
-    },
-    {
-      "sym_ex": "TANSSI/USDT:USDT",
-      "sym": "TANSSIUSDT",
-      "base": "TANSSI",
-      "last": 0.03718,
-      "vol_usdt": 2074295.47468,
-      "vol_ret": 0.001806997264226089,
-      "score": 0.07105014480087682
-    },
-    {
-      "sym_ex": "FARTCOIN/USDT:USDT",
-      "sym": "FARTCOINUSDT",
-      "base": "FARTCOIN",
-      "last": 0.7523,
-      "vol_usdt": 73542319.55457662,
-      "vol_ret": 0.0016681927929397193,
-      "score": 0.07050554494094488
-    },
-    {
-      "sym_ex": "EPT/USDT:USDT",
-      "sym": "EPTUSDT",
-      "base": "EPT",
-      "last": 0.004138,
-      "vol_usdt": 1873334.6344831323,
-      "vol_ret": 0.0017778536881133348,
-      "score": 0.06988324102528656
-    },
-    {
-      "sym_ex": "BRETT/USDT:USDT",
-      "sym": "BRETTUSDT",
-      "base": "BRETT",
-      "last": 0.04317,
-      "vol_usdt": 9209637.414,
-      "vol_ret": 0.0017597527991252936,
-      "score": 0.06967492645720619
-    },
-    {
-      "sym_ex": "SHELL/USDT:USDT",
-      "sym": "SHELLUSDT",
-      "base": "SHELL",
-      "last": 0.11794,
-      "vol_usdt": 10988642.794391999,
-      "vol_ret": 0.0017521171503580906,
-      "score": 0.06949597961680049
-    },
-    {
-      "sym_ex": "AI16Z/USDT:USDT",
-      "sym": "AI16ZUSDT",
-      "base": "AI16Z",
-      "last": 0.0865,
-      "vol_usdt": 11327921.668,
-      "vol_ret": 0.0017361265748956742,
-      "score": 0.06888683605869221
-    },
-    {
-      "sym_ex": "ELX/USDT:USDT",
-      "sym": "ELXUSDT",
-      "base": "ELX",
-      "last": 0.121,
-      "vol_usdt": 2084278.724,
-      "vol_ret": 0.0017486147010295537,
-      "score": 0.06874107368760432
-    },
-    {
-      "sym_ex": "1000000MOG/USDT:USDT",
-      "sym": "1000000MOGUSDT",
-      "base": "1000000MOG",
-      "last": 0.8328,
-      "vol_usdt": 6109469.1024,
-      "vol_ret": 0.0017247659796483486,
-      "score": 0.06807617251359988
-    },
-    {
-      "sym_ex": "SOON/USDT:USDT",
-      "sym": "SOONUSDT",
-      "base": "SOON",
-      "last": 0.2803,
-      "vol_usdt": 3523716.3296,
-      "vol_ret": 0.0017110294918847029,
-      "score": 0.06735374222995692
-    },
-    {
-      "sym_ex": "1000RATS/USDT:USDT",
-      "sym": "1000RATSUSDT",
-      "base": "1000RATS",
-      "last": 0.01828,
-      "vol_usdt": 1121702.62464,
-      "vol_ret": 0.0017146723044113366,
-      "score": 0.06733159910915815
-    },
-    {
-      "sym_ex": "YALA/USDT:USDT",
-      "sym": "YALAUSDT",
-      "base": "YALA",
-      "last": 0.1113,
-      "vol_usdt": 1666208.4138,
-      "vol_ret": 0.0017099625325075894,
-      "score": 0.0671829580713907
-    },
-    {
-      "sym_ex": "PORTAL/USDT:USDT",
-      "sym": "PORTALUSDT",
-      "base": "PORTAL",
-      "last": 0.03904,
-      "vol_usdt": 1592978.9543680002,
-      "vol_ret": 0.0017014373628500617,
-      "score": 0.06684061197907637
-    },
-    {
-      "sym_ex": "QTUM/USDT:USDT",
-      "sym": "QTUMUSDT",
-      "base": "QTUM",
-      "last": 2.733,
-      "vol_usdt": 16052811.7146,
-      "vol_ret": 0.001673253025275013,
-      "score": 0.06672644544290426
-    },
-    {
-      "sym_ex": "CROSS/USDT:USDT",
-      "sym": "CROSSUSDT",
-      "base": "CROSS",
-      "last": 0.20707,
-      "vol_usdt": 2109065.51546,
-      "vol_ret": 0.0016968551658683058,
-      "score": 0.06669505101309155
+      "sym_ex": "FWOG/USDT:USDT",
+      "sym": "FWOGUSDT",
+      "base": "FWOG",
+      "last": 0.03671,
+      "vol_usdt": 1007889.5695,
+      "vol_ret": 0.0022734180873995274,
+      "score": 0.10204797163671528
     },
     {
       "sym_ex": "IKA/USDT:USDT",
       "sym": "IKAUSDT",
       "base": "IKA",
-      "last": 0.031868,
-      "vol_usdt": 1318600.387656,
-      "vol_ret": 0.0016901529092409088,
-      "score": 0.06637517853091
+      "last": 0.032909,
+      "vol_usdt": 1431649.507338,
+      "vol_ret": 0.002229420530611722,
+      "score": 0.10009101577886782
     },
     {
-      "sym_ex": "FHE/USDT:USDT",
-      "sym": "FHEUSDT",
-      "base": "FHE",
-      "last": 0.05207,
-      "vol_usdt": 1312543.90272,
-      "vol_ret": 0.0016841571732439547,
-      "score": 0.06613755280636696
+      "sym_ex": "MAV/USDT:USDT",
+      "sym": "MAVUSDT",
+      "base": "MAV",
+      "last": 0.07406,
+      "vol_usdt": 6631432.2876844,
+      "vol_ret": 0.002210794629629847,
+      "score": 0.09960982772562725
     },
     {
-      "sym_ex": "ASP/USDT:USDT",
-      "sym": "ASPUSDT",
-      "base": "ASP",
-      "last": 0.1394,
-      "vol_usdt": 1787713.5536,
-      "vol_ret": 0.0016817236272293034,
-      "score": 0.0660741657399726
+      "sym_ex": "ALCH/USDT:USDT",
+      "sym": "ALCHUSDT",
+      "base": "ALCH",
+      "last": 0.09189,
+      "vol_usdt": 3824472.09168,
+      "vol_ret": 0.0022104150795458155,
+      "score": 0.09939853089142893
     },
     {
-      "sym_ex": "SWARMS/USDT:USDT",
-      "sym": "SWARMSUSDT",
-      "base": "SWARMS",
-      "last": 0.01912,
-      "vol_usdt": 3289344.3425600003,
-      "vol_ret": 0.001672144784491574,
-      "score": 0.06579914197372597
+      "sym_ex": "HEI/USDT:USDT",
+      "sym": "HEIUSDT",
+      "base": "HEI",
+      "last": 0.4314,
+      "vol_usdt": 3456622.4015419204,
+      "vol_ret": 0.0021656008933706255,
+      "score": 0.0973499513890762
     },
     {
-      "sym_ex": "TREE/USDT:USDT",
-      "sym": "TREEUSDT",
-      "base": "TREE",
-      "last": 0.316,
-      "vol_usdt": 68344442.712,
-      "vol_ret": 0.001548940985119106,
-      "score": 0.06542785585414233
+      "sym_ex": "MITO/USDT:USDT",
+      "sym": "MITOUSDT",
+      "base": "MITO",
+      "last": 0.17689,
+      "vol_usdt": 16858454.75104,
+      "vol_ret": 0.0021368185782144776,
+      "score": 0.09697760168173691
     },
     {
-      "sym_ex": "NIL/USDT:USDT",
-      "sym": "NILUSDT",
-      "base": "NIL",
-      "last": 0.2577,
-      "vol_usdt": 1358787.01747845,
-      "vol_ret": 0.0016562476668987756,
-      "score": 0.06503658286239386
+      "sym_ex": "NODE/USDT:USDT",
+      "sym": "NODEUSDT",
+      "base": "NODE",
+      "last": 0.09493,
+      "vol_usdt": 3047930.61034,
+      "vol_ret": 0.002049404002971229,
+      "score": 0.09207597729932891
     },
     {
-      "sym_ex": "AIN/USDT:USDT",
-      "sym": "AINUSDT",
-      "base": "AIN",
-      "last": 0.10013,
-      "vol_usdt": 1328781.57332,
-      "vol_ret": 0.001654114365633009,
-      "score": 0.06495010714918745
+      "sym_ex": "HNT/USDT:USDT",
+      "sym": "HNTUSDT",
+      "base": "HNT",
+      "last": 2.376,
+      "vol_usdt": 2812015.4831999997,
+      "vol_ret": 0.002015511291298021,
+      "score": 0.09052957347973957
     },
     {
-      "sym_ex": "GRIFFAIN/USDT:USDT",
-      "sym": "GRIFFAINUSDT",
-      "base": "GRIFFAIN",
-      "last": 0.03079,
-      "vol_usdt": 1963320.47046,
-      "vol_ret": 0.0016482126395225,
-      "score": 0.06476054127309566
+      "sym_ex": "PROMPT/USDT:USDT",
+      "sym": "PROMPTUSDT",
+      "base": "PROMPT",
+      "last": 0.16297,
+      "vol_usdt": 16347369.418273589,
+      "vol_ret": 0.0019548349095812275,
+      "score": 0.08872660325644735
     },
     {
-      "sym_ex": "LOOKS/USDT:USDT",
-      "sym": "LOOKSUSDT",
-      "base": "LOOKS",
-      "last": 0.01428,
-      "vol_usdt": 1044711.8451839999,
-      "vol_ret": 0.0016450321978538657,
-      "score": 0.06457113090815911
+      "sym_ex": "HOUSE/USDT:USDT",
+      "sym": "HOUSEUSDT",
+      "base": "HOUSE",
+      "last": 0.01318,
+      "vol_usdt": 1277870.5904,
+      "vol_ret": 0.0019578568939566956,
+      "score": 0.08782064857164201
     },
     {
-      "sym_ex": "1000CAT/USDT:USDT",
-      "sym": "1000CATUSDT",
-      "base": "1000CAT",
-      "last": 0.006811,
-      "vol_usdt": 1177153.299186959,
-      "vol_ret": 0.0016406816370942,
-      "score": 0.06440817900206591
+      "sym_ex": "CGPT/USDT:USDT",
+      "sym": "CGPTUSDT",
+      "base": "CGPT",
+      "last": 0.07573,
+      "vol_usdt": 1181407.2821529831,
+      "vol_ret": 0.0019508848887763827,
+      "score": 0.08749922513657007
     },
     {
-      "sym_ex": "BANK/USDT:USDT",
-      "sym": "BANKUSDT",
-      "base": "BANK",
-      "last": 0.06247,
-      "vol_usdt": 4048279.109468526,
-      "vol_ret": 0.001633758388431928,
-      "score": 0.06433301064765884
+      "sym_ex": "ENA/USDT:USDT",
+      "sym": "ENAUSDT",
+      "base": "ENA",
+      "last": 0.6496,
+      "vol_usdt": 184394369.5319824,
+      "vol_ret": 0.001653854303756983,
+      "score": 0.0867629330198223
     },
     {
-      "sym_ex": "SIREN/USDT:USDT",
-      "sym": "SIRENUSDT",
-      "base": "SIREN",
-      "last": 0.09228,
-      "vol_usdt": 1276824.8376,
-      "vol_ret": 0.0016345923497080993,
-      "score": 0.06417417040475522
-    },
-    {
-      "sym_ex": "C/USDT:USDT",
-      "sym": "CUSDT",
-      "base": "C",
-      "last": 0.21161,
-      "vol_usdt": 10264618.326059999,
-      "vol_ret": 0.0016075512696206817,
-      "score": 0.0637264717158537
-    },
-    {
-      "sym_ex": "ARC/USDT:USDT",
-      "sym": "ARCUSDT",
-      "base": "ARC",
-      "last": 0.01708,
-      "vol_usdt": 4035907.6004800005,
-      "vol_ret": 0.0016178727729903467,
-      "score": 0.06370367912119214
-    },
-    {
-      "sym_ex": "MORPHO/USDT:USDT",
-      "sym": "MORPHOUSDT",
-      "base": "MORPHO",
-      "last": 2.0031,
-      "vol_usdt": 11307263.1342,
-      "vol_ret": 0.0015877472554867936,
-      "score": 0.06301514427764512
-    },
-    {
-      "sym_ex": "POL/USDT:USDT",
-      "sym": "POLUSDT",
-      "base": "POL",
-      "last": 0.2756,
-      "vol_usdt": 27806319.1536,
-      "vol_ret": 0.0015495304875687657,
-      "score": 0.06264521984827774
-    },
-    {
-      "sym_ex": "BAND/USDT:USDT",
-      "sym": "BANDUSDT",
-      "base": "BAND",
-      "last": 0.7153,
-      "vol_usdt": 1220138.85466,
-      "vol_ret": 0.0015700766458860915,
-      "score": 0.06161784201291533
-    },
-    {
-      "sym_ex": "MELANIA/USDT:USDT",
-      "sym": "MELANIAUSDT",
-      "base": "MELANIA",
-      "last": 0.1871,
-      "vol_usdt": 2228912.1966,
-      "vol_ret": 0.0015437230111806357,
-      "score": 0.06064505048217108
-    },
-    {
-      "sym_ex": "NMR/USDT:USDT",
-      "sym": "NMRUSDT",
-      "base": "NMR",
-      "last": 12.685,
-      "vol_usdt": 17165251.99167975,
-      "vol_ret": 0.0015141275852784887,
-      "score": 0.06050804046718269
-    },
-    {
-      "sym_ex": "SPX/USDT:USDT",
-      "sym": "SPXUSDT",
-      "base": "SPX",
-      "last": 1.0939,
-      "vol_usdt": 13067604.695400001,
-      "vol_ret": 0.0015169664572752598,
-      "score": 0.06033672345843746
-    },
-    {
-      "sym_ex": "PORT3/USDT:USDT",
-      "sym": "PORT3USDT",
-      "base": "PORT3",
-      "last": 0.03046,
-      "vol_usdt": 2126114.092,
-      "vol_ret": 0.0015351352912054484,
-      "score": 0.06029818306533398
-    },
-    {
-      "sym_ex": "MILK/USDT:USDT",
-      "sym": "MILKUSDT",
-      "base": "MILK",
-      "last": 0.03919,
-      "vol_usdt": 1260586.63732,
-      "vol_ret": 0.0015102094401994199,
-      "score": 0.05925214336774293
-    },
-    {
-      "sym_ex": "BID/USDT:USDT",
-      "sym": "BIDUSDT",
-      "base": "BID",
-      "last": 0.0762,
-      "vol_usdt": 1785320.28,
-      "vol_ret": 0.00150898882840572,
-      "score": 0.05924017376111915
-    },
-    {
-      "sym_ex": "DOG/USDT:USDT",
-      "sym": "DOGUSDT",
-      "base": "DOG",
-      "last": 0.00225,
-      "vol_usdt": 2713115.6999999997,
-      "vol_ret": 0.0015070136934548508,
-      "score": 0.059226252341018526
-    },
-    {
-      "sym_ex": "XRP/USDT:USDT",
-      "sym": "XRPUSDT",
-      "base": "XRP",
-      "last": 2.8147,
-      "vol_usdt": 423428825.3640009,
-      "vol_ret": 0.0007691521391841272,
-      "score": 0.05915557979206519
-    },
-    {
-      "sym_ex": "GOAT/USDT:USDT",
-      "sym": "GOATUSDT",
-      "base": "GOAT",
-      "last": 0.07879,
-      "vol_usdt": 8868158.0244,
-      "vol_ret": 0.0014938870517704778,
-      "score": 0.05913296739430013
-    },
-    {
-      "sym_ex": "MEME/USDT:USDT",
-      "sym": "MEMEUSDT",
-      "base": "MEME",
-      "last": 0.002408,
-      "vol_usdt": 2706485.574336286,
-      "vol_ret": 0.0014950234616036685,
-      "score": 0.058751429465330296
-    },
-    {
-      "sym_ex": "AERO/USDT:USDT",
-      "sym": "AEROUSDT",
-      "base": "AERO",
-      "last": 1.1078,
-      "vol_usdt": 8364222.433055199,
-      "vol_ret": 0.0014773710488151486,
-      "score": 0.05844467117449497
-    },
-    {
-      "sym_ex": "BGB/USDT:USDT",
-      "sym": "BGBUSDT",
-      "base": "BGB",
-      "last": 4.819,
-      "vol_usdt": 43819050.6809056,
-      "vol_ret": 0.001415171774118244,
-      "score": 0.05843801415316218
-    },
-    {
-      "sym_ex": "CHILLGUY/USDT:USDT",
-      "sym": "CHILLGUYUSDT",
-      "base": "CHILLGUY",
-      "last": 0.03962,
-      "vol_usdt": 1380500.18316,
-      "vol_ret": 0.001488935427938304,
-      "score": 0.05841878968535516
-    },
-    {
-      "sym_ex": "1000SATS/USDT:USDT",
-      "sym": "1000SATSUSDT",
-      "base": "1000SATS",
-      "last": 3.45e-05,
-      "vol_usdt": 1734330.693705,
-      "vol_ret": 0.001474630949009352,
-      "score": 0.0578773596101424
-    },
-    {
-      "sym_ex": "RESOLV/USDT:USDT",
-      "sym": "RESOLVUSDT",
-      "base": "RESOLV",
-      "last": 0.1405,
-      "vol_usdt": 3172175.2800000003,
-      "vol_ret": 0.0014702250215453993,
-      "score": 0.05780257434116715
-    },
-    {
-      "sym_ex": "YZY/USDT:USDT",
-      "sym": "YZYUSDT",
-      "base": "YZY",
-      "last": 0.47,
-      "vol_usdt": 1105580.0599999998,
-      "vol_ret": 0.0014665212834496957,
-      "score": 0.05751299997994439
-    },
-    {
-      "sym_ex": "CUDIS/USDT:USDT",
-      "sym": "CUDISUSDT",
-      "base": "CUDIS",
-      "last": 0.07648,
-      "vol_usdt": 1732929.7280000001,
-      "vol_ret": 0.0014545336942728654,
-      "score": 0.05708216431805937
-    },
-    {
-      "sym_ex": "BIO/USDT:USDT",
-      "sym": "BIOUSDT",
-      "base": "BIO",
-      "last": 0.13051,
-      "vol_usdt": 23670009.69080335,
-      "vol_ret": 0.001415023997485095,
-      "score": 0.05703749619737653
-    },
-    {
-      "sym_ex": "BB/USDT:USDT",
-      "sym": "BBUSDT",
-      "base": "BB",
-      "last": 0.12798,
-      "vol_usdt": 4212843.9237882,
-      "vol_ret": 0.0014426779151249468,
-      "score": 0.05678477376675939
-    },
-    {
-      "sym_ex": "HIPPO/USDT:USDT",
-      "sym": "HIPPOUSDT",
-      "base": "HIPPO",
-      "last": 0.001645,
-      "vol_usdt": 2150277.871,
-      "vol_ret": 0.0014367884955909878,
-      "score": 0.05640900719963733
-    },
-    {
-      "sym_ex": "POPCAT/USDT:USDT",
-      "sym": "POPCATUSDT",
-      "base": "POPCAT",
-      "last": 0.2354,
-      "vol_usdt": 7694066.4196,
-      "vol_ret": 0.001425613620905412,
-      "score": 0.056350629482035806
-    },
-    {
-      "sym_ex": "FXS/USDT:USDT",
-      "sym": "FXSUSDT",
-      "base": "FXS",
-      "last": 2.673,
-      "vol_usdt": 6671102.11416,
-      "vol_ret": 0.0014178002818462886,
-      "score": 0.05597070669065903
-    },
-    {
-      "sym_ex": "SQD/USDT:USDT",
-      "sym": "SQDUSDT",
-      "base": "SQD",
-      "last": 0.077,
-      "vol_usdt": 1278016.278,
-      "vol_ret": 0.001424982285459,
-      "score": 0.05588154761595452
-    },
-    {
-      "sym_ex": "TOSHI/USDT:USDT",
-      "sym": "TOSHIUSDT",
-      "base": "TOSHI",
-      "last": 0.0005593,
-      "vol_usdt": 1323418.08339097,
-      "vol_ret": 0.0014221528272841126,
-      "score": 0.055772749692585714
-    },
-    {
-      "sym_ex": "ORDER/USDT:USDT",
-      "sym": "ORDERUSDT",
-      "base": "ORDER",
-      "last": 0.13,
-      "vol_usdt": 1610876.02,
-      "vol_ret": 0.0014191541634457586,
-      "score": 0.055674012148280994
-    },
-    {
-      "sym_ex": "TAI/USDT:USDT",
-      "sym": "TAIUSDT",
-      "base": "TAI",
-      "last": 0.05526,
-      "vol_usdt": 1788683.42052,
-      "vol_ret": 0.0014108154991233366,
-      "score": 0.05535642088939524
-    },
-    {
-      "sym_ex": "BAN/USDT:USDT",
-      "sym": "BANUSDT",
-      "base": "BAN",
-      "last": 0.10023,
-      "vol_usdt": 7033829.6847,
-      "vol_ret": 0.0013932700012211927,
-      "score": 0.0550253338245069
-    },
-    {
-      "sym_ex": "AWE/USDT:USDT",
-      "sym": "AWEUSDT",
-      "base": "AWE",
-      "last": 0.049714,
-      "vol_usdt": 2475371.121076,
-      "vol_ret": 0.0013952198793114087,
-      "score": 0.05478694963931118
-    },
-    {
-      "sym_ex": "SYRUP/USDT:USDT",
-      "sym": "SYRUPUSDT",
-      "base": "SYRUP",
-      "last": 0.4765,
-      "vol_usdt": 4716559.01,
-      "vol_ret": 0.001389826792894367,
-      "score": 0.0547287154869424
-    },
-    {
-      "sym_ex": "USUAL/USDT:USDT",
-      "sym": "USUALUSDT",
-      "base": "USUAL",
-      "last": 0.0563,
-      "vol_usdt": 3670742.69310413,
-      "vol_ret": 0.001389734849662988,
-      "score": 0.054652688914097663
-    },
-    {
-      "sym_ex": "AAVE/USDT:USDT",
-      "sym": "AAVEUSDT",
-      "base": "AAVE",
-      "last": 308.79,
-      "vol_usdt": 87967662.894,
-      "vol_ret": 0.0012398050079766147,
-      "score": 0.05455592869867366
-    },
-    {
-      "sym_ex": "NEIROCTO/USDT:USDT",
-      "sym": "NEIROCTOUSDT",
-      "base": "NEIROCTO",
-      "last": 0.0003253,
-      "vol_usdt": 2886021.4371607997,
-      "vol_ret": 0.00138821828730021,
-      "score": 0.05453837321464352
-    },
-    {
-      "sym_ex": "COOKIE/USDT:USDT",
-      "sym": "COOKIEUSDT",
-      "base": "COOKIE",
-      "last": 0.1121,
-      "vol_usdt": 1309495.9258,
-      "vol_ret": 0.001389110951143861,
-      "score": 0.054464565689431095
-    },
-    {
-      "sym_ex": "VINE/USDT:USDT",
-      "sym": "VINEUSDT",
-      "base": "VINE",
-      "last": 0.06166,
-      "vol_usdt": 2591289.61696,
-      "vol_ret": 0.0013851233604444636,
-      "score": 0.054395529389027815
-    },
-    {
-      "sym_ex": "TOWNS/USDT:USDT",
-      "sym": "TOWNSUSDT",
-      "base": "TOWNS",
-      "last": 0.02267,
-      "vol_usdt": 3150985.45608,
-      "vol_ret": 0.0013752705622812659,
-      "score": 0.05404446862216365
-    },
-    {
-      "sym_ex": "AIO/USDT:USDT",
-      "sym": "AIOUSDT",
-      "base": "AIO",
-      "last": 0.06393,
-      "vol_usdt": 3603787.1619,
-      "vol_ret": 0.0013683671541739443,
-      "score": 0.053802694226406406
-    },
-    {
-      "sym_ex": "TURBO/USDT:USDT",
-      "sym": "TURBOUSDT",
-      "base": "TURBO",
-      "last": 0.003664,
-      "vol_usdt": 7016721.501792001,
-      "vol_ret": 0.0013590739146116808,
-      "score": 0.0536712658010727
-    },
-    {
-      "sym_ex": "HFT/USDT:USDT",
-      "sym": "HFTUSDT",
-      "base": "HFT",
-      "last": 0.0866,
-      "vol_usdt": 3218293.6303999997,
-      "vol_ret": 0.0013615181708768356,
-      "score": 0.053505048093241095
-    },
-    {
-      "sym_ex": "DBR/USDT:USDT",
-      "sym": "DBRUSDT",
-      "base": "DBR",
-      "last": 0.02106,
-      "vol_usdt": 1183357.3986,
-      "vol_ret": 0.0013643174826096318,
-      "score": 0.0534749422251788
-    },
-    {
-      "sym_ex": "MDT/USDT:USDT",
-      "sym": "MDTUSDT",
-      "base": "MDT",
-      "last": 0.024,
-      "vol_usdt": 1360450.128,
-      "vol_ret": 0.0013622309048024939,
-      "score": 0.0534046498826164
-    },
-    {
-      "sym_ex": "AIXBT/USDT:USDT",
-      "sym": "AIXBTUSDT",
-      "base": "AIXBT",
-      "last": 0.09918,
-      "vol_usdt": 2591622.19656,
-      "vol_ret": 0.0013573954149290021,
-      "score": 0.05329856462699466
-    },
-    {
-      "sym_ex": "PYTH/USDT:USDT",
-      "sym": "PYTHUSDT",
-      "base": "PYTH",
-      "last": 0.1487,
-      "vol_usdt": 23019435.3954,
-      "vol_ret": 0.0013123999619943272,
-      "score": 0.0529323980244673
-    },
-    {
-      "sym_ex": "PIPPIN/USDT:USDT",
-      "sym": "PIPPINUSDT",
-      "base": "PIPPIN",
-      "last": 0.015,
-      "vol_usdt": 1008922.5299999999,
-      "vol_ret": 0.0013494590238721342,
-      "score": 0.05287502995739777
-    },
-    {
-      "sym_ex": "DOGE/USDT:USDT",
-      "sym": "DOGEUSDT",
-      "base": "DOGE",
-      "last": 0.21196,
-      "vol_usdt": 227727408.98098317,
-      "vol_ret": 0.000942982366233499,
-      "score": 0.05248672983229606
-    },
-    {
-      "sym_ex": "MUBARAK/USDT:USDT",
-      "sym": "MUBARAKUSDT",
-      "base": "MUBARAK",
-      "last": 0.02662,
-      "vol_usdt": 1498876.9004000002,
-      "vol_ret": 0.0013300991633238331,
-      "score": 0.05214301836488201
-    },
-    {
-      "sym_ex": "PENDLE/USDT:USDT",
-      "sym": "PENDLEUSDT",
-      "base": "PENDLE",
-      "last": 4.5033,
-      "vol_usdt": 15994938.0258,
-      "vol_ret": 0.0013044585565243703,
-      "score": 0.05213199590995245
+      "sym_ex": "ZORA/USDT:USDT",
+      "sym": "ZORAUSDT",
+      "base": "ZORA",
+      "last": 0.0669,
+      "vol_usdt": 6794087.507792491,
+      "vol_ret": 0.0019231843929282937,
+      "score": 0.08663692563900102
     },
     {
       "sym_ex": "F/USDT:USDT",
       "sym": "FUSDT",
       "base": "F",
-      "last": 0.006415,
-      "vol_usdt": 1065544.36849,
-      "vol_ret": 0.00133033964378826,
-      "score": 0.052122538073030224
+      "last": 0.006294,
+      "vol_usdt": 1242385.9151640001,
+      "vol_ret": 0.0019045379188460262,
+      "score": 0.08541111093121577
     },
     {
-      "sym_ex": "HAEDAL/USDT:USDT",
-      "sym": "HAEDALUSDT",
-      "base": "HAEDAL",
-      "last": 0.12679,
-      "vol_usdt": 1521591.32162,
-      "vol_ret": 0.0013275968818593374,
-      "score": 0.052045594011212296
+      "sym_ex": "H/USDT:USDT",
+      "sym": "HUSDT",
+      "base": "H",
+      "last": 0.03084,
+      "vol_usdt": 6999962.10648,
+      "vol_ret": 0.00188704273349487,
+      "score": 0.0850195524811648
     },
     {
-      "sym_ex": "CRO/USDT:USDT",
-      "sym": "CROUSDT",
-      "base": "CRO",
-      "last": 0.26407,
-      "vol_usdt": 69552863.8786,
-      "vol_ret": 0.0012074609567364126,
-      "score": 0.05200168488905284
+      "sym_ex": "PUNDIX/USDT:USDT",
+      "sym": "PUNDIXUSDT",
+      "base": "PUNDIX",
+      "last": 0.3102,
+      "vol_usdt": 6186694.99891344,
+      "vol_ret": 0.0018857786435175603,
+      "score": 0.0849062301617812
     },
     {
-      "sym_ex": "FIDA/USDT:USDT",
-      "sym": "FIDAUSDT",
-      "base": "FIDA",
-      "last": 0.08289,
-      "vol_usdt": 1502048.5527492003,
-      "vol_ret": 0.0013195749149605372,
-      "score": 0.051726871967669716
+      "sym_ex": "VELVET/USDT:USDT",
+      "sym": "VELVETUSDT",
+      "base": "VELVET",
+      "last": 0.06545,
+      "vol_usdt": 1531428.2906999998,
+      "vol_ret": 0.0018917536625462084,
+      "score": 0.0848539597031379
     },
     {
-      "sym_ex": "ETHFI/USDT:USDT",
-      "sym": "ETHFIUSDT",
-      "base": "ETHFI",
-      "last": 1.089,
-      "vol_usdt": 14623226.8182,
-      "vol_ret": 0.0012962381136580664,
-      "score": 0.0517118275801189
+      "sym_ex": "BTR/USDT:USDT",
+      "sym": "BTRUSDT",
+      "base": "BTR",
+      "last": 0.0515,
+      "vol_usdt": 6639083.256999999,
+      "vol_ret": 0.0018222828302821752,
+      "score": 0.08207100652496879
+    },
+    {
+      "sym_ex": "ZBCN/USDT:USDT",
+      "sym": "ZBCNUSDT",
+      "base": "ZBCN",
+      "last": 0.0039243,
+      "vol_usdt": 4820823.60192,
+      "vol_ret": 0.001761275275316328,
+      "score": 0.07919105075715387
+    },
+    {
+      "sym_ex": "MYRO/USDT:USDT",
+      "sym": "MYROUSDT",
+      "base": "MYRO",
+      "last": 0.02092,
+      "vol_usdt": 1764915.1305600002,
+      "vol_ret": 0.0017520122341535954,
+      "score": 0.07856148889324394
+    },
+    {
+      "sym_ex": "SHELL/USDT:USDT",
+      "sym": "SHELLUSDT",
+      "base": "SHELL",
+      "last": 0.11725,
+      "vol_usdt": 10312752.0307,
+      "vol_ret": 0.0017340876203637487,
+      "score": 0.07834355084166394
+    },
+    {
+      "sym_ex": "FHE/USDT:USDT",
+      "sym": "FHEUSDT",
+      "base": "FHE",
+      "last": 0.05228,
+      "vol_usdt": 1319691.80648,
+      "vol_ret": 0.0016850493497764939,
+      "score": 0.07550765518979125
+    },
+    {
+      "sym_ex": "XION/USDT:USDT",
+      "sym": "XIONUSDT",
+      "base": "XION",
+      "last": 0.9234,
+      "vol_usdt": 4165845.228,
+      "vol_ret": 0.0016696911900249806,
+      "score": 0.07501118477094575
+    },
+    {
+      "sym_ex": "SOON/USDT:USDT",
+      "sym": "SOONUSDT",
+      "base": "SOON",
+      "last": 0.2829,
+      "vol_usdt": 3601278.5256,
+      "vol_ret": 0.0016509383371115288,
+      "score": 0.07412553592946763
+    },
+    {
+      "sym_ex": "SIREN/USDT:USDT",
+      "sym": "SIRENUSDT",
+      "base": "SIREN",
+      "last": 0.09174,
+      "vol_usdt": 1255151.8188,
+      "vol_ret": 0.001653176732969316,
+      "score": 0.07406430277689749
+    },
+    {
+      "sym_ex": "TANSSI/USDT:USDT",
+      "sym": "TANSSIUSDT",
+      "base": "TANSSI",
+      "last": 0.03691,
+      "vol_usdt": 2066098.0038599998,
+      "vol_ret": 0.0016447519547900951,
+      "score": 0.07374006096918212
+    },
+    {
+      "sym_ex": "NIL/USDT:USDT",
+      "sym": "NILUSDT",
+      "base": "NIL",
+      "last": 0.256,
+      "vol_usdt": 1418879.39776,
+      "vol_ret": 0.001644964065749111,
+      "score": 0.07370486753336435
+    },
+    {
+      "sym_ex": "AVAAI/USDT:USDT",
+      "sym": "AVAAIUSDT",
+      "base": "AVAAI",
+      "last": 0.02277,
+      "vol_usdt": 1458391.99572,
+      "vol_ret": 0.001609128018340638,
+      "score": 0.07208978368518826
+    },
+    {
+      "sym_ex": "1000RATS/USDT:USDT",
+      "sym": "1000RATSUSDT",
+      "base": "1000RATS",
+      "last": 0.01823,
+      "vol_usdt": 1126290.19874,
+      "vol_ret": 0.0016087366620095348,
+      "score": 0.07204914389018169
+    },
+    {
+      "sym_ex": "CROSS/USDT:USDT",
+      "sym": "CROSSUSDT",
+      "base": "CROSS",
+      "last": 0.20653,
+      "vol_usdt": 1975741.9830399998,
+      "vol_ret": 0.0016073814583493788,
+      "score": 0.07204672125143835
+    },
+    {
+      "sym_ex": "ELX/USDT:USDT",
+      "sym": "ELXUSDT",
+      "base": "ELX",
+      "last": 0.1208,
+      "vol_usdt": 2061737.088,
+      "vol_ret": 0.0016024314067422838,
+      "score": 0.07182919978262764
+    },
+    {
+      "sym_ex": "FARTCOIN/USDT:USDT",
+      "sym": "FARTCOINUSDT",
+      "base": "FARTCOIN",
+      "last": 0.7465,
+      "vol_usdt": 73258561.02140592,
+      "vol_ret": 0.0014820872395431542,
+      "score": 0.07132106850240076
+    },
+    {
+      "sym_ex": "BRETT/USDT:USDT",
+      "sym": "BRETTUSDT",
+      "base": "BRETT",
+      "last": 0.0429,
+      "vol_usdt": 9045127.806,
+      "vol_ret": 0.00157503108757177,
+      "score": 0.0710752660522068
+    },
+    {
+      "sym_ex": "ASP/USDT:USDT",
+      "sym": "ASPUSDT",
+      "base": "ASP",
+      "last": 0.1391,
+      "vol_usdt": 1783851.784,
+      "vol_ret": 0.0015783888761727119,
+      "score": 0.07072457886871526
+    },
+    {
+      "sym_ex": "YALA/USDT:USDT",
+      "sym": "YALAUSDT",
+      "base": "YALA",
+      "last": 0.1107,
+      "vol_usdt": 1571674.5414,
+      "vol_ret": 0.0015714203417599726,
+      "score": 0.07039530799788354
+    },
+    {
+      "sym_ex": "MORPHO/USDT:USDT",
+      "sym": "MORPHOUSDT",
+      "base": "MORPHO",
+      "last": 1.9966,
+      "vol_usdt": 11156940.901999999,
+      "vol_ret": 0.0015515014090422823,
+      "score": 0.07015909719854153
+    },
+    {
+      "sym_ex": "EPT/USDT:USDT",
+      "sym": "EPTUSDT",
+      "base": "EPT",
+      "last": 0.004127,
+      "vol_usdt": 1856532.7788750974,
+      "vol_ret": 0.0015648515646097287,
+      "score": 0.07011846491630695
+    },
+    {
+      "sym_ex": "TREE/USDT:USDT",
+      "sym": "TREEUSDT",
+      "base": "TREE",
+      "last": 0.3189,
+      "vol_usdt": 69179677.9422,
+      "vol_ret": 0.0014580466293342047,
+      "score": 0.06995361300641086
+    },
+    {
+      "sym_ex": "AI16Z/USDT:USDT",
+      "sym": "AI16ZUSDT",
+      "base": "AI16Z",
+      "last": 0.0857,
+      "vol_usdt": 11074230.615799999,
+      "vol_ret": 0.0015385252318162292,
+      "score": 0.06956756696361426
+    },
+    {
+      "sym_ex": "POL/USDT:USDT",
+      "sym": "POLUSDT",
+      "base": "POL",
+      "last": 0.2747,
+      "vol_usdt": 27824937.123,
+      "vol_ret": 0.0015041907929031284,
+      "score": 0.06917621398144169
+    },
+    {
+      "sym_ex": "TAG/USDT:USDT",
+      "sym": "TAGUSDT",
+      "base": "TAG",
+      "last": 0.0007248,
+      "vol_usdt": 4679723.1159744,
+      "vol_ret": 0.0015347468333161917,
+      "score": 0.06895467269071268
+    },
+    {
+      "sym_ex": "QTUM/USDT:USDT",
+      "sym": "QTUMUSDT",
+      "base": "QTUM",
+      "last": 2.714,
+      "vol_usdt": 15926334.9672,
+      "vol_ret": 0.001516143457202535,
+      "score": 0.06889277064827873
+    },
+    {
+      "sym_ex": "SWARMS/USDT:USDT",
+      "sym": "SWARMSUSDT",
+      "base": "SWARMS",
+      "last": 0.01891,
+      "vol_usdt": 3287235.88568,
+      "vol_ret": 0.0015329741498546516,
+      "score": 0.0687783243278784
+    },
+    {
+      "sym_ex": "AWE/USDT:USDT",
+      "sym": "AWEUSDT",
+      "base": "AWE",
+      "last": 0.05069,
+      "vol_usdt": 2443693.73124,
+      "vol_ret": 0.0015317441281232141,
+      "score": 0.06866444584330335
+    },
+    {
+      "sym_ex": "1000000MOG/USDT:USDT",
+      "sym": "1000000MOGUSDT",
+      "base": "1000000MOG",
+      "last": 0.8258,
+      "vol_usdt": 6208947.414799999,
+      "vol_ret": 0.0015216457233692663,
+      "score": 0.06846900254308766
+    },
+    {
+      "sym_ex": "BANK/USDT:USDT",
+      "sym": "BANKUSDT",
+      "base": "BANK",
+      "last": 0.06261,
+      "vol_usdt": 3910922.474922669,
+      "vol_ret": 0.0015212422640068426,
+      "score": 0.06829183021535103
+    },
+    {
+      "sym_ex": "LOOKS/USDT:USDT",
+      "sym": "LOOKSUSDT",
+      "base": "LOOKS",
+      "last": 0.01435,
+      "vol_usdt": 1054559.51006,
+      "vol_ret": 0.0015242353103440698,
+      "score": 0.06822937184764949
+    },
+    {
+      "sym_ex": "PORT3/USDT:USDT",
+      "sym": "PORT3USDT",
+      "base": "PORT3",
+      "last": 0.03023,
+      "vol_usdt": 2099993.456,
+      "vol_ret": 0.0015176444769935946,
+      "score": 0.06800414331423972
+    },
+    {
+      "sym_ex": "PORTAL/USDT:USDT",
+      "sym": "PORTALUSDT",
+      "base": "PORTAL",
+      "last": 0.03912,
+      "vol_usdt": 1686134.1460320002,
+      "vol_ret": 0.0015167568886079235,
+      "score": 0.06793544584013515
+    },
+    {
+      "sym_ex": "AIN/USDT:USDT",
+      "sym": "AINUSDT",
+      "base": "AIN",
+      "last": 0.10055,
+      "vol_usdt": 1338075.9624,
+      "vol_ret": 0.001512247028589824,
+      "score": 0.06770777262300133
+    },
+    {
+      "sym_ex": "AIO/USDT:USDT",
+      "sym": "AIOUSDT",
+      "base": "AIO",
+      "last": 0.06487,
+      "vol_usdt": 3711558.4570999998,
+      "vol_ret": 0.0015074897533129627,
+      "score": 0.0676571833047388
+    },
+    {
+      "sym_ex": "YZY/USDT:USDT",
+      "sym": "YZYUSDT",
+      "base": "YZY",
+      "last": 0.472,
+      "vol_usdt": 1127166.2079999999,
+      "vol_ret": 0.001491376175681915,
+      "score": 0.06675096978578508
+    },
+    {
+      "sym_ex": "C/USDT:USDT",
+      "sym": "CUSDT",
+      "base": "C",
+      "last": 0.21081,
+      "vol_usdt": 10021861.86504,
+      "vol_ret": 0.0014738216029660206,
+      "score": 0.06657373001596054
+    },
+    {
+      "sym_ex": "NEWT/USDT:USDT",
+      "sym": "NEWTUSDT",
+      "base": "NEWT",
+      "last": 0.2515,
+      "vol_usdt": 16504520.001,
+      "vol_ret": 0.0014427454883153975,
+      "score": 0.06561921614070036
+    },
+    {
+      "sym_ex": "MILK/USDT:USDT",
+      "sym": "MILKUSDT",
+      "base": "MILK",
+      "last": 0.0392,
+      "vol_usdt": 1263729.3647999999,
+      "vol_ret": 0.0014597197042071747,
+      "score": 0.06533128588145584
+    },
+    {
+      "sym_ex": "MELANIA/USDT:USDT",
+      "sym": "MELANIAUSDT",
+      "base": "MELANIA",
+      "last": 0.1866,
+      "vol_usdt": 2229409.6577999997,
+      "vol_ret": 0.0014459168953731628,
+      "score": 0.06477495629712596
+    },
+    {
+      "sym_ex": "SQD/USDT:USDT",
+      "sym": "SQDUSDT",
+      "base": "SQD",
+      "last": 0.07624,
+      "vol_usdt": 1260075.35504,
+      "vol_ret": 0.0014345072185281648,
+      "score": 0.06419281641885329
+    },
+    {
+      "sym_ex": "GRIFFAIN/USDT:USDT",
+      "sym": "GRIFFAINUSDT",
+      "base": "GRIFFAIN",
+      "last": 0.03066,
+      "vol_usdt": 1949203.55196,
+      "vol_ret": 0.0014323939564684066,
+      "score": 0.06414508141583537
+    },
+    {
+      "sym_ex": "BAND/USDT:USDT",
+      "sym": "BANDUSDT",
+      "base": "BAND",
+      "last": 0.7116,
+      "vol_usdt": 1243059.59856,
+      "vol_ret": 0.0014227593368594327,
+      "score": 0.06366128173905153
+    },
+    {
+      "sym_ex": "SPX/USDT:USDT",
+      "sym": "SPXUSDT",
+      "base": "SPX",
+      "last": 1.0779,
+      "vol_usdt": 12867618.8046,
+      "vol_ret": 0.0014027622787179373,
+      "score": 0.06356260521542982
+    },
+    {
+      "sym_ex": "BGB/USDT:USDT",
+      "sym": "BGBUSDT",
+      "base": "BGB",
+      "last": 4.81,
+      "vol_usdt": 43634612.90695,
+      "vol_ret": 0.0013530326050192924,
+      "score": 0.06344576464238061
+    },
+    {
+      "sym_ex": "HFT/USDT:USDT",
+      "sym": "HFTUSDT",
+      "base": "HFT",
+      "last": 0.08708,
+      "vol_usdt": 3237549.23576,
+      "vol_ret": 0.0014147297779131135,
+      "score": 0.06343674973858364
+    },
+    {
+      "sym_ex": "NMR/USDT:USDT",
+      "sym": "NMRUSDT",
+      "base": "NMR",
+      "last": 12.622,
+      "vol_usdt": 17217662.535038058,
+      "vol_ret": 0.0013900041677781085,
+      "score": 0.06328754047117702
+    },
+    {
+      "sym_ex": "AERO/USDT:USDT",
+      "sym": "AEROUSDT",
+      "base": "AERO",
+      "last": 1.0991,
+      "vol_usdt": 8270804.152552919,
+      "vol_ret": 0.0014015570480709486,
+      "score": 0.06319022588279521
+    },
+    {
+      "sym_ex": "BID/USDT:USDT",
+      "sym": "BIDUSDT",
+      "base": "BID",
+      "last": 0.07631,
+      "vol_usdt": 1777053.8630000001,
+      "vol_ret": 0.001410093542563375,
+      "score": 0.0631264221992483
+    },
+    {
+      "sym_ex": "DOG/USDT:USDT",
+      "sym": "DOGUSDT",
+      "base": "DOG",
+      "last": 0.002247,
+      "vol_usdt": 2456551.1754,
+      "vol_ret": 0.0013999701061776274,
+      "score": 0.0627164019962631
+    },
+    {
+      "sym_ex": "RWA/USDT:USDT",
+      "sym": "RWAUSDT",
+      "base": "RWA",
+      "last": 0.004814,
+      "vol_usdt": 1295983.8501797572,
+      "vol_ret": 0.0013960137812457983,
+      "score": 0.062457515503985844
+    },
+    {
+      "sym_ex": "TAI/USDT:USDT",
+      "sym": "TAIUSDT",
+      "base": "TAI",
+      "last": 0.05552,
+      "vol_usdt": 1801856.18464,
+      "vol_ret": 0.0013853846038798091,
+      "score": 0.06201265371794974
+    },
+    {
+      "sym_ex": "BAN/USDT:USDT",
+      "sym": "BANUSDT",
+      "base": "BAN",
+      "last": 0.10064,
+      "vol_usdt": 6896280.31872,
+      "vol_ret": 0.0013655908180299032,
+      "score": 0.06147145371558624
+    },
+    {
+      "sym_ex": "ARC/USDT:USDT",
+      "sym": "ARCUSDT",
+      "base": "ARC",
+      "last": 0.01685,
+      "vol_usdt": 3957075.1636,
+      "vol_ret": 0.001364277069013916,
+      "score": 0.06120883490443281
+    },
+    {
+      "sym_ex": "ORDER/USDT:USDT",
+      "sym": "ORDERUSDT",
+      "base": "ORDER",
+      "last": 0.1299,
+      "vol_usdt": 1622497.7639999997,
+      "vol_ret": 0.001364255630212122,
+      "score": 0.06104638048655744
+    },
+    {
+      "sym_ex": "DBR/USDT:USDT",
+      "sym": "DBRUSDT",
+      "base": "DBR",
+      "last": 0.02097,
+      "vol_usdt": 1184787.88848,
+      "vol_ret": 0.0013631916565049658,
+      "score": 0.06096807032090811
+    },
+    {
+      "sym_ex": "FXS/USDT:USDT",
+      "sym": "FXSUSDT",
+      "base": "FXS",
+      "last": 2.666,
+      "vol_usdt": 6650997.581479999,
+      "vol_ret": 0.0013531717098800348,
+      "score": 0.060893826938743505
+    },
+    {
+      "sym_ex": "1000SATS/USDT:USDT",
+      "sym": "1000SATSUSDT",
+      "base": "1000SATS",
+      "last": 3.43e-05,
+      "vol_usdt": 1736399.6780074,
+      "vol_ret": 0.0013523908804648475,
+      "score": 0.06051862559268745
+    },
+    {
+      "sym_ex": "XRP/USDT:USDT",
+      "sym": "XRPUSDT",
+      "base": "XRP",
+      "last": 2.8034,
+      "vol_usdt": 424247512.31120646,
+      "vol_ret": 0.0007045823070938749,
+      "score": 0.06049912171678448
+    },
+    {
+      "sym_ex": "1000CAT/USDT:USDT",
+      "sym": "1000CATUSDT",
+      "base": "1000CAT",
+      "last": 0.006794,
+      "vol_usdt": 1174044.5409539533,
+      "vol_ret": 0.0013499094742010424,
+      "score": 0.06036770357004245
+    },
+    {
+      "sym_ex": "MDT/USDT:USDT",
+      "sym": "MDTUSDT",
+      "base": "MDT",
+      "last": 0.02387,
+      "vol_usdt": 1361209.3214719999,
+      "vol_ret": 0.0013474995056197848,
+      "score": 0.06027185212608667
+    },
+    {
+      "sym_ex": "TOSHI/USDT:USDT",
+      "sym": "TOSHIUSDT",
+      "base": "TOSHI",
+      "last": 0.0005542,
+      "vol_usdt": 1315206.65012914,
+      "vol_ret": 0.0013467388233468255,
+      "score": 0.06023432907320779
+    },
+    {
+      "sym_ex": "GOAT/USDT:USDT",
+      "sym": "GOATUSDT",
+      "base": "GOAT",
+      "last": 0.0782,
+      "vol_usdt": 9185128.016,
+      "vol_ret": 0.0013202525007709293,
+      "score": 0.0595829804694553
+    },
+    {
+      "sym_ex": "CUDIS/USDT:USDT",
+      "sym": "CUDISUSDT",
+      "base": "CUDIS",
+      "last": 0.07567,
+      "vol_usdt": 1696923.81306,
+      "vol_ret": 0.0013261950054327626,
+      "score": 0.059333283198351947
+    },
+    {
+      "sym_ex": "HIPPO/USDT:USDT",
+      "sym": "HIPPOUSDT",
+      "base": "HIPPO",
+      "last": 0.001635,
+      "vol_usdt": 2158059.7169999997,
+      "vol_ret": 0.0013101475393318658,
+      "score": 0.05864071848051235
+    },
+    {
+      "sym_ex": "VINE/USDT:USDT",
+      "sym": "VINEUSDT",
+      "base": "VINE",
+      "last": 0.06177,
+      "vol_usdt": 2606115.95634,
+      "vol_ret": 0.0013082864348785347,
+      "score": 0.058587691778690554
+    },
+    {
+      "sym_ex": "SYRUP/USDT:USDT",
+      "sym": "SYRUPUSDT",
+      "base": "SYRUP",
+      "last": 0.4754,
+      "vol_usdt": 4446207.024,
+      "vol_ret": 0.0013052275505652823,
+      "score": 0.05857688069244642
+    },
+    {
+      "sym_ex": "CHILLGUY/USDT:USDT",
+      "sym": "CHILLGUYUSDT",
+      "base": "CHILLGUY",
+      "last": 0.03949,
+      "vol_usdt": 1385647.86624,
+      "vol_ret": 0.001308866975918812,
+      "score": 0.05852947849390299
+    },
+    {
+      "sym_ex": "TOWNS/USDT:USDT",
+      "sym": "TOWNSUSDT",
+      "base": "TOWNS",
+      "last": 0.02257,
+      "vol_usdt": 3089692.97572,
+      "vol_ret": 0.0013060826426403865,
+      "score": 0.05852165148069532
+    },
+    {
+      "sym_ex": "MEME/USDT:USDT",
+      "sym": "MEMEUSDT",
+      "base": "MEME",
+      "last": 0.002397,
+      "vol_usdt": 2697683.3240435645,
+      "vol_ret": 0.0013061689006204883,
+      "score": 0.058498429640651585
+    },
+    {
+      "sym_ex": "RESOLV/USDT:USDT",
+      "sym": "RESOLVUSDT",
+      "base": "RESOLV",
+      "last": 0.1398,
+      "vol_usdt": 3146917.8516,
+      "vol_ret": 0.0013016419559125933,
+      "score": 0.05832513518588893
+    },
+    {
+      "sym_ex": "AAVE/USDT:USDT",
+      "sym": "AAVEUSDT",
+      "base": "AAVE",
+      "last": 308.34,
+      "vol_usdt": 87548949.576,
+      "vol_ret": 0.0011612134904728318,
+      "score": 0.057823724997164073
+    },
+    {
+      "sym_ex": "BIO/USDT:USDT",
+      "sym": "BIOUSDT",
+      "base": "BIO",
+      "last": 0.13065,
+      "vol_usdt": 21871900.631982762,
+      "vol_ret": 0.0012606360952990524,
+      "score": 0.057769165065966646
     },
     {
       "sym_ex": "FIS/USDT:USDT",
       "sym": "FISUSDT",
       "base": "FIS",
-      "last": 0.10792,
-      "vol_usdt": 2267730.5144,
-      "vol_ret": 0.0013162582100052504,
-      "score": 0.05164865350799678
+      "last": 0.10738,
+      "vol_usdt": 2262261.65256,
+      "vol_ret": 0.0012842000651727224,
+      "score": 0.057476528564265605
     },
     {
-      "sym_ex": "CTSI/USDT:USDT",
-      "sym": "CTSIUSDT",
-      "base": "CTSI",
-      "last": 0.07359,
-      "vol_usdt": 2388074.2413,
-      "vol_ret": 0.0013086856991514691,
-      "score": 0.05135739571470782
-    },
-    {
-      "sym_ex": "CATI/USDT:USDT",
-      "sym": "CATIUSDT",
-      "base": "CATI",
-      "last": 0.08332,
-      "vol_usdt": 1790721.4387200002,
-      "vol_ret": 0.0013093571667478605,
-      "score": 0.05134261324967199
-    },
-    {
-      "sym_ex": "JTO/USDT:USDT",
-      "sym": "JTOUSDT",
-      "base": "JTO",
-      "last": 1.8435,
-      "vol_usdt": 5250804.18,
-      "vol_ret": 0.001300080910118802,
-      "score": 0.051215120219066344
-    },
-    {
-      "sym_ex": "AI/USDT:USDT",
-      "sym": "AIUSDT",
-      "base": "AI",
-      "last": 0.11715,
-      "vol_usdt": 2500009.3503,
-      "vol_ret": 0.001293927090930912,
-      "score": 0.050781255675532856
-    },
-    {
-      "sym_ex": "WIF/USDT:USDT",
-      "sym": "WIFUSDT",
-      "base": "WIF",
-      "last": 0.7804,
-      "vol_usdt": 35216911.16278561,
-      "vol_ret": 0.0012331739771863838,
-      "score": 0.050642299303526817
-    },
-    {
-      "sym_ex": "KERNEL/USDT:USDT",
-      "sym": "KERNELUSDT",
-      "base": "KERNEL",
-      "last": 0.1802,
-      "vol_usdt": 1919179.0144,
-      "vol_ret": 0.0012843572380360937,
-      "score": 0.05036244427029326
-    },
-    {
-      "sym_ex": "PNUT/USDT:USDT",
-      "sym": "PNUTUSDT",
-      "base": "PNUT",
-      "last": 0.19844,
-      "vol_usdt": 10415730.180941887,
-      "vol_ret": 0.0012686861598992219,
-      "score": 0.050330568973726675
-    },
-    {
-      "sym_ex": "XAI/USDT:USDT",
-      "sym": "XAIUSDT",
-      "base": "XAI",
-      "last": 0.04508,
-      "vol_usdt": 1726162.87816,
-      "vol_ret": 0.0012823342361712902,
-      "score": 0.05026904904546783
+      "sym_ex": "PYTH/USDT:USDT",
+      "sym": "PYTHUSDT",
+      "base": "PYTH",
+      "last": 0.1481,
+      "vol_usdt": 23021614.802,
+      "vol_ret": 0.0012486944570571103,
+      "score": 0.057309587883745225
     },
     {
       "sym_ex": "ASR/USDT:USDT",
       "sym": "ASRUSDT",
       "base": "ASR",
-      "last": 2.355,
-      "vol_usdt": 2127864.619938,
-      "vol_ret": 0.0012780977905567281,
-      "score": 0.05012924941836492
+      "last": 2.356,
+      "vol_usdt": 2127491.3668079996,
+      "vol_ret": 0.0012613445178576428,
+      "score": 0.05643539346584583
     },
     {
-      "sym_ex": "PLUME/USDT:USDT",
-      "sym": "PLUMEUSDT",
-      "base": "PLUME",
-      "last": 0.07899,
-      "vol_usdt": 3408224.8520655003,
-      "vol_ret": 0.0012725636179079576,
-      "score": 0.04999892719644395
+      "sym_ex": "NEIROCTO/USDT:USDT",
+      "sym": "NEIROCTOUSDT",
+      "base": "NEIROCTO",
+      "last": 0.0003236,
+      "vol_usdt": 2805604.2750208,
+      "vol_ret": 0.0012438240788205743,
+      "score": 0.0556913400974931
     },
     {
-      "sym_ex": "ZEREBRO/USDT:USDT",
-      "sym": "ZEREBROUSDT",
-      "base": "ZEREBRO",
-      "last": 0.01925,
-      "vol_usdt": 2724542.667,
-      "vol_ret": 0.0012710873865793846,
-      "score": 0.049893200793325584
+      "sym_ex": "USUAL/USDT:USDT",
+      "sym": "USUALUSDT",
+      "base": "USUAL",
+      "last": 0.05613,
+      "vol_usdt": 3454378.161068211,
+      "vol_ret": 0.0012398895679944998,
+      "score": 0.05555859351391763
     },
     {
-      "sym_ex": "CHR/USDT:USDT",
-      "sym": "CHRUSDT",
-      "base": "CHR",
-      "last": 0.09254,
-      "vol_usdt": 1744087.480492,
-      "vol_ret": 0.0012658414499786485,
-      "score": 0.049617793334666545
+      "sym_ex": "CTSI/USDT:USDT",
+      "sym": "CTSIUSDT",
+      "base": "CTSI",
+      "last": 0.07322,
+      "vol_usdt": 2377761.6561999996,
+      "vol_ret": 0.0012369219031611734,
+      "score": 0.05535014706076856
     },
     {
-      "sym_ex": "ORDI/USDT:USDT",
-      "sym": "ORDIUSDT",
-      "base": "ORDI",
-      "last": 8.54,
-      "vol_usdt": 4998811.1152,
-      "vol_ret": 0.0012586660819415914,
-      "score": 0.049559202282146275
+      "sym_ex": "POPCAT/USDT:USDT",
+      "sym": "POPCATUSDT",
+      "base": "POPCAT",
+      "last": 0.2341,
+      "vol_usdt": 7711707.6858,
+      "vol_ret": 0.0012217104600469862,
+      "score": 0.055032384871256425
     },
     {
-      "sym_ex": "REZ/USDT:USDT",
-      "sym": "REZUSDT",
-      "base": "REZ",
-      "last": 0.01088,
-      "vol_usdt": 1623678.570090048,
-      "vol_ret": 0.0012644808788623248,
-      "score": 0.04955563125846468
+      "sym_ex": "PENDLE/USDT:USDT",
+      "sym": "PENDLEUSDT",
+      "base": "PENDLE",
+      "last": 4.4802,
+      "vol_usdt": 15833492.7408,
+      "vol_ret": 0.0012065736013795818,
+      "score": 0.05491082921096278
     },
     {
-      "sym_ex": "VELO/USDT:USDT",
-      "sym": "VELOUSDT",
-      "base": "VELO",
-      "last": 0.012823,
-      "vol_usdt": 1604888.72392,
-      "vol_ret": 0.0012560096053547448,
-      "score": 0.049219185622637725
+      "sym_ex": "MUBARAK/USDT:USDT",
+      "sym": "MUBARAKUSDT",
+      "base": "MUBARAK",
+      "last": 0.02658,
+      "vol_usdt": 1513977.23712,
+      "vol_ret": 0.001222438429218895,
+      "score": 0.05463654178854692
     },
     {
-      "sym_ex": "BEAM/USDT:USDT",
-      "sym": "BEAMUSDT",
-      "base": "BEAM",
-      "last": 0.006867,
-      "vol_usdt": 1284280.8072088175,
-      "vol_ret": 0.0012561828812442293,
-      "score": 0.04920384909318081
-    },
-    {
-      "sym_ex": "VIRTUAL/USDT:USDT",
-      "sym": "VIRTUALUSDT",
-      "base": "VIRTUAL",
-      "last": 1.0509,
-      "vol_usdt": 18821302.095745407,
-      "vol_ret": 0.001223958957704771,
-      "score": 0.049142862405951566
-    },
-    {
-      "sym_ex": "LQTY/USDT:USDT",
-      "sym": "LQTYUSDT",
-      "base": "LQTY",
-      "last": 0.7852,
-      "vol_usdt": 2076010.4774954482,
-      "vol_ret": 0.001243672164022108,
-      "score": 0.04876369517629704
-    },
-    {
-      "sym_ex": "PENGU/USDT:USDT",
-      "sym": "PENGUUSDT",
-      "base": "PENGU",
-      "last": 0.028615,
-      "vol_usdt": 39035962.74126,
-      "vol_ret": 0.0011708010333670305,
-      "score": 0.04843901380956322
-    },
-    {
-      "sym_ex": "RED/USDT:USDT",
-      "sym": "REDUSDT",
-      "base": "RED",
-      "last": 0.4084,
-      "vol_usdt": 5572484.77992,
-      "vol_ret": 0.0012265430760591577,
-      "score": 0.04832804318283846
-    },
-    {
-      "sym_ex": "PEPE/USDT:USDT",
-      "sym": "PEPEUSDT",
-      "base": "PEPE",
-      "last": 9.4539e-06,
-      "vol_usdt": 109090583.22063075,
-      "vol_ret": 0.0010447575831448752,
-      "score": 0.048301439642159744
+      "sym_ex": "JTO/USDT:USDT",
+      "sym": "JTOUSDT",
+      "base": "JTO",
+      "last": 1.8321,
+      "vol_usdt": 5418274.5252,
+      "vol_ret": 0.0012084004739917908,
+      "score": 0.054272865506936226
     },
     {
       "sym_ex": "CVX/USDT:USDT",
       "sym": "CVXUSDT",
       "base": "CVX",
-      "last": 3.45,
-      "vol_usdt": 1199187.225,
-      "vol_ret": 0.0012299231607479054,
-      "score": 0.04815905802533923
+      "last": 3.434,
+      "vol_usdt": 1566321.1623200001,
+      "vol_ret": 0.001212330741079623,
+      "score": 0.054183851306782174
     },
     {
-      "sym_ex": "PONKE/USDT:USDT",
-      "sym": "PONKEUSDT",
-      "base": "PONKE",
-      "last": 0.09135,
-      "vol_usdt": 2114550.9819,
-      "vol_ret": 0.00121442240096695,
-      "score": 0.047609168123440994
+      "sym_ex": "DOOD/USDT:USDT",
+      "sym": "DOODUSDT",
+      "base": "DOOD",
+      "last": 0.002779,
+      "vol_usdt": 1257827.4895759998,
+      "vol_ret": 0.0012049260028781188,
+      "score": 0.05382822566635354
     },
     {
-      "sym_ex": "GTC/USDT:USDT",
-      "sym": "GTCUSDT",
-      "base": "GTC",
-      "last": 0.3142,
-      "vol_usdt": 2306675.3579599997,
-      "vol_ret": 0.0012122893470161305,
-      "score": 0.04753807752382338
+      "sym_ex": "GORK/USDT:USDT",
+      "sym": "GORKUSDT",
+      "base": "GORK",
+      "last": 0.00912,
+      "vol_usdt": 1001952.2015999999,
+      "vol_ret": 0.001198217053392006,
+      "score": 0.053507651081405504
     },
     {
-      "sym_ex": "PEOPLE/USDT:USDT",
-      "sym": "PEOPLEUSDT",
-      "base": "PEOPLE",
-      "last": 0.01781,
-      "vol_usdt": 1676047.16604,
-      "vol_ret": 0.0012079910768100035,
-      "score": 0.047324376390854024
+      "sym_ex": "RED/USDT:USDT",
+      "sym": "REDUSDT",
+      "base": "RED",
+      "last": 0.4056,
+      "vol_usdt": 5537136.25296,
+      "vol_ret": 0.00118902820911565,
+      "score": 0.05340652720610014
     },
     {
-      "sym_ex": "1000BONK/USDT:USDT",
-      "sym": "1000BONKUSDT",
-      "base": "1000BONK",
-      "last": 0.0193,
-      "vol_usdt": 23448712.0582,
-      "vol_ret": 0.0011635350346101592,
-      "score": 0.04707263786913588
+      "sym_ex": "BERA/USDT:USDT",
+      "sym": "BERAUSDT",
+      "base": "BERA",
+      "last": 2.209,
+      "vol_usdt": 4940203.182,
+      "vol_ret": 0.0011820477335425029,
+      "score": 0.05305010305766121
     },
     {
-      "sym_ex": "HOOK/USDT:USDT",
-      "sym": "HOOKUSDT",
-      "base": "HOOK",
-      "last": 0.1037,
-      "vol_usdt": 2968214.38115,
-      "vol_ret": 0.0011981043205749257,
-      "score": 0.04702267218650479
+      "sym_ex": "PLUME/USDT:USDT",
+      "sym": "PLUMEUSDT",
+      "base": "PLUME",
+      "last": 0.07905,
+      "vol_usdt": 3408894.4362677997,
+      "vol_ret": 0.001183556843066979,
+      "score": 0.05301230860170589
     },
     {
-      "sym_ex": "MOODENG/USDT:USDT",
-      "sym": "MOODENGUSDT",
-      "base": "MOODENG",
-      "last": 0.12667,
-      "vol_usdt": 4094067.778932609,
-      "vol_ret": 0.0011916867509305785,
-      "score": 0.04684670592366829
+      "sym_ex": "COOKIE/USDT:USDT",
+      "sym": "COOKIEUSDT",
+      "base": "COOKIE",
+      "last": 0.1116,
+      "vol_usdt": 1284890.3064000001,
+      "vol_ret": 0.0011845044448065664,
+      "score": 0.052908167182179194
     },
     {
-      "sym_ex": "ARB/USDT:USDT",
-      "sym": "ARBUSDT",
-      "base": "ARB",
-      "last": 0.4843,
-      "vol_usdt": 36878266.620612,
-      "vol_ret": 0.0011314948687322927,
-      "score": 0.046734611443492696
+      "sym_ex": "VELO/USDT:USDT",
+      "sym": "VELOUSDT",
+      "base": "VELO",
+      "last": 0.012805,
+      "vol_usdt": 1613632.5751,
+      "vol_ret": 0.0011760754305636968,
+      "score": 0.05255037929840482
     },
     {
-      "sym_ex": "EPIC/USDT:USDT",
-      "sym": "EPICUSDT",
-      "base": "EPIC",
-      "last": 2.0142,
-      "vol_usdt": 1829753.6634000002,
-      "vol_ret": 0.0011817049471455829,
-      "score": 0.046295069716644814
+      "sym_ex": "PIPPIN/USDT:USDT",
+      "sym": "PIPPINUSDT",
+      "base": "PIPPIN",
+      "last": 0.01502,
+      "vol_usdt": 1008012.0564400001,
+      "vol_ret": 0.0011748908420903645,
+      "score": 0.05245500932796648
     },
     {
-      "sym_ex": "LRC/USDT:USDT",
-      "sym": "LRCUSDT",
-      "base": "LRC",
-      "last": 0.09783,
-      "vol_usdt": 5764383.738429066,
-      "vol_ret": 0.0011736477708227187,
-      "score": 0.04624865369662645
+      "sym_ex": "XAI/USDT:USDT",
+      "sym": "XAIUSDT",
+      "base": "XAI",
+      "last": 0.04487,
+      "vol_usdt": 1733845.8998,
+      "vol_ret": 0.0011716839644776954,
+      "score": 0.05236044208235568
+    },
+    {
+      "sym_ex": "BB/USDT:USDT",
+      "sym": "BBUSDT",
+      "base": "BB",
+      "last": 0.12692,
+      "vol_usdt": 4155365.495443476,
+      "vol_ret": 0.0011656104942629494,
+      "score": 0.052253755998988266
+    },
+    {
+      "sym_ex": "DOGE/USDT:USDT",
+      "sym": "DOGEUSDT",
+      "base": "DOGE",
+      "last": 0.21169,
+      "vol_usdt": 230577714.54040012,
+      "vol_ret": 0.0008185945281350647,
+      "score": 0.05224974020414493
+    },
+    {
+      "sym_ex": "FIDA/USDT:USDT",
+      "sym": "FIDAUSDT",
+      "base": "FIDA",
+      "last": 0.08254,
+      "vol_usdt": 1491460.592354672,
+      "vol_ret": 0.0011643440405605498,
+      "score": 0.05201231530484753
+    },
+    {
+      "sym_ex": "CHR/USDT:USDT",
+      "sym": "CHRUSDT",
+      "base": "CHR",
+      "last": 0.09229,
+      "vol_usdt": 1742438.5593559998,
+      "vol_ret": 0.0011630459518747061,
+      "score": 0.05197107369977007
+    },
+    {
+      "sym_ex": "REZ/USDT:USDT",
+      "sym": "REZUSDT",
+      "base": "REZ",
+      "last": 0.01084,
+      "vol_usdt": 1620648.735777676,
+      "vol_ret": 0.0011611525325265885,
+      "score": 0.05187717095249196
+    },
+    {
+      "sym_ex": "ETHFI/USDT:USDT",
+      "sym": "ETHFIUSDT",
+      "base": "ETHFI",
+      "last": 1.0836,
+      "vol_usdt": 14677567.883999998,
+      "vol_ret": 0.0011395149051829172,
+      "score": 0.05180350969094816
+    },
+    {
+      "sym_ex": "WIF/USDT:USDT",
+      "sym": "WIFUSDT",
+      "base": "WIF",
+      "last": 0.7772,
+      "vol_usdt": 35074379.828980364,
+      "vol_ret": 0.0011025909468444892,
+      "score": 0.05154746007122031
+    },
+    {
+      "sym_ex": "PENGU/USDT:USDT",
+      "sym": "PENGUUSDT",
+      "base": "PENGU",
+      "last": 0.028456,
+      "vol_usdt": 38556413.889968,
+      "vol_ret": 0.0010971002166900608,
+      "score": 0.051540439298078285
+    },
+    {
+      "sym_ex": "AI/USDT:USDT",
+      "sym": "AIUSDT",
+      "base": "AI",
+      "last": 0.11687,
+      "vol_usdt": 2445359.59746,
+      "vol_ret": 0.0011461018433085836,
+      "score": 0.051254754767852205
+    },
+    {
+      "sym_ex": "KERNEL/USDT:USDT",
+      "sym": "KERNELUSDT",
+      "base": "KERNEL",
+      "last": 0.1797,
+      "vol_usdt": 1884300.7758,
+      "vol_ret": 0.0011374354338627001,
+      "score": 0.05082470067965103
     },
     {
       "sym_ex": "RAD/USDT:USDT",
       "sym": "RADUSDT",
       "base": "RAD",
-      "last": 0.6594,
-      "vol_usdt": 1526440.0485599998,
-      "vol_ret": 0.0011805917314110554,
-      "score": 0.04623003339167575
+      "last": 0.658,
+      "vol_usdt": 1501283.4564,
+      "vol_ret": 0.0011300390554807441,
+      "score": 0.05046429751957239
     },
     {
-      "sym_ex": "OM/USDT:USDT",
-      "sym": "OMUSDT",
-      "base": "OM",
-      "last": 0.19904,
-      "vol_usdt": 4202236.100224,
-      "vol_ret": 0.0011678290865413936,
-      "score": 0.04591032343839725
+      "sym_ex": "LQTY/USDT:USDT",
+      "sym": "LQTYUSDT",
+      "base": "LQTY",
+      "last": 0.778,
+      "vol_usdt": 2060378.6752587003,
+      "vol_ret": 0.0011260465840166503,
+      "score": 0.05032273108407613
     },
     {
-      "sym_ex": "LINK/USDT:USDT",
-      "sym": "LINKUSDT",
-      "base": "LINK",
-      "last": 22.47,
-      "vol_usdt": 111583317.24773099,
-      "vol_ret": 0.0009762130197284764,
-      "score": 0.045762184505585564
+      "sym_ex": "GTC/USDT:USDT",
+      "sym": "GTCUSDT",
+      "base": "GTC",
+      "last": 0.3144,
+      "vol_usdt": 2365130.52912,
+      "vol_ret": 0.0011223557375362237,
+      "score": 0.05017718814753313
     },
     {
-      "sym_ex": "ZRX/USDT:USDT",
-      "sym": "ZRXUSDT",
-      "base": "ZRX",
-      "last": 0.2621,
-      "vol_usdt": 1597909.9486,
-      "vol_ret": 0.0011587303690156793,
-      "score": 0.045370089488953214
+      "sym_ex": "MOVR/USDT:USDT",
+      "sym": "MOVRUSDT",
+      "base": "MOVR",
+      "last": 5.59,
+      "vol_usdt": 1342902.5817999998,
+      "vol_ret": 0.0011199112694396556,
+      "score": 0.049996123537308944
+    },
+    {
+      "sym_ex": "AIXBT/USDT:USDT",
+      "sym": "AIXBTUSDT",
+      "base": "AIXBT",
+      "last": 0.09878,
+      "vol_usdt": 2592267.7352,
+      "vol_ret": 0.0011169232264566951,
+      "score": 0.049947649095764865
+    },
+    {
+      "sym_ex": "SKYAI/USDT:USDT",
+      "sym": "SKYAIUSDT",
+      "base": "SKYAI",
+      "last": 0.04379,
+      "vol_usdt": 1340653.79596,
+      "vol_ret": 0.0011166227449103106,
+      "score": 0.049847507670067556
+    },
+    {
+      "sym_ex": "A2Z/USDT:USDT",
+      "sym": "A2ZUSDT",
+      "base": "A2Z",
+      "last": 0.005593,
+      "vol_usdt": 7467064.843854,
+      "vol_ret": 0.001106128571227582,
+      "score": 0.049797522540510855
+    },
+    {
+      "sym_ex": "ZEREBRO/USDT:USDT",
+      "sym": "ZEREBROUSDT",
+      "base": "ZEREBRO",
+      "last": 0.01918,
+      "vol_usdt": 2726642.57124,
+      "vol_ret": 0.0011121176095976535,
+      "score": 0.04973999463385564
     },
     {
       "sym_ex": "NVDA/USDT:USDT",
       "sym": "NVDAUSDT",
       "base": "NVDA",
-      "last": 171.09,
-      "vol_usdt": 1054537.1676,
-      "vol_ret": 0.0011593720176058578,
-      "score": 0.04535786368479922
+      "last": 170.16,
+      "vol_usdt": 1048110.7296000001,
+      "vol_ret": 0.0011137238225112072,
+      "score": 0.04969640024268029
     },
     {
-      "sym_ex": "BOME/USDT:USDT",
-      "sym": "BOMEUSDT",
-      "base": "BOME",
-      "last": 0.001856,
-      "vol_usdt": 2251193.3583360002,
-      "vol_ret": 0.0011567198200177094,
-      "score": 0.045335765892233426
+      "sym_ex": "VIRTUAL/USDT:USDT",
+      "sym": "VIRTUALUSDT",
+      "base": "VIRTUAL",
+      "last": 1.0446,
+      "vol_usdt": 18259672.102819137,
+      "vol_ret": 0.0010870349384077393,
+      "score": 0.04968208363225815
+    },
+    {
+      "sym_ex": "EPIC/USDT:USDT",
+      "sym": "EPICUSDT",
+      "base": "EPIC",
+      "last": 2.0069,
+      "vol_usdt": 1815799.3695799997,
+      "vol_ret": 0.0011090776978602201,
+      "score": 0.04953975340938964
     },
     {
       "sym_ex": "BR/USDT:USDT",
       "sym": "BRUSDT",
       "base": "BR",
-      "last": 0.06607,
-      "vol_usdt": 1496358.77774,
-      "vol_ret": 0.0011576224688201466,
-      "score": 0.04531922900514315
+      "last": 0.06632,
+      "vol_usdt": 1488510.0878400002,
+      "vol_ret": 0.0010973899665680923,
+      "score": 0.048989472085266224
+    },
+    {
+      "sym_ex": "CRO/USDT:USDT",
+      "sym": "CROUSDT",
+      "base": "CRO",
+      "last": 0.26414,
+      "vol_usdt": 68958067.80212,
+      "vol_ret": 0.000993413883985471,
+      "score": 0.04896245622009111
+    },
+    {
+      "sym_ex": "PONKE/USDT:USDT",
+      "sym": "PONKEUSDT",
+      "base": "PONKE",
+      "last": 0.09083,
+      "vol_usdt": 2095203.22232,
+      "vol_ret": 0.0010958183028894457,
+      "score": 0.04896048535155389
+    },
+    {
+      "sym_ex": "TURBO/USDT:USDT",
+      "sym": "TURBOUSDT",
+      "base": "TURBO",
+      "last": 0.003655,
+      "vol_usdt": 6975535.84039,
+      "vol_ret": 0.001076315607391792,
+      "score": 0.048417617549301135
+    },
+    {
+      "sym_ex": "ILV/USDT:USDT",
+      "sym": "ILVUSDT",
+      "base": "ILV",
+      "last": 13.243,
+      "vol_usdt": 2182782.7722,
+      "vol_ret": 0.001081632602413366,
+      "score": 0.048326130463870305
+    },
+    {
+      "sym_ex": "ORDI/USDT:USDT",
+      "sym": "ORDIUSDT",
+      "base": "ORDI",
+      "last": 8.518,
+      "vol_usdt": 5006331.6704400005,
+      "vol_ret": 0.001075283304042653,
+      "score": 0.048234801157912045
+    },
+    {
+      "sym_ex": "LINK/USDT:USDT",
+      "sym": "LINKUSDT",
+      "base": "LINK",
+      "last": 22.363,
+      "vol_usdt": 112201766.7230933,
+      "vol_ret": 0.0009019556595352666,
+      "score": 0.04782481603020519
+    },
+    {
+      "sym_ex": "BEAM/USDT:USDT",
+      "sym": "BEAMUSDT",
+      "base": "BEAM",
+      "last": 0.006834,
+      "vol_usdt": 1262779.8852671387,
+      "vol_ret": 0.0010714218781735167,
+      "score": 0.04780152959072199
+    },
+    {
+      "sym_ex": "OG/USDT:USDT",
+      "sym": "OGUSDT",
+      "base": "OG",
+      "last": 13.8067,
+      "vol_usdt": 4002966.416625781,
+      "vol_ret": 0.001065341995566355,
+      "score": 0.04771659673695801
+    },
+    {
+      "sym_ex": "MOODENG/USDT:USDT",
+      "sym": "MOODENGUSDT",
+      "base": "MOODENG",
+      "last": 0.12589,
+      "vol_usdt": 4057966.418168792,
+      "vol_ret": 0.00105743431774331,
+      "score": 0.04736340936256631
+    },
+    {
+      "sym_ex": "SOLV/USDT:USDT",
+      "sym": "SOLVUSDT",
+      "base": "SOLV",
+      "last": 0.04365,
+      "vol_usdt": 1524539.1060000001,
+      "vol_ret": 0.0010608647685026239,
+      "score": 0.04734303559189274
+    },
+    {
+      "sym_ex": "PEPE/USDT:USDT",
+      "sym": "PEPEUSDT",
+      "base": "PEPE",
+      "last": 9.4126e-06,
+      "vol_usdt": 109119970.1982658,
+      "vol_ret": 0.0008951676424427502,
+      "score": 0.047305198314676965
+    },
+    {
+      "sym_ex": "ICP/USDT:USDT",
+      "sym": "ICPUSDT",
+      "base": "ICP",
+      "last": 4.715,
+      "vol_usdt": 6944853.728300001,
+      "vol_ret": 0.0010483612385290442,
+      "score": 0.04715349629611483
+    },
+    {
+      "sym_ex": "LRC/USDT:USDT",
+      "sym": "LRCUSDT",
+      "base": "LRC",
+      "last": 0.09764,
+      "vol_usdt": 5498351.033818233,
+      "vol_ret": 0.0010473897840687612,
+      "score": 0.0470095830474958
+    },
+    {
+      "sym_ex": "FLM/USDT:USDT",
+      "sym": "FLMUSDT",
+      "base": "FLM",
+      "last": 0.02687,
+      "vol_usdt": 1678787.0844,
+      "vol_ret": 0.00105198267823345,
+      "score": 0.04695272355064561
+    },
+    {
+      "sym_ex": "DMC/USDT:USDT",
+      "sym": "DMCUSDT",
+      "base": "DMC",
+      "last": 0.003264,
+      "vol_usdt": 1091496.150912,
+      "vol_ret": 0.0010497697157550656,
+      "score": 0.04681219556239054
+    },
+    {
+      "sym_ex": "HOOK/USDT:USDT",
+      "sym": "HOOKUSDT",
+      "base": "HOOK",
+      "last": 0.10336,
+      "vol_usdt": 2970205.0513728,
+      "vol_ret": 0.0010459370061592641,
+      "score": 0.04676912142224754
+    },
+    {
+      "sym_ex": "CETUS/USDT:USDT",
+      "sym": "CETUSUSDT",
+      "base": "CETUS",
+      "last": 0.08635,
+      "vol_usdt": 1002820.0259,
+      "vol_ret": 0.0010467917570965637,
+      "score": 0.04667162185819313
+    },
+    {
+      "sym_ex": "CATI/USDT:USDT",
+      "sym": "CATIUSDT",
+      "base": "CATI",
+      "last": 0.08301,
+      "vol_usdt": 1789388.79504,
+      "vol_ret": 0.0010349906498576282,
+      "score": 0.04619326957725612
+    },
+    {
+      "sym_ex": "ZRX/USDT:USDT",
+      "sym": "ZRXUSDT",
+      "base": "ZRX",
+      "last": 0.2608,
+      "vol_usdt": 1561216.0864,
+      "vol_ret": 0.001033367859466879,
+      "score": 0.04610422568460179
+    },
+    {
+      "sym_ex": "1000BONK/USDT:USDT",
+      "sym": "1000BONKUSDT",
+      "base": "1000BONK",
+      "last": 0.019224,
+      "vol_usdt": 23283567.375264,
+      "vol_ret": 0.0009996264372472126,
+      "score": 0.04608354127681816
+    },
+    {
+      "sym_ex": "OGN/USDT:USDT",
+      "sym": "OGNUSDT",
+      "base": "OGN",
+      "last": 0.05982,
+      "vol_usdt": 1565303.9579999999,
+      "vol_ret": 0.0010322771422386554,
+      "score": 0.046055268061556874
     },
     {
       "sym_ex": "SUSHI/USDT:USDT",
       "sym": "SUSHIUSDT",
       "base": "SUSHI",
-      "last": 0.7423,
-      "vol_usdt": 2589286.5346921296,
-      "vol_ret": 0.001155171657264023,
-      "score": 0.04529791870416778
+      "last": 0.7377,
+      "vol_usdt": 2589065.28071202,
+      "vol_ret": 0.0010290098179057071,
+      "score": 0.045978580085513324
+    },
+    {
+      "sym_ex": "SEI/USDT:USDT",
+      "sym": "SEIUSDT",
+      "base": "SEI",
+      "last": 0.27705,
+      "vol_usdt": 37062979.909200005,
+      "vol_ret": 0.0009738706729316592,
+      "score": 0.04587394293553252
+    },
+    {
+      "sym_ex": "PEOPLE/USDT:USDT",
+      "sym": "PEOPLEUSDT",
+      "base": "PEOPLE",
+      "last": 0.01774,
+      "vol_usdt": 1668518.38576,
+      "vol_ret": 0.0010268736642701506,
+      "score": 0.04581846776579547
+    },
+    {
+      "sym_ex": "CYBER/USDT:USDT",
+      "sym": "CYBERUSDT",
+      "base": "CYBER",
+      "last": 1.6974,
+      "vol_usdt": 2381608.0213200003,
+      "vol_ret": 0.0010254878891100658,
+      "score": 0.04580523258341992
+    },
+    {
+      "sym_ex": "ETHW/USDT:USDT",
+      "sym": "ETHWUSDT",
+      "base": "ETHW",
+      "last": 1.5202,
+      "vol_usdt": 2850435.808,
+      "vol_ret": 0.0010229932334609258,
+      "score": 0.045725041039059625
+    },
+    {
+      "sym_ex": "BOME/USDT:USDT",
+      "sym": "BOMEUSDT",
+      "base": "BOME",
+      "last": 0.001845,
+      "vol_usdt": 2255716.54593,
+      "vol_ret": 0.0010207771193952693,
+      "score": 0.04558385694279368
+    },
+    {
+      "sym_ex": "CFX/USDT:USDT",
+      "sym": "CFXUSDT",
+      "base": "CFX",
+      "last": 0.16775,
+      "vol_usdt": 9270068.648500001,
+      "vol_ret": 0.0010081299571537469,
+      "score": 0.04549809557176148
+    },
+    {
+      "sym_ex": "HAEDAL/USDT:USDT",
+      "sym": "HAEDALUSDT",
+      "base": "HAEDAL",
+      "last": 0.12682,
+      "vol_usdt": 1517205.7435599999,
+      "vol_ret": 0.001019635862421939,
+      "score": 0.04548125093147168
+    },
+    {
+      "sym_ex": "IP/USDT:USDT",
+      "sym": "IPUSDT",
+      "base": "IP",
+      "last": 7.9148,
+      "vol_usdt": 51721916.80688,
+      "vol_ret": 0.0009396991314863387,
+      "score": 0.04534525280414116
+    },
+    {
+      "sym_ex": "RSR/USDT:USDT",
+      "sym": "RSRUSDT",
+      "base": "RSR",
+      "last": 0.007164,
+      "vol_usdt": 1537858.3389364008,
+      "vol_ret": 0.0010113904467250784,
+      "score": 0.04511044052693186
+    },
+    {
+      "sym_ex": "PNUT/USDT:USDT",
+      "sym": "PNUTUSDT",
+      "base": "PNUT",
+      "last": 0.19708,
+      "vol_usdt": 10329549.37895946,
+      "vol_ret": 0.0009977857455899905,
+      "score": 0.04510439256064024
+    },
+    {
+      "sym_ex": "SKL/USDT:USDT",
+      "sym": "SKLUSDT",
+      "base": "SKL",
+      "last": 0.0286,
+      "vol_usdt": 9518749.2972,
+      "vol_ret": 0.0009965976553812602,
+      "score": 0.04499467189616213
     },
     {
       "sym_ex": "LA/USDT:USDT",
       "sym": "LAUSDT",
       "base": "LA",
       "last": 0.2977,
-      "vol_usdt": 1599915.4158,
-      "vol_ret": 0.0011541706839051642,
-      "score": 0.0451898356064741
-    },
-    {
-      "sym_ex": "MOVR/USDT:USDT",
-      "sym": "MOVRUSDT",
-      "base": "MOVR",
-      "last": 5.601,
-      "vol_usdt": 1232735.17998,
-      "vol_ret": 0.0011525648825363303,
-      "score": 0.0451008906410694
-    },
-    {
-      "sym_ex": "GALA/USDT:USDT",
-      "sym": "GALAUSDT",
-      "base": "GALA",
-      "last": 0.01558,
-      "vol_usdt": 12634921.169,
-      "vol_ret": 0.0011301215072336266,
-      "score": 0.045002207650397086
-    },
-    {
-      "sym_ex": "FLM/USDT:USDT",
-      "sym": "FLMUSDT",
-      "base": "FLM",
-      "last": 0.02695,
-      "vol_usdt": 1645775.4852,
-      "vol_ret": 0.0011487687836104485,
-      "score": 0.04497929707472727
-    },
-    {
-      "sym_ex": "BERA/USDT:USDT",
-      "sym": "BERAUSDT",
-      "base": "BERA",
-      "last": 2.194,
-      "vol_usdt": 4615021.0784,
-      "vol_ret": 0.0011393275734197486,
-      "score": 0.04481130341402251
-    },
-    {
-      "sym_ex": "CARV/USDT:USDT",
-      "sym": "CARVUSDT",
-      "base": "CARV",
-      "last": 0.2881,
-      "vol_usdt": 1472969.4462000001,
-      "vol_ret": 0.0011403102818416052,
-      "score": 0.044632696064959995
-    },
-    {
-      "sym_ex": "EIGEN/USDT:USDT",
-      "sym": "EIGENUSDT",
-      "base": "EIGEN",
-      "last": 1.1857,
-      "vol_usdt": 3868630.818,
-      "vol_ret": 0.0011359059596382402,
-      "score": 0.044624272239123186
-    },
-    {
-      "sym_ex": "ETHW/USDT:USDT",
-      "sym": "ETHWUSDT",
-      "base": "ETHW",
-      "last": 1.5228,
-      "vol_usdt": 2849716.1448,
-      "vol_ret": 0.0011368401419499707,
-      "score": 0.04459070386437934
-    },
-    {
-      "sym_ex": "CRV/USDT:USDT",
-      "sym": "CRVUSDT",
-      "base": "CRV",
-      "last": 0.7478,
-      "vol_usdt": 10404757.5872,
-      "vol_ret": 0.0011218536054322878,
-      "score": 0.04452074157212042
-    },
-    {
-      "sym_ex": "CETUS/USDT:USDT",
-      "sym": "CETUSUSDT",
-      "base": "CETUS",
-      "last": 0.08663,
-      "vol_usdt": 1009767.943,
-      "vol_ret": 0.001136608517966135,
-      "score": 0.04445418313468437
-    },
-    {
-      "sym_ex": "ILV/USDT:USDT",
-      "sym": "ILVUSDT",
-      "base": "ILV",
-      "last": 13.368,
-      "vol_usdt": 2162359.5552,
-      "vol_ret": 0.0011337838291259395,
-      "score": 0.044422211099584094
-    },
-    {
-      "sym_ex": "IP/USDT:USDT",
-      "sym": "IPUSDT",
-      "base": "IP",
-      "last": 7.8802,
-      "vol_usdt": 51875569.3654,
-      "vol_ret": 0.0010434267920547114,
-      "score": 0.04428849492314771
-    },
-    {
-      "sym_ex": "CYBER/USDT:USDT",
-      "sym": "CYBERUSDT",
-      "base": "CYBER",
-      "last": 1.7061,
-      "vol_usdt": 2340482.9164199997,
-      "vol_ret": 0.0011287589946561351,
-      "score": 0.04423574521643702
-    },
-    {
-      "sym_ex": "JASMY/USDT:USDT",
-      "sym": "JASMYUSDT",
-      "base": "JASMY",
-      "last": 0.013759,
-      "vol_usdt": 2241815.978126,
-      "vol_ret": 0.0011271481518621866,
-      "score": 0.04416518668918866
-    },
-    {
-      "sym_ex": "SEI/USDT:USDT",
-      "sym": "SEIUSDT",
-      "base": "SEI",
-      "last": 0.27826,
-      "vol_usdt": 36932423.57712,
-      "vol_ret": 0.0010571270874255624,
-      "score": 0.04379618220316179
-    },
-    {
-      "sym_ex": "ARKM/USDT:USDT",
-      "sym": "ARKMUSDT",
-      "base": "ARKM",
-      "last": 0.4605,
-      "vol_usdt": 1482789.7380000001,
-      "vol_ret": 0.001116736332984152,
-      "score": 0.04370073065444413
-    },
-    {
-      "sym_ex": "LDO/USDT:USDT",
-      "sym": "LDOUSDT",
-      "base": "LDO",
-      "last": 1.1651,
-      "vol_usdt": 14849797.1963,
-      "vol_ret": 0.0010917098152732096,
-      "score": 0.04363585255105622
-    },
-    {
-      "sym_ex": "RSR/USDT:USDT",
-      "sym": "RSRUSDT",
-      "base": "RSR",
-      "last": 0.007204,
-      "vol_usdt": 1548217.0085295804,
-      "vol_ret": 0.001113891590144315,
-      "score": 0.04359271414889497
-    },
-    {
-      "sym_ex": "BANANA/USDT:USDT",
-      "sym": "BANANAUSDT",
-      "base": "BANANA",
-      "last": 18.251,
-      "vol_usdt": 1556445.28,
-      "vol_ret": 0.0011129294162570266,
-      "score": 0.043555217654472275
-    },
-    {
-      "sym_ex": "CFX/USDT:USDT",
-      "sym": "CFXUSDT",
-      "base": "CFX",
-      "last": 0.16832,
-      "vol_usdt": 9254395.523839999,
-      "vol_ret": 0.0010973657952192458,
-      "score": 0.04347231626386987
-    },
-    {
-      "sym_ex": "GRASS/USDT:USDT",
-      "sym": "GRASSUSDT",
-      "base": "GRASS",
-      "last": 0.6973,
-      "vol_usdt": 2004373.5094,
-      "vol_ret": 0.0011040599075049851,
-      "score": 0.04323532200431381
-    },
-    {
-      "sym_ex": "UNI/USDT:USDT",
-      "sym": "UNIUSDT",
-      "base": "UNI",
-      "last": 9.223,
-      "vol_usdt": 35321839.588,
-      "vol_ret": 0.0010423821256074594,
-      "score": 0.0431013531320783
-    },
-    {
-      "sym_ex": "NTRN/USDT:USDT",
-      "sym": "NTRNUSDT",
-      "base": "NTRN",
-      "last": 0.09235,
-      "vol_usdt": 2879403.3681,
-      "vol_ret": 0.0010942301971028233,
-      "score": 0.04290700136311286
-    },
-    {
-      "sym_ex": "TRB/USDT:USDT",
-      "sym": "TRBUSDT",
-      "base": "TRB",
-      "last": 32.5,
-      "vol_usdt": 7028486.099375,
-      "vol_ret": 0.001086432219956702,
-      "score": 0.04288568385236154
-    },
-    {
-      "sym_ex": "OGN/USDT:USDT",
-      "sym": "OGNUSDT",
-      "base": "OGN",
-      "last": 0.05987,
-      "vol_usdt": 1570146.66858,
-      "vol_ret": 0.001093854696201034,
-      "score": 0.04280152177645205
-    },
-    {
-      "sym_ex": "AXS/USDT:USDT",
-      "sym": "AXSUSDT",
-      "base": "AXS",
-      "last": 2.309,
-      "vol_usdt": 2276903.0528,
-      "vol_ret": 0.0010914596704810783,
-      "score": 0.042755688586070754
-    },
-    {
-      "sym_ex": "ZIL/USDT:USDT",
-      "sym": "ZILUSDT",
-      "base": "ZIL",
-      "last": 0.01093,
-      "vol_usdt": 1693849.425,
-      "vol_ret": 0.0010921769917492873,
-      "score": 0.04274370996536399
-    },
-    {
-      "sym_ex": "SIGN/USDT:USDT",
-      "sym": "SIGNUSDT",
-      "base": "SIGN",
-      "last": 0.07147,
-      "vol_usdt": 2276360.2379,
-      "vol_ret": 0.00108535113686721,
-      "score": 0.04251398194589691
-    },
-    {
-      "sym_ex": "SKYAI/USDT:USDT",
-      "sym": "SKYAIUSDT",
-      "base": "SKYAI",
-      "last": 0.04394,
-      "vol_usdt": 1330896.19936,
-      "vol_ret": 0.0010861360470324087,
-      "score": 0.042479592075405755
-    },
-    {
-      "sym_ex": "MEW/USDT:USDT",
-      "sym": "MEWUSDT",
-      "base": "MEW",
-      "last": 0.002677,
-      "vol_usdt": 1836470.7214000002,
-      "vol_ret": 0.001084693752059907,
-      "score": 0.042457525969055575
-    },
-    {
-      "sym_ex": "AR/USDT:USDT",
-      "sym": "ARUSDT",
-      "base": "AR",
-      "last": 6.234,
-      "vol_usdt": 2773054.54080426,
-      "vol_ret": 0.0010822945953603614,
-      "score": 0.04242743748752335
-    },
-    {
-      "sym_ex": "HYPE/USDT:USDT",
-      "sym": "HYPEUSDT",
-      "base": "HYPE",
-      "last": 45.219,
-      "vol_usdt": 55804860.663387075,
-      "vol_ret": 0.0009864865843692346,
-      "score": 0.042307772783006216
-    },
-    {
-      "sym_ex": "HYPER/USDT:USDT",
-      "sym": "HYPERUSDT",
-      "base": "HYPER",
-      "last": 0.2872,
-      "vol_usdt": 4312474.0016,
-      "vol_ret": 0.0010742951623932031,
-      "score": 0.04221751482107352
-    },
-    {
-      "sym_ex": "W/USDT:USDT",
-      "sym": "WUSDT",
-      "base": "W",
-      "last": 0.07587,
-      "vol_usdt": 5244725.776302,
-      "vol_ret": 0.0010719690696374237,
-      "score": 0.04219001707984601
-    },
-    {
-      "sym_ex": "AEVO/USDT:USDT",
-      "sym": "AEVOUSDT",
-      "base": "AEVO",
-      "last": 0.08435,
-      "vol_usdt": 1036978.85844,
-      "vol_ret": 0.0010787848991367056,
-      "score": 0.04216841773734897
-    },
-    {
-      "sym_ex": "ICP/USDT:USDT",
-      "sym": "ICPUSDT",
-      "base": "ICP",
-      "last": 4.741,
-      "vol_usdt": 6812970.798039999,
-      "vol_ret": 0.0010681670835208609,
-      "score": 0.04214815128725279
-    },
-    {
-      "sym_ex": "ACT/USDT:USDT",
-      "sym": "ACTUSDT",
-      "base": "ACT",
-      "last": 0.03477,
-      "vol_usdt": 3659519.3431800003,
-      "vol_ret": 0.0010727000785030378,
-      "score": 0.04210921320011406
-    },
-    {
-      "sym_ex": "MAGIC/USDT:USDT",
-      "sym": "MAGICUSDT",
-      "base": "MAGIC",
-      "last": 0.1921,
-      "vol_usdt": 1085953.224271325,
-      "vol_ret": 0.0010762121055728365,
-      "score": 0.04207002140097691
-    },
-    {
-      "sym_ex": "C98/USDT:USDT",
-      "sym": "C98USDT",
-      "base": "C98",
-      "last": 0.04725,
-      "vol_usdt": 1173919.3704,
-      "vol_ret": 0.0010757060803176061,
-      "score": 0.04205609057952653
-    },
-    {
-      "sym_ex": "SOLV/USDT:USDT",
-      "sym": "SOLVUSDT",
-      "base": "SOLV",
-      "last": 0.04356,
-      "vol_usdt": 1526265.7344,
-      "vol_ret": 0.0010728202830159446,
-      "score": 0.04196630975316646
-    },
-    {
-      "sym_ex": "HMSTR/USDT:USDT",
-      "sym": "HMSTRUSDT",
-      "base": "HMSTR",
-      "last": 0.0006628,
-      "vol_usdt": 1052256.0041119999,
-      "vol_ret": 0.0010699772139836459,
-      "score": 0.04182102084537442
-    },
-    {
-      "sym_ex": "OG/USDT:USDT",
-      "sym": "OGUSDT",
-      "base": "OG",
-      "last": 13.8105,
-      "vol_usdt": 4021239.3281953195,
-      "vol_ret": 0.0010646971677314482,
-      "score": 0.04181763522007091
-    },
-    {
-      "sym_ex": "NXPC/USDT:USDT",
-      "sym": "NXPCUSDT",
-      "base": "NXPC",
-      "last": 0.6429,
-      "vol_usdt": 1069842.27960696,
-      "vol_ret": 0.0010664797122370165,
-      "score": 0.04168386809685217
-    },
-    {
-      "sym_ex": "NOT/USDT:USDT",
-      "sym": "NOTUSDT",
-      "base": "NOT",
-      "last": 0.001803,
-      "vol_usdt": 2321791.0730999997,
-      "vol_ret": 0.0010640938797530739,
-      "score": 0.04167613561298853
-    },
-    {
-      "sym_ex": "ZK/USDT:USDT",
-      "sym": "ZKUSDT",
-      "base": "ZK",
-      "last": 0.05499,
-      "vol_usdt": 2996795.4948182157,
-      "vol_ret": 0.001060153143446189,
-      "score": 0.04156695239541737
-    },
-    {
-      "sym_ex": "ERA/USDT:USDT",
-      "sym": "ERAUSDT",
-      "base": "ERA",
-      "last": 0.689,
-      "vol_usdt": 2471019.954,
-      "vol_ret": 0.0010583477390544382,
-      "score": 0.04145913301648072
-    },
-    {
-      "sym_ex": "DMC/USDT:USDT",
-      "sym": "DMCUSDT",
-      "base": "DMC",
-      "last": 0.003279,
-      "vol_usdt": 1087775.709204,
-      "vol_ret": 0.0010582058208405043,
-      "score": 0.041357773300458804
-    },
-    {
-      "sym_ex": "IO/USDT:USDT",
-      "sym": "IOUSDT",
-      "base": "IO",
-      "last": 0.517,
-      "vol_usdt": 3885627.24,
-      "vol_ret": 0.0010519643051110571,
-      "score": 0.041304504146579664
-    },
-    {
-      "sym_ex": "API3/USDT:USDT",
-      "sym": "API3USDT",
-      "base": "API3",
-      "last": 0.9643,
-      "vol_usdt": 4120369.81304,
-      "vol_ret": 0.0010489658836610736,
-      "score": 0.04120212735224728
-    },
-    {
-      "sym_ex": "INJ/USDT:USDT",
-      "sym": "INJUSDT",
-      "base": "INJ",
-      "last": 12.535,
-      "vol_usdt": 12946534.078000002,
-      "vol_ret": 0.001030204522988101,
-      "score": 0.04107080772953343
-    },
-    {
-      "sym_ex": "LPT/USDT:USDT",
-      "sym": "LPTUSDT",
-      "base": "LPT",
-      "last": 6.567,
-      "vol_usdt": 10455522.79988469,
-      "vol_ret": 0.0010341386244522599,
-      "score": 0.04105402852428045
-    },
-    {
-      "sym_ex": "SKL/USDT:USDT",
-      "sym": "SKLUSDT",
-      "base": "SKL",
-      "last": 0.02872,
-      "vol_usdt": 9694038.28544,
-      "vol_ret": 0.0010350777455082048,
-      "score": 0.041038474278410314
+      "vol_usdt": 1608595.7524,
+      "vol_ret": 0.0010083916707350103,
+      "score": 0.044979953922115595
     },
     {
       "sym_ex": "DEEP/USDT:USDT",
       "sym": "DEEPUSDT",
       "base": "DEEP",
-      "last": 0.12782,
-      "vol_usdt": 2057186.2079999999,
-      "vol_ret": 0.001046691205698676,
-      "score": 0.04096932637524603
+      "last": 0.1273,
+      "vol_usdt": 2091640.8399999999,
+      "vol_ret": 0.0010058137065912848,
+      "score": 0.044896984853052
     },
     {
-      "sym_ex": "A2Z/USDT:USDT",
-      "sym": "A2ZUSDT",
-      "base": "A2Z",
-      "last": 0.005657,
-      "vol_usdt": 7345813.977134,
-      "vol_ret": 0.0010273502862609362,
-      "score": 0.04057021757761077
+      "sym_ex": "GRASS/USDT:USDT",
+      "sym": "GRASSUSDT",
+      "base": "GRASS",
+      "last": 0.6923,
+      "vol_usdt": 2022805.0626,
+      "vol_ret": 0.0010042408960110947,
+      "score": 0.04482121889502342
     },
     {
-      "sym_ex": "SUI/USDT:USDT",
-      "sym": "SUIUSDT",
-      "base": "SUI",
-      "last": 3.2637,
-      "vol_usdt": 137179478.5473427,
-      "vol_ret": 0.0007975246929577704,
-      "score": 0.04046453055164918
+      "sym_ex": "LPT/USDT:USDT",
+      "sym": "LPTUSDT",
+      "base": "LPT",
+      "last": 6.576,
+      "vol_usdt": 10576344.24753216,
+      "vol_ret": 0.0009910202064854383,
+      "score": 0.04481603376218625
     },
     {
-      "sym_ex": "ADA/USDT:USDT",
-      "sym": "ADAUSDT",
-      "base": "ADA",
-      "last": 0.8078,
-      "vol_usdt": 123828743.47512744,
-      "vol_ret": 0.0008196195116033501,
-      "score": 0.04041454954974729
+      "sym_ex": "GALA/USDT:USDT",
+      "sym": "GALAUSDT",
+      "base": "GALA",
+      "last": 0.01552,
+      "vol_usdt": 12614219.763840001,
+      "vol_ret": 0.0009873558048343293,
+      "score": 0.044791567694795587
     },
     {
-      "sym_ex": "BICO/USDT:USDT",
-      "sym": "BICOUSDT",
-      "base": "BICO",
-      "last": 0.09205,
-      "vol_usdt": 1096245.9102,
-      "vol_ret": 0.0010315158921981838,
-      "score": 0.04030243838403046
+      "sym_ex": "CRV/USDT:USDT",
+      "sym": "CRVUSDT",
+      "base": "CRV",
+      "last": 0.7441,
+      "vol_usdt": 10525452.2492,
+      "vol_ret": 0.000990475722477995,
+      "score": 0.04478793276899463
     },
     {
-      "sym_ex": "TIA/USDT:USDT",
-      "sym": "TIAUSDT",
-      "base": "TIA",
-      "last": 1.5557,
-      "vol_usdt": 14138004.959520001,
-      "vol_ret": 0.0010086215927089914,
-      "score": 0.040299403268981245
+      "sym_ex": "ARB/USDT:USDT",
+      "sym": "ARBUSDT",
+      "base": "ARB",
+      "last": 0.4816,
+      "vol_usdt": 36777278.780031994,
+      "vol_ret": 0.0009488084885202826,
+      "score": 0.04472274915414516
     },
     {
-      "sym_ex": "IMX/USDT:USDT",
-      "sym": "IMXUSDT",
-      "base": "IMX",
-      "last": 0.5,
-      "vol_usdt": 1488095.79249,
-      "vol_ret": 0.0010295634169634835,
-      "score": 0.040252316488671905
+      "sym_ex": "LDO/USDT:USDT",
+      "sym": "LDOUSDT",
+      "base": "LDO",
+      "last": 1.1581,
+      "vol_usdt": 14925954.59044,
+      "vol_ret": 0.000981126936443852,
+      "score": 0.04467027217338504
     },
     {
-      "sym_ex": "FLOKI/USDT:USDT",
-      "sym": "FLOKIUSDT",
-      "base": "FLOKI",
-      "last": 8.848e-05,
-      "vol_usdt": 7584751.831168961,
-      "vol_ret": 0.001018342160608568,
-      "score": 0.040230372045436884
+      "sym_ex": "CARV/USDT:USDT",
+      "sym": "CARVUSDT",
+      "base": "CARV",
+      "last": 0.2859,
+      "vol_usdt": 1468853.5632,
+      "vol_ret": 0.0009990441475689988,
+      "score": 0.04454829414629169
     },
     {
-      "sym_ex": "PROVE/USDT:USDT",
-      "sym": "PROVEUSDT",
-      "base": "PROVE",
-      "last": 0.8689,
-      "vol_usdt": 16462966.6234,
-      "vol_ret": 0.0009989135969655893,
-      "score": 0.04007625900369639
+      "sym_ex": "SIGN/USDT:USDT",
+      "sym": "SIGNUSDT",
+      "base": "SIGN",
+      "last": 0.07121,
+      "vol_usdt": 2287241.1310199997,
+      "vol_ret": 0.0009925358714692714,
+      "score": 0.04431108748489277
     },
     {
-      "sym_ex": "IOTA/USDT:USDT",
-      "sym": "IOTAUSDT",
-      "base": "IOTA",
-      "last": 0.1827,
-      "vol_usdt": 2054882.00232,
-      "vol_ret": 0.0010124271780534175,
-      "score": 0.03961359513046943
+      "sym_ex": "AXS/USDT:USDT",
+      "sym": "AXSUSDT",
+      "base": "AXS",
+      "last": 2.291,
+      "vol_usdt": 2276114.9148,
+      "vol_ret": 0.0009902509740144525,
+      "score": 0.044207166257344555
     },
     {
-      "sym_ex": "ZRO/USDT:USDT",
-      "sym": "ZROUSDT",
-      "base": "ZRO",
-      "last": 1.816,
-      "vol_usdt": 1251169.52,
-      "vol_ret": 0.0010109407584297958,
-      "score": 0.03949915742395226
+      "sym_ex": "HYPE/USDT:USDT",
+      "sym": "HYPEUSDT",
+      "base": "HYPE",
+      "last": 44.978,
+      "vol_usdt": 55506314.419753484,
+      "vol_ret": 0.0009083377863518094,
+      "score": 0.04419121908486281
     },
     {
-      "sym_ex": "MANA/USDT:USDT",
-      "sym": "MANAUSDT",
-      "base": "MANA",
-      "last": 0.2971,
-      "vol_usdt": 6484282.3692,
-      "vol_ret": 0.0009922392389072193,
-      "score": 0.03912150228853667
+      "sym_ex": "BANANA/USDT:USDT",
+      "sym": "BANANAUSDT",
+      "base": "BANANA",
+      "last": 18.176,
+      "vol_usdt": 1560739.67616,
+      "vol_ret": 0.0009857515596630969,
+      "score": 0.04395455668374124
     },
     {
-      "sym_ex": "CELO/USDT:USDT",
-      "sym": "CELOUSDT",
-      "base": "CELO",
-      "last": 0.2875,
-      "vol_usdt": 2633468.6624999996,
-      "vol_ret": 0.0009978411515671034,
-      "score": 0.03907658343832337
+      "sym_ex": "IO/USDT:USDT",
+      "sym": "IOUSDT",
+      "base": "IO",
+      "last": 0.5142,
+      "vol_usdt": 3925592.0256,
+      "vol_ret": 0.0009812017927713055,
+      "score": 0.04391273836228193
+    },
+    {
+      "sym_ex": "C98/USDT:USDT",
+      "sym": "C98USDT",
+      "base": "C98",
+      "last": 0.04704,
+      "vol_usdt": 1172281.996032,
+      "vol_ret": 0.0009833930522367591,
+      "score": 0.043821211697967336
+    },
+    {
+      "sym_ex": "UNI/USDT:USDT",
+      "sym": "UNIUSDT",
+      "base": "UNI",
+      "last": 9.198,
+      "vol_usdt": 35412943.86,
+      "vol_ret": 0.0009292979278293866,
+      "score": 0.043747572338921015
+    },
+    {
+      "sym_ex": "ZIL/USDT:USDT",
+      "sym": "ZILUSDT",
+      "base": "ZIL",
+      "last": 0.01091,
+      "vol_usdt": 1689929.6957399999,
+      "vol_ret": 0.0009800712141036963,
+      "score": 0.04370705398557101
+    },
+    {
+      "sym_ex": "EIGEN/USDT:USDT",
+      "sym": "EIGENUSDT",
+      "base": "EIGEN",
+      "last": 1.1794,
+      "vol_usdt": 3846051.7056,
+      "vol_ret": 0.0009750057519810361,
+      "score": 0.043627516401107916
+    },
+    {
+      "sym_ex": "AR/USDT:USDT",
+      "sym": "ARUSDT",
+      "base": "AR",
+      "last": 6.187,
+      "vol_usdt": 2782295.9273561602,
+      "vol_ret": 0.000974037694669381,
+      "score": 0.04351023175124836
+    },
+    {
+      "sym_ex": "ARKM/USDT:USDT",
+      "sym": "ARKMUSDT",
+      "base": "ARKM",
+      "last": 0.459,
+      "vol_usdt": 1496209.644,
+      "vol_ret": 0.0009700071870072919,
+      "score": 0.04323931392935511
+    },
+    {
+      "sym_ex": "HYPER/USDT:USDT",
+      "sym": "HYPERUSDT",
+      "base": "HYPER",
+      "last": 0.2854,
+      "vol_usdt": 3812612.3652,
+      "vol_ret": 0.000961759337774775,
+      "score": 0.04302719448044383
+    },
+    {
+      "sym_ex": "MEW/USDT:USDT",
+      "sym": "MEWUSDT",
+      "base": "MEW",
+      "last": 0.002667,
+      "vol_usdt": 1821524.7288000002,
+      "vol_ret": 0.0009625675684832587,
+      "score": 0.042925955213787684
     },
     {
       "sym_ex": "SD/USDT:USDT",
       "sym": "SDUSDT",
       "base": "SD",
-      "last": 0.6502,
-      "vol_usdt": 1007094.78,
-      "vol_ret": 0.0010006295713707034,
-      "score": 0.039074326429682796
-    },
-    {
-      "sym_ex": "RAY/USDT:USDT",
-      "sym": "RAYUSDT",
-      "base": "RAY",
-      "last": 3.286,
-      "vol_usdt": 6165922.692,
-      "vol_ret": 0.0009900258884828022,
-      "score": 0.039011900392909096
-    },
-    {
-      "sym_ex": "DYDX/USDT:USDT",
-      "sym": "DYDXUSDT",
-      "base": "DYDX",
-      "last": 0.5725,
-      "vol_usdt": 3171451.915,
-      "vol_ret": 0.000993998410042451,
-      "score": 0.03896179284386447
-    },
-    {
-      "sym_ex": "1MBABYDOGE/USDT:USDT",
-      "sym": "1MBABYDOGEUSDT",
-      "base": "1MBABYDOGE",
-      "last": 0.001143,
-      "vol_usdt": 2550468.5035739997,
-      "vol_ret": 0.000993842880525815,
-      "score": 0.038912656619693065
-    },
-    {
-      "sym_ex": "JUP/USDT:USDT",
-      "sym": "JUPUSDT",
-      "base": "JUP",
-      "last": 0.4805,
-      "vol_usdt": 7937253.609,
-      "vol_ret": 0.000981565868658484,
-      "score": 0.03879980813548319
-    },
-    {
-      "sym_ex": "KAITO/USDT:USDT",
-      "sym": "KAITOUSDT",
-      "base": "KAITO",
-      "last": 0.9791,
-      "vol_usdt": 1528226.6034767148,
-      "vol_ret": 0.000992739005150052,
-      "score": 0.03879822721554161
-    },
-    {
-      "sym_ex": "SNX/USDT:USDT",
-      "sym": "SNXUSDT",
-      "base": "SNX",
-      "last": 0.6505,
-      "vol_usdt": 2106537.8282,
-      "vol_ret": 0.0009879490841053198,
-      "score": 0.038648755211289174
-    },
-    {
-      "sym_ex": "ENS/USDT:USDT",
-      "sym": "ENSUSDT",
-      "base": "ENS",
-      "last": 22.116,
-      "vol_usdt": 6173216.964,
-      "vol_ret": 0.0009776003214407938,
-      "score": 0.038520818369660224
-    },
-    {
-      "sym_ex": "BLUR/USDT:USDT",
-      "sym": "BLURUSDT",
-      "base": "BLUR",
-      "last": 0.07321,
-      "vol_usdt": 1147694.7942899999,
-      "vol_ret": 0.0009856705028174727,
-      "score": 0.03849223979242714
+      "last": 0.6497,
+      "vol_usdt": 1008327.903,
+      "vol_ret": 0.0009630932992861277,
+      "score": 0.04289343914707614
     },
     {
       "sym_ex": "KAS/USDT:USDT",
       "sym": "KASUSDT",
       "base": "KAS",
-      "last": 0.08139,
-      "vol_usdt": 11591977.09842,
-      "vol_ret": 0.0009667314957116137,
-      "score": 0.0384658945371467
+      "last": 0.0813,
+      "vol_usdt": 11733018.6036,
+      "vol_ret": 0.000942235764765523,
+      "score": 0.04269367106330652
     },
     {
-      "sym_ex": "NEO/USDT:USDT",
-      "sym": "NEOUSDT",
-      "base": "NEO",
-      "last": 6.383,
-      "vol_usdt": 5709287.044312527,
-      "vol_ret": 0.0009764815627586701,
-      "score": 0.038444445250365875
+      "sym_ex": "JASMY/USDT:USDT",
+      "sym": "JASMYUSDT",
+      "base": "JASMY",
+      "last": 0.013692,
+      "vol_usdt": 2262864.92796,
+      "vol_ret": 0.0009560966735460611,
+      "score": 0.04266435513603188
+    },
+    {
+      "sym_ex": "PROVE/USDT:USDT",
+      "sym": "PROVEUSDT",
+      "base": "PROVE",
+      "last": 0.8698,
+      "vol_usdt": 16128642.2536,
+      "vol_ret": 0.0009297260086658023,
+      "score": 0.04243297112699122
+    },
+    {
+      "sym_ex": "OM/USDT:USDT",
+      "sym": "OMUSDT",
+      "base": "OM",
+      "last": 0.19925,
+      "vol_usdt": 4207541.886650001,
+      "vol_ret": 0.0009474464100726235,
+      "score": 0.04240835582823534
+    },
+    {
+      "sym_ex": "NOT/USDT:USDT",
+      "sym": "NOTUSDT",
+      "base": "NOT",
+      "last": 0.001802,
+      "vol_usdt": 2153751.33704,
+      "vol_ret": 0.0009472345251543045,
+      "score": 0.04225672621655434
+    },
+    {
+      "sym_ex": "AEVO/USDT:USDT",
+      "sym": "AEVOUSDT",
+      "base": "AEVO",
+      "last": 0.08397,
+      "vol_usdt": 1041306.831036,
+      "vol_ret": 0.000947764547133086,
+      "score": 0.04220370441988978
+    },
+    {
+      "sym_ex": "TRB/USDT:USDT",
+      "sym": "TRBUSDT",
+      "base": "TRB",
+      "last": 32.374,
+      "vol_usdt": 7021332.658699661,
+      "vol_ret": 0.0009357580784343534,
+      "score": 0.0420753210824608
+    },
+    {
+      "sym_ex": "ZK/USDT:USDT",
+      "sym": "ZKUSDT",
+      "base": "ZK",
+      "last": 0.05465,
+      "vol_usdt": 3014665.5853318446,
+      "vol_ret": 0.00094064083522337,
+      "score": 0.04201860519152188
+    },
+    {
+      "sym_ex": "TIA/USDT:USDT",
+      "sym": "TIAUSDT",
+      "base": "TIA",
+      "last": 1.5479,
+      "vol_usdt": 14055866.00286,
+      "vol_ret": 0.0009227293136526637,
+      "score": 0.04197372824896223
+    },
+    {
+      "sym_ex": "AIOZ/USDT:USDT",
+      "sym": "AIOZUSDT",
+      "base": "AIOZ",
+      "last": 0.3008,
+      "vol_usdt": 1334964.8384,
+      "vol_ret": 0.0009384056519349632,
+      "score": 0.041801510259552116
+    },
+    {
+      "sym_ex": "ACT/USDT:USDT",
+      "sym": "ACTUSDT",
+      "base": "ACT",
+      "last": 0.0346,
+      "vol_usdt": 3666512.0376,
+      "vol_ret": 0.0009336562217487262,
+      "score": 0.04174837437414716
+    },
+    {
+      "sym_ex": "ERA/USDT:USDT",
+      "sym": "ERAUSDT",
+      "base": "ERA",
+      "last": 0.6866,
+      "vol_usdt": 2498132.306,
+      "vol_ret": 0.0009335825383541719,
+      "score": 0.04166422918963976
+    },
+    {
+      "sym_ex": "SUI/USDT:USDT",
+      "sym": "SUIUSDT",
+      "base": "SUI",
+      "last": 3.2458,
+      "vol_usdt": 137898986.4943544,
+      "vol_ret": 0.0007244861387908973,
+      "score": 0.041590480271372736
+    },
+    {
+      "sym_ex": "MAGIC/USDT:USDT",
+      "sym": "MAGICUSDT",
+      "base": "MAGIC",
+      "last": 0.1918,
+      "vol_usdt": 1090344.656462194,
+      "vol_ret": 0.0009229916145298576,
+      "score": 0.04108872334523261
+    },
+    {
+      "sym_ex": "HMSTR/USDT:USDT",
+      "sym": "HMSTRUSDT",
+      "base": "HMSTR",
+      "last": 0.0006593,
+      "vol_usdt": 1003399.047382,
+      "vol_ret": 0.0009199724605014572,
+      "score": 0.040946409580262536
+    },
+    {
+      "sym_ex": "RAY/USDT:USDT",
+      "sym": "RAYUSDT",
+      "base": "RAY",
+      "last": 3.2769,
+      "vol_usdt": 6135138.01296,
+      "vol_ret": 0.0009079821705645668,
+      "score": 0.040760079232969953
+    },
+    {
+      "sym_ex": "BICO/USDT:USDT",
+      "sym": "BICOUSDT",
+      "base": "BICO",
+      "last": 0.09187,
+      "vol_usdt": 1114300.04952,
+      "vol_ret": 0.0009087535713951476,
+      "score": 0.04044760446249055
+    },
+    {
+      "sym_ex": "NTRN/USDT:USDT",
+      "sym": "NTRNUSDT",
+      "base": "NTRN",
+      "last": 0.09249,
+      "vol_usdt": 2884982.4862800003,
+      "vol_ret": 0.0009056544331511567,
+      "score": 0.040430175004750164
+    },
+    {
+      "sym_ex": "NXPC/USDT:USDT",
+      "sym": "NXPCUSDT",
+      "base": "NXPC",
+      "last": 0.6404,
+      "vol_usdt": 1080720.31137392,
+      "vol_ret": 0.000907945429431633,
+      "score": 0.040408798158434345
+    },
+    {
+      "sym_ex": "W/USDT:USDT",
+      "sym": "WUSDT",
+      "base": "W",
+      "last": 0.07559,
+      "vol_usdt": 5184472.326673999,
+      "vol_ret": 0.0008976748768802358,
+      "score": 0.04022899773958144
+    },
+    {
+      "sym_ex": "ZRO/USDT:USDT",
+      "sym": "ZROUSDT",
+      "base": "ZRO",
+      "last": 1.808,
+      "vol_usdt": 1316676.0,
+      "vol_ret": 0.0009032316940145321,
+      "score": 0.04021231819561893
     },
     {
       "sym_ex": "FLOW/USDT:USDT",
       "sym": "FLOWUSDT",
       "base": "FLOW",
-      "last": 0.3974,
-      "vol_usdt": 4360920.3235599995,
-      "vol_ret": 0.0009759510519863918,
-      "score": 0.038330125972291525
+      "last": 0.3944,
+      "vol_usdt": 4360556.287679999,
+      "vol_ret": 0.0008937229466199874,
+      "score": 0.03999359636854804
     },
     {
-      "sym_ex": "STX/USDT:USDT",
-      "sym": "STXUSDT",
-      "base": "STX",
-      "last": 0.6076,
-      "vol_usdt": 6899552.82744,
-      "vol_ret": 0.0009691460878854736,
-      "score": 0.03823662281206497
+      "sym_ex": "IMX/USDT:USDT",
+      "sym": "IMXUSDT",
+      "base": "IMX",
+      "last": 0.497,
+      "vol_usdt": 1501996.52016967,
+      "vol_ret": 0.0008972677570087406,
+      "score": 0.039955895411546184
+    },
+    {
+      "sym_ex": "INJ/USDT:USDT",
+      "sym": "INJUSDT",
+      "base": "INJ",
+      "last": 12.474,
+      "vol_usdt": 12959794.9404,
+      "vol_ret": 0.0008764504273386675,
+      "score": 0.03980865264268635
+    },
+    {
+      "sym_ex": "ADA/USDT:USDT",
+      "sym": "ADAUSDT",
+      "base": "ADA",
+      "last": 0.8061,
+      "vol_usdt": 124932531.22951162,
+      "vol_ret": 0.0006993999856594842,
+      "score": 0.039561055773159756
+    },
+    {
+      "sym_ex": "SNX/USDT:USDT",
+      "sym": "SNXUSDT",
+      "base": "SNX",
+      "last": 0.6471,
+      "vol_usdt": 2102294.5974,
+      "vol_ret": 0.0008824647060215594,
+      "score": 0.039329135843506884
     },
     {
       "sym_ex": "WCT/USDT:USDT",
       "sym": "WCTUSDT",
       "base": "WCT",
-      "last": 0.2832,
-      "vol_usdt": 1282535.7897638401,
-      "vol_ret": 0.0009727506848075581,
-      "score": 0.03799043244737836
+      "last": 0.2822,
+      "vol_usdt": 1252616.80390608,
+      "vol_ret": 0.0008826940072650955,
+      "score": 0.03928071402697117
     },
     {
-      "sym_ex": "MOCA/USDT:USDT",
-      "sym": "MOCAUSDT",
-      "base": "MOCA",
-      "last": 0.06516,
-      "vol_usdt": 1316337.96267072,
-      "vol_ret": 0.0009715320104594192,
-      "score": 0.037944558313037016
+      "sym_ex": "AVAX/USDT:USDT",
+      "sym": "AVAXUSDT",
+      "base": "AVAX",
+      "last": 24.368,
+      "vol_usdt": 78789877.64168896,
+      "vol_ret": 0.0007593602405086109,
+      "score": 0.03907619585216133
     },
     {
-      "sym_ex": "HBAR/USDT:USDT",
-      "sym": "HBARUSDT",
-      "base": "HBAR",
-      "last": 0.2123,
-      "vol_usdt": 41855561.64961589,
-      "vol_ret": 0.0008990311611518554,
-      "score": 0.037882275374622604
+      "sym_ex": "KAITO/USDT:USDT",
+      "sym": "KAITOUSDT",
+      "base": "KAITO",
+      "last": 0.9758,
+      "vol_usdt": 1524537.2663198998,
+      "vol_ret": 0.0008762678538269759,
+      "score": 0.039009414760252756
     },
     {
-      "sym_ex": "WLD/USDT:USDT",
-      "sym": "WLDUSDT",
-      "base": "WLD",
-      "last": 0.8671,
-      "vol_usdt": 21961981.6364,
-      "vol_ret": 0.0009312554077998965,
-      "score": 0.0377801591222699
+      "sym_ex": "API3/USDT:USDT",
+      "sym": "API3USDT",
+      "base": "API3",
+      "last": 0.9622,
+      "vol_usdt": 4119372.9492800008,
+      "vol_ret": 0.000871201734466001,
+      "score": 0.0389601940521588
     },
     {
       "sym_ex": "WOO/USDT:USDT",
       "sym": "WOOUSDT",
       "base": "WOO",
-      "last": 0.06534,
-      "vol_usdt": 1054544.6977559999,
-      "vol_ret": 0.0009624409103310551,
-      "score": 0.037566770612585336
+      "last": 0.06499,
+      "vol_usdt": 1050381.11804,
+      "vol_ret": 0.0008737310553096758,
+      "score": 0.038862092925751685
     },
     {
-      "sym_ex": "SAHARA/USDT:USDT",
-      "sym": "SAHARAUSDT",
-      "base": "SAHARA",
-      "last": 0.09044,
-      "vol_usdt": 8216726.870240001,
-      "vol_ret": 0.0009418085882999348,
-      "score": 0.03724625390024619
+      "sym_ex": "MANA/USDT:USDT",
+      "sym": "MANAUSDT",
+      "base": "MANA",
+      "last": 0.2963,
+      "vol_usdt": 6456278.0358,
+      "vol_ret": 0.0008641667623523098,
+      "score": 0.03880424807710561
     },
     {
-      "sym_ex": "MBOX/USDT:USDT",
-      "sym": "MBOXUSDT",
-      "base": "MBOX",
-      "last": 0.05401,
-      "vol_usdt": 1009110.84978,
-      "vol_ret": 0.0009533306408889254,
-      "score": 0.037203200440287326
-    },
-    {
-      "sym_ex": "DRIFT/USDT:USDT",
-      "sym": "DRIFTUSDT",
-      "base": "DRIFT",
-      "last": 0.5249,
-      "vol_usdt": 1023542.9148073801,
-      "vol_ret": 0.0009504240311916199,
-      "score": 0.03708920655106379
-    },
-    {
-      "sym_ex": "BIGTIME/USDT:USDT",
-      "sym": "BIGTIMEUSDT",
-      "base": "BIGTIME",
-      "last": 0.05021,
-      "vol_usdt": 1310737.2718399998,
-      "vol_ret": 0.0009493534141678198,
-      "score": 0.037066729179694134
-    },
-    {
-      "sym_ex": "ORCA/USDT:USDT",
-      "sym": "ORCAUSDT",
-      "base": "ORCA",
-      "last": 2.187,
-      "vol_usdt": 1047653.4815999999,
-      "vol_ret": 0.0009468032892530404,
-      "score": 0.03694762970512527
-    },
-    {
-      "sym_ex": "GMT/USDT:USDT",
-      "sym": "GMTUSDT",
-      "base": "GMT",
-      "last": 0.04013,
-      "vol_usdt": 2310175.02666,
-      "vol_ret": 0.0009432665456471733,
-      "score": 0.03689509608327592
-    },
-    {
-      "sym_ex": "OP/USDT:USDT",
-      "sym": "OPUSDT",
-      "base": "OP",
-      "last": 0.6884,
-      "vol_usdt": 7617579.8296799995,
-      "vol_ret": 0.0009288699873770628,
-      "score": 0.036692898445870696
+      "sym_ex": "CELO/USDT:USDT",
+      "sym": "CELOUSDT",
+      "base": "CELO",
+      "last": 0.2868,
+      "vol_usdt": 2610368.7072,
+      "vol_ret": 0.0008696649087417926,
+      "score": 0.03878643380430263
     },
     {
       "sym_ex": "MOVE/USDT:USDT",
       "sym": "MOVEUSDT",
       "base": "MOVE",
-      "last": 0.1148,
-      "vol_usdt": 3517395.7728,
-      "vol_ret": 0.0009356022316388609,
-      "score": 0.03667543752017414
+      "last": 0.1143,
+      "vol_usdt": 3527188.0434,
+      "vol_ret": 0.000867177308684405,
+      "score": 0.03873754909772546
     },
     {
-      "sym_ex": "UMA/USDT:USDT",
-      "sym": "UMAUSDT",
-      "base": "UMA",
-      "last": 1.3277,
-      "vol_usdt": 2215277.8060600003,
-      "vol_ret": 0.0009378516722506294,
-      "score": 0.036674301398052674
+      "sym_ex": "JUP/USDT:USDT",
+      "sym": "JUPUSDT",
+      "base": "JUP",
+      "last": 0.4782,
+      "vol_usdt": 7881233.328000001,
+      "vol_ret": 0.0008594780645245611,
+      "score": 0.03869114349627586
     },
     {
-      "sym_ex": "CKB/USDT:USDT",
-      "sym": "CKBUSDT",
-      "base": "CKB",
-      "last": 0.004697,
-      "vol_usdt": 2299246.3960295753,
-      "vol_ret": 0.0009370129090902562,
-      "score": 0.03664692992008049
+      "sym_ex": "WLD/USDT:USDT",
+      "sym": "WLDUSDT",
+      "base": "WLD",
+      "last": 0.8666,
+      "vol_usdt": 21846649.7592,
+      "vol_ret": 0.0008364138940710293,
+      "score": 0.03861592325363699
     },
     {
-      "sym_ex": "ALGO/USDT:USDT",
-      "sym": "ALGOUSDT",
-      "base": "ALGO",
-      "last": 0.2265,
-      "vol_usdt": 4588756.7274,
-      "vol_ret": 0.0009307337326681988,
-      "score": 0.03655698457326721
+      "sym_ex": "HOME/USDT:USDT",
+      "sym": "HOMEUSDT",
+      "base": "HOME",
+      "last": 0.0366,
+      "vol_usdt": 2334575.7252,
+      "vol_ret": 0.000865976692004998,
+      "score": 0.03860085234493169
+    },
+    {
+      "sym_ex": "FORM/USDT:USDT",
+      "sym": "FORMUSDT",
+      "base": "FORM",
+      "last": 3.6941,
+      "vol_usdt": 12087152.475912271,
+      "vol_ret": 0.0008494420556889304,
+      "score": 0.038528998613407174
+    },
+    {
+      "sym_ex": "NEO/USDT:USDT",
+      "sym": "NEOUSDT",
+      "base": "NEO",
+      "last": 6.344,
+      "vol_usdt": 5729187.283252785,
+      "vol_ret": 0.0008555644292398672,
+      "score": 0.03836560201041633
+    },
+    {
+      "sym_ex": "IOTA/USDT:USDT",
+      "sym": "IOTAUSDT",
+      "base": "IOTA",
+      "last": 0.1824,
+      "vol_usdt": 2030206.9939200003,
+      "vol_ret": 0.0008601088714446961,
+      "score": 0.03831489612205773
+    },
+    {
+      "sym_ex": "FLOKI/USDT:USDT",
+      "sym": "FLOKIUSDT",
+      "base": "FLOKI",
+      "last": 8.798e-05,
+      "vol_usdt": 7568559.106239559,
+      "vol_ret": 0.0008502945812057601,
+      "score": 0.03825492729959981
+    },
+    {
+      "sym_ex": "ENS/USDT:USDT",
+      "sym": "ENSUSDT",
+      "base": "ENS",
+      "last": 22.049,
+      "vol_usdt": 6147327.347,
+      "vol_ret": 0.0008521907336583828,
+      "score": 0.03824222008840276
+    },
+    {
+      "sym_ex": "GMT/USDT:USDT",
+      "sym": "GMTUSDT",
+      "base": "GMT",
+      "last": 0.04,
+      "vol_usdt": 2287148.48,
+      "vol_ret": 0.0008545205480836623,
+      "score": 0.038080384541894524
+    },
+    {
+      "sym_ex": "DRIFT/USDT:USDT",
+      "sym": "DRIFTUSDT",
+      "base": "DRIFT",
+      "last": 0.5241,
+      "vol_usdt": 1027119.81840297,
+      "vol_ret": 0.0008547664698191242,
+      "score": 0.038004328411405504
+    },
+    {
+      "sym_ex": "SAHARA/USDT:USDT",
+      "sym": "SAHARAUSDT",
+      "base": "SAHARA",
+      "last": 0.09023,
+      "vol_usdt": 8160198.72388,
+      "vol_ret": 0.0008416602334998608,
+      "score": 0.03790605468707393
+    },
+    {
+      "sym_ex": "BLUR/USDT:USDT",
+      "sym": "BLURUSDT",
+      "base": "BLUR",
+      "last": 0.07301,
+      "vol_usdt": 1152567.69236,
+      "vol_ret": 0.0008507695108611533,
+      "score": 0.0378325632870668
+    },
+    {
+      "sym_ex": "OP/USDT:USDT",
+      "sym": "OPUSDT",
+      "base": "OP",
+      "last": 0.6845,
+      "vol_usdt": 7821090.155,
+      "vol_ret": 0.0008389944744217127,
+      "score": 0.03776225239645186
     },
     {
       "sym_ex": "TAO/USDT:USDT",
       "sym": "TAOUSDT",
       "base": "TAO",
-      "last": 313.05,
-      "vol_usdt": 30004183.887940217,
-      "vol_ret": 0.0008849143890743246,
-      "score": 0.036503454248267925
+      "last": 311.94,
+      "vol_usdt": 29156709.80642335,
+      "vol_ret": 0.0008059352184441726,
+      "score": 0.03774561349342661
+    },
+    {
+      "sym_ex": "UMA/USDT:USDT",
+      "sym": "UMAUSDT",
+      "base": "UMA",
+      "last": 1.3234,
+      "vol_usdt": 2202597.3491599998,
+      "vol_ret": 0.0008400168542190129,
+      "score": 0.037419767292057704
     },
     {
       "sym_ex": "RENDER/USDT:USDT",
       "sym": "RENDERUSDT",
       "base": "RENDER",
-      "last": 3.348,
-      "vol_usdt": 9960626.7648,
-      "vol_ret": 0.0009158824217063056,
-      "score": 0.036341257906405
+      "last": 3.335,
+      "vol_usdt": 9497585.752999999,
+      "vol_ret": 0.0008256763344372517,
+      "score": 0.03727697143435487
     },
     {
-      "sym_ex": "ONT/USDT:USDT",
-      "sym": "ONTUSDT",
-      "base": "ONT",
-      "last": 0.1339,
-      "vol_usdt": 1823823.1114999999,
-      "vol_ret": 0.0009264278957195909,
-      "score": 0.03619525223444177
+      "sym_ex": "MOCA/USDT:USDT",
+      "sym": "MOCAUSDT",
+      "base": "MOCA",
+      "last": 0.06499,
+      "vol_usdt": 1309294.0397397561,
+      "vol_ret": 0.0008381446079681299,
+      "score": 0.03727345354488488
+    },
+    {
+      "sym_ex": "DYDX/USDT:USDT",
+      "sym": "DYDXUSDT",
+      "base": "DYDX",
+      "last": 0.5686,
+      "vol_usdt": 3241017.7256,
+      "vol_ret": 0.0008337812464776997,
+      "score": 0.03721009026513232
+    },
+    {
+      "sym_ex": "BIGTIME/USDT:USDT",
+      "sym": "BIGTIMEUSDT",
+      "base": "BIGTIME",
+      "last": 0.05004,
+      "vol_usdt": 1309694.81832,
+      "vol_ret": 0.0008320199869199923,
+      "score": 0.036996985482716516
+    },
+    {
+      "sym_ex": "S/USDT:USDT",
+      "sym": "SUSDT",
+      "base": "S",
+      "last": 0.3002,
+      "vol_usdt": 4827847.020400001,
+      "vol_ret": 0.0008261796195468804,
+      "score": 0.03697667870192089
     },
     {
       "sym_ex": "ONDO/USDT:USDT",
       "sym": "ONDOUSDT",
       "base": "ONDO",
       "last": 0.9073,
-      "vol_usdt": 62496074.46012198,
-      "vol_ret": 0.0008074689482102707,
-      "score": 0.03568853234528547
-    },
-    {
-      "sym_ex": "AIOZ/USDT:USDT",
-      "sym": "AIOZUSDT",
-      "base": "AIOZ",
-      "last": 0.3028,
-      "vol_usdt": 1362329.2968000001,
-      "vol_ret": 0.0009130285708778526,
-      "score": 0.035633197422762004
-    },
-    {
-      "sym_ex": "AVAX/USDT:USDT",
-      "sym": "AVAXUSDT",
-      "base": "AVAX",
-      "last": 24.395,
-      "vol_usdt": 78395308.2798361,
-      "vol_ret": 0.0007782321906700538,
-      "score": 0.03563236152959445
+      "vol_usdt": 61429530.381468974,
+      "vol_ret": 0.0007385950981828082,
+      "score": 0.036937910476267995
     },
     {
       "sym_ex": "NEAR/USDT:USDT",
       "sym": "NEARUSDT",
       "base": "NEAR",
-      "last": 2.375,
-      "vol_usdt": 20232344.75,
-      "vol_ret": 0.0008764577498802656,
-      "score": 0.0354925033315571
+      "last": 2.369,
+      "vol_usdt": 20341423.238,
+      "vol_ret": 0.000801361489094747,
+      "score": 0.03692936476411739
     },
     {
-      "sym_ex": "ACH/USDT:USDT",
-      "sym": "ACHUSDT",
-      "base": "ACH",
-      "last": 0.019201,
-      "vol_usdt": 2930449.093208,
-      "vol_ret": 0.000901507670663229,
-      "score": 0.03528594316222815
-    },
-    {
-      "sym_ex": "FIL/USDT:USDT",
-      "sym": "FILUSDT",
-      "base": "FIL",
-      "last": 2.246,
-      "vol_usdt": 16354322.6688,
-      "vol_ret": 0.0008763851240230762,
-      "score": 0.03522120205649182
-    },
-    {
-      "sym_ex": "AXL/USDT:USDT",
-      "sym": "AXLUSDT",
-      "base": "AXL",
-      "last": 0.2895,
-      "vol_usdt": 1185146.994,
-      "vol_ret": 0.0008968825210532765,
-      "score": 0.03498215461779275
-    },
-    {
-      "sym_ex": "THETA/USDT:USDT",
-      "sym": "THETAUSDT",
-      "base": "THETA",
-      "last": 0.7591,
-      "vol_usdt": 1640612.466,
-      "vol_ret": 0.0008886692348969577,
-      "score": 0.03468874250734621
-    },
-    {
-      "sym_ex": "KAIA/USDT:USDT",
-      "sym": "KAIAUSDT",
-      "base": "KAIA",
-      "last": 0.1443,
-      "vol_usdt": 1743258.2278800001,
-      "vol_ret": 0.0008881600651765168,
-      "score": 0.034675703373044056
+      "sym_ex": "MBOX/USDT:USDT",
+      "sym": "MBOXUSDT",
+      "base": "MBOX",
+      "last": 0.05377,
+      "vol_usdt": 1003363.2555999999,
+      "vol_ret": 0.0008277670314897025,
+      "score": 0.03678379651254124
     },
     {
       "sym_ex": "LAYER/USDT:USDT",
       "sym": "LAYERUSDT",
       "base": "LAYER",
-      "last": 0.4974,
-      "vol_usdt": 3210507.6940800003,
-      "vol_ret": 0.000883740869708823,
-      "score": 0.034602428528221235
+      "last": 0.4956,
+      "vol_usdt": 3229593.06096,
+      "vol_ret": 0.0008165280512499677,
+      "score": 0.036430405158762974
     },
     {
-      "sym_ex": "VET/USDT:USDT",
-      "sym": "VETUSDT",
-      "base": "VET",
-      "last": 0.02311,
-      "vol_usdt": 9251971.794499999,
-      "vol_ret": 0.0008708786942366762,
-      "score": 0.034511744904416025
+      "sym_ex": "ORCA/USDT:USDT",
+      "sym": "ORCAUSDT",
+      "base": "ORCA",
+      "last": 2.182,
+      "vol_usdt": 1037486.8864,
+      "vol_ret": 0.0008122563758027296,
+      "score": 0.03608592893819754
     },
     {
-      "sym_ex": "EGLD/USDT:USDT",
-      "sym": "EGLDUSDT",
-      "base": "EGLD",
-      "last": 13.74,
-      "vol_usdt": 1548789.288,
-      "vol_ret": 0.0008813458133136025,
-      "score": 0.034392653598270186
+      "sym_ex": "STX/USDT:USDT",
+      "sym": "STXUSDT",
+      "base": "STX",
+      "last": 0.6055,
+      "vol_usdt": 6809975.3043,
+      "vol_ret": 0.0008023268853892593,
+      "score": 0.03603695500213397
     },
     {
-      "sym_ex": "S/USDT:USDT",
-      "sym": "SUSDT",
-      "base": "S",
-      "last": 0.3005,
-      "vol_usdt": 4724101.001,
-      "vol_ret": 0.0008753654013741856,
-      "score": 0.03437584132123458
+      "sym_ex": "THETA/USDT:USDT",
+      "sym": "THETAUSDT",
+      "base": "THETA",
+      "last": 0.7545,
+      "vol_usdt": 1665133.2119999998,
+      "vol_ret": 0.0008066327588702215,
+      "score": 0.035875466295422834
     },
     {
-      "sym_ex": "GRT/USDT:USDT",
-      "sym": "GRTUSDT",
-      "base": "GRT",
-      "last": 0.08655,
-      "vol_usdt": 2262702.37266,
-      "vol_ret": 0.0008725070538615876,
-      "score": 0.03409238534492546
+      "sym_ex": "ONT/USDT:USDT",
+      "sym": "ONTUSDT",
+      "base": "ONT",
+      "last": 0.1334,
+      "vol_usdt": 1817134.96676,
+      "vol_ret": 0.0008021423725762977,
+      "score": 0.03568326218840833
     },
     {
-      "sym_ex": "DOT/USDT:USDT",
-      "sym": "DOTUSDT",
-      "base": "DOT",
-      "last": 3.756,
-      "vol_usdt": 25695817.632,
-      "vol_ret": 0.0008308609920331362,
-      "score": 0.03406674942618626
+      "sym_ex": "1MBABYDOGE/USDT:USDT",
+      "sym": "1MBABYDOGEUSDT",
+      "base": "1MBABYDOGE",
+      "last": 0.0011397,
+      "vol_usdt": 2595251.2518504,
+      "vol_ret": 0.0007932065486476016,
+      "score": 0.03533367834148134
     },
     {
-      "sym_ex": "XLM/USDT:USDT",
-      "sym": "XLMUSDT",
-      "base": "XLM",
-      "last": 0.35391,
-      "vol_usdt": 29396534.70816,
-      "vol_ret": 0.0008095473193144625,
-      "score": 0.03347968188461546
+      "sym_ex": "HBAR/USDT:USDT",
+      "sym": "HBARUSDT",
+      "base": "HBAR",
+      "last": 0.21168,
+      "vol_usdt": 42455851.87090061,
+      "vol_ret": 0.0007319645210283318,
+      "score": 0.03532613272849947
     },
     {
       "sym_ex": "STRK/USDT:USDT",
       "sym": "STRKUSDT",
       "base": "STRK",
-      "last": 0.12,
-      "vol_usdt": 2278971.336,
-      "vol_ret": 0.0008535231644353391,
-      "score": 0.03334246067854758
+      "last": 0.1193,
+      "vol_usdt": 2409591.2648199997,
+      "vol_ret": 0.0007894712001890323,
+      "score": 0.03515220377003926
     },
     {
-      "sym_ex": "AERGO/USDT:USDT",
-      "sym": "AERGOUSDT",
-      "base": "AERGO",
-      "last": 0.10716,
-      "vol_usdt": 2643462.9578400003,
-      "vol_ret": 0.0008524481515247641,
-      "score": 0.033325159738490914
+      "sym_ex": "CKB/USDT:USDT",
+      "sym": "CKBUSDT",
+      "base": "CKB",
+      "last": 0.004675,
+      "vol_usdt": 2294176.03324767,
+      "vol_ret": 0.0007896228824061358,
+      "score": 0.03515106799630466
     },
     {
-      "sym_ex": "FORM/USDT:USDT",
-      "sym": "FORMUSDT",
-      "base": "FORM",
-      "last": 3.6889,
-      "vol_usdt": 12045501.81570936,
-      "vol_ret": 0.0008328111163254968,
-      "score": 0.03319905696362055
+      "sym_ex": "VET/USDT:USDT",
+      "sym": "VETUSDT",
+      "base": "VET",
+      "last": 0.023044,
+      "vol_usdt": 9146233.331144,
+      "vol_ret": 0.0007735574534112649,
+      "score": 0.034899762903521946
     },
     {
-      "sym_ex": "HOME/USDT:USDT",
-      "sym": "HOMEUSDT",
-      "base": "HOME",
-      "last": 0.03667,
-      "vol_usdt": 2193444.87262,
-      "vol_ret": 0.0008390584025869275,
-      "score": 0.03276427809815308
-    },
-    {
-      "sym_ex": "KMNO/USDT:USDT",
-      "sym": "KMNOUSDT",
-      "base": "KMNO",
-      "last": 0.05381,
-      "vol_usdt": 1094617.0106,
-      "vol_ret": 0.0008382213975202597,
-      "score": 0.03265510565069506
+      "sym_ex": "ALGO/USDT:USDT",
+      "sym": "ALGOUSDT",
+      "base": "ALGO",
+      "last": 0.226,
+      "vol_usdt": 4559553.796800001,
+      "vol_ret": 0.0007801514398199712,
+      "score": 0.03488017999153645
     },
     {
       "sym_ex": "RUNE/USDT:USDT",
       "sym": "RUNEUSDT",
       "base": "RUNE",
-      "last": 1.174,
-      "vol_usdt": 1028642.1292,
-      "vol_ret": 0.0008375847329788389,
-      "score": 0.032625350954553295
+      "last": 1.17,
+      "vol_usdt": 1001778.336,
+      "vol_ret": 0.0007837655704444879,
+      "score": 0.03479724259277233
     },
     {
-      "sym_ex": "SAND/USDT:USDT",
-      "sym": "SANDUSDT",
-      "base": "SAND",
-      "last": 0.27186,
-      "vol_usdt": 6899866.065479999,
-      "vol_ret": 0.0008248873807170967,
-      "score": 0.03252940451130323
+      "sym_ex": "XLM/USDT:USDT",
+      "sym": "XLMUSDT",
+      "base": "XLM",
+      "last": 0.35271,
+      "vol_usdt": 28801126.89738,
+      "vol_ret": 0.0007392978743565304,
+      "score": 0.03471267686913531
+    },
+    {
+      "sym_ex": "FIL/USDT:USDT",
+      "sym": "FILUSDT",
+      "base": "FIL",
+      "last": 2.239,
+      "vol_usdt": 16105863.631,
+      "vol_ret": 0.0007585320278765149,
+      "score": 0.03470284972918791
+    },
+    {
+      "sym_ex": "ACH/USDT:USDT",
+      "sym": "ACHUSDT",
+      "base": "ACH",
+      "last": 0.019176,
+      "vol_usdt": 2877979.4504159996,
+      "vol_ret": 0.0007766961236543014,
+      "score": 0.034607872607187715
+    },
+    {
+      "sym_ex": "KAIA/USDT:USDT",
+      "sym": "KAIAUSDT",
+      "base": "KAIA",
+      "last": 0.144,
+      "vol_usdt": 1731513.1967999998,
+      "vol_ret": 0.0007756008941009336,
+      "score": 0.034479125551491574
+    },
+    {
+      "sym_ex": "AERGO/USDT:USDT",
+      "sym": "AERGOUSDT",
+      "base": "AERGO",
+      "last": 0.10681,
+      "vol_usdt": 2638834.4019400002,
+      "vol_ret": 0.0007737110933357776,
+      "score": 0.03445657146989571
+    },
+    {
+      "sym_ex": "DOT/USDT:USDT",
+      "sym": "DOTUSDT",
+      "base": "DOT",
+      "last": 3.746,
+      "vol_usdt": 25719294.292,
+      "vol_ret": 0.0007363638389137918,
+      "score": 0.03436704451310979
+    },
+    {
+      "sym_ex": "GRT/USDT:USDT",
+      "sym": "GRTUSDT",
+      "base": "GRT",
+      "last": 0.08636,
+      "vol_usdt": 2263875.290376,
+      "vol_ret": 0.0007596966928553155,
+      "score": 0.033797955352957
+    },
+    {
+      "sym_ex": "EGLD/USDT:USDT",
+      "sym": "EGLDUSDT",
+      "base": "EGLD",
+      "last": 13.69,
+      "vol_usdt": 1532302.534,
+      "vol_ret": 0.0007586292832180519,
+      "score": 0.033699163092886904
     },
     {
       "sym_ex": "FET/USDT:USDT",
       "sym": "FETUSDT",
       "base": "FET",
-      "last": 0.5934,
-      "vol_usdt": 15495811.426800001,
-      "vol_ret": 0.0008083262231437745,
-      "score": 0.03246919526070925
+      "last": 0.5917,
+      "vol_usdt": 14187329.3578,
+      "vol_ret": 0.0007313151620413461,
+      "score": 0.033341437178739976
     },
     {
       "sym_ex": "XTZ/USDT:USDT",
       "sym": "XTZUSDT",
       "base": "XTZ",
-      "last": 0.7055,
-      "vol_usdt": 1867014.0350000001,
-      "vol_ret": 0.0008306979891965845,
-      "score": 0.03241092414832382
+      "last": 0.7017,
+      "vol_usdt": 1874404.8978,
+      "vol_ret": 0.0007482658831700502,
+      "score": 0.03325497157516655
     },
     {
-      "sym_ex": "COMP/USDT:USDT",
-      "sym": "COMPUSDT",
-      "base": "COMP",
-      "last": 41.83,
-      "vol_usdt": 1924929.5935999998,
-      "vol_ret": 0.0008255520687417951,
-      "score": 0.032211347281644064
-    },
-    {
-      "sym_ex": "SHIB/USDT:USDT",
-      "sym": "SHIBUSDT",
-      "base": "SHIB",
-      "last": 1.2082e-05,
-      "vol_usdt": 7735535.5378,
-      "vol_ret": 0.0008134745300841384,
-      "score": 0.032135726393282264
-    },
-    {
-      "sym_ex": "BCH/USDT:USDT",
-      "sym": "BCHUSDT",
-      "base": "BCH",
-      "last": 585.73,
-      "vol_usdt": 62252087.276,
-      "vol_ret": 0.0007090314043625312,
-      "score": 0.03177720543980868
-    },
-    {
-      "sym_ex": "WAL/USDT:USDT",
-      "sym": "WALUSDT",
-      "base": "WAL",
-      "last": 0.4065,
-      "vol_usdt": 2294975.0519712,
-      "vol_ret": 0.000811881438665163,
-      "score": 0.03169611623550405
-    },
-    {
-      "sym_ex": "APE/USDT:USDT",
-      "sym": "APEUSDT",
-      "base": "APE",
-      "last": 0.5617,
-      "vol_usdt": 7512340.378099999,
-      "vol_ret": 0.0008002810088562997,
-      "score": 0.0315983081937912
+      "sym_ex": "AXL/USDT:USDT",
+      "sym": "AXLUSDT",
+      "base": "AXL",
+      "last": 0.2888,
+      "vol_usdt": 1176464.9216,
+      "vol_ret": 0.0007466150428623346,
+      "score": 0.033132166794431074
     },
     {
       "sym_ex": "BNT/USDT:USDT",
       "sym": "BNTUSDT",
       "base": "BNT",
-      "last": 0.7268,
-      "vol_usdt": 1007953.8584,
-      "vol_ret": 0.0008025535908517956,
-      "score": 0.031237998213283984
-    },
-    {
-      "sym_ex": "ATOM/USDT:USDT",
-      "sym": "ATOMUSDT",
-      "base": "ATOM",
-      "last": 4.386,
-      "vol_usdt": 2881742.352,
-      "vol_ret": 0.000787769081175035,
-      "score": 0.030782784996346273
+      "last": 0.7239,
+      "vol_usdt": 1001650.2954,
+      "vol_ret": 0.0007422475674238056,
+      "score": 0.03292290506595077
     },
     {
       "sym_ex": "TRUMP/USDT:USDT",
       "sym": "TRUMPUSDT",
       "base": "TRUMP",
-      "last": 8.253,
-      "vol_usdt": 19343584.78742718,
-      "vol_ret": 0.0007540923908678654,
-      "score": 0.030589901700017897
+      "last": 8.25,
+      "vol_usdt": 19416664.2267675,
+      "vol_ret": 0.0007118537664910424,
+      "score": 0.03282457492157394
     },
     {
-      "sym_ex": "TAIKO/USDT:USDT",
-      "sym": "TAIKOUSDT",
-      "base": "TAIKO",
-      "last": 0.3937,
-      "vol_usdt": 1522708.28382931,
-      "vol_ret": 0.0007733157260364931,
-      "score": 0.03011690434712115
+      "sym_ex": "COMP/USDT:USDT",
+      "sym": "COMPUSDT",
+      "base": "COMP",
+      "last": 41.73,
+      "vol_usdt": 1924146.0965999998,
+      "vol_ret": 0.0007382270311468114,
+      "score": 0.03280520866237458
     },
     {
-      "sym_ex": "PI/USDT:USDT",
-      "sym": "PIUSDT",
-      "base": "PI",
-      "last": 0.3419,
-      "vol_usdt": 27738972.97322216,
-      "vol_ret": 0.0007259447742605029,
-      "score": 0.030057420652955892
+      "sym_ex": "KMNO/USDT:USDT",
+      "sym": "KMNOUSDT",
+      "base": "KMNO",
+      "last": 0.05359,
+      "vol_usdt": 1101128.7352,
+      "vol_ret": 0.0007291424283259396,
+      "score": 0.03233815514647492
     },
     {
-      "sym_ex": "APT/USDT:USDT",
-      "sym": "APTUSDT",
-      "base": "APT",
-      "last": 4.2217,
-      "vol_usdt": 14949586.891423801,
-      "vol_ret": 0.0007393274461689598,
-      "score": 0.02970162037225456
+      "sym_ex": "SHIB/USDT:USDT",
+      "sym": "SHIBUSDT",
+      "base": "SHIB",
+      "last": 1.2044e-05,
+      "vol_usdt": 7894714.57448,
+      "vol_ret": 0.0007167351520002258,
+      "score": 0.032247952649951075
     },
     {
-      "sym_ex": "ETC/USDT:USDT",
-      "sym": "ETCUSDT",
-      "base": "ETC",
-      "last": 20.175,
-      "vol_usdt": 13997858.85,
-      "vol_ret": 0.000728071332477402,
-      "score": 0.029190423507836145
+      "sym_ex": "WAL/USDT:USDT",
+      "sym": "WALUSDT",
+      "base": "WAL",
+      "last": 0.4057,
+      "vol_usdt": 2291689.74846387,
+      "vol_ret": 0.0007234574138528993,
+      "score": 0.03216385845017915
     },
     {
-      "sym_ex": "UXLINK/USDT:USDT",
-      "sym": "UXLINKUSDT",
-      "base": "UXLINK",
-      "last": 0.3095,
-      "vol_usdt": 2024395.2415,
-      "vol_ret": 0.0007453542710816677,
-      "score": 0.029045403988360113
+      "sym_ex": "SAND/USDT:USDT",
+      "sym": "SANDUSDT",
+      "base": "SAND",
+      "last": 0.27069,
+      "vol_usdt": 6951598.0106999995,
+      "vol_ret": 0.0007112720134810725,
+      "score": 0.03193608254281282
+    },
+    {
+      "sym_ex": "APE/USDT:USDT",
+      "sym": "APEUSDT",
+      "base": "APE",
+      "last": 0.5596,
+      "vol_usdt": 7547777.692559999,
+      "vol_ret": 0.0006991455611814015,
+      "score": 0.03142987304470684
+    },
+    {
+      "sym_ex": "BCH/USDT:USDT",
+      "sym": "BCHUSDT",
+      "base": "BCH",
+      "last": 584.64,
+      "vol_usdt": 61897766.112,
+      "vol_ret": 0.000610890682995276,
+      "score": 0.03120508813792409
     },
     {
       "sym_ex": "SUN/USDT:USDT",
       "sym": "SUNUSDT",
       "base": "SUN",
-      "last": 0.021768,
-      "vol_usdt": 1002530.8996799999,
-      "vol_ret": 0.000741274684138795,
-      "score": 0.0288132740284104
+      "last": 0.021759,
+      "vol_usdt": 1001004.95262,
+      "vol_ret": 0.0006960017222792809,
+      "score": 0.0308350935033079
+    },
+    {
+      "sym_ex": "ATOM/USDT:USDT",
+      "sym": "ATOMUSDT",
+      "base": "ATOM",
+      "last": 4.37,
+      "vol_usdt": 2902475.34,
+      "vol_ret": 0.0006841741376166068,
+      "score": 0.03043266548135508
     },
     {
       "sym_ex": "CAKE/USDT:USDT",
       "sym": "CAKEUSDT",
       "base": "CAKE",
-      "last": 2.347,
-      "vol_usdt": 2693956.0712,
-      "vol_ret": 0.0007200125981227193,
-      "score": 0.028089168697270562
+      "last": 2.3383,
+      "vol_usdt": 2694872.0436,
+      "vol_ret": 0.0006773878079836691,
+      "score": 0.03011193662578203
     },
     {
-      "sym_ex": "LTC/USDT:USDT",
-      "sym": "LTCUSDT",
-      "base": "LTC",
-      "last": 110.01,
-      "vol_usdt": 34027596.6254808,
-      "vol_ret": 0.0006624191448494869,
-      "score": 0.027979470250034208
+      "sym_ex": "TAIKO/USDT:USDT",
+      "sym": "TAIKOUSDT",
+      "base": "TAIKO",
+      "last": 0.392,
+      "vol_usdt": 1512346.2195968002,
+      "vol_ret": 0.0006736891850089354,
+      "score": 0.029863165173045204
+    },
+    {
+      "sym_ex": "PI/USDT:USDT",
+      "sym": "PIUSDT",
+      "base": "PI",
+      "last": 0.3415,
+      "vol_usdt": 27743351.145338252,
+      "vol_ret": 0.0006219299174099602,
+      "score": 0.02934093681790906
+    },
+    {
+      "sym_ex": "APT/USDT:USDT",
+      "sym": "APTUSDT",
+      "base": "APT",
+      "last": 4.2148,
+      "vol_usdt": 13409459.790408,
+      "vol_ret": 0.000643039365911409,
+      "score": 0.02930242319485198
+    },
+    {
+      "sym_ex": "UXLINK/USDT:USDT",
+      "sym": "UXLINKUSDT",
+      "base": "UXLINK",
+      "last": 0.3089,
+      "vol_usdt": 2010603.2874800002,
+      "vol_ret": 0.0006536501814375751,
+      "score": 0.02899297037970115
     },
     {
       "sym_ex": "A/USDT:USDT",
       "sym": "AUSDT",
       "base": "A",
-      "last": 0.4731,
-      "vol_usdt": 1130152.6344,
-      "vol_ret": 0.0006983483561793114,
-      "score": 0.027123833417330264
-    },
-    {
-      "sym_ex": "BADGER/USDT:USDT",
-      "sym": "BADGERUSDT",
-      "base": "BADGER",
-      "last": 0.8798,
-      "vol_usdt": 1142068.3800000001,
-      "vol_ret": 0.0006813337042949683,
-      "score": 0.026451515457827805
+      "last": 0.46952,
+      "vol_usdt": 1169843.82448,
+      "vol_ret": 0.0006483207631905848,
+      "score": 0.0286942172784247
     },
     {
       "sym_ex": "FUN/USDT:USDT",
       "sym": "FUNUSDT",
       "base": "FUN",
-      "last": 0.009318,
-      "vol_usdt": 1344758.7095664002,
-      "vol_ret": 0.0006758317920824731,
-      "score": 0.0262478756409318
+      "last": 0.009324,
+      "vol_usdt": 1358255.2207644,
+      "vol_ret": 0.0006379941821844754,
+      "score": 0.02824105689758721
     },
     {
       "sym_ex": "TUT/USDT:USDT",
       "sym": "TUTUSDT",
       "base": "TUT",
-      "last": 0.06769,
-      "vol_usdt": 6048360.0338322,
-      "vol_ret": 0.0006592715435167331,
-      "score": 0.02591828300710602
+      "last": 0.06773,
+      "vol_usdt": 5133571.8917145,
+      "vol_ret": 0.0006270398597903495,
+      "score": 0.028007669301414944
     },
     {
-      "sym_ex": "BSV/USDT:USDT",
-      "sym": "BSVUSDT",
-      "base": "BSV",
-      "last": 25.45,
-      "vol_usdt": 1028988.85920415,
-      "vol_ret": 0.0006652723748634718,
-      "score": 0.02580826145742842
+      "sym_ex": "ETC/USDT:USDT",
+      "sym": "ETCUSDT",
+      "base": "ETC",
+      "last": 20.123,
+      "vol_usdt": 13934171.350000001,
+      "vol_ret": 0.0006128827770932316,
+      "score": 0.027977300300442074
     },
     {
       "sym_ex": "PROM/USDT:USDT",
       "sym": "PROMUSDT",
       "base": "PROM",
-      "last": 9.0634,
-      "vol_usdt": 1004141.33672,
-      "vol_ret": 0.0006513928461258049,
-      "score": 0.025257432242306654
+      "last": 9.071,
+      "vol_usdt": 1013239.771,
+      "vol_ret": 0.0006278000621594579,
+      "score": 0.02775697844917032
+    },
+    {
+      "sym_ex": "LTC/USDT:USDT",
+      "sym": "LTCUSDT",
+      "base": "LTC",
+      "last": 109.76,
+      "vol_usdt": 34071898.7700224,
+      "vol_ret": 0.0005748501632506669,
+      "score": 0.027653279166746536
+    },
+    {
+      "sym_ex": "BADGER/USDT:USDT",
+      "sym": "BADGERUSDT",
+      "base": "BADGER",
+      "last": 0.8783,
+      "vol_usdt": 1094180.8702,
+      "vol_ret": 0.0005988427735578116,
+      "score": 0.026455301583827657
     },
     {
       "sym_ex": "CTC/USDT:USDT",
       "sym": "CTCUSDT",
       "base": "CTC",
-      "last": 0.5936,
-      "vol_usdt": 1089168.1472,
-      "vol_ret": 0.0006398437017392658,
-      "score": 0.024806404192414814
+      "last": 0.5911,
+      "vol_usdt": 1080072.1064,
+      "vol_ret": 0.0005879199348392885,
+      "score": 0.02596121451816018
+    },
+    {
+      "sym_ex": "DEXE/USDT:USDT",
+      "sym": "DEXEUSDT",
+      "base": "DEXE",
+      "last": 7.273,
+      "vol_usdt": 1046472.21338191,
+      "vol_ret": 0.0005696394359745539,
+      "score": 0.025133617931030864
     },
     {
       "sym_ex": "TON/USDT:USDT",
       "sym": "TONUSDT",
       "base": "TON",
-      "last": 3.1037,
-      "vol_usdt": 17165690.69808,
-      "vol_ret": 0.0005779337519436242,
-      "score": 0.023469870632156872
+      "last": 3.0958,
+      "vol_usdt": 16604003.194279999,
+      "vol_ret": 0.0005106030793785156,
+      "score": 0.023544563896508962
+    },
+    {
+      "sym_ex": "BSV/USDT:USDT",
+      "sym": "BSVUSDT",
+      "base": "BSV",
+      "last": 25.33,
+      "vol_usdt": 1020219.52034669,
+      "vol_ret": 0.0005271122272674712,
+      "score": 0.02321191276657505
     },
     {
       "sym_ex": "QNT/USDT:USDT",
       "sym": "QNTUSDT",
       "base": "QNT",
       "last": 100.42,
-      "vol_usdt": 1383231.2732,
-      "vol_ret": 0.0005677955587996311,
-      "score": 0.0219763514917603
+      "vol_usdt": 1378541.6592,
+      "vol_ret": 0.000519607377188926,
+      "score": 0.02289789232725021
     },
     {
       "sym_ex": "KAVA/USDT:USDT",
       "sym": "KAVAUSDT",
       "base": "KAVA",
-      "last": 0.3688,
-      "vol_usdt": 2735624.30432,
-      "vol_ret": 0.0005289199860821945,
-      "score": 0.02053194495092144
-    },
-    {
-      "sym_ex": "DEXE/USDT:USDT",
-      "sym": "DEXEUSDT",
-      "base": "DEXE",
-      "last": 7.288,
-      "vol_usdt": 1049942.12461096,
-      "vol_ret": 0.0005207866815693978,
-      "score": 0.02009349166690644
+      "last": 0.368,
+      "vol_usdt": 2773112.2816,
+      "vol_ret": 0.0005170133918181183,
+      "score": 0.02287725170310223
     },
     {
       "sym_ex": "BNB/USDT:USDT",
       "sym": "BNBUSDT",
       "base": "BNB",
-      "last": 844.17,
-      "vol_usdt": 49324329.7146,
-      "vol_ret": 0.0004178658533757403,
-      "score": 0.01936312802417981
+      "last": 843.19,
+      "vol_usdt": 49912227.3188,
+      "vol_ret": 0.00037648962329608806,
+      "score": 0.019794001737828366
     },
     {
       "sym_ex": "TRX/USDT:USDT",
       "sym": "TRXUSDT",
       "base": "TRX",
-      "last": 0.3346,
-      "vol_usdt": 12033192.3628,
-      "vol_ret": 0.0004231321413340682,
-      "score": 0.016990266623925127
+      "last": 0.33433,
+      "vol_usdt": 13845719.287560001,
+      "vol_ret": 0.00040940972285445295,
+      "score": 0.01878539861730704
     },
     {
       "sym_ex": "XAUT/USDT:USDT",
       "sym": "XAUTUSDT",
       "base": "XAUT",
-      "last": 3545.7,
-      "vol_usdt": 19465963.914,
-      "vol_ret": 0.00025956780809361995,
-      "score": 0.011033726974350988
+      "last": 3546.9,
+      "vol_usdt": 18550996.38,
+      "vol_ret": 0.0002079242848955969,
+      "score": 0.010014817936996595
     },
     {
       "sym_ex": "PAXG/USDT:USDT",
       "sym": "PAXGUSDT",
       "base": "PAXG",
-      "last": 3550.06,
-      "vol_usdt": 10776498.234919999,
-      "vol_ret": 0.00024008024347180578,
-      "score": 0.009661284166465662
+      "last": 3552.81,
+      "vol_usdt": 10612932.71514,
+      "vol_ret": 0.0001885179185228932,
+      "score": 0.008589629325528515
     },
     {
       "sym_ex": "USDC/USDT:USDT",
       "sym": "USDCUSDT",
       "base": "USDC",
       "last": 0.999,
-      "vol_usdt": 1992070.935,
-      "vol_ret": 1.2977701105648587e-05,
-      "score": 6.849374733966975e-05
+      "vol_usdt": 2024377.596,
+      "vol_ret": 1.2977701105648599e-05,
+      "score": 7.078837132634714e-05
     }
   ],
-  "ts": 1757008813
+  "ts": 1757010626
 }
