@@ -1,16 +1,104 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 from __future__ import annotations
-import os, time, logging
-from typing import List, Dict, Any, Optional
+import os, time, json, logging
+from typing import List, Dict, Any, Optional, Iterable
 
 from engine.signals.strategy_bridge import evaluate_for
 from engine.strategies.runner import load_strategies
 from engine.utils.signal_sink import append_signal
-from engine.utils.signal_sink_factored import append_signal_factored   # <-- NEW
-from tools.load_pairs import load_pairs  # pairs.txt
+from tools.load_pairs import load_pairs  # ← pairs.txt
 
 LOG = logging.getLogger("pipeline")
 
+REPORTS_DIR = "/opt/scalp/reports"
+
+def _as_float(x) -> Optional[float]:
+    try:
+        return float(x)
+    except Exception:
+        return None
+
+def _normalize_ohlcv_from_any(data: Iterable) -> List[List[float]]:
+    """
+    Rend une liste de [ts, o, h, l, c, v] (ou proche),
+    à partir de différents formats possibles (list de list, list de dict, etc.).
+    On ne garde que ts et close si besoin (les autres champs peuvent rester 0.0).
+    """
+    out: List[List[float]] = []
+    for row in data:
+        ts: Optional[float] = None
+        close: Optional[float] = None
+        o = h = l = v = None
+
+        if isinstance(row, dict):
+            # tolère plusieurs conventions
+            ts = _as_float(row.get("ts") or row.get("time") or row.get("t"))
+            close = _as_float(row.get("close") or row.get("c"))
+            o = _as_float(row.get("open") or row.get("o"))
+            h = _as_float(row.get("high") or row.get("h"))
+            l = _as_float(row.get("low") or row.get("l"))
+            v = _as_float(row.get("volume") or row.get("v"))
+        elif isinstance(row, (list, tuple)) and len(row) >= 5:
+            # [ts, open, high, low, close, (volume...)]
+            ts = _as_float(row[0])
+            o  = _as_float(row[1])
+            h  = _as_float(row[2])
+            l  = _as_float(row[3])
+            close = _as_float(row[4])
+            if len(row) >= 6:
+                v = _as_float(row[5])
+
+        if ts is None or close is None:
+            continue
+
+        out.append([
+            ts,
+            o if o is not None else 0.0,
+            h if h is not None else 0.0,
+            l if l is not None else 0.0,
+            close,
+            v if v is not None else 0.0,
+        ])
+
+    # tri par timestamp au cas où
+    out.sort(key=lambda r: r[0])
+    return out
+
+def _load_local_ohlcv(symbol: str, tf: str, limit: int = 300) -> Optional[List[List[float]]]:
+    """
+    Charge /opt/scalp/reports/{SYMBOL}_{tf}.json (tolérant aux formats)
+    et renvoie une liste normalisée de bougies.
+    """
+    path = os.path.join(REPORTS_DIR, f"{symbol.upper()}_{tf}.json")
+    if not os.path.exists(path):
+        return None
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            raw = json.load(f)
+        # quelques structures courantes : liste brute, {"candles":[...]}, {"data":[...]}
+        if isinstance(raw, dict):
+            for k in ("candles", "data", "klines", "rows"):
+                if k in raw and isinstance(raw[k], list):
+                    raw = raw[k]
+                    break
+        if not isinstance(raw, list):
+            return None
+        ohlcv = _normalize_ohlcv_from_any(raw)
+        if not ohlcv:
+            return None
+        return ohlcv[-limit:]
+    except Exception as e:
+        LOG.warning("load ohlcv local failed %s %s: %s", symbol, tf, e)
+        return None
+
 class PipelineScheduler:
+    """
+    Boucle principale : évalue (symbol × tf), écrit les signaux CSV,
+    et recharge la watchlist depuis pairs.txt toutes les N secondes.
+    """
+
     def __init__(
         self,
         symbols: Optional[List[str]] = None,
@@ -40,47 +128,32 @@ class PipelineScheduler:
             return
         self._last_reload = now
         new_pairs = load_pairs()
-        if new_pairs and new_pairs != self.symbols:
-            self.log.info("Watchlist mise à jour (%d → %d)", len(self.symbols), len(new_pairs))
-            self.log.debug("Anciennes: %s", self.symbols)
-            self.log.debug("Nouvelles: %s", new_pairs)
+        if not new_pairs:
+            return
+        if new_pairs != self.symbols:
+            self.log.info("Watchlist mise à jour (%d → %d paires)", len(self.symbols), len(new_pairs))
             self.symbols = new_pairs
 
-    def _eval_once(self, symbol: str, tf: str, ohlcv: Optional[List[List[float]]] = None) -> Dict[str, Any]:
+    def _eval_once(self, symbol: str, tf: str) -> Dict[str, Any]:
+        # ← NOUVEAU : on charge l’ohlcv local et on le passe au bridge
+        ohlcv = _load_local_ohlcv(symbol, tf)
         res = evaluate_for(symbol=symbol, tf=tf,
                            strategies=self._STRATS, config=self._CFG,
                            ohlcv=ohlcv, logger=self.log)
 
         sig = res.get("combined", "HOLD")
-        items = res.get("items", [])
-
-        # details (legacy)
-        details = ";".join(f"{i.get('name')}={i.get('signal')}" for i in items)[:512]
-
-        # 1) CSV legacy
         try:
-            append_signal({"symbol": symbol, "tf": tf, "signal": sig, "details": details})
-        except Exception as e:
-            self.log.error("append_signal failed: %s", e, exc_info=True)
+            items   = res.get("items", [])
+            details = ";".join(f"{i.get('name')}={i.get('signal')}" for i in items)[:512]
 
-        # 2) CSV factorisé
-        try:
-            # On tente de récupérer des valeurs brutes si elles existent dans res
-            # (sinon append_signal_factored posera des valeurs par défaut)
-            facts = {
+            # S'il y a des métriques, on les conserve côté sink (signal_sink_factored.py)
+            metrics = res.get("metrics") or {}
+            append_signal({
                 "symbol": symbol, "tf": tf, "signal": sig, "details": details,
-                "ts": res.get("ts") or int(time.time()),
-                "rsi_value": res.get("rsi", {}).get("value"),
-                "ema_gap":   res.get("ema", {}).get("gap"),
-                "sma_cross_fast": next((i.get("signal","") for i in items if i.get("name")=="sma_cross_fast"), ""),
-                "rsi_factor": res.get("rsi", {}).get("factor"),
-                "ema_factor": res.get("ema", {}).get("factor"),
-                "sma_factor": res.get("sma", {}).get("factor"),
-                "score":      res.get("score"),
-            }
-            append_signal_factored(facts)
-        except Exception as e:
-            self.log.error("append_signal_factored failed: %s", e, exc_info=True)
+                "metrics": metrics
+            })
+        except Exception:
+            pass
 
         self.log.info("pipe-%s-%s sig=%s", symbol, tf, sig)
         return res
