@@ -46,7 +46,11 @@ document.getElementById("tabs").addEventListener("click",(ev)=>{
 // ==== Data grid =======================================================
 function renderDataGrid(payload){
   const root = $("#data-root");
-  const syms = payload.symbols || {};
+  if(!payload || !payload.symbols){
+    root.innerHTML = '<div class="err">Pas de données reçues</div>';
+    return;
+  }
+  const syms = payload.symbols;
   const t = el("table");
   const thead = el("thead",{},[
     el("tr",{},[
@@ -78,9 +82,10 @@ async function refreshData(){
     $("#data-root").innerHTML = `<div class="err">Erreur /data : ${e.message}</div>`;
   }
 }
+// toutes les 5s
 setInterval(refreshData, 5000);
 
-// ==== SSE (optionnel, pour bascules instantanées 1m -> fresh) ========
+// ==== SSE (instantané pour 1m) ========
 (function subscribeSSE(){
   try{
     const es = new EventSource("/data/stream");
