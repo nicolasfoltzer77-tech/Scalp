@@ -1,85 +1,39 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>SCALP — rtviz-ui 1.0.1</title>
-  <style>
-    :root { color-scheme: dark; --bg:#0d1117; --panel:#111827; --muted:#94a3b8; --ok:#10b981; --err:#ef4444; --badge:#1f2937; --pill:#0b1220; --blue:#60a5fa;}
-    body{margin:0;background:#0b0f14;color:#e5e7eb;font:14px/1.35 system-ui,Segoe UI,Roboto,Arial;}
-    .wrap{max-width:1100px;margin:32px auto;padding:0 16px;}
-    h1{margin:0 0 22px;font-size:32px;font-weight:800;letter-spacing:.4px}
-    .brand{opacity:.85;margin-left:10px;font-weight:600}
-    .tabs{display:flex;gap:14px;margin:18px 0 14px}
-    .tab{background:#10151d;border:1px solid #17202b;border-radius:14px;padding:10px 16px;cursor:pointer}
-    .tab.active{background:#0b1220;border-color:#263445}
-    .panel{background:#0c1118;border:1px solid #17202b;border-radius:14px;padding:16px}
-    .meta{display:flex;gap:12px;align-items:center;margin-bottom:10px}
-    .badge{background:#0e1724;color:#a4b1c6;border:1px solid #17202b;padding:6px 10px;border-radius:999px}
-    .pill a{color:#93c5fd;text-decoration:none}
-    table{width:100%;border-collapse:separate;border-spacing:0;margin-top:10px}
-    th,td{padding:10px 12px;border-bottom:1px solid #17202b}
-    th{color:#9fb0c6;text-align:left;background:#0b1220;position:sticky;top:0}
-    .heat-H{background:#1f2937;color:#9aa4b2}
-    .heat-BUY{background:#023430;color:#16f0a4}
-    .heat-SELL{background:#3a0412;color:#ff8aa0}
-    .err{color:#ef4444;margin-top:8px}
-    .muted{color:#94a3b8}
-  </style>
+  <meta charset="UTF-8">
+  <title>SCALP rtviz-ui 1.0.1</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+  <script src="app.js"></script>
 </head>
-<body>
-  <div class="wrap">
-    <h1>SCALP <span class="brand">rtviz-ui 1.0.1</span></h1>
+<body class="has-background-dark has-text-light">
+<section class="section">
+  <div class="container">
+    <h1 class="title has-text-light">SCALP <small>rtviz-ui 1.0.1</small></h1>
 
-    <div class="tabs">
-      <div class="tab active" data-tab="flux">Flux</div>
-      <div class="tab" data-tab="heatmap">Heatmap</div>
-      <div class="tab" data-tab="history">Historique</div>
+    <div class="tabs is-toggle is-toggle-rounded">
+      <ul>
+        <li id="tab-flux"><a onclick="showTab('flux')">Flux</a></li>
+        <li id="tab-heatmap"><a onclick="showTab('heatmap')">Heatmap</a></li>
+        <li id="tab-hist"><a onclick="showTab('hist')">Historique</a></li>
+        <li id="tab-data"><a onclick="showTab('data')">Data</a></li>
+      </ul>
     </div>
 
-    <!-- FLUX -->
-    <section id="panel-flux" class="panel">
-      <div class="meta">
-        <span class="badge" id="flux-status">Flux: …</span>
-        <span class="pill badge"><a href="/signals">/signals</a></span>
-      </div>
-      <div class="err" id="flux-error"></div>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr><th>ts</th><th>sym</th><th>tf</th><th>side</th><th>rsi</th><th>sma</th><th>ema</th><th>score</th></tr>
-          </thead>
-          <tbody id="flux-body"></tbody>
-        </table>
-      </div>
-    </section>
+    <div id="content-flux" class="content">…</div>
+    <div id="content-heatmap" class="content is-hidden">…</div>
+    <div id="content-hist" class="content is-hidden">…</div>
 
-    <!-- HEATMAP -->
-    <section id="panel-heatmap" class="panel" hidden>
-      <div class="meta">
-        <span class="badge" id="heatmap-status">Heatmap: …</span>
-        <span class="pill badge"><a href="/heatmap">/heatmap</a></span>
-      </div>
-      <div class="err" id="heatmap-error"></div>
-      <div id="heatmap-grid"></div>
-    </section>
-
-    <!-- HISTORY -->
-    <section id="panel-history" class="panel" hidden>
-      <div class="meta">
-        <span class="badge">Historique BTCUSDT</span>
-        <span class="pill badge"><a href="/history/BTCUSDT">/history/BTCUSDT</a></span>
-      </div>
-      <div class="err" id="history-error"></div>
-      <table>
-        <thead><tr><th>ts</th><th>tf</th><th>side</th><th>rsi</th><th>sma</th><th>ema</th><th>score</th></tr></thead>
-        <tbody id="history-body"></tbody>
+    <div id="content-data" class="content is-hidden">
+      <h2 class="subtitle has-text-light">Statut des données</h2>
+      <table class="table is-fullwidth is-striped is-hoverable has-background-dark has-text-light">
+        <thead>
+          <tr><th>Symbole</th><th>TF</th><th>État</th></tr>
+        </thead>
+        <tbody id="data-body"></tbody>
       </table>
-    </section>
-
-    <p class="muted" style="margin-top:14px">Logs : <a href="/logs/">/logs/</a> · Ping : <a href="/hello">/hello</a></p>
+    </div>
   </div>
-
-  <script src="/app.js"></script>
+</section>
 </body>
 </html>
