@@ -1,129 +1,168 @@
-// /opt/scalp/webviz/app.js
+/* rtviz-ui app.js – robuste contre les 404 (multi-endpoints) */
 
-// --- Helpers ---
-const $ = (sel, ctx=document) => ctx.querySelector(sel);
-const $$ = (sel, ctx=document) => Array.from(ctx.querySelectorAll(sel));
-const TF_LIST = ["1m","5m","15m"];           // tfs affichés
-const COLOR_MAP = { gris:"#7f8c8d", rouge:"#e74c3c", orange:"#f39c12", vert:"#27ae60" };
-
-function pill(state, txt=state) {
-  const color = COLOR_MAP[state] || "#7f8c8d";
-  return `<span style="
-    display:inline-block;padding:.2rem .5rem;border-radius:.6rem;
-    color:#111;background:${color};font-weight:600;min-width:3.2rem;
-    text-align:center;color:#fff">${txt}</span>`;
-}
-
-function setActive(tabId) {
-  $$(".tabs .tab").forEach(el => el.classList.remove("active"));
-  $(`#${tabId}`)?.classList.add("active");
-  $$(".view").forEach(v => v.classList.add("hidden"));
-  $(`#view-${tabId.replace("tab-","")}`)?.classList.remove("hidden");
-}
-
-// --- Onglet DATA ---
-async function loadDataStatus() {
-  const res = await fetch("/api/data_status", { cache: "no-store" });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return await res.json(); // { "BTCUSDT_1m": {file, age_sec, state}, ... }
-}
-
-/**
- * Transforme le JSON {SYMBTF: {...}} => Map {sym => {tf => state}}
- * - supprime le suffixe USDT dans le symbole pour l’affichage
- * - marque "gris" pour les tf manquants
- */
-function normalizeStatus(raw) {
-  const table = new Map(); // sym -> { tf -> {state, age} }
-  for (const [key, obj] of Object.entries(raw)) {
-    // key ex: "BTCUSDT_1m"
-    const m = key.match(/^([A-Z0-9]+)_(\d+m|[1-9]\dh)$/i);
-    if (!m) continue;
-    let sym = m[1].replace(/USDT$/i, "");  // afficher sans USDT
-    const tf = m[2];
-
-    if (!table.has(sym)) table.set(sym, {});
-    table.get(sym)[tf] = { state: obj.state || "gris", age: obj.age_sec ?? null };
+/* ===== helpers ===== */
+async function tryFetchJSON(urls) {
+  const errs = [];
+  for (const u of urls) {
+    try {
+      const r = await fetch(u, {cache: "no-store"});
+      if (r.ok) return await r.json();
+      errs.push(`${u} -> ${r.status}`);
+    } catch (e) {
+      errs.push(`${u} -> ${e}`);
+    }
   }
-
-  // injecte "gris" si des TF manquent
-  for (const [sym, tfs] of table.entries()) {
-    TF_LIST.forEach(tf => {
-      if (!tfs[tf]) tfs[tf] = { state: "gris", age: null };
-    });
-  }
-  return table;
+  throw new Error(errs.join(" | "));
+}
+function td(txt, cls="") {
+  const d = document.createElement("td");
+  d.textContent = txt ?? "";
+  if (cls) d.className = cls;
+  return d;
+}
+function tr(cells=[]) {
+  const r = document.createElement("tr");
+  cells.forEach(c => r.appendChild(c));
+  return r;
+}
+function fmtTs(ts) {
+  const n = Number(ts);
+  if (!Number.isFinite(n)) return String(ts);
+  const d = new Date(n*1000);
+  return d.toLocaleString();
 }
 
-function fmtAge(sec) {
-  if (sec == null) return "—";
-  if (sec < 90) return `${sec}s`;
-  const m = Math.floor(sec/60);
-  if (m < 90) return `${m}m`;
-  const h = Math.floor(m/60);
-  return `${h}h`;
-}
+/* ===== endpoints (avec fallbacks) ===== */
+const ENDPOINTS = {
+  signals:   ["/signals", "/api/signals", "/viz/signals"],
+  heatmap:   ["/heatmap", "/viz/heatmap", "/api/heatmap"],
+  history:   (sym) => [`/history/${sym}`, `/api/history/${sym}`, `/viz/history/${sym}`],
+  data:      ["/api/data_status", "/viz/data_status", "/data_status"]
+};
 
-function renderDataTable(table) {
-  const rows = [];
-  rows.push(`
-    <div style="margin:.5rem 0 1rem 0">
-      Légende : ${pill("vert","ok")} ${pill("orange","reload")}
-      ${pill("rouge","vieux")} ${pill("gris","absent")}
-    </div>
-  `);
-  rows.push(`
-    <table class="datatable" style="width:100%;border-collapse:separate;border-spacing:0 .4rem">
-      <thead>
-        <tr>
-          <th style="text-align:left;padding:.6rem 1rem">sym</th>
-          ${TF_LIST.map(tf => `<th style="text-align:center;padding:.6rem 1rem">${tf}</th>`).join("")}
-        </tr>
-      </thead>
-      <tbody>
-        ${[...table.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([sym, tfs]) => {
-          return `
-            <tr>
-              <td style="padding:.5rem 1rem;font-weight:700;opacity:.9">${sym}</td>
-              ${TF_LIST.map(tf => {
-                const cell = tfs[tf] || {state:"gris", age:null};
-                return `<td style="text-align:center;padding:.5rem 1rem">${pill(cell.state, fmtAge(cell.age))}</td>`;
-              }).join("")}
-            </tr>
-          `;
-        }).join("")}
-      </tbody>
-    </table>
-  `);
-  $("#data-container").innerHTML = rows.join("");
-}
+/* ====== Onglet FLUX ====== */
+async function loadFlux() {
+  const tbody = document.getElementById("flux-body");
+  const errBox = document.getElementById("flux-error");
+  tbody.innerHTML = ""; errBox.textContent = "";
 
-async function showDataTab() {
-  setActive("tab-data");
-  $("#data-container").innerHTML = `<div style="opacity:.7">Chargement…</div>`;
   try {
-    const raw = await loadDataStatus();
-    const table = normalizeStatus(raw);
-    renderDataTable(table);
+    const items = await tryFetchJSON(ENDPOINTS.signals);
+    // items = [{ts,sym,tf,side,score,entry,rsi,sma,ema}] – champs optionnels tolérés
+    items.forEach(it => {
+      const side = (it.side || it.signal || "HOLD").toUpperCase();
+      const cls = side === "BUY" ? "green" : side === "SELL" ? "red" : "";
+      const rsi = it.rsi ?? "";
+      const sma = it.sma ?? "";
+      const ema = it.ema ?? "";
+      const score = it.score ?? "";
+      const entry = it.entry ?? "";
+
+      tbody.appendChild(tr([
+        td(fmtTs(it.ts)),
+        td(it.sym || it.symbol || ""),
+        td(it.tf || ""),
+        td(side, cls),
+        td(rsi),
+        td(sma),
+        td(ema),
+        td(score)
+      ]));
+    });
   } catch (e) {
-    $("#data-container").innerHTML = `<div style="color:#e74c3c">Erreur: ${e.message}</div>`;
+    errBox.textContent = "Erreur de chargement flux: " + e.message;
   }
 }
 
-// --- Onglets existants (si présents dans ton index.html) ---
-async function showFluxTab(){ setActive("tab-flux"); /* ... garder ton code existant si nécessaire ... */ }
-async function showHeatmapTab(){ setActive("tab-heatmap"); /* ... */ }
-async function showHistoriqueTab(){ setActive("tab-historique"); /* ... */ }
+/* ====== Onglet HEATMAP ====== */
+async function loadHeatmap() {
+  const box = document.getElementById("heatmap-body");
+  const err = document.getElementById("heatmap-error");
+  box.textContent = ""; err.textContent = "";
+  try {
+    const data = await tryFetchJSON(ENDPOINTS.heatmap);
+    box.textContent = JSON.stringify(data, null, 2);
+  } catch (e) {
+    err.textContent = "Erreur de chargement heatmap: " + e.message;
+  }
+}
 
-// --- Boot ---
-document.addEventListener("DOMContentLoaded", () => {
-  // boutons d’onglets s’ils existent
-  $("#tab-flux")?.addEventListener("click", showFluxTab);
-  $("#tab-heatmap")?.addEventListener("click", showHeatmapTab);
-  $("#tab-historique")?.addEventListener("click", showHistoriqueTab);
-  $("#tab-data")?.addEventListener("click", showDataTab);
+/* ====== Onglet HISTORIQUE ====== */
+async function loadHistory(sym="BTCUSDT") {
+  const tbody = document.getElementById("history-body");
+  const err = document.getElementById("history-error");
+  tbody.innerHTML = ""; err.textContent = "";
+  try {
+    const data = await tryFetchJSON(ENDPOINTS.history(sym));
+    // data: {items:[{ts,tf,side,score,rsi,sma,ema}]} OU directement un tableau
+    const items = Array.isArray(data) ? data : (data.items || []);
+    items.forEach(it => {
+      const side = (it.side || it.signal || "HOLD").toUpperCase();
+      const cls = side === "BUY" ? "green" : side === "SELL" ? "red" : "";
+      tbody.appendChild(tr([
+        td(fmtTs(it.ts)),
+        td(it.tf || ""),
+        td(side, cls),
+        td(it.rsi ?? ""),
+        td(it.sma ?? ""),
+        td(it.ema ?? ""),
+        td(it.score ?? "")
+      ]));
+    });
+  } catch (e) {
+    err.textContent = "Erreur de chargement historique: " + e.message;
+  }
+}
 
-  // onglet par défaut : Data si présent, sinon Heatmap
-  if ($("#tab-data")) showDataTab();
-  else if ($("#tab-heatmap")) showHeatmapTab();
-});
+/* ====== Onglet DONNÉES ======
+   data_status renvoie par ex:
+   { "LINK": { "1m": {"state":"fresh"}, "5m":{"state":"stale"}, "15m":{"state":"loading"} }, ... }
+   États mappés → couleurs:
+     fresh -> green, loading -> orange, stale -> red, missing -> grey
+*/
+function stateClass(s) {
+  const m = (s||"").toLowerCase();
+  if (m === "fresh")   return "green";
+  if (m === "loading") return "orange";
+  if (m === "stale")   return "red";
+  return "grey";
+}
+async function loadData() {
+  const tbody = document.getElementById("data-body");
+  const err = document.getElementById("data-error");
+  tbody.innerHTML = ""; err.textContent = "";
+
+  try {
+    const data = await tryFetchJSON(ENDPOINTS.data);
+    // tri alpha sur symbole
+    const symbols = Object.keys(data||{}).sort();
+    symbols.forEach(sym => {
+      const s = data[sym] || {};
+      const c1 = s["1m"]?.state || s["1m"] || "missing";
+      const c5 = s["5m"]?.state || s["5m"] || "missing";
+      const c15 = s["15m"]?.state || s["15m"] || "missing";
+      tbody.appendChild(tr([
+        td(sym),
+        td(typeof c1==="string"?c1:JSON.stringify(c1), stateClass(c1)),
+        td(typeof c5==="string"?c5:JSON.stringify(c5), stateClass(c5)),
+        td(typeof c15==="string"?c15:JSON.stringify(c15), stateClass(c15)),
+      ]));
+    });
+  } catch (e) {
+    err.textContent = "Erreur de chargement des données: " + e.message;
+  }
+}
+
+/* ===== chargement initial & rafraîchissement léger ===== */
+function init() {
+  // charge tous les onglets une fois
+  loadFlux();
+  loadHeatmap();
+  loadHistory("BTCUSDT");
+  loadData();
+
+  // rafraîchis le flux et l’état data toutes les 10s sans surcharger
+  setInterval(loadFlux, 10000);
+  setInterval(loadData, 15000);
+}
+document.addEventListener("DOMContentLoaded", init);
