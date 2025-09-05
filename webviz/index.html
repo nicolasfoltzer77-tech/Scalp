@@ -1,11 +1,9 @@
 <!doctype html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8" />
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1, maximum-scale=1" />
-  <title>SCALP · rtviz-ui 1.0.1</title>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+  <title>SCALP · rtviz-ui</title>
   <style>
     body{margin:0;background:#0f141a;color:#e6edf3;font:16px/1.45 system-ui,Segoe UI,Roboto}
     .wrap{max-width:1100px;margin:32px auto;padding:0 16px}
@@ -24,22 +22,21 @@
     th,td{padding:8px 10px;border-bottom:1px solid #223043}
     th{font-weight:600;color:#9fb4d0;text-align:left}
   </style>
-  <!-- cache-bust via ?v=1.0.1 -->
-  <script>window.UI_VERSION="1.0.1";</script>
-  <script defer src="/app.js?v=1.0.1"></script>
+  <!-- on ne met PAS la version en dur ; app.js fait un fetch /version -->
+  <script defer src="/app.js?v=101"></script>
 </head>
 <body>
   <div class="wrap">
     <div style="display:flex;justify-content:space-between;align-items:center">
       <div>
-        <h1>SCALP <span class="ver">rtviz-ui <span id="ui-ver">1.0.1</span></span></h1>
+        <h1>SCALP <span class="ver">rtviz-ui <span id="ui-ver">…</span></span></h1>
         <div class="toolbar">
           <div class="tabs">
             <button class="tab active" data-tab="flux">Flux</button>
             <button class="tab" data-tab="heatmap">Heatmap</button>
             <button class="tab" data-tab="hist">Historique</button>
           </div>
-          <button id="btn-update" title="Vérifier et recharger si une nouvelle version est dispo">Mettre à jour</button>
+          <button id="btn-update" title="Vider le cache et recharger">Mettre à jour</button>
           <span id="ver-msg" class="pill" style="display:none"></span>
         </div>
       </div>

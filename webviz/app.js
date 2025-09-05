@@ -1,8 +1,7 @@
-// rtviz-ui front — 1.0.1
+// rtviz-ui front
 (() => {
   const $ = (s,p=document)=>p.querySelector(s);
   const $$ = (s,p=document)=>p.querySelectorAll(s);
-  const UI_VERSION = window.UI_VERSION || "0.0.0";
 
   // Tabs
   $$('.tab').forEach(b=>{
@@ -16,50 +15,38 @@
     };
   });
 
-  // Bouton de mise à jour
-  async function checkVersion(silent=false){
+  // Version / bouton update
+  async function showVersionAndMaybeUpdate(){
     try{
       const r = await fetch('/version?ts='+Date.now(), {cache:'no-store'});
-      if(!r.ok) throw new Error('version http '+r.status);
       const {ui} = await r.json();
-      if(ui && ui !== UI_VERSION){
-        const msg = $('#ver-msg');
-        msg.textContent = `Nouvelle version disponible: ${ui} (vous: ${UI_VERSION})`;
-        msg.style.display='inline-block';
-        const btn = $('#btn-update');
-        btn.classList.add('warn');
-        btn.onclick = ()=>{
-          // cache-bust total (URL + app.js)
-          const u = new URL(location.href);
-          u.searchParams.set('v', Date.now());
-          location.replace(u.toString());
-        };
-      } else if (!silent) {
-        const msg = $('#ver-msg');
-        msg.textContent = `À jour (${UI_VERSION})`;
-        msg.style.display='inline-block';
-        setTimeout(()=>msg.style.display='none', 2500);
-      }
+      $('#ui-ver').textContent = ui || '(?)';
+      // si le HTML/JS est ancien et le backend plus récent, on force un bouton rouge
+      const htmlHas = new URL(location.href).searchParams.get('v') || '';
+      const btn = $('#btn-update');
+      btn.onclick = ()=>{
+        const u = new URL(location.href);
+        u.searchParams.set('v', Date.now()); // cache-bust total
+        location.replace(u.toString());
+      };
+      // Si l’ancienne page ne montrait pas la même version, on colore le bouton
+      if(!htmlHas){ btn.classList.add('warn'); }
     }catch(e){
-      if(!silent){ console.warn(e); }
+      $('#ui-ver').textContent = '(?)';
     }
   }
-  $('#btn-update').onclick = ()=>checkVersion(false);
-  checkVersion(true);
 
-  // Flux (résumé simple)
+  // Flux
   async function loadFlux(){
     $('#flux-err').style.display='none';
     try{
       const r = await fetch('/signals?ts='+Date.now(), {cache:'no-store'});
-      if(!r.ok) throw new Error('http '+r.status);
+      if(!r.ok) throw new Error();
       const arr = await r.json();
-      const tb = $('#flux-table tbody');
-      tb.innerHTML='';
+      const tb = $('#flux-table tbody'); tb.innerHTML='';
       (arr.slice(0,50)).forEach(it=>{
         const tr = document.createElement('tr');
-        const t = it.ts, sym = it.sym || it.symbol, tf = it.tf, side = it.side || it.signal, score = it.score ?? '', entry = it.entry ?? '';
-        tr.innerHTML = `<td>${t}</td><td>${sym}</td><td>${tf}</td><td>${side}</td><td>${score}</td><td>${entry}</td>`;
+        tr.innerHTML = `<td>${it.ts}</td><td>${it.sym||it.symbol}</td><td>${it.tf}</td><td>${it.side||it.signal}</td><td>${it.score??''}</td><td>${it.entry??''}</td>`;
         tb.appendChild(tr);
       });
       $('#flux-table').style.display='table';
@@ -67,17 +54,17 @@
       $('#flux-err').style.display='block';
     }
   }
-  // Heatmap (affiche brut si JSON non conforme)
+
+  // Heatmap
   async function loadHeat(){
     $('#heat-err').style.display='none';
     try{
       const r = await fetch('/heatmap?ts='+Date.now(), {cache:'no-store'});
-      if(!r.ok) throw new Error('http '+r.status);
-      const j = await r.json(); // attendu: {cells:[{sym,tf,side,v}]}
-      const wrap = $('#heat-wrap'); wrap.innerHTML='';
+      if(!r.ok) throw new Error();
+      const j = await r.json();
       const cells = Array.isArray(j.cells)? j.cells : [];
+      const wrap = $('#heat-wrap'); wrap.innerHTML='';
       if(!cells.length){ wrap.textContent='(vide)'; return; }
-      // regroupe par sym
       const map = {};
       cells.forEach(c=>{
         const sym=(c.sym||c.symbol||'').toUpperCase();
@@ -98,11 +85,9 @@
     }
   }
 
-  // 1er chargement
-  loadFlux();
-  loadHeat();
-
-  // auto-refresh light
-  setInterval(()=>{ loadFlux(); }, 20_000);
-  setInterval(()=>{ loadHeat(); }, 60_000);
+  // go
+  showVersionAndMaybeUpdate();
+  loadFlux(); loadHeat();
+  setInterval(loadFlux, 20_000);
+  setInterval(loadHeat, 60_000);
 })();
