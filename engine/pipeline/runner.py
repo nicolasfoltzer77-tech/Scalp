@@ -1,18 +1,20 @@
 from __future__ import annotations
-import os, time, logging
+import time, logging
 from typing import List, Dict, Any, Optional
 
-from engine.signals.strategy_bridge import evaluate_for
 from engine.strategies.runner import load_strategies
-from engine.utils.signal_sink import append_signal
-from tools.load_pairs import load_pairs  # ← pairs.txt
+from engine.signals.strategy_bridge import evaluate_for
+
+from engine.utils.signal_sink import append_signal                    # legacy -> signals.csv
+from engine.utils.signal_sink_factored import append_signal_factored  # nouveau -> signals_f.csv
+from tools.load_pairs import load_pairs
 
 LOG = logging.getLogger("pipeline")
 
 class PipelineScheduler:
     """
-    Boucle principale : évalue (symbol × tf), écrit les signaux CSV,
-    et recharge la watchlist depuis pairs.txt toutes les N secondes.
+    Boucle principale : évalue (symbol × tf), écrit les signaux (legacy + factorisé),
+    et recharge la watchlist depuis pairs.txt régulièrement.
     """
 
     def __init__(
@@ -28,12 +30,10 @@ class PipelineScheduler:
         self.reload_pairs_sec = reload_pairs_sec
         self.log = logger or LOG
 
-        # stratégies/config (un seul dict)
         cfg: Dict[str, Any] = load_strategies()
         self._CFG: Dict[str, Any] = cfg
         self._STRATS: List[Dict[str, Any]] = cfg.get("strategies", [])
 
-        # pairs initiales
         self.symbols: List[str] = symbols or load_pairs()
         self._last_reload = 0.0
 
@@ -46,27 +46,56 @@ class PipelineScheduler:
             return
         self._last_reload = now
         new_pairs = load_pairs()
-        if not new_pairs:
-            return
-        if new_pairs != self.symbols:
+        if new_pairs and new_pairs != self.symbols:
             self.log.info("Watchlist mise à jour (%d → %d paires)", len(self.symbols), len(new_pairs))
-            self.log.debug("Anciennes: %s", self.symbols)
-            self.log.debug("Nouvelles: %s", new_pairs)
             self.symbols = new_pairs
 
     def _eval_once(self, symbol: str, tf: str, ohlcv: Optional[List[List[float]]] = None) -> Dict[str, Any]:
         res = evaluate_for(symbol=symbol, tf=tf,
                            strategies=self._STRATS, config=self._CFG,
                            ohlcv=ohlcv, logger=self.log)
+
+        # --- Signal combiné (legacy) ---
         sig = res.get("combined", "HOLD")
-        # écriture CSV (dashboard)
+        items = res.get("items", [])
+        details = ";".join(f"{i.get('name')}={i.get('signal')}" for i in items)[:512]
         try:
-            items = res.get("items", [])
-            details = ";".join(f"{i.get('name')}={i.get('signal')}" for i in items)[:512]
             append_signal({"symbol": symbol, "tf": tf, "signal": sig, "details": details})
-        except Exception:
-            pass
-        self.log.info("pipe-%s-%s sig=%s", symbol, tf, sig)
+        except Exception as e:
+            self.log.error("append_signal legacy failed: %s", e)
+
+        # --- Version factorisée ---
+        ts = int(res.get("ts") or time.time())
+        # On récupère des valeurs numériques si dispo (sinon None)
+        metrics = res.get("metrics", {})  # idéalement fourni par evaluate_for
+        rsi_val = metrics.get("rsi")
+        ema_val = metrics.get("ema")
+        sma_val = metrics.get("sma")
+
+        # Calcul d'un score factorisé simple si pas fourni par evaluate_for
+        factor = res.get("factor")
+        if factor is None:
+            # transforme les sous-signaux en -1/0/+1
+            def to_factor(v: str) -> int:
+                v = (v or "").upper()
+                if v in ("BUY","LONG","BULL"):  return 1
+                if v in ("SELL","SHORT","BEAR"): return -1
+                return 0
+            f_parts = [to_factor(i.get("signal")) for i in items]
+            factor = sum(f_parts) if f_parts else 0
+
+        why = ",".join(f"{i.get('name')}:{i.get('signal')}" for i in items)[:180]
+
+        try:
+            append_signal_factored({
+                "ts": ts, "symbol": symbol, "tf": tf, "signal": sig,
+                "rsi": rsi_val, "ema": ema_val, "sma": sma_val,
+                "factor": factor, "why": why
+            })
+        except Exception as e:
+            self.log.error("append_signal_factored failed: %s", e)
+
+        self.log.info("pipe-%s-%s sig=%s factor=%s", symbol, tf, sig, factor)
         return res
 
     def run(self) -> None:
