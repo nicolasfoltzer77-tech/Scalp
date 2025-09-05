@@ -1,113 +1,70 @@
 <!doctype html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>SCALP · rtviz-ui</title>
   <style>
-    :root{
-      --bg:#0f141a; --fg:#e6edf3; --muted:#9fb4d0;
-      --card:#111822; --card-b:#223043;
-      --pill:#1b1523; --pill-b:#263041; --pill-f:#c9d1d9;
-      --accent:#3b82f6; --accent-b:#35537a; --danger:#ef4444;
-    }
-    *{box-sizing:border-box}
-    body{margin:0;background:var(--bg);color:var(--fg);
-         font:16px/1.45 system-ui,Segoe UI,Roboto,Arial}
+    body{margin:0;background:#0f141a;color:#e6edf3;font:16px/1.45 system-ui,Segoe UI,Roboto}
     .wrap{max-width:1100px;margin:28px auto;padding:0 16px}
-    h1{margin:0 0 10px;font-size:28px}
-    .muted{color:var(--muted)}
-    .toolbar{display:flex;gap:12px;align-items:center;justify-content:space-between;margin:14px 0}
-    .tabs{display:flex;gap:10px;flex-wrap:wrap}
-    .tab-btn{padding:10px 16px;border-radius:12px;background:var(--pill);
-             border:1px solid var(--pill-b);color:var(--pill-f);cursor:pointer}
-    .tab-btn.active{background:#23304a;border-color:var(--accent-b)}
-    #btn-update{padding:10px 16px;border-radius:12px;border:1px solid var(--accent);
-                background:#1f2937;color:#dbebfe;cursor:pointer}
-    #btn-update.warn{background:#7c2d12;border-color:#ef4444;color:#fff}
-
-    .panel{display:none}
-    .card{background:var(--card);border:1px solid var(--card-b);
-          border-radius:16px;padding:16px;margin-top:12px}
-    .err{color:var(--danger)}
-
+    h1{margin:0 0 8px;font-size:28px} .muted{opacity:.65}
+    .tabs{display:flex;gap:12px;margin:18px 0}
+    .tab{padding:10px 16px;border-radius:12px;background:#151b23;border:1px solid #263041;cursor:pointer}
+    .tab.active{background:#23304a;border-color:#35537a}
+    .toolbar{display:flex;gap:12px;align-items:center}
+    #btn-update{padding:8px 12px;border:1px solid #3b82f6;background:#1f2937;color:#dbeafe;border-radius:10px;cursor:pointer}
+    .card{background:#111822;border:1px solid #223043;border-radius:16px;padding:16px;margin-top:12px}
+    .legend{display:flex;gap:18px;margin-bottom:10px;align-items:center}
+    .pill{display:inline-block;width:12px;height:12px;border-radius:999px;margin-right:8px;border:1px solid rgba(0,0,0,.35)}
+    .fresh{background:#16a34a} .reloading{background:#f59e0b} .stale{background:#dc2626} .absent{background:#94a3b8}
+    .err{color:#ef4444;margin-top:8px}
     table{width:100%;border-collapse:collapse;margin-top:10px}
-    th,td{padding:9px 10px;border-bottom:1px solid var(--card-b);text-align:left}
-    th{font-weight:600;color:var(--muted)}
-
-    /* Pastilles couleur (sans texte) */
-    .dot{display:inline-block;width:14px;height:14px;border-radius:50%;
-         border:2px solid #0003;vertical-align:middle}
-    .dot.fresh{background:#0fd35d;border-color:#0b8f41}
-    .dot.reloading{background:#f59e0b;border-color:#b25f00}
-    .dot.stale{background:#ef4444;border-color:#9b1c1c}
-    .dot.absent{background:#94a3b8;border-color:#475569}
-
-    .legend{display:flex;gap:12px;align-items:center;margin:6px 0 10px}
-    .legend span{display:flex;gap:6px;align-items:center;color:var(--muted)}
-    a{color:#8ab4ff;text-decoration:none} a:hover{text-decoration:underline}
+    th,td{padding:8px 10px;border-bottom:1px solid #223043;text-align:left}
+    th{font-weight:600;color:#9fb4d0}
   </style>
-  <!-- app.js interroge /version pour afficher la vraie version ; cache-bust -->
-  <script defer src="/app.js?v=105"></script>
+  <!-- cache-bust fort -->
+  <script defer src="/app.js?v=103"></script>
 </head>
 <body>
-  <div class="wrap">
-    <div class="toolbar">
-      <h1>SCALP <small id="ver" class="muted"></small></h1>
-      <button id="btn-update" title="Forcer l’actualisation (vide le cache)">Mettre à jour</button>
-    </div>
-
-    <nav class="tabs" id="tabs">
-      <button data-tab="data" class="tab-btn">Données</button>
-      <button data-tab="flux" class="tab-btn">Flux</button>
-      <button data-tab="heatmap" class="tab-btn">Heatmap</button>
-      <button data-tab="history" class="tab-btn">Historique</button>
-    </nav>
-
-    <!-- Onglet DONNÉES -->
-    <section id="tab-data" class="panel" style="display:block">
-      <div class="card">
-        <div class="legend">
-          <span><span class="dot fresh"></span><small>fresh</small></span>
-          <span><span class="dot reloading"></span><small>reloading</small></span>
-          <span><span class="dot stale"></span><small>stale</small></span>
-          <span><span class="dot absent"></span><small>absent</small></span>
-        </div>
-        <div id="data-root">Chargement…</div>
-      </div>
-    </section>
-
-    <!-- Onglet FLUX -->
-    <section id="tab-flux" class="panel">
-      <div class="card">
-        <div id="flux-root">
-          <div class="err">Flux non initialisé dans cet index (OK).</div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Onglet HEATMAP -->
-    <section id="tab-heatmap" class="panel">
-      <div class="card">
-        <div id="heatmap-root">
-          <div class="err">Heatmap non initialisée dans cet index (OK).</div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Onglet HISTORIQUE -->
-    <section id="tab-history" class="panel">
-      <div class="card">
-        <div id="history-root">
-          <div class="err">Historique non initialisé dans cet index (OK).</div>
-        </div>
-      </div>
-    </section>
-
-    <footer style="margin-top:16px">
-      <span>Logs : <a href="/logs/" target="_blank">/logs/</a></span> ·
-      <span>Ping : <a href="/hello" target="_blank">/hello</a></span>
-    </footer>
+<div class="wrap">
+  <div class="toolbar" style="justify-content:space-between">
+    <h1>SCALP <small id="ver" class="muted"></small></h1>
+    <button id="btn-update">Mettre à jour</button>
   </div>
+
+  <nav class="tabs" id="tabs">
+    <button data-tab="data" class="tab active">Données</button>
+    <button data-tab="flux" class="tab">Flux</button>
+    <button data-tab="heatmap" class="tab">Heatmap</button>
+    <button data-tab="history" class="tab">Historique</button>
+  </nav>
+
+  <section id="tab-data" class="card">
+    <div class="legend">
+      <span><i class="pill fresh"></i>fresh</span>
+      <span><i class="pill reloading"></i>reloading</span>
+      <span><i class="pill stale"></i>stale</span>
+      <span><i class="pill absent"></i>absent</span>
+    </div>
+    <div id="data-root">Chargement…</div>
+  </section>
+
+  <section id="tab-flux" class="card" hidden>
+    <div id="flux-root">Flux : <a href="/signals">/signals</a></div>
+  </section>
+
+  <section id="tab-heatmap" class="card" hidden>
+    <div id="heat-root">Heatmap : <a href="/heatmap">/heatmap</a></div>
+  </section>
+
+  <section id="tab-history" class="card" hidden>
+    <div id="hist-root">Historique</div>
+  </section>
+
+  <footer style="margin-top:12px">
+    <span>Logs : <a href="/logs/" target="_blank">/logs/</a></span> ·
+    <span>Ping : <a href="/hello" target="_blank">/hello</a></span>
+  </footer>
+</div>
 </body>
 </html>
