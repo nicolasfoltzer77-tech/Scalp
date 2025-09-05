@@ -1,83 +1,93 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <title>SCALP rtviz-ui</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>SCALP · rtviz-ui 1.0.0</title>
+  <link rel="icon" href="data:,">
   <style>
-    body { background: #111; color: #eee; font-family: sans-serif; }
-    h1 { color: #6cf; }
-    .tabs { margin: 10px 0; }
-    .tab { display: inline-block; margin-right: 10px; padding: 6px 12px; border-radius: 5px; background: #222; color: #ccc; cursor: pointer; }
-    .tab.active { background: #6cf; color: #000; }
-    table { border-collapse: collapse; width: 100%; margin-top: 10px; }
-    th, td { border: 1px solid #333; padding: 4px 6px; text-align: center; }
-    th { background: #222; }
-    .green { color: #0f0; }
-    .orange { color: #fa0; }
-    .red { color: #f33; }
-    .grey { color: #777; }
-    pre { white-space: pre-wrap; }
+    body{background:#0f141a;color:#e6edf3;font:14px/1.4 system-ui,Segoe UI,Roboto,Ubuntu;}
+    .tabs {display:flex;gap:12px;margin:24px 0}
+    .tab {padding:10px 16px;border-radius:12px;background:#1b2230;color:#bcd;border:1px solid #293344;cursor:pointer}
+    .tab.active{background:#253044;color:#fff}
+    .card{background:#121822;border:1px solid #293344;border-radius:16px;padding:16px;margin:16px 0}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:8px 10px;border-bottom:1px solid #223}
+    th{color:#9ab}
+    .green{color:#58d68d;font-weight:600}
+    .red{color:#ff6b6b;font-weight:600}
+    .orange{color:#ffb347;font-weight:600}
+    .grey{color:#9aa}
+    .muted{color:#8aa}
   </style>
 </head>
 <body>
-  <h1>SCALP <small>rtviz-ui 1.0.0</small></h1>
+  <main style="max-width:1100px;margin:0 auto;padding:20px">
+    <h1 style="margin:0 0 8px">SCALP <span class="muted">rtviz-ui 1.0.0</span></h1>
 
-  <div class="tabs">
-    <span class="tab active" onclick="showTab('flux')">Flux</span>
-    <span class="tab" onclick="showTab('heatmap')">Heatmap</span>
-    <span class="tab" onclick="showTab('history')">Historique</span>
-    <span class="tab" onclick="showTab('data')">Données</span>
-  </div>
+    <div class="tabs">
+      <button class="tab active" data-pane="flux">Flux</button>
+      <button class="tab" data-pane="heatmap">Heatmap</button>
+      <button class="tab" data-pane="history">Historique</button>
+      <button class="tab" data-pane="data">Données</button>
+    </div>
 
-  <!-- Conteneurs -->
-  <div id="flux" class="tabcontent">
-    <h2>Flux des signaux</h2>
-    <div id="flux-error" style="color:red"></div>
-    <table>
-      <thead>
-        <tr><th>ts</th><th>sym</th><th>tf</th><th>side</th><th>rsi</th><th>sma</th><th>ema</th><th>score</th></tr>
-      </thead>
-      <tbody id="flux-body"></tbody>
-    </table>
-  </div>
+    <!-- Flux -->
+    <section class="card" id="pane-flux">
+      <div class="muted">Flux (derniers signaux)</div>
+      <div id="flux-error" class="red" style="margin:8px 0"></div>
+      <table>
+        <thead>
+          <tr><th>ts</th><th>sym</th><th>tf</th><th>side</th><th>rsi</th><th>sma</th><th>ema</th><th>score</th></tr>
+        </thead>
+        <tbody id="flux-body"></tbody>
+      </table>
+    </section>
 
-  <div id="heatmap" class="tabcontent" style="display:none">
-    <h2>Heatmap</h2>
-    <div id="heatmap-error" style="color:red"></div>
-    <pre id="heatmap-body"></pre>
-  </div>
+    <!-- Heatmap -->
+    <section class="card" id="pane-heatmap" style="display:none">
+      <div class="muted">Heatmap</div>
+      <div id="heatmap-error" class="red" style="margin:8px 0"></div>
+      <pre id="heatmap-body" style="white-space:pre-wrap"></pre>
+    </section>
 
-  <div id="history" class="tabcontent" style="display:none">
-    <h2>Historique (exemple BTCUSDT)</h2>
-    <div id="history-error" style="color:red"></div>
-    <table>
-      <thead>
-        <tr><th>ts</th><th>tf</th><th>side</th><th>rsi</th><th>sma</th><th>ema</th><th>score</th></tr>
-      </thead>
-      <tbody id="history-body"></tbody>
-    </table>
-  </div>
+    <!-- Historique -->
+    <section class="card" id="pane-history" style="display:none">
+      <div class="muted">Historique (BTCUSDT)</div>
+      <div id="history-error" class="red" style="margin:8px 0"></div>
+      <table>
+        <thead>
+          <tr><th>ts</th><th>tf</th><th>side</th><th>rsi</th><th>sma</th><th>ema</th><th>score</th></tr>
+        </thead>
+        <tbody id="history-body"></tbody>
+      </table>
+    </section>
 
-  <div id="data" class="tabcontent" style="display:none">
-    <h2>État des données Klines</h2>
-    <div id="data-error" style="color:red"></div>
-    <table>
-      <thead>
-        <tr><th>Symbole</th><th>1m</th><th>5m</th><th>15m</th></tr>
-      </thead>
-      <tbody id="data-body"></tbody>
-    </table>
-  </div>
+    <!-- Données -->
+    <section class="card" id="pane-data" style="display:none">
+      <div class="muted">État des données (klines)</div>
+      <div id="data-error" class="red" style="margin:8px 0"></div>
+      <table>
+        <thead><tr><th>sym</th><th>1m</th><th>5m</th><th>15m</th></tr></thead>
+        <tbody id="data-body"></tbody>
+      </table>
+      <p class="muted">Couleurs : <span class="green">fresh</span> · <span class="orange">loading</span> · <span class="red">stale</span> · <span class="grey">missing</span></p>
+    </section>
 
-  <script src="/app.js"></script>
+    <p class="muted">Logs : <a href="/logs/">/logs/</a> · Ping : <a href="/hello">/hello</a></p>
+  </main>
+
   <script>
-    function showTab(tab) {
-      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
-      document.querySelectorAll('.tabcontent').forEach(el => el.style.display = 'none');
-      document.querySelector(`.tab[onclick="showTab('${tab}')"]`).classList.add('active');
-      document.getElementById(tab).style.display = 'block';
-    }
+    // mini-tabs
+    const tabs = document.querySelectorAll(".tab");
+    const panes = {flux:"pane-flux", heatmap:"pane-heatmap", history:"pane-history", data:"pane-data"};
+    tabs.forEach(b => b.onclick = () => {
+      tabs.forEach(x=>x.classList.remove("active"));
+      b.classList.add("active");
+      Object.values(panes).forEach(id => document.getElementById(id).style.display="none");
+      document.getElementById(panes[b.dataset.pane]).style.display="";
+    });
   </script>
+  <script src="/app.js"></script>
 </body>
 </html>
