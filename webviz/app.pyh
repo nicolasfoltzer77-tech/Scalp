@@ -1,0 +1,53 @@
+from fastapi import FastAPI
+import time
+
+app = FastAPI()
+
+# Lecture de la version depuis le fichier
+def get_version():
+    try:
+        with open("/opt/scalp/webviz/VERSION") as f:
+            return f.read().strip()
+    except:
+        return "0.0.0"
+
+START_TS = int(time.time())
+
+@app.get("/version")
+def version():
+    return {"ui": get_version(), "ts": START_TS}
+
+@app.get("/hello")
+def hello():
+    return {"msg": "hello from scalp-rtviz"}
+
+@app.get("/logs/")
+def logs():
+    return {"logs": ["log1", "log2", "log3"]}
+
+@app.get("/data")
+def data():
+    return {
+        "tfs": ["1m", "5m", "15m"],
+        "min_candles": 1500,
+        "items": [
+            {
+                "symbol": "BTC",
+                "tfs": {
+                    "1m": {"status": "fresh", "candles": 1500},
+                    "5m": {"status": "reloading", "candles": 800},
+                    "15m": {"status": "stale", "candles": 200},
+                },
+            },
+            {
+                "symbol": "ETH",
+                "tfs": {
+                    "1m": {"status": "fresh", "candles": 1500},
+                    "5m": {"status": "fresh", "candles": 1500},
+                    "15m": {"status": "absent", "candles": 0},
+                },
+            },
+        ],
+        "updated_at": int(time.time()),
+    }
+
