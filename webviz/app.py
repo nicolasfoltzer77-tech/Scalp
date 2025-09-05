@@ -1,47 +1,64 @@
 from fastapi import FastAPI
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-import os
+import os, csv, time, glob
 
 app = FastAPI()
 
-# 👉 Dossier où se trouvent index.html, app.js, style.css
-FRONT_DIR = "/opt/scalp/webviz"
+BASE = "/opt/scalp/webviz"
+CSV_DIR = "/opt/scalp/var/dashboard"
+KLINES_DIR = "/opt/scalp/data/klines"
 
-# Servir les fichiers statiques (JS, CSS…)
-app.mount("/static", StaticFiles(directory=FRONT_DIR), name="static")
+# --- Fichiers statiques ---
+app.mount("/static", StaticFiles(directory=BASE), name="static")
 
 @app.get("/")
 async def root():
-    """Renvoie l'index du dashboard"""
-    return FileResponse(os.path.join(FRONT_DIR, "index.html"))
+    return FileResponse(os.path.join(BASE, "index.html"))
 
-# Exemple d’API pour l’onglet Data
+# --- Endpoint signals (flux principal) ---
+@app.get("/signals")
+async def signals():
+    csv_path = os.path.join(CSV_DIR, "signals.csv")
+    if not os.path.exists(csv_path):
+        return JSONResponse(content=[], status_code=200)
+
+    rows = []
+    with open(csv_path, newline="") as f:
+        r = csv.DictReader(f, fieldnames=["ts","symbol","tf","signal","details"])
+        for rec in r:
+            try:
+                ts = int(rec["ts"])
+            except Exception:
+                ts = int(time.time())
+            rows.append({
+                "ts": ts,
+                "sym": rec["symbol"].replace("USDT",""),
+                "tf": rec["tf"],
+                "side": rec["signal"],
+                "entry": rec.get("details",""),
+                "score": 0  # placeholder
+            })
+    return rows[-200:]  # limiter le flux
+
+# --- Endpoint data_status ---
 @app.get("/api/data_status")
 async def data_status():
-    """
-    Retourne l’état des fichiers CSV dans /opt/scalp/data/klines
-    - gris  : absent
-    - rouge : trop vieux
-    - orange: en cours de rechargement
-    - vert  : ok
-    """
-    import glob, time
-    DATA_DIR = "/opt/scalp/data/klines"
-    now = time.time()
     status = {}
-
-    for f in glob.glob(os.path.join(DATA_DIR, "*.csv")):
-        name = os.path.basename(f).replace(".csv", "")
-        age = now - os.path.getmtime(f)
-
-        if age > 3600:   # trop vieux > 1h
-            state = "rouge"
-        elif age > 600:  # vieux > 10min
+    now = time.time()
+    for path in glob.glob(f"{KLINES_DIR}/*.csv"):
+        name = os.path.basename(path).replace(".csv","")  # ex: BTCUSDT_1m
+        try:
+            age = now - os.path.getmtime(path)
+        except Exception:
+            age = None
+        if age is None:
+            state = "gris"
+        elif age < 120:
+            state = "vert"
+        elif age < 600:
             state = "orange"
         else:
-            state = "vert"
-
-        status[name] = {"file": f, "age_sec": int(age), "state": state}
-
+            state = "rouge"
+        status[name] = {"file": path, "age_sec": int(age) if age else None, "state": state}
     return status
