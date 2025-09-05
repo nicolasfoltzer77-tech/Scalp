@@ -19,10 +19,10 @@ def _build_from_signals(items: List[Dict], kmax=3) -> Dict:
     for sym,arr in by_sym.items():
         arr.sort(key=lambda x: x["ts"], reverse=True)
         for it in arr[:kmax]:
-            v = 1.0 if it["side"]=="BUY" else 0.0
+            v = 1.0 if it["side"]=="BUY" else (0.0 if it["side"]=="SELL" else 0.5)
             cells.append({"sym": sym, "tf": it["tf"], "side": it["side"], "v": v})
     cells.sort(key=lambda c: (c["sym"], c["tf"]))
-    return {"source":"signals.csv","cells":cells}
+    return {"source":"fallback(signals)","cells":cells}
 
 @router.get("/heatmap_status")
 def heatmap_status():
@@ -32,5 +32,9 @@ def heatmap_status():
 def heatmap():
     p = resolve_paths()
     js = load_json(p["heatmap_json"])
-    if isinstance(js, dict) and "cells" in js: return js
+    if isinstance(js, dict) and "cells" in js:
+        cells = js.get("cells") or []
+        if len(cells)>0:
+            return js
+        # si présent mais vide -> fallback
     return _build_from_signals(load_signals_any())
