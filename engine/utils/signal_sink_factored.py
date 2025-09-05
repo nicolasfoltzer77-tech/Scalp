@@ -4,43 +4,83 @@ import csv, os, time
 from typing import Dict, Any
 
 BASE = "/opt/scalp/var/dashboard"
-CSVF = f"{BASE}/signals_f.csv"
+CSV  = f"{BASE}/signals_f.csv"
+
 HEADER = [
-    "ts","symbol","tf","side","score",
+    "ts","symbol","tf",
+    "signal",               # BUY/SELL/HOLD (combiné)
+    "score",                # somme factorisée
+    # composantes (brut et facteur)
     "rsi_value","rsi_factor",
-    "sma_fast_factor",
-    "ema_trend_slope","ema_trend_factor",
-    "notes",
+    "ema_gap","ema_factor",
+    "sma_cross_fast","sma_factor",
+    # trace libre
+    "details"
 ]
 
-def _ensure_header(path: str) -> None:
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    if not os.path.exists(path) or os.path.getsize(path) == 0:
-        with open(path, "w", newline="", encoding="utf-8") as f:
-            csv.writer(f).writerow(HEADER)
+def _to_int(v, default=0):
+    try: return int(v)
+    except: return default
+
+def _to_float(v, default=0.0):
+    try: return float(v)
+    except: return default
 
 def append_signal_factored(row: Dict[str, Any]) -> None:
     """
-    row keys attendus:
-      ts?, symbol, tf, side, score,
-      rsi_value?, rsi_factor,
-      sma_fast_factor,
-      ema_trend_slope?, ema_trend_factor,
-      notes?
+    row attendu au minimum:
+      symbol, tf, signal (BUY/SELL/HOLD)
+    et si dispo (facultatif): rsi_value, ema_gap, sma_cross_fast, rsi_factor, ema_factor, sma_factor, score, details
+    -> crée BASE si besoin, écrit l'entête si nouveau fichier.
     """
-    _ensure_header(CSVF)
+    os.makedirs(BASE, exist_ok=True)
+    write_header = not os.path.exists(CSV)
+
+    ts = _to_int(row.get("ts") or time.time(), int(time.time()))
+    symbol = (row.get("symbol") or "").strip()
+    tf = (row.get("tf") or "").strip()
+    signal = (row.get("signal") or "HOLD").strip().upper()
+
+    # valeurs brutes (si non fournies on met 0)
+    rsi_value = _to_float(row.get("rsi_value"), 0.0)
+    ema_gap   = _to_float(row.get("ema_gap"), 0.0)       # ex: (price-ema)/ema
+    sma_cross_fast = (row.get("sma_cross_fast") or "").upper()  # "BUY"/"SELL"/"HOLD"
+
+    # facteurs (+1/0/-1) – si absents on les déduit de règles simples
+    def sign(x: float) -> int:
+        return 1 if x > 0 else (-1 if x < 0 else 0)
+
+    rsi_factor = int(row.get("rsi_factor")) if str(row.get("rsi_factor")).lstrip("+-").isdigit() else (
+        1 if 55 <= rsi_value <= 70 else (-1 if 30 <= rsi_value <= 45 else 0)
+    )
+    ema_factor = int(row.get("ema_factor")) if str(row.get("ema_factor")).lstrip("+-").isdigit() else sign(ema_gap)
+    sma_factor = int(row.get("sma_factor")) if str(row.get("sma_factor")).lstrip("+-").isdigit() else (
+        1 if sma_cross_fast == "BUY" else (-1 if sma_cross_fast == "SELL" else 0)
+    )
+
+    # score
+    score = row.get("score")
+    if score is None:
+        try:
+            score = int(rsi_factor) + int(ema_factor) + int(sma_factor)
+        except:
+            score = 0
+
+    details = (row.get("details") or "").strip()[:512]
+
     out = {
-        "ts": int(row.get("ts") or time.time()),
-        "symbol": str(row.get("symbol","")).strip(),
-        "tf": str(row.get("tf","")).strip(),
-        "side": str(row.get("side","HOLD")).upper().strip(),
-        "score": int(row.get("score") or 0),
-        "rsi_value": "" if row.get("rsi_value") is None else row.get("rsi_value"),
-        "rsi_factor": int(row.get("rsi_factor") or 0),
-        "sma_fast_factor": int(row.get("sma_fast_factor") or 0),
-        "ema_trend_slope": "" if row.get("ema_trend_slope") is None else row.get("ema_trend_slope"),
-        "ema_trend_factor": int(row.get("ema_trend_factor") or 0),
-        "notes": str(row.get("notes",""))[:160],
+        "ts": ts, "symbol": symbol, "tf": tf,
+        "signal": signal,
+        "score": int(score),
+        "rsi_value": rsi_value, "rsi_factor": int(rsi_factor),
+        "ema_gap": ema_gap, "ema_factor": int(ema_factor),
+        "sma_cross_fast": sma_cross_fast, "sma_factor": int(sma_factor),
+        "details": details
     }
-    with open(CSVF, "a", newline="", encoding="utf-8") as f:
-        csv.DictWriter(f, fieldnames=HEADER).writerow(out)
+
+    # écriture
+    with open(CSV, "a", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=HEADER)
+        if write_header:
+            w.writeheader()
+        w.writerow(out)
