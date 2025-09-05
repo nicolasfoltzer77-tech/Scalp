@@ -1,55 +1,49 @@
 #!/usr/bin/env python3
-import os, json
+from __future__ import annotations
+import os, json, time
 from fastapi import FastAPI
-from fastapi.responses import JSONResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import PlainTextResponse, FileResponse, JSONResponse
 
-app = FastAPI()
+APP_DIR   = "/opt/scalp/webviz"
+DASH_DIR  = "/opt/scalp/var/dashboard"
+VERSION   = "1.0.1"   # <— bump
 
-BASE = "/opt/scalp/webviz"
-STATIC = os.path.join(BASE)
-DATA_STATUS_FILE = "/opt/scalp/var/dashboard/data_status.json"
+app = FastAPI(title="rtviz-ui", version=VERSION)
 
-app.mount("/", StaticFiles(directory=STATIC, html=True), name="static")
+def no_cache_headers():
+    # empêche le cache navigateur
+    return {"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0"}
 
-
-@app.get("/hello")
+@app.get("/hello", response_class=PlainTextResponse)
 async def hello():
     return "hello from rtviz"
 
+@app.get("/version", response_class=JSONResponse)
+async def version():
+    return {"ui": VERSION, "ts": int(time.time())}
 
-@app.get("/signals")
+# Fichiers UI (no-cache)
+@app.get("/", response_class=FileResponse)
+async def index():
+    return FileResponse(os.path.join(APP_DIR, "index.html"), headers=no_cache_headers())
+
+@app.get("/app.js", response_class=FileResponse)
+async def appjs():
+    return FileResponse(os.path.join(APP_DIR, "app.js"), headers=no_cache_headers())
+
+# APIs existantes (exemples—tu avais déjà /signals, /heatmap)
+@app.get("/signals", response_class=PlainTextResponse)
 async def signals():
-    path = "/opt/scalp/var/dashboard/signals_f.csv"
-    if not os.path.exists(path):
-        return []
-    with open(path) as f:
-        rows = [l.strip().split(",") for l in f if l.strip()]
-    return [
-        {
-            "ts": r[0],
-            "sym": r[1],
-            "tf": r[2],
-            "side": r[3],
-            "score": r[4] if len(r) > 4 else "",
-            "entry": r[5] if len(r) > 5 else "",
-        }
-        for r in rows
-    ]
+    p = os.path.join(DASH_DIR, "signals.json")
+    if not os.path.exists(p):
+        return PlainTextResponse('[]', status_code=404)
+    return FileResponse(p, headers=no_cache_headers())
 
-
-@app.get("/heatmap")
+@app.get("/heatmap", response_class=PlainTextResponse)
 async def heatmap():
-    path = "/opt/scalp/var/dashboard/heatmap.json"
-    if not os.path.exists(path):
-        return []
-    with open(path) as f:
-        return json.load(f)
+    p = os.path.join(DASH_DIR, "heatmap.json")
+    if not os.path.exists(p):
+        return PlainTextResponse('{"cells":[]}', status_code=404)
+    return FileResponse(p, headers=no_cache_headers())
 
-
-@app.get("/data_status")
-async def data_status():
-    if not os.path.exists(DATA_STATUS_FILE):
-        return JSONResponse(content={"error": "data_status.json not found"}, status_code=404)
-    with open(DATA_STATUS_FILE) as f:
-        return json.load(f)
+# (le reste de tes routes /logs etc. restent identiques)

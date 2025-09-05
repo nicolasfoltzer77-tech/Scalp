@@ -1,39 +1,68 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <title>SCALP rtviz-ui 1.0.1</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
-  <script src="app.js"></script>
+  <meta charset="utf-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <title>SCALP · rtviz-ui 1.0.1</title>
+  <style>
+    body{margin:0;background:#0f141a;color:#e6edf3;font:16px/1.45 system-ui,Segoe UI,Roboto}
+    .wrap{max-width:1100px;margin:32px auto;padding:0 16px}
+    h1{margin:0 0 8px;font-size:28px}
+    .ver{opacity:.7}
+    .tabs{display:flex;gap:12px;margin:18px 0}
+    .tab{padding:10px 16px;border-radius:12px;background:#151b23;color:#c9d1d9;border:1px solid #263041;cursor:pointer}
+    .tab.active{background:#23304a;border-color:#35537a}
+    .toolbar{display:flex;gap:12px;align-items:center}
+    #btn-update{padding:8px 12px;border:1px solid #3b82f6;background:#1f2937;color:#dbeafe;border-radius:10px;cursor:pointer}
+    #btn-update.warn{background:#7c2d12;border-color:#ef4444;color:#fff}
+    .card{background:#111822;border:1px solid #223043;border-radius:16px;padding:16px;margin-top:12px}
+    .pill{display:inline-block;padding:6px 10px;border-radius:999px;background:#0b1220;border:1px solid #223043;color:#9fb4d0}
+    .err{color:#ef4444}
+    table{width:100%;border-collapse:collapse;margin-top:10px}
+    th,td{padding:8px 10px;border-bottom:1px solid #223043}
+    th{font-weight:600;color:#9fb4d0;text-align:left}
+  </style>
+  <!-- cache-bust via ?v=1.0.1 -->
+  <script>window.UI_VERSION="1.0.1";</script>
+  <script defer src="/app.js?v=1.0.1"></script>
 </head>
-<body class="has-background-dark has-text-light">
-<section class="section">
-  <div class="container">
-    <h1 class="title has-text-light">SCALP <small>rtviz-ui 1.0.1</small></h1>
-
-    <div class="tabs is-toggle is-toggle-rounded">
-      <ul>
-        <li id="tab-flux"><a onclick="showTab('flux')">Flux</a></li>
-        <li id="tab-heatmap"><a onclick="showTab('heatmap')">Heatmap</a></li>
-        <li id="tab-hist"><a onclick="showTab('hist')">Historique</a></li>
-        <li id="tab-data"><a onclick="showTab('data')">Data</a></li>
-      </ul>
+<body>
+  <div class="wrap">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <h1>SCALP <span class="ver">rtviz-ui <span id="ui-ver">1.0.1</span></span></h1>
+        <div class="toolbar">
+          <div class="tabs">
+            <button class="tab active" data-tab="flux">Flux</button>
+            <button class="tab" data-tab="heatmap">Heatmap</button>
+            <button class="tab" data-tab="hist">Historique</button>
+          </div>
+          <button id="btn-update" title="Vérifier et recharger si une nouvelle version est dispo">Mettre à jour</button>
+          <span id="ver-msg" class="pill" style="display:none"></span>
+        </div>
+      </div>
     </div>
 
-    <div id="content-flux" class="content">…</div>
-    <div id="content-heatmap" class="content is-hidden">…</div>
-    <div id="content-hist" class="content is-hidden">…</div>
-
-    <div id="content-data" class="content is-hidden">
-      <h2 class="subtitle has-text-light">Statut des données</h2>
-      <table class="table is-fullwidth is-striped is-hoverable has-background-dark has-text-light">
-        <thead>
-          <tr><th>Symbole</th><th>TF</th><th>État</th></tr>
-        </thead>
-        <tbody id="data-body"></tbody>
+    <div id="pane-flux" class="card">
+      <div class="pill">Flux : <a href="/signals" style="color:#93c5fd">/signals</a></div>
+      <div id="flux-err" class="err" style="display:none;margin-top:10px">Erreur de chargement.</div>
+      <table id="flux-table" style="display:none">
+        <thead><tr><th>ts</th><th>sym</th><th>tf</th><th>side</th><th>score</th><th>entry</th></tr></thead>
+        <tbody></tbody>
       </table>
     </div>
+
+    <div id="pane-heatmap" class="card" style="display:none">
+      <div class="pill">Heatmap : <a href="/heatmap" style="color:#93c5fd">/heatmap</a></div>
+      <div id="heat-err" class="err" style="display:none;margin-top:10px">Erreur de chargement heatmap.</div>
+      <div id="heat-wrap"></div>
+    </div>
+
+    <div id="pane-hist" class="card" style="display:none">
+      <div class="pill">Logs : <a href="/logs/" style="color:#93c5fd">/logs/</a> · Ping : <a href="/hello" style="color:#93c5fd">/hello</a></div>
+    </div>
   </div>
-</section>
 </body>
 </html>
