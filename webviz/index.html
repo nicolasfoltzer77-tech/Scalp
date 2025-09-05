@@ -2,77 +2,58 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>SCALP · rtviz-ui</title>
   <style>
     body{margin:0;background:#0f141a;color:#e6edf3;font:16px/1.45 system-ui,Segoe UI,Roboto}
     .wrap{max-width:1100px;margin:32px auto;padding:0 16px}
     h1{margin:0 0 8px;font-size:28px}
-    .ver{opacity:.7}
+    .muted{opacity:.7}
     .tabs{display:flex;gap:12px;margin:18px 0}
-    .tab{padding:10px 16px;border-radius:12px;background:#151b23;border:1px solid #263041;cursor:pointer;color:#c9d1d9}
-    .tab.active{background:#23304a;border-color:#35537a}
+    .tab-btn{padding:10px 16px;border-radius:12px;background:#151b23;border:1px solid #263041;cursor:pointer;color:#c9d1d9}
+    .tab-btn.active{background:#23304a;border-color:#35537a}
     .toolbar{display:flex;gap:12px;align-items:center}
     #btn-update{padding:8px 12px;border:1px solid #3b82f6;background:#1f2937;color:#dbeafe;border-radius:10px;cursor:pointer}
-    #btn-update.warn{background:#7c2d12;border-color:#ef4444;color:#fff}
     .card{background:#111822;border:1px solid #223043;border-radius:16px;padding:16px;margin-top:12px}
+    .pill{display:inline-block;padding:6px 10px;border-radius:999px;background:#0b1220;border:1px solid #223043;color:#9fb4d0;white-space:nowrap}
     .err{color:#ef4444}
     table{width:100%;border-collapse:collapse;margin-top:10px}
     th,td{padding:8px 10px;border-bottom:1px solid #223043}
     th{font-weight:600;color:#9fb4d0;text-align:left}
-    .pill{display:inline-block;padding:6px 10px;border-radius:999px;border:1px solid #223043}
-    .st-grey{background:#2a2f36;color:#aab2bb}
-    .st-red{background:#3a1214;color:#ff9b9b}
-    .st-orange{background:#3a2a12;color:#ffd089}
-    .st-green{background:#123a1c;color:#8cf1b2}
+    footer{margin-top:20px}
   </style>
-  <!-- Le JS est versionné pour bust cache -->
-  <script defer src="/app.js?v=102"></script>
+  <script defer src="/app.js?v=104"></script>
 </head>
 <body>
   <div class="wrap">
     <div class="toolbar" style="justify-content:space-between;align-items:center">
-      <h1>SCALP <small id="ver" class="ver"></small></h1>
-      <button id="btn-update" title="forcer le rechargement">Mettre à jour</button>
+      <h1>SCALP <small id="ver" class="muted"></small></h1>
+      <button id="btn-update" class="tab-btn">Mettre à jour</button>
     </div>
 
     <nav class="tabs" id="tabs">
-      <button class="tab active" data-tab="flux">Flux</button>
-      <button class="tab" data-tab="heatmap">Heatmap</button>
-      <button class="tab" data-tab="history">Historique</button>
-      <button class="tab" data-tab="data">Données</button>
+      <button data-tab="data" class="tab-btn">Données</button>
+      <button data-tab="heatmap" class="tab-btn">Heatmap</button>
+      <button data-tab="history" class="tab-btn">Historique</button>
     </nav>
 
-    <!-- Flux -->
-    <section id="tab-flux" class="card">
-      <div>Flux : <a href="/signals">/signals</a></div>
-      <div id="flux-error" class="err" style="display:none"></div>
-      <table id="flux-table"><thead>
-        <tr><th>ts</th><th>sym</th><th>tf</th><th>side</th><th>score</th><th>entry</th></tr>
-      </thead><tbody></tbody></table>
-    </section>
+    <main>
+      <section id="tab-data" class="panel card" style="display:none">
+        <div><b>Statut des données</b> : <a href="/data" target="_blank">/data</a></div>
+        <div id="data-root" style="margin-top:8px"></div>
+      </section>
 
-    <!-- Heatmap -->
-    <section id="tab-heatmap" class="card" style="display:none">
-      <div>Heatmap : <a href="/heatmap">/heatmap</a></div>
-      <div id="heatmap-error" class="err" style="display:none"></div>
-      <div id="heatmap-grid"></div>
-    </section>
+      <section id="tab-heatmap" class="panel card" style="display:none">
+        <div>Heatmap : <a href="/heatmap" target="_blank">/heatmap</a></div>
+        <div id="heatmap-root" class="muted" style="margin-top:8px">À venir</div>
+      </section>
 
-    <!-- Historique -->
-    <section id="tab-history" class="card" style="display:none">
-      <div id="history-root">À venir…</div>
-    </section>
+      <section id="tab-history" class="panel card" style="display:none">
+        <div id="history-root" class="muted">À venir</div>
+      </section>
+    </main>
 
-    <!-- Données -->
-    <section id="tab-data" class="card" style="display:none">
-      <div style="margin-bottom:8px">Statut des données : <a href="/data">/data</a></div>
-      <div id="data-error" class="err" style="display:none"></div>
-      <table id="data-table"><thead id="data-head"></thead><tbody id="data-body"></tbody></table>
-      <div id="data-meta" class="ver" style="margin-top:6px"></div>
-    </section>
-
-    <footer style="margin:18px 0 6px">
+    <footer>
       <span>Logs : <a href="/logs/" target="_blank">/logs/</a></span>
       · <span>Ping : <a href="/hello" target="_blank">/hello</a></span>
     </footer>

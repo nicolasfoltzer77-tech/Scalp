@@ -1,122 +1,99 @@
-(async function () {
-  const $ = s => document.querySelector(s);
-  const $$ = s => Array.from(document.querySelectorAll(s));
+/* rtviz-ui 1.0.2 → 1.0.4  (Data: only pills + legend, no timers) */
+const POLL_MS = 10000;
 
-  // --- version UI ---
-  async function loadVersion() {
-    try {
-      const r = await fetch("/version", {cache:"no-store"});
-      const js = await r.json();
-      $("#ver").textContent = `rtviz-ui ${js.ui}`;
-    } catch {
-      $("#ver").textContent = "rtviz-ui ?";
-    }
-  }
+async function j(url){const r=await fetch(url,{cache:"no-store"});if(!r.ok)throw new Error(r.status+" "+r.statusText);return r.json();}
 
-  // --- onglets ---
-  function bindTabs() {
-    $$("#tabs .tab").forEach(btn=>{
-      btn.addEventListener("click", ()=>{
-        $$("#tabs .tab").forEach(b=>b.classList.remove("active"));
-        btn.classList.add("active");
-        const name = btn.dataset.tab;
-        ["flux","heatmap","history","data"].forEach(t=>{
-          $("#tab-"+t).style.display = (t===name)?"block":"none";
-        });
-        if (name==="data") renderData();   // lazy load
-        if (name==="flux") renderFlux();
-        if (name==="heatmap") renderHeatmap();
-      })
-    });
-  }
+function pill(status){
+  const span=document.createElement("span");
+  span.className="pill";
+  let bg="#1b1b1b", br="#333", txt="absent";
+  if(status==="fresh"){bg="#0b1220";br="#223043";txt="fresh";}
+  else if(status==="reloading"){bg="#3a2a12";br="#684a1a";txt="reloading";}
+  else if(status==="stale"){bg="#2a0f0f";br="#5a1b1b";txt="stale";}
+  span.style.background=bg; span.style.borderColor=br;
+  span.textContent = txt;
+  return span;
+}
 
-  // --- bouton MAJ (force reload dur) ---
-  $("#btn-update").addEventListener("click", ()=>{
-    // Ajoute un cache-buster à l’URL courante
-    const u = new URL(window.location.href);
-    u.searchParams.set("v", Date.now().toString().slice(-6));
-    location.href = u.toString();
+function legend(){
+  const wrap=document.createElement("div");
+  wrap.style.display="flex"; wrap.style.gap="8px"; wrap.style.marginBottom="8px";
+  const variants = [
+    ["fresh","#0b1220","#223043"],
+    ["reloading","#3a2a12","#684a1a"],
+    ["stale","#2a0f0f","#5a1b1b"],
+    ["absent","#1b1b1b","#333"]
+  ];
+  variants.forEach(([txt,bg,br])=>{
+    const p=document.createElement("span");
+    p.className="pill"; p.style.background=bg; p.style.borderColor=br; p.textContent=txt;
+    wrap.appendChild(p);
   });
+  return wrap;
+}
 
-  // -------- Flux (placeholder simple) --------
-  async function renderFlux() {
-    const err = $("#flux-error"); err.style.display="none";
-    const body = $("#flux-table tbody"); body.innerHTML = "";
-    try {
-      const r = await fetch("/signals", {cache:"no-store"});
-      if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
-      const rows = await r.json();
-      (rows||[]).slice(0,50).forEach(o=>{
-        const tr = document.createElement("tr");
-        tr.innerHTML = `<td>${o.ts||""}</td><td>${o.sym||o.symbol||""}</td><td>${o.tf||""}</td>
-                        <td>${o.side||o.signal||""}</td><td>${o.score??""}</td><td>${o.entry??""}</td>`;
-        body.appendChild(tr);
+// -------- DATA TAB ----------
+let DATA_TIMER=null;
+async function loadData(){
+  const root=document.getElementById("data-root");
+  try{
+    const d=await j("/data");
+    root.innerHTML="";
+    root.appendChild(legend());
+
+    const t=document.createElement("table");
+    const thead=document.createElement("thead");
+    const trh=document.createElement("tr");
+    ["Symbol",...d.tfs].forEach(h=>{const th=document.createElement("th");th.textContent=h;trh.appendChild(th);});
+    thead.appendChild(trh); t.appendChild(thead);
+
+    const tb=document.createElement("tbody");
+    d.items.forEach(row=>{
+      const tr=document.createElement("tr");
+      const td0=document.createElement("td"); td0.textContent=row.symbol; tr.appendChild(td0);
+      d.tfs.forEach(tf=>{
+        const td=document.createElement("td");
+        const st=(row.tfs?.[tf]?.status)||"absent";
+        td.appendChild(pill(st));
+        tr.appendChild(td);
       });
-    } catch(e) {
-      err.textContent = "Erreur de chargement."; err.style.display="block";
-    }
+      tb.appendChild(tr);
+    });
+    t.appendChild(tb);
+    root.appendChild(t);
+
+    const upd=document.createElement("div");
+    upd.className="muted"; upd.style.marginTop="8px";
+    upd.textContent="Mise à jour OK";
+    root.appendChild(upd);
+  }catch(e){
+    root.innerHTML=`<div class="err">Erreur de chargement: ${e}</div>`;
   }
+}
 
-  // -------- Heatmap (placeholder) --------
-  async function renderHeatmap() {
-    const err = $("#heatmap-error"); err.style.display="none";
-    const root = $("#heatmap-grid"); root.innerHTML = "";
-    try {
-      const r = await fetch("/heatmap", {cache:"no-store"});
-      if (!r.ok) throw new Error();
-      const js = await r.json();
-      root.textContent = JSON.stringify(js).slice(0,400)+"…"; // minimal, on ne casse rien
-    } catch {
-      err.textContent = "Erreur de chargement heatmap."; err.style.display="block";
-    }
+// -------- TABS / NAV ----------
+function selectTab(name){
+  document.querySelectorAll(".panel").forEach(p=>p.style.display="none");
+  document.getElementById(`tab-${name}`).style.display="block";
+  document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
+  document.querySelector(`[data-tab="${name}"]`).classList.add("active");
+
+  clearInterval(DATA_TIMER);
+  if(name==="data"){
+    loadData();
+    DATA_TIMER=setInterval(loadData, POLL_MS);
   }
+}
 
-  // -------- Données (nouvel onglet) --------
-  function statClass(s) {
-    if (!s || s==="absent" || s==="unknown") return "st-grey";
-    if (s==="stale" || s==="invalid") return "st-red";
-    if (s==="reloading" || s==="loading") return "st-orange";
-    return "st-green"; // fresh / ok
-  }
+async function showVer(){
+  try{const v=await j("/version"); document.getElementById("ver").textContent=`rtviz-ui ${v.ui}`;}
+  catch{ document.getElementById("ver").textContent=`rtviz-ui`; }
+}
+function doUpdate(){ location.href='/?v='+(Date.now()%100000); }
 
-  async function renderData() {
-    const err = $("#data-error"); err.style.display = "none";
-    $("#data-head").innerHTML = ""; $("#data-body").innerHTML = ""; $("#data-meta").textContent="";
-    try {
-      const r = await fetch("/data", {cache:"no-store"});
-      if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
-      const js = await r.json();
-
-      const tfs = js.tfs || []; // ex: ["1m","5m","15m","1h"]
-      // entête
-      const trh = document.createElement("tr");
-      trh.innerHTML = `<th>Symbol</th>` + tfs.map(tf=>`<th>${tf}</th>`).join("");
-      $("#data-head").appendChild(trh);
-
-      // lignes
-      (js.items||[]).forEach(row=>{
-        const tr = document.createElement("tr");
-        tr.innerHTML = `<td>${(row.symbol||"").replace(/USDT$/,"")}</td>` +
-           tfs.map(tf=>{
-             const info = (row.tfs||{})[tf] || {};
-             const st = info.status || "absent";
-             const age = (info.age_sec!=null)? `${info.age_sec}s` : "";
-             return `<td><span class="pill ${statClass(st)}">${st}${age?` · ${age}`:""}</span></td>`;
-           }).join("");
-        $("#data-body").appendChild(tr);
-      });
-
-      if (js.updated_at) {
-        const dt = new Date(js.updated_at*1000);
-        $("#data-meta").textContent = `Mise à jour: ${dt.toLocaleString()}`;
-      }
-    } catch(e) {
-      err.textContent = "Erreur de chargement des données."; err.style.display="block";
-    }
-  }
-
-  // init
-  await loadVersion();
-  bindTabs();
-  renderFlux(); // onglet par défaut
-})();
+window.addEventListener("DOMContentLoaded", ()=>{
+  document.getElementById("btn-update").addEventListener("click", doUpdate);
+  document.querySelectorAll(".tab-btn").forEach(b=>b.addEventListener("click",()=>selectTab(b.dataset.tab)));
+  showVer();
+  selectTab("data"); // Data en premier
+});
