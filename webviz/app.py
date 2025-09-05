@@ -1,53 +1,103 @@
 from fastapi import FastAPI
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 import os, csv, time, glob
 
-app = FastAPI()
+app = FastAPI(title="scalp-webviz")
 
 BASE = "/opt/scalp/webviz"
-CSV_DIR = "/opt/scalp/var/dashboard"
-KLINES_DIR = "/opt/scalp/data/klines"
+DASH = "/opt/scalp/var/dashboard"   # signals.csv, signals_f.csv
+KLINES = "/opt/scalp/data/klines"   # fichiers de données
 
-# --- Fichiers statiques ---
+# --------- Static + index ----------
 app.mount("/static", StaticFiles(directory=BASE), name="static")
 
-@app.get("/")
-async def root():
+@app.get("/", include_in_schema=False)
+def index():
     return FileResponse(os.path.join(BASE, "index.html"))
 
-# --- Endpoint signals (flux principal) ---
-@app.get("/signals")
-async def signals():
-    csv_path = os.path.join(CSV_DIR, "signals.csv")
-    if not os.path.exists(csv_path):
-        return JSONResponse(content=[], status_code=200)
+@app.get("/hello", include_in_schema=False)
+def hello():
+    return PlainTextResponse("hello from rtviz")
+
+# --------- Helpers ----------
+def _read_signals_csv():
+    """
+    Lit /opt/scalp/var/dashboard/signals_f.csv si présent,
+    sinon /opt/scalp/var/dashboard/signals.csv.
+    Retourne une liste de dicts pour le front.
+    """
+    # préférence au factorisé si dispo
+    candidate = os.path.join(DASH, "signals_f.csv")
+    if not os.path.exists(candidate):
+        candidate = os.path.join(DASH, "signals.csv")
+
+    if not os.path.exists(candidate):
+        return []
 
     rows = []
-    with open(csv_path, newline="") as f:
-        r = csv.DictReader(f, fieldnames=["ts","symbol","tf","signal","details"])
-        for rec in r:
-            try:
-                ts = int(rec["ts"])
-            except Exception:
-                ts = int(time.time())
-            rows.append({
-                "ts": ts,
-                "sym": rec["symbol"].replace("USDT",""),
-                "tf": rec["tf"],
-                "side": rec["signal"],
-                "entry": rec.get("details",""),
-                "score": 0  # placeholder
-            })
-    return rows[-200:]  # limiter le flux
+    with open(candidate, newline="", encoding="utf-8") as f:
+        # Schémas possibles:
+        #  a) ts,symbol,tf,signal,details
+        #  b) ts,symbol,tf,side,rsi,ema_fast,ema_slow,score,entry (factorisé)
+        header = next(csv.reader([f.readline()]))
+        f.seek(0)
 
-# --- Endpoint data_status ---
+        # Si pas d'entête, on force un schéma par défaut
+        # (le DictReader avec fieldnames explicit)
+        def dicts(fieldnames):
+            return csv.DictReader(f, fieldnames=fieldnames)
+
+        if "side" in header or "score" in header:
+            # factorisé
+            r = csv.DictReader(f)
+            for rec in r:
+                try:
+                    ts = int(float(rec.get("ts", time.time())))
+                except Exception:
+                    ts = int(time.time())
+                rows.append({
+                    "ts": ts,
+                    "sym": rec.get("symbol","").replace("USDT",""),
+                    "tf": rec.get("tf",""),
+                    "side": rec.get("side","HOLD"),
+                    "score": float(rec.get("score", 0) or 0),
+                    "entry": rec.get("entry",""),
+                })
+        else:
+            # format simple (ts,symbol,tf,signal,details)
+            for rec in dicts(["ts","symbol","tf","signal","details"]):
+                try:
+                    ts = int(float(rec.get("ts", time.time())))
+                except Exception:
+                    ts = int(time.time())
+                rows.append({
+                    "ts": ts,
+                    "sym": rec.get("symbol","").replace("USDT",""),
+                    "tf": rec.get("tf",""),
+                    "side": (rec.get("signal","HOLD") or "HOLD").upper(),
+                    "score": 0,
+                    "entry": rec.get("details",""),
+                })
+    # on limite pour l’UI
+    return rows[-300:]
+
+# --------- API: signals (deux chemins pour être béton) ----------
+@app.get("/signals")
+@app.get("/api/signals")
+def get_signals():
+    try:
+        return _read_signals_csv()
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+# --------- API: état des data (onglet Data) ----------
 @app.get("/api/data_status")
-async def data_status():
-    status = {}
+def data_status():
     now = time.time()
-    for path in glob.glob(f"{KLINES_DIR}/*.csv"):
-        name = os.path.basename(path).replace(".csv","")  # ex: BTCUSDT_1m
+    status = {}
+    for path in glob.glob(os.path.join(KLINES, "*.csv")):
+        name = os.path.basename(path).replace(".csv", "")   # ex: BTCUSDT_1m
         try:
             age = now - os.path.getmtime(path)
         except Exception:
@@ -60,5 +110,5 @@ async def data_status():
             state = "orange"
         else:
             state = "rouge"
-        status[name] = {"file": path, "age_sec": int(age) if age else None, "state": state}
+        status[name] = {"file": path, "age_sec": int(age) if age is not None else None, "state": state}
     return status
