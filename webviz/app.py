@@ -1,32 +1,47 @@
-from __future__ import annotations
-import os
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+import os
 
-# Import des routeurs existants
-from routes.logs import router as logs_router
-from routes.streams import router as streams_router
-from routes.diag import router as diag_router
-from routes.data import router as data_router   # ✅ nouvel onglet Data
+app = FastAPI()
 
-app = FastAPI(title="SCALP Webviz")
+# 👉 Dossier où se trouvent index.html, app.js, style.css
+FRONT_DIR = "/opt/scalp/webviz"
 
-# CORS (API accessible depuis ton frontend)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Servir les fichiers statiques (JS, CSS…)
+app.mount("/static", StaticFiles(directory=FRONT_DIR), name="static")
 
-# Montage des fichiers statiques (frontend Vue/JS/HTML)
-www_dir = os.path.join(os.path.dirname(__file__), "www")
-app.mount("/", StaticFiles(directory=www_dir, html=True), name="static")
+@app.get("/")
+async def root():
+    """Renvoie l'index du dashboard"""
+    return FileResponse(os.path.join(FRONT_DIR, "index.html"))
 
-# Brancher les routeurs
-app.include_router(logs_router)
-app.include_router(streams_router)
-app.include_router(diag_router)
-app.include_router(data_router)   # ✅ nouveau
+# Exemple d’API pour l’onglet Data
+@app.get("/api/data_status")
+async def data_status():
+    """
+    Retourne l’état des fichiers CSV dans /opt/scalp/data/klines
+    - gris  : absent
+    - rouge : trop vieux
+    - orange: en cours de rechargement
+    - vert  : ok
+    """
+    import glob, time
+    DATA_DIR = "/opt/scalp/data/klines"
+    now = time.time()
+    status = {}
+
+    for f in glob.glob(os.path.join(DATA_DIR, "*.csv")):
+        name = os.path.basename(f).replace(".csv", "")
+        age = now - os.path.getmtime(f)
+
+        if age > 3600:   # trop vieux > 1h
+            state = "rouge"
+        elif age > 600:  # vieux > 10min
+            state = "orange"
+        else:
+            state = "vert"
+
+        status[name] = {"file": f, "age_sec": int(age), "state": state}
+
+    return status

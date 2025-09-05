@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>SCALP Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <nav>
+    <button onclick="showTab('signals')">📈 Signaux</button>
+    <button onclick="showTab('positions')">📊 Positions</button>
+    <button onclick="showTab('logs')">📝 Logs</button>
+    <button onclick="showTab('data')">💾 Data</button> <!-- ✅ nouvel onglet -->
+  </nav>
+
+  <main>
+    <section id="signals" class="tab"></section>
+    <section id="positions" class="tab"></section>
+    <section id="logs" class="tab"></section>
+    <section id="data" class="tab"></section> <!-- ✅ nouvel onglet -->
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
