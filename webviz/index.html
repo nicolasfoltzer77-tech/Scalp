@@ -1,93 +1,85 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8"/>
+  <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>SCALP · rtviz-ui 1.0.0</title>
-  <link rel="icon" href="data:,">
+  <title>SCALP — rtviz-ui 1.0.0</title>
   <style>
-    body{background:#0f141a;color:#e6edf3;font:14px/1.4 system-ui,Segoe UI,Roboto,Ubuntu;}
-    .tabs {display:flex;gap:12px;margin:24px 0}
-    .tab {padding:10px 16px;border-radius:12px;background:#1b2230;color:#bcd;border:1px solid #293344;cursor:pointer}
-    .tab.active{background:#253044;color:#fff}
-    .card{background:#121822;border:1px solid #293344;border-radius:16px;padding:16px;margin:16px 0}
-    table{width:100%;border-collapse:collapse}
-    th,td{padding:8px 10px;border-bottom:1px solid #223}
-    th{color:#9ab}
-    .green{color:#58d68d;font-weight:600}
-    .red{color:#ff6b6b;font-weight:600}
-    .orange{color:#ffb347;font-weight:600}
-    .grey{color:#9aa}
-    .muted{color:#8aa}
+    :root { color-scheme: dark; --bg:#0d1117; --panel:#111827; --muted:#94a3b8; --ok:#10b981; --err:#ef4444; --badge:#1f2937; --pill:#0b1220; --blue:#60a5fa;}
+    body{margin:0;background:#0b0f14;color:#e5e7eb;font:14px/1.35 system-ui,Segoe UI,Roboto,Arial;}
+    .wrap{max-width:1100px;margin:32px auto;padding:0 16px;}
+    h1{margin:0 0 22px;font-size:32px;font-weight:800;letter-spacing:.4px}
+    .brand{opacity:.85;margin-left:10px;font-weight:600}
+    .tabs{display:flex;gap:14px;margin:18px 0 14px}
+    .tab{background:#10151d;border:1px solid #17202b;border-radius:14px;padding:10px 16px;cursor:pointer}
+    .tab.active{background:#0b1220;border-color:#263445}
+    .panel{background:#0c1118;border:1px solid #17202b;border-radius:14px;padding:16px}
+    .meta{display:flex;gap:12px;align-items:center;margin-bottom:10px}
+    .badge{background:#0e1724;color:#a4b1c6;border:1px solid #17202b;padding:6px 10px;border-radius:999px}
+    .pill a{color:#93c5fd;text-decoration:none}
+    table{width:100%;border-collapse:separate;border-spacing:0;margin-top:10px}
+    th,td{padding:10px 12px;border-bottom:1px solid #17202b}
+    th{color:#9fb0c6;text-align:left;background:#0b1220;position:sticky;top:0}
+    .heat-H{background:#1f2937;color:#9aa4b2}
+    .heat-BUY{background:#023430;color:#16f0a4}
+    .heat-SELL{background:#3a0412;color:#ff8aa0}
+    .err{color:#ef4444;margin-top:8px}
+    .muted{color:#94a3b8}
   </style>
 </head>
 <body>
-  <main style="max-width:1100px;margin:0 auto;padding:20px">
-    <h1 style="margin:0 0 8px">SCALP <span class="muted">rtviz-ui 1.0.0</span></h1>
+  <div class="wrap">
+    <h1>SCALP <span class="brand">rtviz-ui 1.0.0</span></h1>
 
     <div class="tabs">
-      <button class="tab active" data-pane="flux">Flux</button>
-      <button class="tab" data-pane="heatmap">Heatmap</button>
-      <button class="tab" data-pane="history">Historique</button>
-      <button class="tab" data-pane="data">Données</button>
+      <div class="tab active" data-tab="flux">Flux</div>
+      <div class="tab" data-tab="heatmap">Heatmap</div>
+      <div class="tab" data-tab="history">Historique</div>
     </div>
 
-    <!-- Flux -->
-    <section class="card" id="pane-flux">
-      <div class="muted">Flux (derniers signaux)</div>
-      <div id="flux-error" class="red" style="margin:8px 0"></div>
-      <table>
-        <thead>
-          <tr><th>ts</th><th>sym</th><th>tf</th><th>side</th><th>rsi</th><th>sma</th><th>ema</th><th>score</th></tr>
-        </thead>
-        <tbody id="flux-body"></tbody>
-      </table>
+    <!-- FLUX -->
+    <section id="panel-flux" class="panel">
+      <div class="meta">
+        <span class="badge" id="flux-status">Flux: …</span>
+        <span class="pill badge"><a href="/signals">/signals</a></span>
+      </div>
+      <div class="err" id="flux-error"></div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>ts</th><th>sym</th><th>tf</th><th>side</th><th>rsi</th><th>sma</th><th>ema</th><th>score</th></tr>
+          </thead>
+          <tbody id="flux-body"></tbody>
+        </table>
+      </div>
     </section>
 
-    <!-- Heatmap -->
-    <section class="card" id="pane-heatmap" style="display:none">
-      <div class="muted">Heatmap</div>
-      <div id="heatmap-error" class="red" style="margin:8px 0"></div>
-      <pre id="heatmap-body" style="white-space:pre-wrap"></pre>
+    <!-- HEATMAP -->
+    <section id="panel-heatmap" class="panel" hidden>
+      <div class="meta">
+        <span class="badge" id="heatmap-status">Heatmap: …</span>
+        <span class="pill badge"><a href="/heatmap">/heatmap</a></span>
+      </div>
+      <div class="err" id="heatmap-error"></div>
+      <div id="heatmap-grid"></div>
     </section>
 
-    <!-- Historique -->
-    <section class="card" id="pane-history" style="display:none">
-      <div class="muted">Historique (BTCUSDT)</div>
-      <div id="history-error" class="red" style="margin:8px 0"></div>
+    <!-- HISTORY -->
+    <section id="panel-history" class="panel" hidden>
+      <div class="meta">
+        <span class="badge">Historique BTCUSDT</span>
+        <span class="pill badge"><a href="/history/BTCUSDT">/history/BTCUSDT</a></span>
+      </div>
+      <div class="err" id="history-error"></div>
       <table>
-        <thead>
-          <tr><th>ts</th><th>tf</th><th>side</th><th>rsi</th><th>sma</th><th>ema</th><th>score</th></tr>
-        </thead>
+        <thead><tr><th>ts</th><th>tf</th><th>side</th><th>rsi</th><th>sma</th><th>ema</th><th>score</th></tr></thead>
         <tbody id="history-body"></tbody>
       </table>
     </section>
 
-    <!-- Données -->
-    <section class="card" id="pane-data" style="display:none">
-      <div class="muted">État des données (klines)</div>
-      <div id="data-error" class="red" style="margin:8px 0"></div>
-      <table>
-        <thead><tr><th>sym</th><th>1m</th><th>5m</th><th>15m</th></tr></thead>
-        <tbody id="data-body"></tbody>
-      </table>
-      <p class="muted">Couleurs : <span class="green">fresh</span> · <span class="orange">loading</span> · <span class="red">stale</span> · <span class="grey">missing</span></p>
-    </section>
+    <p class="muted" style="margin-top:14px">Logs : <a href="/logs/">/logs/</a> · Ping : <a href="/hello">/hello</a></p>
+  </div>
 
-    <p class="muted">Logs : <a href="/logs/">/logs/</a> · Ping : <a href="/hello">/hello</a></p>
-  </main>
-
-  <script>
-    // mini-tabs
-    const tabs = document.querySelectorAll(".tab");
-    const panes = {flux:"pane-flux", heatmap:"pane-heatmap", history:"pane-history", data:"pane-data"};
-    tabs.forEach(b => b.onclick = () => {
-      tabs.forEach(x=>x.classList.remove("active"));
-      b.classList.add("active");
-      Object.values(panes).forEach(id => document.getElementById(id).style.display="none");
-      document.getElementById(panes[b.dataset.pane]).style.display="";
-    });
-  </script>
   <script src="/app.js"></script>
 </body>
 </html>
