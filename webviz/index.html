@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>SCALP rtviz-ui</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { background: #111; color: #eee; font-family: sans-serif; }
+    h1 { color: #6cf; }
+    .tabs { margin: 10px 0; }
+    .tab { display: inline-block; margin-right: 10px; padding: 6px 12px; border-radius: 5px; background: #222; color: #ccc; cursor: pointer; }
+    .tab.active { background: #6cf; color: #000; }
+    table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+    th, td { border: 1px solid #333; padding: 4px 6px; text-align: center; }
+    th { background: #222; }
+    .green { color: #0f0; }
+    .orange { color: #fa0; }
+    .red { color: #f33; }
+    .grey { color: #777; }
+    pre { white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h1>SCALP <small>rtviz-ui 1.0.0</small></h1>
+
+  <div class="tabs">
+    <span class="tab active" onclick="showTab('flux')">Flux</span>
+    <span class="tab" onclick="showTab('heatmap')">Heatmap</span>
+    <span class="tab" onclick="showTab('history')">Historique</span>
+    <span class="tab" onclick="showTab('data')">Données</span>
+  </div>
+
+  <!-- Conteneurs -->
+  <div id="flux" class="tabcontent">
+    <h2>Flux des signaux</h2>
+    <div id="flux-error" style="color:red"></div>
+    <table>
+      <thead>
+        <tr><th>ts</th><th>sym</th><th>tf</th><th>side</th><th>rsi</th><th>sma</th><th>ema</th><th>score</th></tr>
+      </thead>
+      <tbody id="flux-body"></tbody>
+    </table>
+  </div>
+
+  <div id="heatmap" class="tabcontent" style="display:none">
+    <h2>Heatmap</h2>
+    <div id="heatmap-error" style="color:red"></div>
+    <pre id="heatmap-body"></pre>
+  </div>
+
+  <div id="history" class="tabcontent" style="display:none">
+    <h2>Historique (exemple BTCUSDT)</h2>
+    <div id="history-error" style="color:red"></div>
+    <table>
+      <thead>
+        <tr><th>ts</th><th>tf</th><th>side</th><th>rsi</th><th>sma</th><th>ema</th><th>score</th></tr>
+      </thead>
+      <tbody id="history-body"></tbody>
+    </table>
+  </div>
+
+  <div id="data" class="tabcontent" style="display:none">
+    <h2>État des données Klines</h2>
+    <div id="data-error" style="color:red"></div>
+    <table>
+      <thead>
+        <tr><th>Symbole</th><th>1m</th><th>5m</th><th>15m</th></tr>
+      </thead>
+      <tbody id="data-body"></tbody>
+    </table>
+  </div>
+
+  <script src="/app.js"></script>
+  <script>
+    function showTab(tab) {
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tabcontent').forEach(el => el.style.display = 'none');
+      document.querySelector(`.tab[onclick="showTab('${tab}')"]`).classList.add('active');
+      document.getElementById(tab).style.display = 'block';
+    }
+  </script>
+</body>
+</html>
