@@ -1,10 +1,15 @@
 import os, json, time, asyncio
 from typing import Optional
 from fastapi import APIRouter, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, JSONResponse
 from webviz.core.paths import resolve_paths, load_json, parse_signals_csv_lines
+from webviz.core.diag import diag_stream
 
 router = APIRouter()
+
+@router.get("/stream_status")
+def stream_status():
+    return diag_stream()
 
 def _sse_pack(data: str, event: Optional[str]=None, id_: Optional[str]=None) -> str:
     parts=[]
