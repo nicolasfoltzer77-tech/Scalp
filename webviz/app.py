@@ -1,13 +1,14 @@
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
-import os, csv, time, glob
+import os, csv, time, glob, json
+from collections import defaultdict
 
 app = FastAPI(title="scalp-webviz")
 
 BASE = "/opt/scalp/webviz"
-DASH = "/opt/scalp/var/dashboard"   # signals.csv, signals_f.csv
-KLINES = "/opt/scalp/data/klines"   # fichiers de données
+DASH = "/opt/scalp/var/dashboard"   # signals.csv, signals_f.csv, heatmap.json
+KLINES = "/opt/scalp/data/klines"
 
 # --------- Static + index ----------
 app.mount("/static", StaticFiles(directory=BASE), name="static")
@@ -22,34 +23,20 @@ def hello():
 
 # --------- Helpers ----------
 def _read_signals_csv():
-    """
-    Lit /opt/scalp/var/dashboard/signals_f.csv si présent,
-    sinon /opt/scalp/var/dashboard/signals.csv.
-    Retourne une liste de dicts pour le front.
-    """
-    # préférence au factorisé si dispo
+    """Lit signals_f.csv si présent, sinon signals.csv → liste de dicts pour l’UI."""
     candidate = os.path.join(DASH, "signals_f.csv")
     if not os.path.exists(candidate):
         candidate = os.path.join(DASH, "signals.csv")
-
     if not os.path.exists(candidate):
         return []
 
     rows = []
     with open(candidate, newline="", encoding="utf-8") as f:
-        # Schémas possibles:
-        #  a) ts,symbol,tf,signal,details
-        #  b) ts,symbol,tf,side,rsi,ema_fast,ema_slow,score,entry (factorisé)
-        header = next(csv.reader([f.readline()]))
+        # on regarde l'entête si elle existe
+        first = f.readline()
+        header = [c.strip() for c in first.strip().split(",")] if first else []
         f.seek(0)
-
-        # Si pas d'entête, on force un schéma par défaut
-        # (le DictReader avec fieldnames explicit)
-        def dicts(fieldnames):
-            return csv.DictReader(f, fieldnames=fieldnames)
-
         if "side" in header or "score" in header:
-            # factorisé
             r = csv.DictReader(f)
             for rec in r:
                 try:
@@ -65,8 +52,8 @@ def _read_signals_csv():
                     "entry": rec.get("entry",""),
                 })
         else:
-            # format simple (ts,symbol,tf,signal,details)
-            for rec in dicts(["ts","symbol","tf","signal","details"]):
+            r = csv.DictReader(f, fieldnames=["ts","symbol","tf","signal","details"])
+            for rec in r:
                 try:
                     ts = int(float(rec.get("ts", time.time())))
                 except Exception:
@@ -79,10 +66,23 @@ def _read_signals_csv():
                     "score": 0,
                     "entry": rec.get("details",""),
                 })
-    # on limite pour l’UI
     return rows[-300:]
 
-# --------- API: signals (deux chemins pour être béton) ----------
+def _fallback_heatmap_from_signals(signals):
+    """Construit une heatmap minimale à partir des derniers signaux par (sym,tf)."""
+    last = {}
+    for r in signals:
+        key = (r["sym"], r["tf"])
+        if key not in last or r["ts"] >= last[key]["ts"]:
+            last[key] = r
+    cells = []
+    for (sym, tf), row in sorted(last.items()):
+        side = row.get("side","HOLD")
+        v = {"BUY":1.0, "SELL":-1.0}.get(side, 0.0)
+        cells.append({"sym": f"{sym}USDT", "tf": tf, "side": side, "v": v})
+    return {"source":"fallback(signals)", "cells": cells}
+
+# --------- API: signals ----------
 @app.get("/signals")
 @app.get("/api/signals")
 def get_signals():
@@ -91,7 +91,21 @@ def get_signals():
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
 
-# --------- API: état des data (onglet Data) ----------
+# --------- API: heatmap ----------
+@app.get("/heatmap")
+@app.get("/api/heatmap")
+def get_heatmap():
+    try:
+        hp = os.path.join(DASH, "heatmap.json")
+        if os.path.exists(hp):
+            with open(hp, "r", encoding="utf-8") as f:
+                return json.load(f)
+        # sinon on fabrique depuis les signaux
+        return _fallback_heatmap_from_signals(_read_signals_csv())
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+# --------- API: état des données (onglet Data) ----------
 @app.get("/api/data_status")
 def data_status():
     now = time.time()
