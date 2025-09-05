@@ -1,70 +1,39 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
   <title>SCALP · rtviz-ui</title>
   <style>
-    body{margin:0;background:#0f141a;color:#e6edf3;font:16px/1.45 system-ui,Segoe UI,Roboto}
-    .wrap{max-width:1100px;margin:28px auto;padding:0 16px}
-    h1{margin:0 0 8px;font-size:28px} .muted{opacity:.65}
+    body {margin:0;background:#0f141a;color:#e6edf3;font:16px/1.45 system-ui,Segoe UI,Roboto}
+    .wrap{max-width:1100px;margin:32px auto;padding:0 16px}
+    h1{margin:0 0 8px;font-size:28px}
     .tabs{display:flex;gap:12px;margin:18px 0}
-    .tab{padding:10px 16px;border-radius:12px;background:#151b23;border:1px solid #263041;cursor:pointer}
-    .tab.active{background:#23304a;border-color:#35537a}
+    .tab{padding:10px 16px;border-radius:12px;background:#151b23;cursor:pointer}
+    .tab.active{background:#23304a;border:1px solid #35537a}
     .toolbar{display:flex;gap:12px;align-items:center}
-    #btn-update{padding:8px 12px;border:1px solid #3b82f6;background:#1f2937;color:#dbeafe;border-radius:10px;cursor:pointer}
-    .card{background:#111822;border:1px solid #223043;border-radius:16px;padding:16px;margin-top:12px}
-    .legend{display:flex;gap:18px;margin-bottom:10px;align-items:center}
-    .pill{display:inline-block;width:12px;height:12px;border-radius:999px;margin-right:8px;border:1px solid rgba(0,0,0,.35)}
-    .fresh{background:#16a34a} .reloading{background:#f59e0b} .stale{background:#dc2626} .absent{background:#94a3b8}
-    .err{color:#ef4444;margin-top:8px}
-    table{width:100%;border-collapse:collapse;margin-top:10px}
-    th,td{padding:8px 10px;border-bottom:1px solid #223043;text-align:left}
-    th{font-weight:600;color:#9fb4d0}
+    #btn-update{padding:8px 12px;border:1px solid #3b82f6;border-radius:8px;cursor:pointer}
+    .card{background:#111822;border:1px solid #223043;border-radius:12px;padding:16px;margin-top:12px}
+    #ver{opacity:.7}
   </style>
-  <!-- version forcée 104 -->
-  <script defer src="/app.js?v=104"></script>
+  <!-- ⚡ Cache-buster dynamique : ts sera injecté côté backend -->
+  <script defer src="/app.js?v={{ts}}"></script>
 </head>
 <body>
-<div class="wrap">
-  <div class="toolbar" style="justify-content:space-between">
-    <h1>SCALP <small id="ver" class="muted"></small></h1>
-    <button id="btn-update">Mettre à jour</button>
-  </div>
-
-  <nav class="tabs" id="tabs">
-    <button data-tab="data" class="tab active">Données</button>
-    <button data-tab="flux" class="tab">Flux</button>
-    <button data-tab="heatmap" class="tab">Heatmap</button>
-    <button data-tab="history" class="tab">Historique</button>
-  </nav>
-
-  <section id="tab-data" class="card">
-    <div class="legend">
-      <span><i class="pill fresh"></i>fresh</span>
-      <span><i class="pill reloading"></i>reloading</span>
-      <span><i class="pill stale"></i>stale</span>
-      <span><i class="pill absent"></i>absent</span>
+  <div class="wrap">
+    <div class="toolbar">
+      <h1>SCALP <small id="ver" class="muted"></small></h1>
+      <button id="btn-update">Mettre à jour</button>
     </div>
-    <div id="data-root">Chargement…</div>
-  </section>
-
-  <section id="tab-flux" class="card" hidden>
-    <div id="flux-root">Flux : <a href="/signals">/signals</a></div>
-  </section>
-
-  <section id="tab-heatmap" class="card" hidden>
-    <div id="heat-root">Heatmap : <a href="/heatmap">/heatmap</a></div>
-  </section>
-
-  <section id="tab-history" class="card" hidden>
-    <div id="hist-root">Historique</div>
-  </section>
-
-  <footer style="margin-top:12px">
-    <span>Logs : <a href="/logs/" target="_blank">/logs/</a></span> ·
-    <span>Ping : <a href="/hello" target="_blank">/hello</a></span>
-  </footer>
-</div>
+    <div class="tabs">
+      <div class="tab active">Données</div>
+      <div class="tab">Flux</div>
+      <div class="tab">Heatmap</div>
+      <div class="tab">Historique</div>
+    </div>
+    <div class="card">
+      <div id="content">Chargement…</div>
+    </div>
+  </div>
 </body>
 </html>
