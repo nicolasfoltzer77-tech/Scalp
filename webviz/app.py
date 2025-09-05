@@ -12,7 +12,7 @@ from routes.data import router as data_router   # ✅ nouvel onglet Data
 
 app = FastAPI(title="SCALP Webviz")
 
-# CORS si besoin (API accessible depuis ton frontend)
+# CORS (API accessible depuis ton frontend)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -22,7 +22,7 @@ app.add_middleware(
 )
 
 # Montage des fichiers statiques (frontend Vue/JS/HTML)
-www_dir = os.path.join(os.path.dirname(__file__), "../www")
+www_dir = os.path.join(os.path.dirname(__file__), "www")
 app.mount("/", StaticFiles(directory=www_dir, html=True), name="static")
 
 # Brancher les routeurs
