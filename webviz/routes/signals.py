@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Query
 from typing import Optional, List, Dict
 from webviz.core.paths import load_signals_any
+from webviz.core.diag import diag_signals
 
 router = APIRouter()
 
@@ -14,6 +15,11 @@ def _apply_filters(items: List[Dict], sym: Optional[str], tf: Optional[str], inc
         if tfs and it["tf"] not in tfs: continue
         out.append(it)
     return out
+
+@router.get("/signals_status")
+def signals_status():
+    """Diagnostic détaillé pour la brique 'signals'."""
+    return diag_signals()
 
 @router.get("/signals_raw")
 def signals_raw(limit: int = Query(100, ge=1, le=2000),

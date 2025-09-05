@@ -1,7 +1,12 @@
 from fastapi import APIRouter, Query
 from webviz.core.paths import resolve_paths, load_json
+from webviz.core.diag import diag_history
 
 router = APIRouter()
+
+@router.get("/history_status")
+def history_status():
+    return diag_history()
 
 @router.get("/history")
 def history(limit: int = Query(100, ge=1, le=1000),
