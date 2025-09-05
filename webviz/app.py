@@ -1,49 +1,77 @@
-#!/usr/bin/env python3
 from __future__ import annotations
 import os, json, time
-from fastapi import FastAPI
-from fastapi.responses import PlainTextResponse, FileResponse, JSONResponse
+from fastapi import FastAPI, Response
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
+from fastapi.middleware.cors import CORSMiddleware
 
-APP_DIR   = "/opt/scalp/webviz"
-DASH_DIR  = "/opt/scalp/var/dashboard"
-VERSION   = "1.0.1"   # <— bump
+APP_DIR = "/opt/scalp/webviz"
+DASH_DIR = "/opt/scalp/var/dashboard"
+DATA_STATUS = os.path.join(DASH_DIR, "data_status.json")   # généré par ton job côté data
 
-app = FastAPI(title="rtviz-ui", version=VERSION)
+app = FastAPI()
 
-def no_cache_headers():
-    # empêche le cache navigateur
-    return {"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0"}
+# CORS + anti-cache côté API
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], allow_credentials=True,
+    allow_methods=["*"], allow_headers=["*"],
+)
 
-@app.get("/hello", response_class=PlainTextResponse)
-async def hello():
-    return "hello from rtviz"
+def _nocache(resp: Response) -> Response:
+    resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    resp.headers["Pragma"] = "no-cache"
+    resp.headers["Expires"] = "0"
+    return resp
 
-@app.get("/version", response_class=JSONResponse)
-async def version():
-    return {"ui": VERSION, "ts": int(time.time())}
+# --------- Pages (index + js) ---------
+@app.get("/", include_in_schema=False)
+def root():
+    path = os.path.join(APP_DIR, "index.html")
+    return _nocache(FileResponse(path, media_type="text/html"))
 
-# Fichiers UI (no-cache)
-@app.get("/", response_class=FileResponse)
-async def index():
-    return FileResponse(os.path.join(APP_DIR, "index.html"), headers=no_cache_headers())
+@app.get("/app.js", include_in_schema=False)
+def appjs():
+    path = os.path.join(APP_DIR, "app.js")
+    return _nocache(FileResponse(path, media_type="text/javascript"))
 
-@app.get("/app.js", response_class=FileResponse)
-async def appjs():
-    return FileResponse(os.path.join(APP_DIR, "app.js"), headers=no_cache_headers())
+# --------- API utilitaires ---------
+@app.get("/hello", include_in_schema=False)
+def hello():
+    return PlainTextResponse("hello from rtviz")
 
-# APIs existantes (exemples—tu avais déjà /signals, /heatmap)
-@app.get("/signals", response_class=PlainTextResponse)
-async def signals():
-    p = os.path.join(DASH_DIR, "signals.json")
-    if not os.path.exists(p):
-        return PlainTextResponse('[]', status_code=404)
-    return FileResponse(p, headers=no_cache_headers())
+@app.get("/version")
+def version():
+    return _nocache(JSONResponse({"ui":"1.0.2", "ts": int(time.time())}))
 
-@app.get("/heatmap", response_class=PlainTextResponse)
-async def heatmap():
-    p = os.path.join(DASH_DIR, "heatmap.json")
-    if not os.path.exists(p):
-        return PlainTextResponse('{"cells":[]}', status_code=404)
-    return FileResponse(p, headers=no_cache_headers())
+# --------- API historiques existants (inchangés) ---------
+# /signals et /heatmap sont déjà implémentés ailleurs dans ton app ;
+# on ne modifie pas leur logique ici.
 
-# (le reste de tes routes /logs etc. restent identiques)
+# --------- NOUVEAU : API Data (onglet Données) ---------
+@app.get("/data")
+def data_status():
+    """
+    Sert tel quel le fichier JSON préparé par ton job:
+    {
+      "updated_at": 17570...,      # epoch
+      "tfs": ["1m","5m","15m","1h",...],
+      "items": [
+        {"symbol":"BTC", "tfs":{
+           "1m":{"status":"fresh","age_sec":12},
+           "5m":{"status":"stale","age_sec":620},
+           "15m":{"status":"reloading","age_sec":90},
+           "1h":{"status":"absent","age_sec":null}
+        }},
+        ...
+      ]
+    }
+    """
+    try:
+        if os.path.isfile(DATA_STATUS):
+            with open(DATA_STATUS, "r", encoding="utf-8") as f:
+                payload = json.load(f)
+        else:
+            payload = {"updated_at": int(time.time()), "tfs": [], "items": []}
+        return _nocache(JSONResponse(payload))
+    except Exception as e:
+        return _nocache(JSONResponse({"error": str(e), "items": []}))
