@@ -1,39 +1,27 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-  <title>SCALP · rtviz-ui</title>
-  <style>
-    body {margin:0;background:#0f141a;color:#e6edf3;font:16px/1.45 system-ui,Segoe UI,Roboto}
-    .wrap{max-width:1100px;margin:32px auto;padding:0 16px}
-    h1{margin:0 0 8px;font-size:28px}
-    .tabs{display:flex;gap:12px;margin:18px 0}
-    .tab{padding:10px 16px;border-radius:12px;background:#151b23;cursor:pointer}
-    .tab.active{background:#23304a;border:1px solid #35537a}
-    .toolbar{display:flex;gap:12px;align-items:center}
-    #btn-update{padding:8px 12px;border:1px solid #3b82f6;border-radius:8px;cursor:pointer}
-    .card{background:#111822;border:1px solid #223043;border-radius:12px;padding:16px;margin-top:12px}
-    #ver{opacity:.7}
-  </style>
-  <!-- ⚡ Cache-buster dynamique : ts sera injecté côté backend -->
-  <script defer src="/app.js?v={{ts}}"></script>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>SCALP</title>
+  <link rel="stylesheet" href="/assets/app.css?v=1"/>
+  <script defer src="/app.js?v=1"></script>
 </head>
 <body>
-  <div class="wrap">
-    <div class="toolbar">
-      <h1>SCALP <small id="ver" class="muted"></small></h1>
-      <button id="btn-update">Mettre à jour</button>
-    </div>
-    <div class="tabs">
-      <div class="tab active">Données</div>
-      <div class="tab">Flux</div>
-      <div class="tab">Heatmap</div>
-      <div class="tab">Historique</div>
-    </div>
-    <div class="card">
-      <div id="content">Chargement…</div>
-    </div>
-  </div>
+  <header>
+    <h1>SCALP <small id="ver" class="muted"></small></h1>
+    <nav class="tabs" id="tabs">
+      <button data-tab="data" class="tab-btn">Données</button>
+      <button data-tab="flux" class="tab-btn">Flux</button>
+      <button data-tab="heatmap" class="tab-btn">Heatmap</button>
+      <button data-tab="history" class="tab-btn">Historique</button>
+      <button id="btn-update" class="tab-btn">Mettre à jour</button>
+    </nav>
+  </header>
+  <main id="content">Chargement…</main>
+  <footer>
+    <span>Logs : <a href="/logs/" target="_blank">/logs/</a></span> ·
+    <span>Ping : <a href="/hello" target="_blank">/hello</a></span>
+  </footer>
 </body>
 </html>
