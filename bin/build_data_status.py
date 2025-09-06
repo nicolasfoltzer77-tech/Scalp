@@ -1,79 +1,70 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import os, json, time, glob, re
-from collections import defaultdict
+import os, re, json, time
+from pathlib import Path
 
-BASE = "/opt/scalp/data/klines"
-OUT  = "/opt/scalp/var/dashboard/data_status.json"
+DATA = Path("/opt/scalp/data")
+OUT  = Path("/opt/scalp/var/dashboard/data_status.json")
 
-# Fraîcheur max (s) par TF
-MAX_AGE      = {"1m": 90, "5m": 300, "15m": 900}
-MIN_CANDLES  = 1500
+# seuils de fraicheur (âge max en secondes)
+THRESH = {"1m": 120, "5m": 8*60, "15m": 25*60}
+# au-delà de ce seuil on passe "stale"
+STALE  = {"1m": 10*60, "5m": 60*60, "15m": 3*60*60}
 
-HDR_RE = re.compile(r'[A-Za-z]')  # détecte une entête (caractères alpha)
+rx = re.compile(r"^(?P<sym>.+)_(?P<tf>1m|5m|15m)\.jsonl$", re.I)
 
-def count_lines(path:str)->int:
-    """Compte les lignes données (ignore blank + éventuel header)."""
-    n = 0
-    header_checked = False
+def tail_last_ts_and_count(p: Path):
+    if not p.exists(): return None, 0
+    # lit en arrière: on ne parcourt pas tout le fichier
     try:
-        with open(path, "r", encoding="utf-8") as f:
-            for line in f:
-                s = line.strip()
-                if not s:
-                    continue
-                if not header_checked:
-                    header_checked = True
-                    # si la 1re ligne contient des lettres, on la considère comme header
-                    if HDR_RE.search(s):
-                        continue
-                n += 1
-    except FileNotFoundError:
-        return 0
-    return n
-
-def build():
-    now = time.time()
-    tfs = list(MAX_AGE.keys())
-    by_sym_tf = defaultdict(dict)
-
-    for csv in glob.glob(os.path.join(BASE, "*.csv")):
-        name = os.path.basename(csv).rsplit(".",1)[0]  # BTCUSDT_1m
-        if "_" not in name: 
-            continue
-        sym_raw, tf = name.rsplit("_",1)
-        if tf not in MAX_AGE:
-            continue
-        sym = sym_raw.replace("USDT","")
-
-        try:
-            st = os.stat(csv)
-            age = now - st.st_mtime
-        except FileNotFoundError:
-            by_sym_tf[sym][tf] = {"status":"absent","candles":0}
-            continue
-
-        if age > MAX_AGE[tf]:
-            status = "stale"
-            candles = 0
+        with p.open("rb") as f:
+            f.seek(0, 2)
+            size = f.tell()
+            back = min(size, 128*1024)
+            f.seek(size - back)
+            lines = f.read().decode("utf-8", "ignore").strip().splitlines()
+        # dernier JSON valide
+        import json as _json
+        for line in reversed(lines):
+            line=line.strip()
+            if not line: continue
+            try:
+                o = _json.loads(line)
+                ts = float(o.get("ts", 0))
+                break
+            except Exception:
+                continue
         else:
-            candles = count_lines(csv)
-            status  = "fresh" if candles >= MIN_CANDLES else "reloading"
+            ts = 0.0
+        # compte approximatif des bougies (nb total de lignes)
+        cnt = sum(1 for _ in open(p, "r", encoding="utf-8", errors="ignore"))
+        return ts, cnt
+    except Exception:
+        return None, 0
 
-        by_sym_tf[sym][tf] = {"status":status, "candles":candles}
+now = time.time()
+symbols = {}
+for f in DATA.glob("*.jsonl"):
+    m = rx.match(f.name)
+    if not m: continue
+    sym = m.group("sym").upper()
+    tf  = m.group("tf")
+    ts, cnt = tail_last_ts_and_count(f)
+    if ts is None: status = "absent"
+    else:
+        age = now - (ts/1000 if ts>10_000_000_000 else ts)
+        if age < THRESH[tf]:        status = "fresh"
+        elif age < STALE[tf]:       status = "reloading"
+        else:                       status = "stale"
+    symbols.setdefault(sym, {"symbol": sym, "tfs": {}})
+    symbols[sym]["tfs"][tf] = {"status": status, "candles": cnt}
 
-    items = []
-    for sym, tfd in sorted(by_sym_tf.items()):
-        row = {"symbol": sym, "tfs": {}}
-        for tf in tfs:
-            row["tfs"][tf] = tfd.get(tf, {"status":"absent","candles":0})
-        items.append(row)
+items = list(symbols.values())
+payload = {"items": items, "updated_at": int(now)}
 
-    out = {"tfs": tfs, "min_candles": MIN_CANDLES, "items": items, "updated_at": int(now)}
-    os.makedirs(os.path.dirname(OUT), exist_ok=True)
-    with open(OUT, "w", encoding="utf-8") as f:
-        json.dump(out, f, ensure_ascii=False)
-    print(f"[ok] {OUT} -> {len(items)} symbols")
-
-if __name__ == "__main__":
-    build()
+OUT.parent.mkdir(parents=True, exist_ok=True)
+tmp = OUT.with_suffix(".json.tmp")
+with tmp.open("w", encoding="utf-8") as f:
+    json.dump(payload, f, ensure_ascii=False, separators=(",",":"))
+os.replace(tmp, OUT)
+print(f"wrote {OUT} with {len(items)} symbols")
