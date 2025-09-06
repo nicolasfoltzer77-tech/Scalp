@@ -1,50 +1,62 @@
-from fastapi import FastAPI, Response
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
-import json, time
+import json
+import time
 
-ROOT = Path("/opt/scalp/webviz").resolve()
-app  = FastAPI()
+# --- Versioning ---
+VERSION_FILE = Path(__file__).parent / "VERSION"
+if VERSION_FILE.exists():
+    UI_VERSION = VERSION_FILE.read_text().strip()
+else:
+    UI_VERSION = "0.0.0"
 
-# ---------- Version ----------
-def read_version() -> str:
-    p = ROOT / "VERSION"
-    try:
-        return p.read_text().strip()
-    except Exception:
-        return "0.0.0"
+# --- Init FastAPI ---
+app = FastAPI(title="SCALP RTViz")
+
+# --- Assets directory ---
+ROOT = Path(__file__).parent
+assets_dir = ROOT / "assets"
+assets_dir.mkdir(parents=True, exist_ok=True)
+
+app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
+
+# --- API endpoints ---
 
 @app.get("/version")
-def version():
-    return {"ui": read_version(), "ts": int(time.time())}
+async def version():
+    return {"ui": UI_VERSION, "ts": int(time.time())}
 
-# ---------- Pages & statics ----------
-# Sert /app.js et /assets/* avec les bons MIME
-app.mount("/assets", StaticFiles(directory=str(ROOT / "assets")), name="assets")
-app.mount("/static", StaticFiles(directory=str(ROOT / "static")), name="static")
-
-@app.get("/app.js")
-def app_js():
-    p = ROOT / "app.js"
-    return Response(p.read_text(), media_type="application/javascript; charset=utf-8")
-
-@app.get("/", response_class=HTMLResponse)
-def index():
-    # renvoie du HTML, pas un txt/attachment
-    html = (ROOT / "index.html").read_text(encoding="utf-8")
-    return HTMLResponse(content=html, status_code=200)
-
-# ---------- API métiers (déjà existantes) ----------
-# /signals, /heatmap, /data doivent exister côté service.
-# Je garde des stubs défensifs si jamais un import saute.
-DATA_FILE = ROOT / "data.json"  # facultatif
+@app.get("/hello")
+async def hello():
+    return JSONResponse(content={"msg": "Hello from SCALP RTViz!"})
 
 @app.get("/data")
-def data():
-    if DATA_FILE.exists():
-        try:
-            return JSONResponse(json.loads(DATA_FILE.read_text()))
-        except Exception:
-            pass
-    return JSONResponse({"detail": "Not Found"}, status_code=404)
+async def data():
+    # ⚠️ Ici, tu devras connecter avec ton vrai backend/data loader
+    # Pour l’instant on simule une réponse minimale
+    sample = {
+        "tfs": ["1m", "5m", "15m"],
+        "min_candles": 1500,
+        "items": [
+            {
+                "symbol": "BTC",
+                "tfs": {
+                    "1m": {"status": "fresh", "candles": 1500},
+                    "5m": {"status": "reloading", "candles": 800},
+                    "15m": {"status": "stale", "candles": 200},
+                },
+            },
+            {
+                "symbol": "ETH",
+                "tfs": {
+                    "1m": {"status": "fresh", "candles": 1500},
+                    "5m": {"status": "fresh", "candles": 1500},
+                    "15m": {"status": "absent", "candles": 0},
+                },
+            },
+        ],
+        "updated_at": int(time.time()),
+    }
+    return JSONResponse(content=sample)
