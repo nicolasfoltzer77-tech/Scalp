@@ -1,75 +1,88 @@
-/* rtviz-ui refresh wiring */
+const $ = sel => document.querySelector(sel);
+const table = $("#table");
+const msg = $("#errmsg");
+const uiSpan = $("#ui");
+const lastBody = $("#lastjson");
+const lastEmpty = $("#lastjson-empty");
+const btn = $("#btnRefresh");
 
-const el = {
-  ver: document.getElementById('uiVer'),
-  grid: document.getElementById('grid'),
-  msg: document.getElementById('msg'),
-  btn: document.getElementById('btnRefresh'),
-};
+const STATE_COLORS = { fresh:"green", reloading:"orange", stale:"red", absent:"gray" };
 
-const STATUS_COLOR = { fresh: 'green', reloading: 'orange', stale: 'red', absent: 'gray' };
-
-async function getJSON(path) {
-  const url = `${path}?ts=${Date.now()}`;            // anti-cache
-  const res = await fetch(url, { cache: 'no-store' });
-  if (!res.ok) {
-    const txt = await res.text().catch(()=>'');
-    throw new Error(`${res.status} ${res.statusText} ${txt}`.trim());
-  }
-  return res.json();
+async function fetchJSON(url){
+  const r = await fetch(url, {cache:"no-store"});
+  if(!r.ok) throw new Error(`${url} -> ${r.status}`);
+  return await r.json();
 }
 
-function renderGrid(data) {
-  // data = { tfs: ["1m","5m","15m"], items: [{symbol, tfs:{'1m':{status},...}}] }
-  const { tfs, items } = data;
-  const th = `
+function renderData(data){
+  // data = {tfs:["1m","5m","15m"], min_candles:1500, items:[{symbol,...}]}
+  const tfs = data.tfs || ["1m","5m","15m"];
+  const head = `
     <div class="row head">
       <div class="cell sym">Symbol</div>
-      ${tfs.map(tf => `<div class="cell tf">${tf}</div>`).join('')}
+      ${tfs.map(tf => `<div class="cell tf">${tf}</div>`).join("")}
     </div>`;
-  const rows = (items || []).map(it => {
-    const dots = tfs.map(tf => {
-      const st = it.tfs?.[tf]?.status || 'absent';
-      const cls = STATUS_COLOR[st] || 'gray';
-      return `<div class="cell dot"><span class="dot ${cls}"></span></div>`;
-    }).join('');
-    return `<div class="row">
-      <div class="cell sym">${it.symbol}</div>${dots}
-    </div>`;
-  }).join('');
-  el.grid.innerHTML = th + rows;
+  const rows = (data.items || []).map(it => {
+    const cells = tfs.map(tf => {
+      const st = it.tfs?.[tf]?.status || "absent";
+      const dot = `<span class="dot ${STATE_COLORS[st]||"gray"}"></span>`;
+      return `<div class="cell tf"><span class="cell dot">${dot}</span></div>`;
+    }).join("");
+    return `<div class="row"><div class="cell sym">${it.symbol||"?"}</div>${cells}</div>`;
+  }).join("");
+  table.innerHTML = head + rows;
 }
 
-function setBusy(busy, text='') {
-  el.btn.disabled = busy;
-  el.btn.textContent = busy ? 'Mise à jour…' : 'Mettre à jour';
-  el.msg.textContent = text;
-  el.msg.className = 'msg' + (text ? ' show' : '');
+function setError(show, text){
+  msg.textContent = text || "Impossible de charger les données.";
+  msg.classList.toggle("show", !!show);
 }
 
-async function refreshAll() {
-  try {
-    setBusy(true, '');
-    // version
-    const v = await getJSON('/version');             // {ui:"1.0.xx"}
-    el.ver.textContent = v.ui || '?';
-    // data
-    const data = await getJSON('/data');             // 200 -> JSON prêt
-    renderGrid(data);
-  } catch (e) {
-    console.error(e);
-    el.msg.textContent = "Impossible de charger les données.";
-    el.msg.className = 'msg error show';
-  } finally {
-    setBusy(false);
+async function refreshAll(manual=false){
+  try{
+    const [ver, data] = await Promise.all([
+      fetchJSON("/version"),
+      fetchJSON("/data")
+    ]);
+    uiSpan.textContent = `rtviz-ui ${ver.ui||"?"}`;
+    renderData(data);
+    setError(false);
+  }catch(e){
+    setError(true, "Impossible de charger les données.");
+  }
+  try{
+    const last = await fetchJSON("/logs/last10data");
+    renderLast(last);
+  }catch(e){
+    renderLast([]);
+  }
+  if(manual){
+    // petit flash visuel si tu veux plus tard
   }
 }
 
-// bouton -> force refresh immédiat
-el.btn?.addEventListener('click', refreshAll);
+function renderLast(arr){
+  if(!Array.isArray(arr) || arr.length===0){
+    lastBody.innerHTML = "";
+    lastEmpty.style.display = "block";
+    return;
+  }
+  lastEmpty.style.display = "none";
+  lastBody.innerHTML = arr.map(x=>{
+    const size = Number(x.size||0);
+    const human = size>1e6 ? (size/1e6).toFixed(2)+" MB" :
+                 size>1e3 ? (size/1e3).toFixed(1)+" kB" : size+" B";
+    return `<tr>
+      <td style="padding:4px">${x.name||""}</td>
+      <td style="padding:4px">${x.mtime||""}</td>
+      <td style="padding:4px;text-align:right">${human}</td>
+    </tr>`;
+  }).join("");
+}
 
-// premier chargement
+// actions
+btn?.addEventListener("click", ()=>refreshAll(true));
+
+// tick auto 10s
 refreshAll();
-
-// (optionnel) auto-refresh toutes les 30s
-// setInterval(refreshAll, 30000);
+setInterval(refreshAll, 10_000);
