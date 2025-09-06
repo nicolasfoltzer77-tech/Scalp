@@ -1,24 +1,13 @@
 #!/usr/bin/env python3
-import os, json, glob, time
-DATA = "/opt/scalp/data"
-OUT  = "/opt/scalp/var/dashboard/last10-data.json"
-
-items = []
-for p in glob.glob(os.path.join(DATA, "*.[jJ][sS][oO][nN]")) + \
-         glob.glob(os.path.join(DATA, "*.jsonl")):
-    try:
-        st = os.stat(p)
-        items.append({
-            "name": os.path.basename(p),
-            "path": p,
-            "size": st.st_size,
-            "mtime": time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(st.st_mtime))
-        })
-    except Exception:
-        pass
-
-items.sort(key=lambda x: x["mtime"], reverse=True)
-with open(OUT + ".tmp", "w", encoding="utf-8") as f:
-    json.dump(items[:10], f, ensure_ascii=False, separators=(",",":"))
-os.replace(OUT + ".tmp", OUT)
-print(f"Wrote {OUT} with {min(10,len(items))} items")
+import json, os, time, glob
+from pathlib import Path
+DATA = Path("/opt/scalp/data")
+OUT  = Path("/opt/scalp/var/dashboard"); OUT.mkdir(parents=True, exist_ok=True)
+items=[]
+for p in sorted(glob.glob(str(DATA/"*.{json,jsonl}").replace("{","[").replace("}","]")),
+                key=lambda x: os.path.getmtime(x), reverse=True)[:10]:
+    st=os.stat(p)
+    items.append({"name":os.path.basename(p),
+                  "path":p, "size":st.st_size,
+                  "mtime":time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(st.st_mtime))})
+(Path(OUT/"last10-data.json")).write_text(json.dumps(items, ensure_ascii=False, indent=2))
