@@ -14,7 +14,8 @@
     .btn{padding:9px 14px;border:1px solid #3b82f6;border-radius:12px;background:#1f2937;color:#dbeafe;cursor:pointer}
     .card{background:#111822;border:1px solid #223043;border-radius:16px;padding:16px;margin-top:16px}
     .legend{display:flex;gap:18px;align-items:center;margin:0 0 12px}
-    .dot{width:12px;height:12px;border-radius:50%;display:inline-block;margin-right:6px;vertical-align:-2px}
+    .dot{width:14px;height:14px;border-radius:50%;display:inline-block;vertical-align:middle}
+    .litem{display:flex;align-items:center;gap:8px}
     .fresh{background:#16a34a}
     .reloading{background:#f59e0b}
     .stale{background:#ef4444}
@@ -26,6 +27,8 @@
     .pill{display:inline-block;width:14px;height:14px;border-radius:50%}
     .muted{opacity:.8}
     .err{color:#ef4444}
+    /* lignes skeleton pendant chargement */
+    .sk{opacity:.5}
   </style>
 </head>
 <body>
@@ -36,20 +39,19 @@
     </div>
 
     <div class="card">
-      <div class="legend">
-        <span><i class="dot fresh"></i>fresh</span>
-        <span><i class="dot reloading"></i>reloading</span>
-        <span><i class="dot stale"></i>stale</span>
-        <span><i class="dot absent"></i>absent</span>
+      <!-- Pastilles de légende -->
+      <div class="legend" aria-label="Légende">
+        <span class="litem" title="fresh"><i class="dot fresh"></i></span>
+        <span class="litem" title="reloading"><i class="dot reloading"></i></span>
+        <span class="litem" title="stale"><i class="dot stale"></i></span>
+        <span class="litem" title="absent"><i class="dot absent"></i></span>
       </div>
 
-      <div id="panel">
-        <p class="muted">Chargement…</p>
-      </div>
+      <!-- Tableau des données -->
+      <div id="panel"></div>
     </div>
   </div>
 
   <script defer src="/app.js"></script>
 </body>
 </html>
-
