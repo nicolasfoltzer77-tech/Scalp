@@ -1,47 +1,28 @@
 <!doctype html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>SCALP rtviz-ui</title>
-  <link rel="icon" href="data:,">
-  <style>
-    :root{color-scheme:dark}
-    body{margin:24px;background:#0f141a;color:#e6edf3;font:16px/1.4 system-ui,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial}
-    h1{margin:0 0 8px;font-size:28px}
-    .btn{background:#2b3440;border:1px solid #3b4655;border-radius:12px;padding:10px 16px;cursor:pointer}
-    .wrap{max-width:980px}
-    .card{background:#111822;border:1px solid #223043;border-radius:16px;padding:16px;margin-top:16px}
-    .legend{display:flex;gap:14px;margin:6px 0 14px}
-    .dot{width:14px;height:14px;border-radius:50%;display:inline-block;margin-right:8px;vertical-align:middle}
-    .fresh{background:#16c172}.reloading{background:#ffb020}.stale{background:#d14}.absent{background:#7a8699}
-    table{width:100%;border-collapse:collapse}
-    th,td{padding:10px;border-bottom:1px solid #223043}
-    th{font-weight:600;color:#9fb4d0;text-align:left}
-    .cell-dot{display:inline-block;width:14px;height:14px;border-radius:50%}
-    .err{color:#ef4444;margin-top:12px}
-    .muted{opacity:.7}
-  </style>
+  <link rel="stylesheet" href="/assets/app.css">
 </head>
 <body>
-<div class="wrap">
-  <div style="display:flex;align-items:center;gap:12px;justify-content:space-between">
-    <h1>SCALP <span class="muted">rtviz-ui</span> <span id="ver">…</span></h1>
-    <button id="btn" class="btn">Mettre à jour</button>
-  </div>
+  <header class="hdr">
+    <h1>SCALP <span class="muted">rtviz-ui</span> <span id="uiVer">?</span></h1>
+    <button id="btnRefresh" class="btn">Mettre à jour</button>
+  </header>
 
-  <div class="card">
+  <section class="card">
     <div class="legend">
-      <span><i class="dot fresh"></i>fresh</span>
-      <span><i class="dot reloading"></i>reloading</span>
-      <span><i class="dot stale"></i>stale</span>
-      <span><i class="dot absent"></i>absent</span>
+      <span class="dot green"></span> fresh
+      <span class="dot orange"></span> reloading
+      <span class="dot red"></span> stale
+      <span class="dot gray"></span> absent
     </div>
-    <div id="zone"></div>
-    <div id="err" class="err" style="display:none"></div>
-  </div>
-</div>
+    <div id="grid" class="grid">Chargement…</div>
+    <div id="msg" class="msg"></div>
+  </section>
 
-<script src="/app.js?v=1.0.20"></script>
+  <script src="/app.js"></script>
 </body>
 </html>

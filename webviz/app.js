@@ -1,53 +1,75 @@
-/* rtviz-ui app.js */
-const $ = (s) => document.querySelector(s);
+/* rtviz-ui refresh wiring */
 
-async function getJSON(u){
-  const r = await fetch(u, {cache:"no-store"});
-  if (!r.ok) throw new Error(`${u} -> ${r.status}`);
-  return await r.json();
+const el = {
+  ver: document.getElementById('uiVer'),
+  grid: document.getElementById('grid'),
+  msg: document.getElementById('msg'),
+  btn: document.getElementById('btnRefresh'),
+};
+
+const STATUS_COLOR = { fresh: 'green', reloading: 'orange', stale: 'red', absent: 'gray' };
+
+async function getJSON(path) {
+  const url = `${path}?ts=${Date.now()}`;            // anti-cache
+  const res = await fetch(url, { cache: 'no-store' });
+  if (!res.ok) {
+    const txt = await res.text().catch(()=>'');
+    throw new Error(`${res.status} ${res.statusText} ${txt}`.trim());
+  }
+  return res.json();
 }
 
-function dotClass(status){
-  switch(status){
-    case "fresh": return "cell-dot fresh";
-    case "reloading": return "cell-dot reloading";
-    case "stale": return "cell-dot stale";
-    default: return "cell-dot absent";
+function renderGrid(data) {
+  // data = { tfs: ["1m","5m","15m"], items: [{symbol, tfs:{'1m':{status},...}}] }
+  const { tfs, items } = data;
+  const th = `
+    <div class="row head">
+      <div class="cell sym">Symbol</div>
+      ${tfs.map(tf => `<div class="cell tf">${tf}</div>`).join('')}
+    </div>`;
+  const rows = (items || []).map(it => {
+    const dots = tfs.map(tf => {
+      const st = it.tfs?.[tf]?.status || 'absent';
+      const cls = STATUS_COLOR[st] || 'gray';
+      return `<div class="cell dot"><span class="dot ${cls}"></span></div>`;
+    }).join('');
+    return `<div class="row">
+      <div class="cell sym">${it.symbol}</div>${dots}
+    </div>`;
+  }).join('');
+  el.grid.innerHTML = th + rows;
+}
+
+function setBusy(busy, text='') {
+  el.btn.disabled = busy;
+  el.btn.textContent = busy ? 'Mise à jour…' : 'Mettre à jour';
+  el.msg.textContent = text;
+  el.msg.className = 'msg' + (text ? ' show' : '');
+}
+
+async function refreshAll() {
+  try {
+    setBusy(true, '');
+    // version
+    const v = await getJSON('/version');             // {ui:"1.0.xx"}
+    el.ver.textContent = v.ui || '?';
+    // data
+    const data = await getJSON('/data');             // 200 -> JSON prêt
+    renderGrid(data);
+  } catch (e) {
+    console.error(e);
+    el.msg.textContent = "Impossible de charger les données.";
+    el.msg.className = 'msg error show';
+  } finally {
+    setBusy(false);
   }
 }
 
-function renderTable(state){
-  const tfs = state.tfs || ["1m","5m","15m"];
-  let html = `<table><thead><tr><th>Symbol</th>${tfs.map(tf=>`<th>${tf}</th>`).join("")}</tr></thead><tbody>`;
-  for (const it of state.items || []){
-    html += `<tr><td>${it.symbol || "…"}</td>`;
-    for (const tf of tfs){
-      const s = it.tfs?.[tf]?.status || "absent";
-      html += `<td><i class="${dotClass(s)}"></i></td>`;
-    }
-    html += `</tr>`;
-  }
-  html += `</tbody></table>`;
-  $("#zone").innerHTML = html;
-}
+// bouton -> force refresh immédiat
+el.btn?.addEventListener('click', refreshAll);
 
-async function refreshAll(){
-  $("#err").style.display="none";
-  try{
-    const v = await getJSON("/version");
-    $("#ver").textContent = v.ui || "?.?.?";
-  }catch(e){ /* version non bloquante */ }
-
-  try{
-    const data = await getJSON("/data");
-    renderTable(data);
-  }catch(e){
-    $("#zone").innerHTML = "";
-    $("#err").textContent = "Impossible de charger les données.";
-    $("#err").style.display = "block";
-  }
-}
-
-$("#btn").addEventListener("click", ()=> refreshAll());
+// premier chargement
 refreshAll();
-setInterval(refreshAll, 5000);
+
+// (optionnel) auto-refresh toutes les 30s
+// setInterval(refreshAll, 30000);
