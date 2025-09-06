@@ -1,25 +1,62 @@
+// --- util
+const $ = (s, p=document) => p.querySelector(s);
+
+// version & bouton
 async function loadVersion() {
   try {
-    const res = await fetch('/version');
-    const v = await res.json();
-    document.getElementById('version').innerText = `rtviz-ui ${v.ui}`;
-  } catch (e) {
-    document.getElementById('version').innerText = "version inconnue";
+    const j = await fetch('/version', {cache:'no-store'}).then(r=>r.json());
+    $('#ver').textContent = `rtviz-ui ${j.ui || '—'}`;
+  } catch {
+    $('#ver').textContent = 'rtviz-ui ?';
   }
+}
+$('#btn-update').addEventListener('click', () => {
+  // recharge l’app en forçant le cache-busting
+  const u = new URL(location.href);
+  u.searchParams.set('v', Date.now());
+  location.replace(u.toString());
+});
+
+// mapping statut -> classe couleur
+const S2C = { fresh:'fresh', reloading:'reloading', stale:'stale', absent:'absent' };
+
+// rend une cellule pastille
+function dot(status) {
+  const cls = S2C[status] || 'absent';
+  return `<span class="pill ${cls}" title="${status}"></span>`;
+}
+
+function buildTable(data) {
+  const tfs = data.tfs || ['1m','5m','15m'];
+  let html = '<table><thead><tr><th>Symbol</th>';
+  for (const tf of tfs) html += `<th>${tf}</th>`;
+  html += '</tr></thead><tbody>';
+
+  for (const it of (data.items||[])) {
+    html += `<tr><td>${it.symbol}</td>`;
+    for (const tf of tfs) {
+      const st = (it.tfs?.[tf]?.status) || 'absent';
+      html += `<td class="dotcell">${dot(st)}</td>`;
+    }
+    html += '</tr>';
+  }
+  html += '</tbody></table>';
+  html += `<p class="muted">Mise à jour : ${new Date((data.updated_at||Date.now())*1000).toLocaleString()}</p>`;
+  return html;
 }
 
 async function loadData() {
   try {
-    const res = await fetch('/data');
-    if (!res.ok) throw new Error("Erreur API");
-    const data = await res.json();
-    document.getElementById('data').innerText = JSON.stringify(data, null, 2);
+    const j = await fetch('/data', {cache:'no-store'}).then(r=>{
+      if(!r.ok) throw new Error(r.statusText); return r.json();
+    });
+    $('#panel').innerHTML = buildTable(j);
   } catch (e) {
-    document.getElementById('data').innerText = "Impossible de charger les données.";
+    $('#panel').innerHTML = `<p class="err">Impossible de charger les données.</p>`;
   }
 }
 
-window.onload = () => {
-  loadVersion();
-  loadData();
-};
+// init + polling
+loadVersion();
+loadData();
+setInterval(loadData, 5000);
