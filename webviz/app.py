@@ -1,57 +1,89 @@
-from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi import FastAPI, Response, status
+from fastapi.responses import JSONResponse, PlainTextResponse, FileResponse
 from starlette.staticfiles import StaticFiles
 from pathlib import Path
-import os
+import json, time, logging, os
 
-ROOT_CORE = Path("/opt/scalp/ui-core")
-ROOT_MODS = Path("/opt/scalp/ui-mods")
-SHARED = Path("/opt/scalp/ui-shared")
-VERSION_FILE = SHARED / "VERSION"
+# ---------- LOGGING VERBEUX ----------
+LOG_LEVEL = os.getenv("WEBVIZ_LOG", "DEBUG").upper()
+logging.basicConfig(
+    level=LOG_LEVEL,
+    format="%(asctime)s %(levelname)s %(name)s :: %(message)s",
+)
+log = logging.getLogger("webviz")
 
-app = FastAPI()
+ROOT = Path("/opt/scalp/webviz")
+ASSETS = ROOT / "assets"
+INDEX = ROOT / "index.html"
+APPJS = ROOT / "app.js"
+VERSION_FILE = ROOT / "VERSION"
 
-# --- Health/ready (pour Caddy, monitoring)
+# Emplacement d’un dump JSON produit par le loader (fallback si API interne absente)
+DATA_JSON = Path(os.getenv("SCALP_DATA_JSON", "/opt/scalp/runtime/data.json"))
+
+UI_VER = (VERSION_FILE.read_text().strip() if VERSION_FILE.exists() else "0.0.0")
+
+app = FastAPI(title="SCALP rtviz-ui", docs_url=None, redoc_url=None, openapi_url=None)
+
+# ---------- STATIC ----------
+app.mount("/assets", StaticFiles(directory=str(ASSETS), html=False), name="assets")
+
+# ---------- ENDPOINTS ----------
 @app.get("/healthz")
 def healthz():
-    return {"ok": True}
+    log.debug("GET /healthz")
+    return {"ok": True, "ui": UI_VER}
 
-@app.get("/ready")
-def ready():
-    # on considère ready si index core existe
-    return {"ready": (ROOT_CORE / "index.html").exists()}
-
-# --- Version UI
 @app.get("/version")
 def version():
-    v = "0.0.0"
-    try:
-        v = VERSION_FILE.read_text().strip()
-    except FileNotFoundError:
-        pass
-    return {"ui": v}
+    log.debug("GET /version -> %s", UI_VER)
+    return {"ui": UI_VER}
 
-# --- Fichiers statiques dédiés (ex: /assets/... si besoin)
-app.mount("/mods", StaticFiles(directory=str(ROOT_MODS), html=False), name="mods")
-app.mount("/core", StaticFiles(directory=str(ROOT_CORE), html=False), name="core")
+@app.get("/", response_class=FileResponse)
+def root():
+    log.debug("GET / -> index.html")
+    return FileResponse(str(INDEX))
 
-def _pick(path: str) -> Path | None:
-    p_mods = ROOT_MODS / path
-    if p_mods.is_file():
-        return p_mods
-    p_core = ROOT_CORE / path
-    if p_core.is_file():
-        return p_core
-    return None
+@app.get("/app.js")
+def get_app_js():
+    log.debug("GET /app.js (no-cache)")
+    return Response(APPJS.read_text(), media_type="application/javascript", headers={
+        "Cache-Control": "no-store"
+    })
 
-# Fallback “try mods then core” pour tout le reste
-@app.get("/{full_path:path}")
-def any_file(full_path: str):
-    # page d’accueil
-    if full_path in ("", "/"):
-        full_path = "index.html"
-    p = _pick(full_path)
-    if p:
-        # Types mimes corrects via FileResponse
-        return FileResponse(str(p))
-    return JSONResponse({"detail": "Not Found"}, status_code=404)
+# ---------- /data : toujours présent ----------
+@app.get("/data")
+def data():
+    """
+    1) Si un fichier runtime existe: on le renvoie (chemin SCALP_DATA_JSON)
+    2) Sinon -> 503 avec explication + log
+    (Ça évite les 404 qui cassaient l'UI)
+    """
+    log.debug("GET /data")
+    if DATA_JSON.exists():
+        try:
+            raw = DATA_JSON.read_text()
+            # Log taille + timestamp pour debug
+            log.info("Serving /data from %s (%d bytes)", DATA_JSON, len(raw))
+            # Valider JSON grossièrement
+            j = json.loads(raw)
+            # ajout d'un champ ui pour traçabilité
+            j.setdefault("ui", UI_VER)
+            return JSONResponse(j, headers={"Cache-Control": "no-store"})
+        except Exception as e:
+            log.exception("Error reading %s: %s", DATA_JSON, e)
+            return JSONResponse(
+                {"error": "bad_data", "detail": str(e), "ui": UI_VER},
+                status_code=status.HTTP_502_BAD_GATEWAY,
+            )
+    else:
+        log.error("DATA source not found: %s", DATA_JSON)
+        return JSONResponse(
+            {
+                "error": "no_data",
+                "detail": f"DATA_JSON not found: {DATA_JSON}",
+                "hint": "vérifie le loader ou configure SCALP_DATA_JSON",
+                "ui": UI_VER,
+            },
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
