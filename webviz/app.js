@@ -16,7 +16,7 @@
 
   async function tick(){
     try{
-      try{ const v = await getJSON("/api/version"); verEl.textContent = v.ui || ""; }catch{}
+      try{ const v = await getJSON("/api/version"); verEl.textContent = (v.ui||"1.0.31"); }catch{}
 
       const st = await getJSON("/api/data-status");
       tbody.innerHTML = (st.items||[]).map(it=>{
