@@ -1,53 +1,49 @@
 <!doctype html>
 <html lang="fr">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta charset="utf-8">
 <title>SCALP rtviz-ui</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-  :root{color-scheme:dark light}
-  body{margin:0;background:#0e1116;color:#e8eaf0;font:16px/1.25 system-ui,Segoe UI,Roboto,Arial}
-  .wrap{max-width:980px;margin:32px auto;padding:0 16px}
-  h1{font-size:22px;margin:0 0 16px;display:flex;align-items:center;gap:12px}
-  .ver{font:600 12px/1 monospace;padding:4px 8px;background:#1b2230;border-radius:8px}
-  button#refresh{margin-left:auto;background:#2a66ff;border:0;color:#fff;padding:10px 14px;border-radius:10px;cursor:pointer}
-  button#refresh:hover{filter:brightness(1.05)}
-  .legend{display:flex;gap:16px;align-items:center;margin:6px 2px 14px}
-  .dot{display:inline-block;width:12px;height:12px;border-radius:50%;vertical-align:middle;margin-right:6px}
-  .green{background:#2daa4e}.orange{background:#f2a600}.red{background:#e04646}.grey{background:#6b7280}
-  table{width:100%;border-collapse:separate;border-spacing:0 6px}
-  thead th{font-weight:700;text-align:left;color:#b9c0d0}
-  tbody tr{background:#141925;border-radius:10px}
-  tbody td{padding:8px 12px}         /* ← lignes plus basses */
-  tbody td.c{text-align:center}
-  pre{background:#0b0f17;color:#cbd5e1;border-radius:12px;padding:12px 14px;overflow:auto}
+  body{margin:0;background:#0f1318;color:#e6eef8;font:14px/1.2 system-ui,Segoe UI,Roboto,Arial}
+  .wrap{max-width:1100px;margin:24px auto;padding:0 16px}
+  h1{margin:0 0 12px;font-size:26px}
+  #ver{opacity:.7;margin-left:8px;font-size:14px}
+  .legend{display:flex;gap:18px;align-items:center;margin:10px 0 14px}
+  .dot{display:inline-block;width:10px;height:10px;border-radius:50%}
+  .green{background:#2da44e}.orange{background:#f2a600}.red{background:#e5534b}.grey{background:#768390}
+  table{width:100%;border-collapse:collapse;background:#111722;border-radius:10px;overflow:hidden}
+  th,td{padding:8px 10px}       /* ← lignes plus basses */
+  thead th{color:#9fb3c8;text-align:left;border-bottom:1px solid #1a2230}
+  tbody tr:nth-child(odd){background:#0f141d}
+  td.c{text-align:center}
+  pre{background:#0f141d;border:1px solid #1a2230;border-radius:10px;padding:12px;overflow:auto}
+  .topbar{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .btn{background:#2563eb;color:#fff;border:0;border-radius:10px;padding:10px 14px;font-weight:600}
 </style>
 </head>
 <body>
-  <div class="wrap">
-    <h1>
-      SCALP rtviz-ui
-      <span class="ver" id="ver">–</span>
-      <button id="refresh">Mettre à jour</button>
-    </h1>
-
-    <div class="legend">
-      <span><span class="dot green"></span>fresh</span>
-      <span><span class="dot orange"></span>reloading</span>
-      <span><span class="dot red"></span>stale</span>
-      <span><span class="dot grey"></span>absent</span>
-    </div>
-
-    <table id="tbl">
-      <thead>
-        <tr><th>Symbol</th><th class="c">1m</th><th class="c">5m</th><th class="c">15m</th></tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-
-    <h3 style="margin:22px 0 8px">Derniers .json dans <code>/opt/scalp/data</code> <small>(auto 10s)</small></h3>
-    <pre id="last10">—</pre>
+<div class="wrap">
+  <div class="topbar">
+    <h1>SCALP rtviz-ui <span id="ver"></span></h1>
+    <button id="refresh" class="btn">Mettre à jour</button>
   </div>
-  <script src="./app.js"></script>
+
+  <div class="legend">
+    <span class="dot green"></span> fresh
+    <span class="dot orange"></span> reloading
+    <span class="dot red"></span> stale
+    <span class="dot grey"></span> absent
+  </div>
+
+  <table id="tbl">
+    <thead><tr><th>Symbol</th><th class="c">1m</th><th class="c">5m</th><th class="c">15m</th></tr></thead>
+    <tbody></tbody>
+  </table>
+
+  <h3 style="margin:18px 4px">Derniers .json dans <code>/opt/scalp/data</code> <small>(auto 10s)</small></h3>
+  <pre id="last10">—</pre>
+</div>
+<script src="/app.js"></script>
 </body>
 </html>
