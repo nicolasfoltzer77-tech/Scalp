@@ -1,57 +1,32 @@
 <!doctype html>
-<html lang="fr">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>SCALP · rtviz-ui</title>
-  <link rel="stylesheet" href="/assets/app.css">
-  <style>
-    :root{color-scheme:dark}
-    body{margin:0;background:#0f141a;color:#e6edf3;font:16px/1.45 system-ui,Segoe UI,Roboto}
-    .wrap{max-width:1100px;margin:24px auto;padding:0 16px}
-    h1{margin:18px 0 12px;font-size:28px}
-    .ver{opacity:.7}
-    .btn{padding:9px 14px;border:1px solid #3b82f6;border-radius:12px;background:#1f2937;color:#dbeafe;cursor:pointer}
-    .card{background:#111822;border:1px solid #223043;border-radius:16px;padding:16px;margin-top:16px}
-    .legend{display:flex;gap:18px;align-items:center;margin:0 0 12px}
-    .dot{width:14px;height:14px;border-radius:50%;display:inline-block;vertical-align:middle}
-    .litem{display:flex;align-items:center;gap:8px}
-    .fresh{background:#16a34a}
-    .reloading{background:#f59e0b}
-    .stale{background:#ef4444}
-    .absent{background:#64748b}
-    table{width:100%;border-collapse:collapse}
-    th,td{padding:10px;border-bottom:1px solid #223043;text-align:left}
-    th{font-weight:600;color:#9fb4d0}
-    td.dotcell{text-align:center}
-    .pill{display:inline-block;width:14px;height:14px;border-radius:50%}
-    .muted{opacity:.8}
-    .err{color:#ef4444}
-    /* lignes skeleton pendant chargement */
-    .sk{opacity:.5}
-  </style>
-</head>
-<body>
-  <div class="wrap">
-    <div style="display:flex;justify-content:space-between;align-items:center">
-      <h1>SCALP <small class="ver muted" id="ver"></small></h1>
-      <button class="btn" id="btn-update" type="button">Mettre à jour</button>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>SCALP rtviz-ui</title>
+<link rel="stylesheet" href="/assets/app.css">
+<div class="wrap">
+  <header class="top">
+    <h1>SCALP <span id="ver">rtviz-ui</span></h1>
+    <button id="btn-refresh" class="btn">Mettre à jour</button>
+  </header>
+
+  <section class="card">
+    <div class="legend">
+      <span class="dot green"></span> fresh
+      <span class="dot orange"></span> reloading
+      <span class="dot red"></span> stale
+      <span class="dot gray"></span> absent
     </div>
 
-    <div class="card">
-      <!-- Pastilles de légende -->
-      <div class="legend" aria-label="Légende">
-        <span class="litem" title="fresh"><i class="dot fresh"></i></span>
-        <span class="litem" title="reloading"><i class="dot reloading"></i></span>
-        <span class="litem" title="stale"><i class="dot stale"></i></span>
-        <span class="litem" title="absent"><i class="dot absent"></i></span>
+    <div class="tbl">
+      <div class="row head">
+        <div>Symbol</div><div>1m</div><div>5m</div><div>15m</div>
       </div>
-
-      <!-- Tableau des données -->
-      <div id="panel"></div>
+      <div id="rows"></div>
     </div>
-  </div>
 
-  <script defer src="/app.js"></script>
-</body>
-</html>
+    <div id="err" class="err" hidden>Impossible de charger les données.</div>
+  </section>
+</div>
+
+<script src="/app.js?v={{ts}}"></script>
+
