@@ -1,0 +1,11 @@
+:root{color-scheme:dark}
+html,body{margin:0;background:#0f141a;color:#e6edf3;font:16px/1.45 system-ui,Segoe UI,Roboto}
+h1{margin:0;font-size:28px}
+.muted{opacity:.6}
+.wrap{max-width:1100px;margin:24px auto;padding:0 16px}
+button{padding:8px 12px;border:1px solid #35537a;background:#1b2a3c;color:#dbeafe;border-radius:10px;cursor:pointer}
+.card{background:#111822;border:1px solid #223043;border-radius:16px;padding:16px}
+.legend{display:flex;gap:18px;margin:8px 0 16px}
+.dot{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:6px;vertical-align:middle}
+.green{background:#06c167}.orange{background:#f2a100}.red{background:#e14848}.gray{background:#8a94a6}
+
