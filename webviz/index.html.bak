@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="fr">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SCALP rtviz-ui</title>
+<style>
+  :root{color-scheme:dark light}
+  body{margin:0;background:#0b0e12;color:#e6e6e6;font:15px/1.2 system-ui,Segoe UI,Roboto,Arial}
+  .wrap{max-width:1100px;margin:28px auto;padding:0 14px}
+  h1{font-size:26px;margin:0 0 16px}
+  .version{opacity:.7;font-weight:600;margin-left:8px}
+  .toolbar{float:right}
+  .btn{background:#1162ff;border:0;color:#fff;padding:9px 14px;border-radius:10px;font-weight:700;cursor:pointer}
+  .legend{display:flex;gap:16px;align-items:center;margin:8px 0 14px}
+  .dot{display:inline-block;width:10px;height:10px;border-radius:50%;vertical-align:middle;margin-right:6px}
+  .green{background:#2da44e}.orange{background:#f2a600}.red{background:#c62828}.grey{background:#6b7280}
+  table{width:100%;border-collapse:collapse;border-radius:12px;overflow:hidden;background:#12161c}
+  th,td{padding:6px 10px;border-bottom:1px solid #1b212b}
+  th{color:#9aa4af;font-weight:700;text-align:left}
+  td.c{width:90px;text-align:center}
+  tr{height:30px} /* ← lignes plus basses */
+  .files{margin-top:22px}
+</style>
+<div class="wrap">
+  <h1>SCALP rtviz-ui <span class="version" id="ver"></span>
+    <span class="toolbar"><button class="btn" id="refresh">Mettre à jour</button></span>
+  </h1>
+
+  <div class="legend">
+    <span><span class="dot green"></span>fresh</span>
+    <span><span class="dot orange"></span>reloading</span>
+    <span><span class="dot red"></span>stale</span>
+    <span><span class="dot grey"></span>absent</span>
+  </div>
+
+  <table id="tbl">
+    <thead><tr><th>Symbol</th><th class="c">1m</th><th class="c">5m</th><th class="c">15m</th></tr></thead>
+    <tbody></tbody>
+  </table>
+
+  <div class="files">
+    <h3>Derniers .json dans <code>/opt/scalp/data</code> <small>(auto 10s)</small></h3>
+    <pre id="last10" style="white-space:pre-wrap;background:#0f1319;padding:10px;border-radius:10px"></pre>
+  </div>
+</div>
+<script src="app.js"></script>
+</html>
