@@ -1,9 +1,1 @@
-{
-  "tfs": ["1m","5m","15m"],
-  "min_candles": 1500,
-  "items": [
-    {"symbol":"BTC","tfs":{"1m":{"status":"fresh"},"5m":{"status":"reloading"},"15m":{"status":"stale"}}},
-    {"symbol":"ETH","tfs":{"1m":{"status":"fresh"},"5m":{"status":"fresh"},"15m":{"status":"absent"}}}
-  ],
-  "updated_at": 1757111111
-}
+/opt/scalp/var/dashboard/data_status.json
