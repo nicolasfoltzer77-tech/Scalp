@@ -7,16 +7,22 @@ from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
 
 BASE = Path("/opt/scalp")
-OUT  = BASE / "data"         # L’API de visu lit ici
+OUT  = BASE / "data"
 OUT.mkdir(parents=True, exist_ok=True)
 
-API_BASE = os.getenv("API_BASE", "http://127.0.0.1")  # ex: http://158.220.121.141
+API_BASE      = os.getenv("API_BASE", "http://127.0.0.1")
 API_WATCHLIST = f"{API_BASE}/api/watchlist"
 API_SIGNALS   = f"{API_BASE}/api/signals"
-API_POSITIONS = f"{API_BASE}/api/positions"   # utilisé pour /viz/history (optionnel)
+API_POSITIONS = f"{API_BASE}/api/positions"
 
-def now_iso():
-    return datetime.now(timezone.utc).isoformat()
+# Fallback fichiers
+F_WATCHLIST = BASE / "var" / "dashboard" / "data_status.json"
+F_SIGNALS   = OUT / "signals.json"
+F_POSITIONS = BASE / "reports" / "positions.json"
+
+def now_iso(): return datetime.now(timezone.utc).isoformat()
+
+def _log(msg): print(f"[{now_iso()}] {msg}", flush=True)
 
 def http_get_json(url: str, timeout=4):
     req = Request(url, headers={"Accept": "application/json"})
@@ -25,7 +31,6 @@ def http_get_json(url: str, timeout=4):
     try:
         return json.loads(data.decode("utf-8"))
     except Exception:
-        # parfois c’est NDJSON -> on prend la dernière ligne JSON valide
         items = []
         for line in data.splitlines():
             line=line.strip()
@@ -37,8 +42,13 @@ def http_get_json(url: str, timeout=4):
                 pass
         return items
 
-# ---------- utilitaires de normalisation ----------
+def file_get_json(path: Path):
+    if not path.exists(): 
+        raise FileNotFoundError(path)
+    with path.open("r", encoding="utf-8") as f:
+        return json.load(f)
 
+# ---------- utilitaires de normalisation ----------
 ALIASES = {
     "sym":   ["sym","symbol","ticker","pair","asset"],
     "side":  ["side","signal","action","direction","status"],
@@ -49,16 +59,12 @@ ALIASES = {
     "sl":    ["sl","stop","stop_loss"],
     "tp":    ["tp","take_profit","target"],
 }
-
 def pick(d: dict, keys: list[str]):
     for k in keys:
-        if k in d:
-            return d[k]
+        if k in d: return d[k]
     return None
-
 def to_upper(s): 
     return s.upper() if isinstance(s,str) else s
-
 def to_iso(ts):
     if isinstance(ts, str):
         try:
@@ -67,36 +73,31 @@ def to_iso(ts):
             return now_iso()
     try:
         x = float(ts)
-        if x > 10_000_000_000: x/=1000.0  # ms -> s
+        if x > 10_000_000_000: x/=1000.0
         return datetime.fromtimestamp(x, tz=timezone.utc).isoformat()
     except Exception:
         return now_iso()
-
 def to_float(x):
     try:
-        if isinstance(x,str) and x.endswith("%"):
-            return float(x[:-1])/100.0
+        if isinstance(x,str) and x.endswith("%"): return float(x[:-1])/100.0
         v = float(x)
         if v>1.0: v/=100.0
         return max(0.0,min(1.0,v))
-    except Exception:
-        return None
+    except Exception: return None
 
 # ---------- Signals ----------
-
 def normalize_signal(raw: dict):
     sym   = pick(raw, ALIASES["sym"])
-    if not sym: 
-        return None
+    if not sym: return None
     side  = pick(raw, ALIASES["side"])
     score = pick(raw, ALIASES["score"])
     entry = pick(raw, ALIASES["entry"])
     ts    = pick(raw, ALIASES["ts"])
 
     side_u = to_upper(side) or "HOLD"
-    if side_u in ("LONG","BUY","BULL","UP"):   side_u = "BUY"
-    elif side_u in ("SHORT","SELL","BEAR","DOWN"): side_u = "SELL"
-    elif side_u not in ("BUY","SELL"):         side_u = "HOLD"
+    if side_u in ("LONG","BUY","BULL","UP"):          side_u = "BUY"
+    elif side_u in ("SHORT","SELL","BEAR","DOWN"):    side_u = "SELL"
+    elif side_u not in ("BUY","SELL"):                side_u = "HOLD"
 
     return {
         "ts":   to_iso(ts),
@@ -106,19 +107,28 @@ def normalize_signal(raw: dict):
         "entry": to_float(entry),
     }
 
-def build_signals_from_api():
+def signals_from_api_or_file():
+    # API d'abord
     try:
         data = http_get_json(API_SIGNALS)
-    except (URLError, HTTPError) as e:
-        print(f"[{now_iso()}] GET {API_SIGNALS} ERROR {e}")
-        return []
-    rows = []
+        src  = f"API {API_SIGNALS}"
+    except Exception as e:
+        _log(f"signals: API KO ({e}), fallback fichier {F_SIGNALS}")
+        try:
+            data = file_get_json(F_SIGNALS)
+            src  = f"FILE {F_SIGNALS}"
+        except Exception as e2:
+            _log(f"signals: FILE KO ({e2})")
+            return [], "none"
+
+    rows=[]
     if isinstance(data, dict):
         rows = data.get("items") or data.get("signals") or []
         if isinstance(rows, dict): rows = [rows]
-        if isinstance(rows, list)==False: rows = []
+        if not isinstance(rows, list): rows=[]
     elif isinstance(data, list):
         rows = data
+
     out=[]
     for r in rows:
         if not isinstance(r, dict): 
@@ -126,12 +136,11 @@ def build_signals_from_api():
         n = normalize_signal(r)
         if not n: 
             continue
-        if n["side"] in ("BUY","SELL"):   # filtrage pour le flux
+        if n["side"] in ("BUY","SELL"):
             out.append(n)
-    return out[:500]
+    return out[:500], src
 
-# ---------- Heatmap depuis /api/watchlist ----------
-
+# ---------- Heatmap ----------
 def extract_watchlist_items(obj):
     items=[]
     def add(sym, score):
@@ -154,26 +163,54 @@ def extract_watchlist_items(obj):
                 add(pick(it,ALIASES["sym"]), pick(it,ALIASES["score"]))
     return items
 
-def build_heatmap_from_api():
+def heatmap_from_api_or_file():
+    # 1) API
     try:
         data = http_get_json(API_WATCHLIST)
-    except (URLError, HTTPError) as e:
-        print(f"[{now_iso()}] GET {API_WATCHLIST} ERROR {e}")
-        return {"as_of": now_iso(), "cells":[]}
-    items = extract_watchlist_items(data)
-    cols = 4
+        items = extract_watchlist_items(data)
+        src = f"API {API_WATCHLIST}"
+    except Exception as e:
+        _log(f"watchlist: API KO ({e}), fallback fichier {F_WATCHLIST}")
+        # 2) Fichier data_status.json -> score par statut
+        try:
+            ds  = file_get_json(F_WATCHLIST)
+            score_map = {"fresh":1.0, "reloading":0.6, "stale":0.3, "absent":0.0}
+            items=[]
+            for it in ds.get("items", []):
+                sym = to_upper(it.get("symbol") or it.get("sym"))
+                tfs = it.get("tfs", {})
+                # moyenne simple des 3 TF si présentes
+                vals=[]
+                for tf in ("1m","5m","15m"):
+                    st = (tfs.get(tf) or {}).get("status")
+                    if st in score_map: vals.append(score_map[st])
+                if sym and vals:
+                    items.append({"sym": sym, "score": sum(vals)/len(vals)})
+            src = f"FILE {F_WATCHLIST}"
+        except Exception as e2:
+            _log(f"watchlist: FILE KO ({e2})")
+            items=[]
+            src="none"
+
+    cols=4
     cells=[]
     for i,it in enumerate(sorted(items, key=lambda x:x.get("score",0), reverse=True)):
         cells.append({"x": i%cols, "y": i//cols, "v": float(it["score"]), "sym": it["sym"]})
-    return {"as_of": now_iso(), "cells": cells}
+    return {"as_of": now_iso(), "cells": cells}, src
 
-# ---------- Positions -> history (optionnel UI) ----------
-
-def build_history_from_api():
+# ---------- History ----------
+def history_from_api_or_file():
+    # API
     try:
         data = http_get_json(API_POSITIONS)
-    except Exception:
-        return []
+        src  = f"API {API_POSITIONS}"
+    except Exception as e:
+        # fichier optionnel
+        try:
+            data = file_get_json(F_POSITIONS)
+            src  = f"FILE {F_POSITIONS}"
+        except Exception:
+            return [], "none"
     rows=[]
     if isinstance(data, dict):
         rows = data.get("items") or data.get("positions") or []
@@ -192,9 +229,7 @@ def build_history_from_api():
             "tp":   pick(r, ALIASES["tp"]),
             "entry": pick(r, ALIASES["entry"]),
         })
-    return out[:200]
-
-# ---------- Ecriture atomique ----------
+    return out[:200], src
 
 def write_json_atomic(path: Path, payload):
     tmp = path.with_suffix(".tmp")
@@ -203,20 +238,20 @@ def write_json_atomic(path: Path, payload):
     os.replace(tmp, path)
 
 def main():
-    print(f"[{now_iso()}] rt_agg HTTP polling {API_BASE}", flush=True)
+    _log(f"rt_agg start; API_BASE={API_BASE}  OUT={OUT}")
     while True:
         try:
-            signals  = build_signals_from_api()
-            heatmap  = build_heatmap_from_api()
-            history  = build_history_from_api()
+            signals,  s_src = signals_from_api_or_file()
+            heatmap,  h_src = heatmap_from_api_or_file()
+            history,  p_src = history_from_api_or_file()
 
             write_json_atomic(OUT / "signals.json",  signals)
             write_json_atomic(OUT / "heatmap.json",  heatmap)
             write_json_atomic(OUT / "history.json",  history)
 
-            print(f"[{now_iso()}] wrote signals={len(signals)} cells={len(heatmap.get('cells',[]))} history={len(history)}", flush=True)
+            _log(f"wrote signals={len(signals)}[{s_src}] cells={len(heatmap.get('cells',[]))}[{h_src}] history={len(history)}[{p_src}]")
         except Exception as e:
-            print(f"[{now_iso()}] ERROR {e}", flush=True)
+            _log(f"ERROR {e}")
         time.sleep(3)
 
 if __name__ == "__main__":
