@@ -1,34 +1,13 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta charset="UTF-8">
   <title>SCALP</title>
-  <link rel="stylesheet" href="/assets/app.css?v=1"/>
-  <script defer src="/app.js?v=1"></script>
-  <style>
-    body{margin:0;background:#0f141a;color:#e6edf3;font:16px/1.45 system-ui,Segoe UI,Roboto}
-    .wrap{max-width:1100px;margin:28px auto;padding:0 16px}
-    h1{margin:0 0 14px;font-size:28px}
-    .muted{opacity:.6}
-    .tabs{display:flex;gap:10px;margin:16px 0}
-    .tab{padding:9px 14px;border-radius:12px;background:#151b23;border:1px solid #263041;cursor:pointer}
-    .tab.active{background:#23304a;border-color:#35537a}
-    .card{background:#111822;border:1px solid #223043;border-radius:16px;padding:16px;margin-top:12px}
-  </style>
+  <script src="app.js"></script>
 </head>
 <body>
-  <div class="wrap">
-    <h1>SCALP <small id="ver" class="muted"></small></h1>
-    <nav class="tabs">
-      <button class="tab active" data-tab="data">Données</button>
-      <button class="tab" data-tab="flux">Flux</button>
-      <button class="tab" data-tab="heatmap">Heatmap</button>
-      <button class="tab" data-tab="history">Historique</button>
-      <button id="btn-update" class="tab">Mettre à jour</button>
-    </nav>
-    <div id="panel" class="card">Chargement…</div>
-    <p class="muted">Logs : <a href="/logs/" target="_blank">/logs/</a> · Ping : <a href="/hello" target="_blank">/hello</a></p>
-  </div>
+  <h1>SCALP <span id="version"></span></h1>
+  <button onclick="location.reload()">Mettre à jour</button>
+  <div id="data">Chargement...</div>
 </body>
 </html>

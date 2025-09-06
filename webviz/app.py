@@ -1,62 +1,27 @@
 from fastapi import FastAPI
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from pathlib import Path
-import json
-import time
+import os
 
-# --- Versioning ---
-VERSION_FILE = Path(__file__).parent / "VERSION"
-if VERSION_FILE.exists():
-    UI_VERSION = VERSION_FILE.read_text().strip()
-else:
-    UI_VERSION = "0.0.0"
+ROOT = "/opt/scalp/webviz"
+VERSION_FILE = os.path.join(ROOT, "VERSION")
 
-# --- Init FastAPI ---
-app = FastAPI(title="SCALP RTViz")
+app = FastAPI()
 
-# --- Assets directory ---
-ROOT = Path(__file__).parent
-assets_dir = ROOT / "assets"
-assets_dir.mkdir(parents=True, exist_ok=True)
-
-app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
-
-# --- API endpoints ---
-
+# Routes API version
 @app.get("/version")
 async def version():
-    return {"ui": UI_VERSION, "ts": int(time.time())}
+    try:
+        with open(VERSION_FILE, "r") as f:
+            v = f.read().strip()
+    except FileNotFoundError:
+        v = "0.0.0"
+    return {"ui": v}
 
-@app.get("/hello")
-async def hello():
-    return JSONResponse(content={"msg": "Hello from SCALP RTViz!"})
+# Route pour la page principale
+@app.get("/")
+async def root():
+    return FileResponse(os.path.join(ROOT, "index.html"))
 
-@app.get("/data")
-async def data():
-    # ⚠️ Ici, tu devras connecter avec ton vrai backend/data loader
-    # Pour l’instant on simule une réponse minimale
-    sample = {
-        "tfs": ["1m", "5m", "15m"],
-        "min_candles": 1500,
-        "items": [
-            {
-                "symbol": "BTC",
-                "tfs": {
-                    "1m": {"status": "fresh", "candles": 1500},
-                    "5m": {"status": "reloading", "candles": 800},
-                    "15m": {"status": "stale", "candles": 200},
-                },
-            },
-            {
-                "symbol": "ETH",
-                "tfs": {
-                    "1m": {"status": "fresh", "candles": 1500},
-                    "5m": {"status": "fresh", "candles": 1500},
-                    "15m": {"status": "absent", "candles": 0},
-                },
-            },
-        ],
-        "updated_at": int(time.time()),
-    }
-    return JSONResponse(content=sample)
+# Fichiers statiques (js, css…)
+app.mount("/", StaticFiles(directory=ROOT), name="static")
