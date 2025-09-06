@@ -1,8 +1,10 @@
 (function(){
-  const UI_VER="1.0.30";  // front
+  const UI_VER="1.0.30";
   document.getElementById('ui-ver').textContent = UI_VER;
 
-  const API = (p)=>fetch(p,{headers:{'Accept':'application/json'}}).then(r=>r.json());
+  const API = (p)=>fetch(p,{headers:{'Accept':'application/json'}}).then(r=>{
+    if(!r.ok) throw new Error(r.statusText); return r.json();
+  });
   const $ = (sel)=>document.querySelector(sel);
 
   function dot(cls){const i=document.createElement('i');i.className='dot '+cls;return i}
@@ -21,35 +23,35 @@
     return r;
   }
 
-  // Status dots -> from /api/data-status (or fallback to heatmap)
+  // Try /api/data-status then fallback to static /api/data-status (Caddy->file)
   async function loadGrid(){
-    const grid = $('#grid'); grid.innerHTML='';
-    grid.append(header());
+    const grid = $('#grid'); grid.innerHTML=''; grid.append(header());
+    const showErr = (m)=>{const msg=$('#msg'); msg.textContent=m; msg.classList.add('show')};
+
     try{
-      const s = await API('/api/data-status'); // {items:[{sym, tfs:{'1m':'green','5m':'orange','15m':'gray'}}]}
-      const items = s.items || [];
-      for(const it of items){
+      const s = await API('/api/data-status'); // Caddy sert le JSON statique si backend ne l'a pas
+      const items = s.items || s || [];
+      items.forEach(it=>{
         const t=it.tfs||{};
         grid.append(row(it.sym || it.symbol || '-', t['1m']||'gray', t['5m']||'gray', t['15m']||'gray'));
-      }
+      });
       $('#msg').classList.remove('show');
     }catch(e){
-      $('#msg').textContent='Erreur API /api/data-status'; $('#msg').classList.add('show');
+      showErr('Aucune donnée de statut disponible.');
     }
   }
 
-  // Last 10 JSON/JSONL in /opt/scalp/data -> generated every 10s by last10data.service
   async function loadLast10(){
     const tb = document.querySelector('#last10 tbody'); tb.innerHTML='';
     try{
-      const list = await API('/api/last10-data'); // [{name,path,size,mtime}]
+      const list = await API('/api/last10-data'); // Caddy->/opt/scalp/var/dashboard/last10-data.json
       if(!Array.isArray(list) || list.length===0){
         tb.innerHTML='<tr><td colspan=3 class="muted">Aucun fichier .json trouvé.</td></tr>'; return;
       }
       for(const it of list){
         const tr=document.createElement('tr');
         const sz = typeof it.size==='number'? (it.size>=1024? (it.size/1024).toFixed(1)+'K': it.size+'B') : '';
-        tr.innerHTML = `<td>${it.name}</td><td>${it.mtime||''}</td><td>${sz}</td>`;
+        tr.innerHTML = `<td>${it.name||''}</td><td>${it.mtime||''}</td><td>${sz}</td>`;
         tb.appendChild(tr);
       }
     }catch(e){
@@ -57,9 +59,8 @@
     }
   }
 
-  function tick(){
-    loadGrid();
-    loadLast10();
-  }
+  function tick(){ loadGrid(); loadLast10(); }
+  $('#btn-refresh').addEventListener('click', tick);
+
   tick(); setInterval(tick, 10000);
 })();

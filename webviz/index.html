@@ -7,7 +7,9 @@
   body{margin:0;background:#0f141a;color:#e8eef4;font:16px/1.4 system-ui,Segoe UI,Roboto,Arial}
   .wrap{max-width:980px;margin:28px auto;padding:0 16px}
   h1{margin:0 0 8px;font-size:30px}
-  .version{opacity:.6;font-size:14px;margin-bottom:18px}
+  .version{opacity:.6;font-size:14px;margin-left:8px}
+  .btn{background:#1f6feb;border:0;color:#fff;padding:8px 12px;border-radius:10px;cursor:pointer}
+  .btn:active{transform:translateY(1px)}
   .card{border:1px solid #27354a;border-radius:16px;padding:16px 12px;margin:16px 0}
   table{width:100%;border-collapse:collapse}
   th,td{padding:10px 6px;border-bottom:1px solid #202938;text-align:left}
@@ -20,9 +22,13 @@
   .cell.sym{font-weight:700}.cell.tf{text-align:center}.cell.dot{text-align:center}
   .msg{margin:10px 4px;opacity:.85;display:none}.msg.show{display:block}.msg.error{color:#ff6b6b}
   .muted{opacity:.6;font-size:13px}
+  .topbar{display:flex;gap:10px;align-items:center;margin-bottom:10px}
 </style>
 <div class="wrap">
-  <h1>SCALP rtviz-ui <span id="ui-ver" class="version"></span></h1>
+  <div class="topbar">
+    <h1>SCALP rtviz-ui <span id="ui-ver" class="version"></span></h1>
+    <button class="btn" id="btn-refresh" title="Rafraîchir maintenant">Mettre à jour</button>
+  </div>
 
   <div class="card">
     <div class="legend">
