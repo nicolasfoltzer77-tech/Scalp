@@ -1,0 +1,46 @@
+<!doctype html><html lang="fr"><meta charset="utf-8">
+<meta name=viewport content="width=device-width,initial-scale=1">
+<title>SCALP rtviz-ui</title>
+<link rel="icon" href="data:,">
+<style>
+  :root{color-scheme:dark light}
+  body{margin:0;background:#0f141a;color:#e8eef4;font:16px/1.4 system-ui,Segoe UI,Roboto,Arial}
+  .wrap{max-width:980px;margin:28px auto;padding:0 16px}
+  h1{margin:0 0 8px;font-size:30px}
+  .version{opacity:.6;font-size:14px;margin-bottom:18px}
+  .card{border:1px solid #27354a;border-radius:16px;padding:16px 12px;margin:16px 0}
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:10px 6px;border-bottom:1px solid #202938;text-align:left}
+  .legend{display:flex;gap:18px;align-items:center;margin:6px 2px 12px}
+  .dot{display:inline-block;width:12px;height:12px;border-radius:50%;vertical-align:middle;margin-right:6px}
+  .green{background:#2da44e}.orange{background:#f2a600}.red{background:#d1242f}.gray{background:#7d8590}
+  .grid{display:block}
+  .row{display:grid;grid-template-columns:160px repeat(3,80px);gap:10px;align-items:center;padding:10px 6px;border-bottom:1px solid #202938}
+  .row.head{font-weight:700;opacity:.85;border-bottom:1px solid #2a3a52}
+  .cell.sym{font-weight:700}.cell.tf{text-align:center}.cell.dot{text-align:center}
+  .msg{margin:10px 4px;opacity:.85;display:none}.msg.show{display:block}.msg.error{color:#ff6b6b}
+  .muted{opacity:.6;font-size:13px}
+</style>
+<div class="wrap">
+  <h1>SCALP rtviz-ui <span id="ui-ver" class="version"></span></h1>
+
+  <div class="card">
+    <div class="legend">
+      <span><i class="dot green"></i>fresh</span>
+      <span><i class="dot orange"></i>reloading</span>
+      <span><i class="dot red"></i>stale</span>
+      <span><i class="dot gray"></i>absent</span>
+    </div>
+    <div id="grid" class="grid"></div>
+    <div id="msg" class="msg muted">—</div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin:0 0 10px">Derniers .json dans <code>/opt/scalp/data</code> <span class="muted">(auto 10s)</span></h3>
+    <table id="last10">
+      <thead><tr><th>Fichier</th><th>Modifié</th><th>Taille</th></tr></thead>
+      <tbody><tr><td colspan="3" class="muted">Chargement…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+<script src="/app.js"></script>
