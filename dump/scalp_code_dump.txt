@@ -1,0 +1,1204 @@
+===== FILE: /opt/scalp/bot/bot.py =====
+#!/usr/bin/env python3
+import os, json, time, pathlib, logging
+from heatmap_handler import load_heatmap, format_heatmap
+from telegram import ParseMode, Update
+from telegram.ext import Updater, CommandHandler, CallbackContext
+
+DATA_DIR   = pathlib.Path("/opt/scalp/data")
+TOP_JSON   = DATA_DIR/"top.json"
+HEAT_JSON  = DATA_DIR/"heatmap.json"
+STATUS_JSON= DATA_DIR/"status.json"
+ENV        = pathlib.Path("/opt/scalp/scalp.env")
+
+def _env(k, d=""):
+    # charge /opt/scalp/scalp.env sans toucher à /etc/scalp.env
+    m={}
+    try:
+        for ln in ENV.read_text().splitlines():
+            if "=" in ln and not ln.strip().startswith("#"):
+                a,b=ln.split("=",1); m[a.strip()]=b.strip().strip("'").strip('"')
+    except Exception: pass
+    return m.get(k,d)
+
+TOKEN=_env("TELEGRAM_BOT_TOKEN")
+CHAT =_env("TELEGRAM_CHAT_ID")
+
+def _safe_load(p: pathlib.Path, expect_key=None):
+    if not p.exists() or p.stat().st_size==0: return None
+    try:
+        j=json.loads(p.read_text())
+        if expect_key and expect_key not in j: return None
+        return j
+    except Exception:
+        return None
+
+def cmd_version(upd:Update, ctx:CallbackContext):
+    hhmm=os.popen("grep -E '^VERSION=' /opt/scalp/scalp.env | tail -1 | cut -d= -f2").read().strip() or time.strftime("%H%M")
+    upd.message.reply_text(hhmm)
+
+def cmd_status(upd:Update, ctx:CallbackContext):
+    upd.message.reply_text("✅")
+
+def cmd_top(upd:Update, ctx:CallbackContext):
+    j=_safe_load(TOP_JSON,"assets")
+    if not j or not j["assets"]:
+        upd.message.reply_text("(pas de données)"); return
+    assets=", ".join(j["assets"][:15])
+    hhmm=time.strftime("%H%M")
+    upd.message.reply_text(f"🏆 {assets}\n• {hhmm}")
+
+def _mk_bhs_cell(b,h,s):
+    nums=[("b",b),("h",h),("s",s)]
+    mx=max(v for _,v in nums)
+    out=[]
+    for tag,val in nums:
+        if val==mx and mx>0:
+            out.append(f"<b>{val}</b>")
+        else:
+            out.append(f"<code>{val}</code>")
+    return "/".join(out)
+
+def cmd_heatmap(upd:Update, ctx:CallbackContext):
+    j=_safe_load(HEAT_JSON,"rows")
+    if not j or not j["rows"]:
+        upd.message.reply_text("(pas de données)"); return
+    lines=[]
+    header="Sym  5m(b/h/s)   15m(b/h/s)   30m(b/h/s)"
+    lines.append(f"<code>{header}</code>")
+    for r in j["rows"]:
+        sym=r["sym"]
+        c5  = r.get("5m",  {}).get
+        c15 = r.get("15m", {}).get
+        c30 = r.get("30m", {}).get
+        cell5  = _mk_bhs_cell(c5("b",0),  c5("h",0),  c5("s",0))
+        cell15 = _mk_bhs_cell(c15("b",0), c15("h",0), c15("s",0))
+        cell30 = _mk_bhs_cell(c30("b",0), c30("h",0), c30("s",0))
+        line=f"{sym:<4} {cell5:<13} {cell15:<13} {cell30:<13}"
+        lines.append(line)
+    text="\n".join(lines)
+    upd.message.reply_text(text, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
+
+def main():
+    logging.basicConfig(level=logging.INFO)
+    up=Updater(TOKEN, use_context=True)
+    dp=up.dispatcher
+    dp.add_handler(CommandHandler("version", cmd_version))
+    dp.add_handler(CommandHandler("status",  cmd_status))
+    dp.add_handler(CommandHandler("top",     cmd_top))
+    dp.add_handler(CommandHandler("heatmap", cmd_heatmap))
+    up.start_polling(drop_pending_updates=True)
+    up.idle()
+
+if __name__=="__main__":
+    main()
+
+# --- /heatmap ---
+@dp.message_handler(commands=['heatmap'])
+async def cmd_heatmap(message):
+    updated, rows = load_heatmap()
+    if rows:
+        txt = format_heatmap(rows) or "(pas de données)"
+        hhmm = time.strftime("%H:%M", time.localtime(updated)) if updated else ""
+        await bot.send_message(CHAT_ID, txt + (f"\n• {hhmm}" if hhmm else ""), parse_mode="Markdown")
+    else:
+        await bot.send_message(CHAT_ID, "(pas de données)")
+
+
+
+===== FILE: /opt/scalp/bot/formatters.py =====
+from __future__ import annotations
+from pathlib import Path
+from datetime import datetime
+from workers.io import read_json_safely
+
+def escape_html(s:str)->str:
+    return (s.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;"))
+
+def _mtime_hhmm(p:Path)->str:
+    try:
+        return datetime.fromtimestamp(p.stat().st_mtime).strftime("%H%M")
+    except Exception:
+        return "----"
+
+def fmt_top(js:dict, data_dir:Path)->str:
+    assets = js.get("assets",[])[:15]
+    listed = ", ".join(a.split("/")[0] for a in assets)
+    hhmm = _mtime_hhmm(data_dir/"top.json")
+    return f"🏆 {escape_html(listed)}\n• {hhmm}"
+
+def fmt_status(data_dir:Path)->str:
+    # simple check: files presence
+    top_ok  = (data_dir/"top.json").exists()
+    heat_ok = (data_dir/"heatmap.json").exists()
+    a = "✅" if top_ok else "❌"
+    b = "✅" if heat_ok else "❌"
+    return f"{a} top.json { _mtime_hhmm(data_dir/'top.json') } | {b} heatmap.json { _mtime_hhmm(data_dir/'heatmap.json') }"
+
+def _triplet_cell(b:int,h:int,s:int)->str:
+    vals = [("b",b),("h",h),("s",s)]
+    m = max(v for _,v in vals)
+    def styl(k,v): return f"<b>{v}</b>" if v==m else f"<span>{v}</span>"
+    return f"{styl('b',b)} {styl('h',h)} {styl('s',s)}"
+
+def fmt_heatmap(js:dict)->str:
+    rows = js.get("rows",[])
+    # header
+    out = ["<b>📊 Heatmap (b/h/s)</b>", "<pre>sym   5m        15m       30m</pre>"]
+    lines = []
+    for r in rows[:15]:
+        sym = r.get("sym","?")
+        c5  = r.get("5m",  {"b":0,"h":0,"s":0})
+        c15 = r.get("15m", {"b":0,"h":0,"s":0})
+        c30 = r.get("30m", {"b":0,"h":0,"s":0})
+        line = f"<code>{sym:<4}</code> {_triplet_cell(c5['b'],c5['h'],c5['s'])}   {_triplet_cell(c15['b'],c15['h'],c15['s'])}   {_triplet_cell(c30['b'],c30['h'],c30['s'])}"
+        lines.append(line)
+    out.extend(lines)
+    return "\n".join(out)
+
+
+
+===== FILE: /opt/scalp/bot/handlers.py =====
+from telegram import Update
+from telegram.ext import ContextTypes
+from utils import load_json, short_time, format_table
+
+async def cmd_version(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(f"🟢 SCALP v{short_time()}")
+
+async def cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    status = load_json("status.json", {})
+    balance = status.get("balance", "N/A")
+    await update.message.reply_text(f"💰 Solde: {balance}\n📊 Status: OK")
+
+async def cmd_top(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    data = load_json("top.json", {})
+    top5 = data.get("top5", [])
+    top15 = data.get("top15", [])
+    heure = data.get("heure", short_time())
+    txt = "🏆 *TOP CRYPTOS*\n"
+    txt += "5 premiers: " + ", ".join(top5) + "\n"
+    txt += "10 suivants: " + ", ".join(top15) + f" ({heure})"
+    await update.message.reply_text(txt, parse_mode="Markdown")
+
+async def cmd_heatmap(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    data = load_json("heatmap.json", {})
+    headers = ["Crypto", "5m", "15m", "30m"]
+    rows = []
+    for sym, vals in data.items():
+        rows.append([
+            sym,
+            vals.get("5m", "-"),
+            vals.get("15m", "-"),
+            vals.get("30m", "-"),
+        ])
+    if not rows:
+        await update.message.reply_text("⚠️ Heatmap vide")
+    else:
+        await update.message.reply_text(f"🔥 HEATMAP\n```\n{format_table(headers, rows)}\n```", parse_mode="Markdown")
+
+async def cmd_signals(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    signals = load_json("signals.json", {})
+    if not signals:
+        await update.message.reply_text("⚠️ Aucun signal")
+    else:
+        txt = "📡 *SIGNALS*\n"
+        for sym, sig in signals.items():
+            txt += f"{sym}: {sig}\n"
+        await update.message.reply_text(txt, parse_mode="Markdown")
+
+
+
+===== FILE: /opt/scalp/bot/heatmap_handler.py =====
+import json, time, pathlib
+HEATMAP_PATH = pathlib.Path("/opt/scalp/data/heatmap.json")
+
+def _norm_updated(u):
+    try:
+        u = int(u)
+    except Exception:
+        return 0
+    return int(u/1000) if u > 10**12 else u
+
+def load_heatmap():
+    try:
+        with HEATMAP_PATH.open("r") as f:
+            data = json.load(f)
+        rows = data.get("rows") or []
+        if not isinstance(rows, list): rows = []
+        updated = _norm_updated(data.get("updated", 0))
+        return updated, rows
+    except Exception:
+        return 0, []
+
+def format_heatmap(rows):
+    lines=[]
+    for r in rows[:15]:
+        sym=r.get("sym","?")
+        def trip(tf):
+            d=r.get(tf,{})
+            return f"{int(d.get('b',0))}/{int(d.get('h',0))}/{int(d.get('s',0))}"
+        lines.append(f"{sym:>5} 5m:{trip('5m')} 15m:{trip('15m')} 30m:{trip('30m')}")
+    return "```\n"+"\n".join(lines)+"\n```" if lines else None
+
+
+
+===== FILE: /opt/scalp/bot/__init__.py =====
+
+
+
+===== FILE: /opt/scalp/bot/router.py =====
+from pathlib import Path
+from telegram import Update
+from telegram.ext import Application, ContextTypes, CommandHandler
+from formatters import fmt_top, fmt_status, fmt_heatmap, escape_html
+from workers.io import read_json_safely
+
+TOP_FP = "top.json"
+HEAT_FP = "heatmap.json"
+
+def register_handlers(app: Application, data_dir: Path, version_tag):
+    async def cmd_version(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+        await update.message.reply_text(version_tag())
+
+    async def cmd_top(update: Update, ctx):
+        js = read_json_safely(data_dir/ TOP_FP, {"assets":[]})
+        await update.message.reply_html(fmt_top(js, data_dir))
+
+    async def cmd_status(update: Update, ctx):
+        await update.message.reply_html(fmt_status(data_dir))
+
+    async def cmd_heatmap(update: Update, ctx):
+        js = read_json_safely(data_dir/ HEAT_FP, {"rows":[]})
+        if not js.get("rows"):
+            await update.message.reply_html("<i>(pas de données)</i>")
+            return
+        await update.message.reply_html(fmt_heatmap(js))
+
+    async def cmd_signals(update: Update, ctx):
+        await update.message.reply_html("<i>Aucun signal récent.</i>")
+
+    app.add_handler(CommandHandler("version", cmd_version))
+    app.add_handler(CommandHandler("top", cmd_top))
+    app.add_handler(CommandHandler("status", cmd_status))
+    app.add_handler(CommandHandler("heatmap", cmd_heatmap))
+    app.add_handler(CommandHandler("signals", cmd_signals))
+
+
+
+===== FILE: /opt/scalp/bot/scheduler.py =====
+import time
+import random
+from utils import save_json, short_time
+
+def update_status():
+    status = {"balance": round(random.uniform(1000, 2000), 2), "time": short_time()}
+    save_json("status.json", status)
+
+def update_top():
+    cryptos = ["BTC", "ETH", "BNB", "XRP", "ADA", "SOL", "DOGE", "DOT", "MATIC", "LTC",
+               "AVAX", "TRX", "ATOM", "LINK", "UNI"]
+    data = {"top5": cryptos[:5], "top15": cryptos[5:], "heure": short_time()}
+    save_json("top.json", data)
+
+def update_heatmap():
+    top = ["BTC", "ETH", "BNB", "XRP", "ADA", "SOL", "DOGE", "DOT", "MATIC", "LTC",
+           "AVAX", "TRX", "ATOM", "LINK", "UNI"]
+    heatmap = {}
+    for c in top:
+        heatmap[c] = {
+            "5m": random.choice([-20, -10, 0, 10, 20]),
+            "15m": random.choice([-20, -10, 0, 10, 20]),
+            "30m": random.choice([-20, -10, 0, 10, 20])
+        }
+    save_json("heatmap.json", heatmap)
+
+def update_signals():
+    top = ["BTC", "ETH", "BNB", "XRP", "ADA"]
+    signals = {}
+    for c in top:
+        signals[c] = random.choice(["BUY", "SELL", "HOLD"])
+    save_json("signals.json", signals)
+
+def main():
+    while True:
+        update_status()
+        update_top()
+        update_heatmap()
+        update_signals()
+        time.sleep(300)  # toutes les 5 minutes
+
+if __name__ == "__main__":
+    main()
+
+
+
+===== FILE: /opt/scalp/bot/utils.py =====
+import json
+import os
+from datetime import datetime
+
+DATA_DIR = "/opt/scalp/data"
+
+def load_json(filename, default=None):
+    path = os.path.join(DATA_DIR, filename)
+    if not os.path.exists(path):
+        return default if default is not None else {}
+    try:
+        with open(path, "r") as f:
+            return json.load(f)
+    except Exception:
+        return default if default is not None else {}
+
+def save_json(filename, data):
+    path = os.path.join(DATA_DIR, filename)
+    with open(path, "w") as f:
+        json.dump(data, f, indent=2)
+
+def short_time():
+    return datetime.now().strftime("%H%M")
+
+def format_table(headers, rows):
+    col_widths = [len(str(h)) for h in headers]
+    for row in rows:
+        for i, cell in enumerate(row):
+            col_widths[i] = max(col_widths[i], len(str(cell)))
+    out = []
+    out.append(" | ".join(str(h).ljust(col_widths[i]) for i, h in enumerate(headers)))
+    out.append("-+-".join("-" * w for w in col_widths))
+    for row in rows:
+        out.append(" | ".join(str(cell).ljust(col_widths[i]) for i, cell in enumerate(row)))
+    return "\n".join(out)
+
+
+
+===== FILE: /opt/scalp/data/heatmap.json =====
+{"as_of":"2025-09-13T09:19:44.748787+00:00","cells":[]}
+
+
+===== FILE: /opt/scalp/data/heatmap.lock =====
+
+
+
+===== FILE: /opt/scalp/data/history.json =====
+[]
+
+
+===== FILE: /opt/scalp/data/signals.json =====
+[]
+
+
+===== FILE: /opt/scalp/data/status.json =====
+{"updated": 1757754909465}
+
+
+===== FILE: /opt/scalp/data/top.json =====
+{"updated": 1757748990898, "assets": ["ADA/USDT", "APT/USDT", "ARB/USDT", "BNB/USDT", "BTC/USDT", "DOGE/USDT", "ETH/USDT", "LINK/USDT", "LTC/USDT", "OP/USDT", "SOL/USDT", "SUI/USDT", "TON/USDT", "TRX/USDT", "XRP/USDT"], "top_vol": ["DOGE/USDT", "OP/USDT", "ADA/USDT", "ARB/USDT", "SUI/USDT", "XRP/USDT", "LINK/USDT", "SOL/USDT", "APT/USDT", "TRX/USDT"]}
+
+
+===== FILE: /opt/scalp/__init__.py =====
+
+
+
+===== FILE: /opt/scalp/scalp.env =====
+TELEGRAM_BOT_TOKEN=8257199418:AAFQxRsJNRYGmN2pukiIpz-FJD8qErwtxYo
+TELEGRAM_CHAT_ID=7552287774
+EXCHANGE=bitget
+API_KEY=bg_adea0c7a84992c6aabb190db17175625
+API_SECRET=e2c0bd845c962a57329c9731a569ea896773cee8a48f82e4326178bdb37c659e
+API_PASSPHRASE=hsbjfknbshk
+
+VERSION=0915
+BUILD=0915
+
+
+
+===== FILE: /opt/scalp/services/balance_cli.py =====
+#!/usr/bin/env python3
+import json, time, sys
+from pathlib import Path
+from exchange_bitget import get_usdt_balance, DATA
+def main():
+    bal=get_usdt_balance()
+    (DATA/"status.json").write_text(json.dumps({"updated":int(time.time()*1000),"ok":True,"balance":bal},separators=(",",":")))
+    print(json.dumps(bal,indent=2))
+if __name__=="__main__": main()
+
+
+
+===== FILE: /opt/scalp/services/exchange_bitget.py =====
+from __future__ import annotations
+import os, time
+from pathlib import Path
+import ccxt
+
+DATA=Path("/opt/scalp/data"); CAND=DATA/"candles"; CAND.mkdir(parents=True,exist_ok=True)
+REQ=["BITGET_API_KEY","BITGET_API_SECRET","BITGET_PASSPHRASE"]
+
+def _env(): 
+    miss=[k for k in REQ if not os.getenv(k)]
+    if miss: raise RuntimeError("Secrets manquants: "+",".join(miss))
+def client():
+    _env(); return ccxt.bitget({
+        "apiKey":os.getenv("BITGET_API_KEY"),
+        "secret":os.getenv("BITGET_API_SECRET"),
+        "password":os.getenv("BITGET_PASSPHRASE"),
+        "enableRateLimit":True,
+        "options":{"defaultType":"swap"},
+    })
+def to_sym(base:str)->str: return f"{base.upper().split('/')[0]}/USDT:USDT"
+
+def get_usdt_balance()->dict:
+    ex=client(); bal=ex.fetch_balance(params={"type":"swap"}).get("USDT",{})
+    f=float(bal.get("free",0)); u=float(bal.get("used",0)); t=float(bal.get("total",f+u))
+    return {"asset":"USDT","free":round(f,2),"used":round(u,2),"total":round(t,2)}
+
+TF={"1m":200,"3m":200,"5m":200,"15m":200,"30m":200,"60m":200}
+def fetch_ohlcv_save(base:str, tf:str, limit:int|None=None)->int:
+    if tf not in TF: raise ValueError("tf")
+    ex=client(); m=to_sym(base); limit=limit or TF[tf]
+    rows=ex.fetch_ohlcv(m, timeframe=tf, since=None, limit=limit)
+    out=CAND/f"{base.upper().split('/')[0]}_{tf}.csv"
+    out.write_text("\n".join(f"{ts}|{o:.8f},{h:.8f},{l:.8f},{c:.8f},{v:.8f}" for ts,o,h,l,c,v in rows[-TF[tf]:]))
+    return len(rows)
+
+
+
+===== FILE: /opt/scalp/services/__init__.py =====
+# package marker
+
+
+
+===== FILE: /opt/scalp/services/ohlcv_cli.py =====
+#!/usr/bin/env python3
+import os, time, csv, pathlib, sys
+import ccxt
+from datetime import datetime, timezone
+
+ENV = "/opt/scalp/scalp.env"
+OUTDIR = pathlib.Path("/opt/scalp/data/candles")
+OUTDIR.mkdir(parents=True, exist_ok=True)
+
+def load_env(path=ENV):
+    env={}
+    if os.path.exists(path):
+        with open(path) as f:
+            for line in f:
+                line=line.strip()
+                if not line or line.startswith("#") or "=" not in line: continue
+                k,v=line.split("=",1); env[k.strip()]=v.strip().strip("'").strip('"')
+    return env
+
+def client(env):
+    exname = env.get("EXCHANGE","bitget").lower()
+    if exname!="bitget": raise RuntimeError("Seul bitget est supporté ici")
+    key=env.get("BITGET_API_KEY") or env.get("API_KEY")
+    sec=env.get("BITGET_API_SECRET") or env.get("API_SECRET")
+    pas=env.get("BITGET_API_PASSPHRASE") or env.get("BITGET_PASSPHRASE") or env.get("API_PASSPHRASE")
+    return ccxt.bitget({'apiKey':key,'secret':sec,'password':pas})
+
+def base_list():
+    # liste “trophée” par défaut
+    return ["BTC/USDT","ETH/USDT","SOL/USDT","BNB/USDT","XRP/USDT","DOGE/USDT",
+            "ADA/USDT","TRX/USDT","TON/USDT","LINK/USDT","LTC/USDT","ARB/USDT","APT/USDT","SUI/USDT","OP/USDT"]
+
+def symbols_from_top():
+    p="/opt/scalp/data/top.json"
+    try:
+        import json
+        if os.path.getsize(p)>0:
+            data=json.load(open(p))
+            aset=data.get("assets") or []
+            if aset: return [a if "/" in a else f"{a}/USDT" for a in aset[:15]]
+    except Exception: pass
+    return base_list()
+
+def write_csv(sym, rows):
+    # rows: list of [ts,open,high,low,close,volume]
+    out=OUTDIR/f"{sym.split('/')[0]}_5m.csv"
+    with open(out,"w",newline="") as f:
+        w=csv.writer(f)
+        for r in rows: w.writerow(r)
+
+def fetch_one(ex, sym, limit=120):
+    for _ in range(2):
+        try:
+            o = ex.fetch_ohlcv(sym, timeframe="5m", limit=limit)
+            return o
+        except Exception as e:
+            time.sleep(0.7)
+    raise
+
+def main():
+    env=load_env()
+    ex=client(env)
+    syms = symbols_from_top()
+    for s in syms:
+        rows = fetch_one(ex, s, limit=180)
+        write_csv(s, rows)
+    # status.json ping
+    import json
+    pathlib.Path("/opt/scalp/data").mkdir(parents=True, exist_ok=True)
+    js={"updated": int(time.time()*1000)}
+    open("/opt/scalp/data/status.json","w").write(json.dumps(js))
+    print(f"ok rows {len(syms)}")
+
+if __name__=="__main__":
+    main()
+
+
+
+===== FILE: /opt/scalp/services/order_cli.py =====
+#!/usr/bin/env python3
+import os, sys, json
+from exchange_bitget import client, to_sym
+def main():
+    if len(sys.argv)<4: 
+        print("usage: order_cli.py BASE buy|sell USDT [limit PRICE] [--reduce]",file=sys.stderr); sys.exit(1)
+    base,side,usd=sys.argv[1].upper(),sys.argv[2].lower(),float(sys.argv[3])
+    typ="market"; price=None; reduce="--reduce" in sys.argv
+    if len(sys.argv)>=6 and sys.argv[4]=="limit": typ="limit"; price=float(sys.argv[5])
+    ex=client(); m=to_sym(base); px=price or ex.fetch_ticker(m)["last"]; amt=usd/px; amt=float(ex.amount_to_precision(m,amt))
+    if os.getenv("ALLOW_TRADING","0")!="1":
+        print(json.dumps({"dry_run":True,"symbol":m,"side":side,"type":typ,"amount":amt,"price":price},indent=2)); return
+    print(json.dumps(ex.create_order(m,typ,side,amt,price,params={"reduceOnly":reduce}),indent=2))
+if __name__=="__main__": main()
+
+
+
+===== FILE: /opt/scalp/tools/bitget_env_check.py =====
+#!/usr/bin/env python3
+import os, json, pathlib
+ENV_SRC = "/etc/scalp.env"
+ENV_DST = "/opt/scalp/scalp.env"
+
+def parse_env(path):
+    d={}
+    try:
+        with open(path,"r") as f:
+            for line in f:
+                line=line.strip()
+                if not line or line.startswith("#") or "=" not in line: continue
+                k,v=line.split("=",1)
+                d[k.strip()]=v.strip().strip("'").strip('"')
+    except Exception:
+        pass
+    return d
+
+def can_write(path):
+    p=pathlib.Path(path)
+    return p.exists() and os.access(path, os.W_OK)
+
+def main():
+    src = parse_env(ENV_SRC)
+    # si ENV_DST non inscriptible → ne PAS écrire (évite le crash systemd)
+    written=False
+    if can_write(ENV_DST):
+        # normalise quelques clés utiles pour les services
+        lines=[]
+        for k in ("TELEGRAM_BOT_TOKEN","TELEGRAM_CHAT_ID","EXCHANGE","API_KEY","API_SECRET","API_PASSPHRASE",
+                  "BITGET_API_KEY","BITGET_API_SECRET","BITGET_PASSPHRASE","VERSION","BUILD"):
+            if k in src: lines.append(f"{k}={src[k]}")
+        with open(ENV_DST,"w") as f:
+            f.write("\n".join(lines)+"\n")
+        written=True
+
+    # retour minimal OK (pas de call exchange ici)
+    print(json.dumps({
+        "env_src": ENV_SRC,
+        "env_dst": ENV_DST,
+        "written": written,
+        "bitget_ok": True,
+        "message": "env locked, skipped write" if not written else "env updated"
+    }))
+if __name__=="__main__":
+    main()
+
+
+
+===== FILE: /opt/scalp/tools/cleanup_and_guard.sh =====
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "== Stoppe (sans désactiver) =="
+systemctl stop scalp-telegram-bot.service 2>/dev/null || true
+systemctl stop scalp-heatmap.service 2>/dev/null || true
+systemctl stop scalp-heatmap.timer 2>/dev/null || true
+
+echo "== Purge traces anciennes =="
+# vieux units possibles (on ne touche PAS scalp.env)
+for u in \
+  /etc/systemd/system/scalp-telegram.service \
+  /etc/systemd/system/scalp-bot.service \
+  /etc/systemd/system/scalp-heatmap-writer.service \
+  /etc/systemd/system/scalp-heatmap@.service \
+  /etc/systemd/system/*scalp*~ \
+  /etc/systemd/system/*scalp*.bak
+do [ -e "$u" ] && rm -f "$u"; done
+
+echo "== Python caches =="
+find /opt/scalp -type d -name __pycache__ -prune -exec rm -rf {} + 2>/dev/null || true
+find /opt/scalp -type f -name '*.pyc' -delete 2>/dev/null || true
+
+echo "== Journaux (léger) =="
+journalctl --rotate || true
+journalctl --vacuum-time=3d || true
+
+echo "== Garde-fou JSON =="
+fix_json(){ f="$1"; tmp="$(mktemp)"
+  case "$f" in
+    *heatmap.json) echo '{"updated":0,"rows":[]}' >"$tmp" ;;
+    *top.json)     echo '{"updated":0,"assets":[]}' >"$tmp" ;;
+    *signals.json) echo '{"updated":0,"items":[]}' >"$tmp" ;;
+    *status.json)  echo '{"updated":0,"ok":true,"notes":""}' >"$tmp" ;;
+  esac
+  mv "$tmp" "$f"
+}
+mkdir -p /opt/scalp/data /opt/scalp/data/candles
+for f in /opt/scalp/data/{heatmap,top,signals,status}.json; do
+  [ -s "$f" ] || fix_json "$f"
+  case "$f" in
+    *heatmap.json) jq -e 'has("rows") and (.rows|type=="array")' "$f" >/dev/null 2>&1 || fix_json "$f" ;;
+    *top.json)     jq -e 'has("assets") and (.assets|type=="array")' "$f" >/dev/null 2>&1 || fix_json "$f" ;;
+    *signals.json) jq -e 'has("items") and (.items|type=="array")' "$f" >/dev/null 2>&1 || fix_json "$f" ;;
+    *status.json)  jq -e 'has("ok")' "$f" >/dev/null 2>&1 || fix_json "$f" ;;
+  esac
+done
+chmod 644 /opt/scalp/data/{heatmap,top,signals,status}.json
+
+echo "== Droits dossiers (lecture app) =="
+chown -R root:root /opt/scalp
+chmod 755 /opt/scalp /opt/scalp/{bot,workers,data,data/candles,tools} 2>/dev/null || true
+
+echo "== Units propres (service + timer) =="
+cat >/etc/systemd/system/scalp-heatmap.service <<'UNIT'
+[Unit]
+Description=SCALP Heatmap Writer
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=/opt/scalp/scalp.env
+WorkingDirectory=/opt/scalp/workers
+ExecStart=/usr/bin/python3 /opt/scalp/workers/analyzer.py
+Nice=10
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
+cat >/etc/systemd/system/scalp-heatmap.timer <<'UNIT'
+[Unit]
+Description=Run scalp-heatmap.service every 5 minutes (aligned)
+After=network-online.target
+
+[Timer]
+OnCalendar=*:0/5
+AccuracySec=30s
+Persistent=true
+Unit=scalp-heatmap.service
+
+[Install]
+WantedBy=timers.target
+UNIT
+
+cat >/etc/systemd/system/scalp-telegram-bot.service <<'UNIT'
+[Unit]
+Description=SCALP Telegram Bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=/opt/scalp/scalp.env
+WorkingDirectory=/opt/scalp/bot
+ExecStart=/usr/bin/python3 /opt/scalp/bot/bot.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
+systemctl daemon-reload
+systemctl reset-failed
+
+echo "== (Ré)active timer et bot =="
+systemctl enable --now scalp-heatmap.timer
+systemctl enable --now scalp-telegram-bot.service
+
+echo "== Kick immédiat heatmap pour peupler les JSON =="
+systemctl start scalp-heatmap.service || true
+
+echo "== Vérifs rapides =="
+jq -r '.rows|length' /opt/scalp/data/heatmap.json || echo "heatmap.json KO"
+jq -r '.assets|length' /opt/scalp/data/top.json || echo "top.json KO"
+jq -r '.items|length' /opt/scalp/data/signals.json || echo "signals.json KO"
+
+echo "== Status courts =="
+systemctl status scalp-heatmap.timer --no-pager | sed -n '1,12p' || true
+systemctl status scalp-telegram-bot.service --no-pager | sed -n '1,12p' || true
+
+
+
+===== FILE: /opt/scalp/tools/deploy.sh =====
+#!/usr/bin/env bash
+set -uo pipefail
+
+ENV_SRC="/etc/scalp.env"
+ENV_DST="/opt/scalp/scalp.env"
+GUARD="/opt/scalp/tools/bitget_env_check.py"
+
+TIMERS=("scalp-ohlcv.timer" "scalp-heatmap.timer")
+SERVICES=("scalp-telegram-bot.service")
+
+emoji_ok="✅"; emoji_info="🔧"; emoji_lock="🔒"; emoji_unlock="🔓"; emoji_play="▶️"; emoji_stop="⏹️"; emoji_note="📝"
+
+now_hhmm(){ date +%H:%M; }
+now_build(){ date +%H%M; }
+
+has_cmd(){ command -v "$1" >/dev/null 2>&1; }
+
+is_immutable(){
+  has_cmd lsattr || return 1
+  [[ -f "$ENV_DST" ]] || return 1
+  lsattr -d "$ENV_DST" 2>/dev/null | awk '{print $1}' | grep -q 'i'
+}
+
+unlock_env(){
+  $SUDO chattr -i "$ENV_DST" 2>/dev/null || true
+  $SUDO chattr -a "$ENV_DST" 2>/dev/null || true
+}
+
+lock_env(){
+  $SUDO chattr +i "$ENV_DST" 2>/dev/null || true
+}
+
+ensure_env_file(){
+  [[ -f "$ENV_DST" ]] || : >"$ENV_DST"
+}
+
+bump_version(){
+  local hhmm build tmp new
+  hhmm="$(now_hhmm)"
+  build="$(now_build)"
+  tmp="$(mktemp)"
+
+  # base: contenu actuel
+  cat "$ENV_DST" >"$tmp"
+
+  # VERSION
+  if grep -qE '^VERSION=' "$tmp"; then
+    sed -E -i "s/^VERSION=.*/VERSION=${hhmm//:/}/" "$tmp"
+  else
+    printf "\nVERSION=%s\n" "${hhmm//:/}" >>"$tmp"
+  fi
+
+  # BUILD
+  if grep -qE '^BUILD=' "$tmp"; then
+    sed -E -i "s/^BUILD=.*/BUILD=${build}/" "$tmp"
+  else
+    printf "BUILD=%s\n" "$build" >>"$tmp"
+  fi
+
+  # n’écrit que si différent
+  if ! cmp -s "$tmp" "$ENV_DST"; then
+    cp -f "$tmp" "$ENV_DST"
+  fi
+  rm -f "$tmp"
+  echo "$emoji_ok VERSION=$(printf '%s' "$hhmm") (BUILD=$build)"
+}
+
+run_guard(){
+  [[ -x "$GUARD" ]] || { echo "$emoji_note guard manquant, skip."; return 0; }
+  if is_immutable; then
+    echo "$emoji_lock env verrouillé, skip normalisation."
+    return 0
+  fi
+  echo "🔍 Normalisation/env check…"
+  # Le script python écrit /opt/scalp/scalp.env seulement si nécessaire
+  /usr/bin/python3 "$GUARD" || true
+}
+
+unit_exists(){ systemctl list-unit-files "$1" --no-legend 2>/dev/null | grep -q "$1"; }
+
+stop_all(){
+  echo "$emoji_stop Stop timers/services…"
+  for t in "${TIMERS[@]}"; do unit_exists "$t" && systemctl disable --now "$t" 2>/dev/null || true; done
+  for s in "${SERVICES[@]}"; do unit_exists "$s" && systemctl stop "$s" 2>/dev/null || true; done
+}
+
+start_all(){
+  echo "$emoji_play Restart services/timers…"
+  for s in "${SERVICES[@]}"; do unit_exists "$s" && systemctl enable --now "$s" 2>/dev/null || true; done
+  for t in "${TIMERS[@]}"; do
+    if unit_exists "$t"; then systemctl enable --now "$t" 2>/dev/null || true; else
+      # fallback one-shot si pas de timer
+      base="${t%.timer}"
+      unit_exists "$base.service" && systemctl start "$base.service" 2>/dev/null || true
+    fi
+  done
+}
+
+summary(){
+  echo "🧾 Résumé:"
+  unit_exists scalp-telegram-bot.service && systemctl --no-pager --lines=0 status scalp-telegram-bot.service || true
+  unit_exists scalp-ohlcv.timer && systemctl --no-pager --lines=0 status scalp-ohlcv.timer || true
+  unit_exists scalp-heatmap.timer && systemctl --no-pager --lines=0 status scalp-heatmap.timer || true
+  echo "$emoji_ok Deploy terminé. VERSION=$(now_hhmm)"
+}
+
+main(){
+  export SUDO=""
+  [[ $EUID -ne 0 ]] && SUDO="sudo"
+
+  echo "== SCALP deploy =="
+  ensure_env_file
+
+  local was_locked=0
+  if is_immutable; then
+    was_locked=1
+    echo "$emoji_unlock unlock env…"
+    unlock_env
+  fi
+
+  run_guard
+  bump_version
+
+  # si précédemment verrouillé -> re-lock
+  if (( was_locked == 1 )); then
+    echo "$emoji_lock lock env…"
+    lock_env
+  fi
+
+  echo "$emoji_info systemd reload…"
+  systemctl daemon-reload
+
+  stop_all
+  start_all
+  summary
+}
+
+main "$@"
+
+
+
+===== FILE: /opt/scalp/tools/json_guard.sh =====
+#!/usr/bin/env bash
+set -euo pipefail
+
+fix_heatmap(){ printf '{"updated":0,"rows":[]}\n'; }
+valid_heatmap(){
+  jq -e 'type=="object" and has("rows") and (.rows|type=="array")' "$1" >/dev/null 2>&1
+}
+
+lock=/opt/scalp/data/heatmap.lock
+file=/opt/scalp/data/heatmap.json
+tmp=$(mktemp)
+
+if [[ ! -s "$file" ]] || ! valid_heatmap "$file"; then
+  (
+    exec 9>"$lock"
+    flock -x 9
+    fix_heatmap > "$tmp"
+    mv -f "$tmp" "$file"
+  )
+  echo "guard: heatmap.json reset (missing/invalid)"
+else
+  echo "guard: heatmap.json OK ($(jq '.rows|length' "$file") rows)"
+fi
+rm -f "$tmp" 2>/dev/null || true
+
+
+
+===== FILE: /opt/scalp/tools/one_shot_heatmap.sh =====
+#!/usr/bin/env bash
+set -euo pipefail
+
+DATA=/opt/scalp/data
+ANALYZER=/opt/scalp/workers/analyzer.py
+ENV_GUARD=/opt/scalp/tools/bitget_env_check.py
+
+# 1) normalisation des secrets (lecture seule)
+[[ -x "$ENV_GUARD" ]] && /usr/bin/python3 "$ENV_GUARD" --no-write >/dev/null || true
+
+# 2) top.json par défaut si vide/absent
+mkdir -p "$DATA"
+if ! jq -e '.assets|length>0' "$DATA/top.json" >/dev/null 2>&1; then
+  jq -n --argjson a '["BTC","ETH","SOL","BNB","XRP","DOGE","ADA","TRX","TON","LINK","LTC","ARB","APT","SUI","OP"]' \
+     '{updated:(now|floor*1000), assets:$a}' > "$DATA/top.json"
+fi
+
+# 3) (re)génère la heatmap
+PYTHONPATH=/opt /usr/bin/python3 "$ANALYZER"
+
+# 4) résumé
+echo "top:  $(jq -r '.assets|length // 0'   "$DATA/top.json") assets"
+echo "heat: $(jq -r '.rows|length   // 0'   "$DATA/heatmap.json") rows"
+
+
+
+===== FILE: /opt/scalp/tools/ping_tele_bot.py =====
+import os,sys,requests,time
+tok=os.getenv("TELEGRAM_BOT_TOKEN","")
+cid=os.getenv("TELEGRAM_CHAT_ID","")
+if not tok or not cid:
+    print("ERR env TELEGRAM missing"); sys.exit(2)
+r=requests.get(f"https://api.telegram.org/bot{tok}/getMe", timeout=10)
+r.raise_for_status()
+txt=f"SCALP bot alive {time.strftime('%H:%M')}"; 
+s=requests.get(f"https://api.telegram.org/bot{tok}/sendMessage",
+               params={"chat_id":cid,"text":txt}, timeout=10)
+s.raise_for_status()
+print("OK telegram")
+
+
+
+===== FILE: /opt/scalp/tools/run_heatmap_once.sh =====
+#!/usr/bin/env bash
+set -euo pipefail
+/opt/scalp/tools/json_guard.sh >/dev/null 2>&1 || true
+/usr/bin/python3 /opt/scalp/workers/analyzer.py
+jq -r '.rows|length' /opt/scalp/data/heatmap.json
+
+
+
+===== FILE: /opt/scalp/tools/secrets_guard.sh =====
+#!/usr/bin/env bash
+set -euo pipefail
+CHK=/opt/scalp/tools/bitget_env_check.py
+DST=/opt/scalp/scalp.env
+
+# 1) (re)génère /opt/scalp/scalp.env et teste Bitget & Telegram
+out="$($CHK)"
+ok=$(printf '%s' "$out" | jq -r '.bitget_ok')
+msg=$(printf '%s' "$out" | jq -r '.message')
+echo "$out"
+
+if [ "$ok" != "true" ]; then
+  echo "SECRETS_GUARD: KO -> $msg" >&2
+  exit 2
+fi
+
+# 2) verrouille les droits (lecture seule root)
+chmod 600 "$DST"
+chown root:root "$DST"
+# rendre immuable (désactivable avec: chattr -i /opt/scalp/scalp.env)
+chattr +i "$DST" 2>/dev/null || true
+
+echo "SECRETS_GUARD: OK -> $msg"
+
+
+
+===== FILE: /opt/scalp/workers/analyzer.py =====
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Calcule la heatmap b/h/s (0..9) pour 5m, 15m, 30m
+à partir des CSV OHLCV: /opt/scalp/data/candles/{SYM}_{TF}.csv
+Format attendu (sans header): ts,open,high,low,close,volume
+Écrit : /opt/scalp/data/heatmap.json
+"""
+import os, csv, math, json, time, tempfile, fcntl
+from statistics import mean
+
+DATA_DIR = "/opt/scalp/data/candles"
+OUT_JSON = "/opt/scalp/data/heatmap.json"
+LOCK = "/opt/scalp/data/heatmap.lock"
+
+SYMS = ["ADA","APT","ARB","BNB","BTC","DOGE","ETH","LINK",
+        "LTC","OP","SOL","SUI","TON","TRX","XRP"]
+TFS  = ["5m","15m","30m"]
+
+# ----- petites utils -----
+def ema(series, n):
+    if not series: return []
+    k = 2/(n+1)
+    e = [series[0]]
+    for x in series[1:]:
+        e.append(e[-1] + k*(x - e[-1]))
+    return e
+
+def rsi14(closes, period=14):
+    if len(closes) < period+1: return [50.0]*len(closes)
+    gains, losses = [], []
+    for i in range(1, period+1):
+        ch = closes[i]-closes[i-1]
+        gains.append(max(ch,0)); losses.append(max(-ch,0))
+    avg_gain, avg_loss = mean(gains), mean(losses)
+    rsis = [50.0]*(period)  # padding
+    for i in range(period+1,len(closes)):
+        ch = closes[i]-closes[i-1]
+        gain = max(ch,0); loss = max(-ch,0)
+        avg_gain = (avg_gain*(period-1)+gain)/period
+        avg_loss = (avg_loss*(period-1)+loss)/period
+        rs = (avg_gain/avg_loss) if avg_loss>0 else 999
+        rsi = 100 - (100/(1+rs))
+        rsis.append(rsi)
+    if len(rsis)<len(closes):
+        rsis += [rsis[-1]]*(len(closes)-len(rsis))
+    return rsis
+
+def atr14(highs,lows,closes,period=14):
+    if len(closes) < period+1: return [0.0]*len(closes)
+    trs=[highs[0]-lows[0]]
+    for i in range(1,len(closes)):
+        tr=max(highs[i]-lows[i],
+               abs(highs[i]-closes[i-1]),
+               abs(lows[i]-closes[i-1]))
+        trs.append(tr)
+    a=[mean(trs[1:period+1])]
+    for tr in trs[period+1:]:
+        a.append(((a[-1]*(period-1))+tr)/period)
+    a=[0.0]*(len(closes)-len(a))+a
+    return a
+
+def read_tail_csv(path, maxrows=400):
+    if not os.path.exists(path): return []
+    # lecture tail légère
+    with open(path,"r") as f:
+        rows=f.readlines()[-maxrows:]
+    out=[]
+    for r in rows:
+        p=r.strip().split(",")
+        if len(p)<6: continue
+        try:
+            ts=int(p[0]); o=float(p[1]); h=float(p[2]); l=float(p[3]); c=float(p[4]); v=float(p[5])
+            out.append((ts,o,h,l,c,v))
+        except: continue
+    return out
+
+def score_side(b,h,s,total=9):
+    # clamp + normalise à somme=total
+    b=max(0,round(b)); h=max(0,round(h)); s=max(0,round(s))
+    sm=b+h+s
+    if sm==0: h=total; return b,h,s
+    if sm!=total:
+        # redistribue sur la plus forte composante
+        diff=total-sm
+        if b>=max(h,s): b+=diff
+        elif s>=max(b,h): s+=diff
+        else: h+=diff
+    return int(b),int(h),int(s)
+
+# ----- logique de signal -----
+def compute_for_closes_highs_lows_vol(closes, highs, lows, vols):
+    n=len(closes)
+    if n<50:  # trop court
+        return 0,9,0
+
+    ema9 = ema(closes,9)
+    ema20 = ema(closes,20)
+    rsi = rsi14(closes,14)
+    atr = atr14(highs,lows,closes,14)
+
+    c=closes[-1]
+    e9, e20 = ema9[-1], ema20[-1]
+    r = rsi[-1]
+    v = vols[-1]
+    v_avg = mean(vols[-60:]) if n>=60 else mean(vols)
+    atrp = (atr[-1]/c*100) if c>0 else 0
+
+    b=h=s=0.0
+
+    # 1) momentum EMA cross
+    if e9>e20: b+=3
+    elif e9<e20: s+=3
+    else: h+=2
+
+    # 2) RSI bandes
+    if r>=60: b+=2
+    elif r<=40: s+=2
+    else: h+=2
+
+    # 3) position vs EMA20
+    if c>e20: b+=1
+    elif c<e20: s+=1
+    else: h+=1
+
+    # 4) volume spike
+    if v_avg>0 and v>=1.3*v_avg:
+        if c>=closes[-2]: b+=2
+        else: s+=2
+    else:
+        h+=1
+
+    # 5) volatilité/ATR (filtre)
+    if atrp>=0.8:
+        # favorise la direction momentum
+        if e9>e20: b+=1
+        elif e9<e20: s+=1
+        else: h+=1
+    else:
+        h+=1
+
+    return score_side(b,h,s)
+
+def calc_symbol(sym, tf):
+    path = os.path.join(DATA_DIR, f"{sym}_{tf}.csv")
+    rows = read_tail_csv(path)
+    if not rows:
+        return {"b":0,"h":9,"s":0}
+    _,o,h,l,c,v = zip(*rows)
+    b,h_,s = compute_for_closes_highs_lows_vol(list(c), list(h), list(l), list(v))
+    return {"b":b,"h":h_,"s":s}
+
+def build_heatmap():
+    rows=[]
+    for sym in SYMS:
+        entry={"sym":sym}
+        for tf in TFS:
+            entry[tf] = calc_symbol(sym, tf)
+        rows.append(entry)
+    return {"updated": int(time.time()*1000), "rows": rows}
+
+def atomic_write(path, data: bytes):
+    d=os.path.dirname(path)
+    fd,tmp = tempfile.mkstemp(prefix=".hm.",dir=d)
+    with os.fdopen(fd,"wb") as f:
+        f.write(data); f.flush(); os.fsync(f.fileno())
+    os.replace(tmp, path)
+
+def main():
+    obj = build_heatmap()
+    payload = json.dumps(obj, ensure_ascii=False, separators=(",",":")).encode()
+    os.makedirs(os.path.dirname(OUT_JSON), exist_ok=True)
+    # lock fichier pour éviter races avec lecteurs/écrivains
+    with open(LOCK,"w") as lf:
+        fcntl.flock(lf, fcntl.LOCK_EX)
+        atomic_write(OUT_JSON, payload)
+        fcntl.flock(lf, fcntl.LOCK_UN)
+    print(f"heatmap: wrote {len(obj['rows'])} rows -> {OUT_JSON}")
+
+if __name__ == "__main__":
+    main()
+
+
+
+===== FILE: /opt/scalp/workers/__init__.py =====
+
+
+
+===== FILE: /opt/scalp/workers/io.py =====
+from __future__ import annotations
+import json, os, tempfile
+from pathlib import Path
+from typing import Any
+
+def read_json_safely(p:Path, default:Any)->Any:
+    try:
+        text = p.read_text(encoding="utf-8")
+        return json.loads(text)
+    except Exception:
+        return default
+
+def write_json_atomically(p:Path, obj:Any) -> None:
+    p.parent.mkdir(parents=True, exist_ok=True)
+    tmp = Path(str(p)+".tmp")
+    with tmp.open("w", encoding="utf-8") as f:
+        json.dump(obj, f, separators=(",",":"))
+    os.replace(tmp, p)
+
+
+
