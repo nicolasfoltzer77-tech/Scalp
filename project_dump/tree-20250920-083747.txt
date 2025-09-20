@@ -1,0 +1,134 @@
+# TREE — 20250920-083747
+
+Chemins relatifs à la racine du repo.
+
+[.]
+  bot_runner.py  |     5 KB | 2025-09-19 23:11:05
+  bumppush.py  |    15 KB | 2025-09-20 08:34:01
+  requirements.txt  |     52 B | 2025-09-17 06:54:13
+[execution]
+  bitget_client.py  |    752 B | 2025-09-19 18:25:51
+  executor.py  |     4 KB | 2025-09-19 18:25:51
+  monitor.py  |     3 KB | 2025-09-19 18:25:51
+  price_feed.py  |     1 KB | 2025-09-19 18:25:51
+  storage.py  |     1 KB | 2025-09-19 18:25:51
+[services]
+  agg_1m_to_3m.py  |     2 KB | 2025-09-19 18:25:51
+  analyze_A.py  |     4 KB | 2025-09-19 18:25:51
+  analyze_B.py  |     1 KB | 2025-09-19 18:25:51
+  analyze_pipeline.py  |    182 B | 2025-09-19 18:25:51
+  b_triggers.py  |     4 KB | 2025-09-19 18:25:51
+  build_heatmap_softmax.py  |     1 KB | 2025-09-19 18:25:51
+  build_softmap.py  |     2 KB | 2025-09-19 19:44:04
+  exec_signals.py  |     4 KB | 2025-09-19 18:25:51
+  fetch_1m_safe.py  |    946 B | 2025-09-19 18:25:51
+  fetch_ohlcv.py  |     1 KB | 2025-09-19 18:25:51
+  ohlcv_1m_cli.py  |     3 KB | 2025-09-19 18:25:51
+  ohlcv_bitget_batch.py  |     3 KB | 2025-09-19 18:25:51
+  ohlcv_bitget_cli.py  |     4 KB | 2025-09-19 18:25:51
+  on_new_signals.py  |     2 KB | 2025-09-19 23:13:47
+  paper_trade.py  |    10 KB | 2025-09-19 18:25:51
+  positions_watcher.py  |     4 KB | 2025-09-19 18:25:51
+  promote_min.py  |     1 KB | 2025-09-19 23:16:55
+  run_ohlcv_batch.sh  |    257 B | 2025-09-19 18:26:16
+  signals_B.py  |     8 KB | 2025-09-19 18:25:51
+  top_bitget.py  |     1 KB | 2025-09-19 18:25:51
+[lib]
+  errors.py  |    266 B | 2025-09-19 18:25:51
+[tools]
+  agg_tf3.py  |     1 KB | 2025-09-19 20:41:47
+  bootstrap_ohlcv_bitget.py  |     1 KB | 2025-09-19 18:58:47
+  bot_ensure_service.sh  |    472 B | 2025-09-17 20:44:34
+  build_top_from_heatmap.py  |    415 B | 2025-09-19 18:26:09
+  check_B.sh  |     3 KB | 2025-09-17 12:18:15
+  check_deps.py  |    875 B | 2025-09-19 18:26:09
+  check_env.py  |    132 B | 2025-09-19 18:26:09
+  check_heat.py  |     1 KB | 2025-09-19 18:26:09
+  check_ohlcv_1m.py  |     1 KB | 2025-09-19 18:26:09
+  diag_B.sh  |    394 B | 2025-09-17 10:59:39
+  diag_heat.sh  |     2 KB | 2025-09-17 10:15:20
+  diag_heatmap.py  |    589 B | 2025-09-19 18:26:09
+  diag_refresh.sh  |     4 KB | 2025-09-16 20:51:48
+  diag_systemd_1m.sh  |    970 B | 2025-09-17 15:07:17
+  enable_B_watchers.sh  |    190 B | 2025-09-17 11:54:41
+  guard_soft.sh  |    576 B | 2025-09-17 07:55:30
+  health_heatmap.sh  |    430 B | 2025-09-17 06:54:38
+  install_deps.sh  |    207 B | 2025-09-16 17:06:23
+  json_view.py  |     2 KB | 2025-09-19 18:26:09
+  make_context.py  |    890 B | 2025-09-19 20:41:29
+  normalize_json.py  |     1 KB | 2025-09-19 18:26:09
+  normalize_positions.py  |    836 B | 2025-09-19 18:26:09
+  ohlcv_sync.py  |     3 KB | 2025-09-19 18:26:09
+  on_Btop_updated.sh  |    381 B | 2025-09-17 11:54:14
+  on_btop_updated.sh  |    392 B | 2025-09-17 10:59:10
+  ping_telegram.py  |    907 B | 2025-09-19 18:26:09
+  pretty_heat.py  |    983 B | 2025-09-19 20:18:06
+  pretty_heat_60_30_15_now.py  |     1 KB | 2025-09-19 22:17:10
+  pretty_positions.py  |    403 B | 2025-09-19 22:55:25
+  pretty_signals.py  |    905 B | 2025-09-19 22:54:55
+  pretty_status.py  |     1 KB | 2025-09-19 20:23:28
+  pretty_top.py  |    555 B | 2025-09-19 20:18:18
+  pretty_top_names.py  |     1 KB | 2025-09-19 22:46:40
+  probe_B.sh  |     2 KB | 2025-09-17 07:58:03
+  probe_pipeline.sh  |     2 KB | 2025-09-17 08:09:27
+  probe_pipeline_B.sh  |   1015 B | 2025-09-17 08:16:45
+  purge_state.sh  |     1 KB | 2025-09-17 17:05:54
+  refresh_bot.sh  |    242 B | 2025-09-16 20:04:04
+  refresh_pipeline.sh  |    823 B | 2025-09-16 20:54:54
+  relaunch_all.sh  |     2 KB | 2025-09-17 11:28:51
+  relaunch_clean.sh  |    720 B | 2025-09-17 09:02:44
+  repair_and_restart.sh  |     5 KB | 2025-09-16 18:59:28
+  reset_top_json.py  |     1 KB | 2025-09-19 18:26:09
+  restart_and_preview.sh  |    648 B | 2025-09-17 05:42:28
+  rotate_history.sh  |    182 B | 2025-09-18 07:49:29
+  run_1m_now.sh  |    638 B | 2025-09-17 11:10:22
+  run_B_pipeline_now.sh  |    271 B | 2025-09-17 11:54:34
+  select_universe_bitget.py  |     3 KB | 2025-09-19 19:50:21
+  set_bot_commands.py  |     2 KB | 2025-09-19 18:26:09
+  setup_venv.sh  |     1 KB | 2025-09-17 06:54:13
+  telegram_ping.py  |    782 B | 2025-09-19 18:26:09
+  test_B.sh  |    381 B | 2025-09-17 10:49:30
+  test_exec_flow.sh  |     1 KB | 2025-09-16 17:51:34
+  test_heat_source.py  |    484 B | 2025-09-19 18:26:09
+  test_ohlcv.py  |    662 B | 2025-09-19 18:26:09
+  trade_state.py  |     3 KB | 2025-09-19 23:10:21
+  validate_pipeline.sh  |    980 B | 2025-09-17 15:50:11
+  view_heatmap.sh  |     89 B | 2025-09-16 18:09:09
+  view_history.sh  |     91 B | 2025-09-16 18:09:09
+  view_positions.sh  |     96 B | 2025-09-16 18:09:09
+  view_signals.sh  |     92 B | 2025-09-16 18:09:09
+[bin]
+  dump_and_push.sh  |     4 KB | 2025-09-17 05:10:42
+  dump_and_reset.sh  |     2 KB | 2025-09-17 05:13:48
+[analyze]
+  __init__.py  |     29 B | 2025-09-19 18:26:09
+  analyze_a_cli.py  |    283 B | 2025-09-19 18:26:09
+  b_triggers.py  |    14 KB | 2025-09-19 18:26:09
+  indicators_advanced.py  |     4 KB | 2025-09-19 18:26:09
+  layer_a.py  |     2 KB | 2025-09-19 18:49:54
+  run_triggers_cli.py  |     2 KB | 2025-09-19 20:41:56
+[bot]
+  __init__.py  |      0 B | 2025-09-19 18:26:09
+  _keyboard_patch.py  |    670 B | 2025-09-19 18:26:09
+  bot_stdlib.py  |     2 KB | 2025-09-19 18:26:09
+  commands_wire.py  |    978 B | 2025-09-19 18:26:09
+  env_simple.py  |    469 B | 2025-09-19 18:26:09
+  json_util.py  |     1 KB | 2025-09-19 18:26:09
+  mod_heatmap.py  |     1 KB | 2025-09-19 18:26:09
+  mod_signals.py  |    865 B | 2025-09-19 18:26:09
+  mod_top.py  |    503 B | 2025-09-19 18:26:09
+  router.py  |     3 KB | 2025-09-19 18:26:09
+  singleton.py  |    477 B | 2025-09-19 18:26:09
+  views.py  |     2 KB | 2025-09-19 18:26:09
+  views_account.py  |    909 B | 2025-09-19 18:26:09
+  views_btop.py  |     1 KB | 2025-09-19 18:26:09
+  views_heat.py  |     2 KB | 2025-09-19 18:26:09
+  views_history.py  |     3 KB | 2025-09-19 18:26:09
+  views_menu.py  |    309 B | 2025-09-19 18:26:09
+  views_positions.py  |     3 KB | 2025-09-19 18:26:09
+  views_signals.py  |    969 B | 2025-09-19 18:26:09
+  views_top_patch.py  |     1 KB | 2025-09-19 18:26:09
+[bot/lib]
+  __init__.py  |      0 B | 2025-09-19 18:26:09
+[project_dump]
+[project_dump/slim]
