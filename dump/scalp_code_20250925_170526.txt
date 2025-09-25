@@ -1,0 +1,3589 @@
+# Scalp Project Code Dump
+# Generated: 2025-09-25 17:05:26 UTC
+# Root: /opt/scalp
+# Caps: 512KB/file, max 4000 files
+# Exclusions: hidden, .git, __pycache__, venv/.venv, var, logs, data, reports, dump
+# Extensions: py, sh, bash, ini, cfg, conf, toml, yaml/yml, md, txt
+
+========== TREE (size, mtime) ==========
+/opt/scalp/tools/_patch_candles_refresh_tf.py                                              354  2025-09-25 15:45:02.778745926 +0000
+/opt/scalp/tools/a5_runner.sh                                                              746  2025-09-25 12:44:54.428500525 +0000
+/opt/scalp/tools/a_export_check.py                                                        1234  2025-09-25 07:08:59.501744319 +0000
+/opt/scalp/tools/a_refresh_and_run.sh                                                      587  2025-09-25 15:45:02.966746161 +0000
+/opt/scalp/tools/a_sanity.py                                                              1420  2025-09-25 12:14:08.091800209 +0000
+/opt/scalp/tools/a_sanity_quick.py                                                         672  2025-09-25 14:15:14.753695769 +0000
+/opt/scalp/tools/alert_eval.sh                                                             889  2025-09-25 07:55:50.245158198 +0000
+/opt/scalp/tools/analysis_a.py                                                            2179  2025-09-25 08:18:43.286722941 +0000
+/opt/scalp/tools/analysis_b.py                                                            1759  2025-09-25 08:18:58.310739771 +0000
+/opt/scalp/tools/bitget_check.py                                                          1267  2025-09-25 08:58:04.842328945 +0000
+/opt/scalp/tools/bitget_http.py                                                           1611  2025-09-25 08:17:10.466619152 +0000
+/opt/scalp/tools/bitget_ohlcv.py                                                           786  2025-09-25 09:01:02.514612658 +0000
+/opt/scalp/tools/bitget_public.py                                                         1736  2025-09-25 08:01:57.469593650 +0000
+/opt/scalp/tools/candles_refresh_1m3m_subset.py                                           2386  2025-09-25 12:22:28.052436747 +0000
+/opt/scalp/tools/candles_refresh_opts.patch.py                                             782  2025-09-25 16:26:21.609769424 +0000
+/opt/scalp/tools/candles_refresh_subset.py                                                1816  2025-09-25 11:35:44.347521368 +0000
+/opt/scalp/tools/candles_refresh_tf.py                                                    2849  2025-09-25 16:53:56.323697633 +0000
+/opt/scalp/tools/ccxt_check.py                                                             848  2025-09-25 09:13:49.483758594 +0000
+/opt/scalp/tools/check_fresh_top.py                                                       1229  2025-09-25 15:17:45.773233160 +0000
+/opt/scalp/tools/coins90_debug.sh                                                         1109  2025-09-25 06:42:08.064131295 +0000
+/opt/scalp/tools/coins90_run.sh                                                            348  2025-09-25 06:41:53.068114792 +0000
+/opt/scalp/tools/dashboard_live.sh                                                         527  2025-09-25 12:53:36.191336189 +0000
+/opt/scalp/tools/detect_fresh_symbols.sh                                                   557  2025-09-25 07:55:50.181158121 +0000
+/opt/scalp/tools/drain_symbol_queue.sh                                                     554  2025-09-25 07:55:50.201158146 +0000
+/opt/scalp/tools/e2e_test.sh                                                               887  2025-09-25 07:42:28.292125214 +0000
+/opt/scalp/tools/enqueue_symbols.py                                                        451  2025-09-25 07:55:50.165158102 +0000
+/opt/scalp/tools/env_compat.sh                                                             499  2025-09-25 07:55:50.037157948 +0000
+/opt/scalp/tools/events_notify.sh                                                         1000  2025-09-25 07:55:50.265158222 +0000
+/opt/scalp/tools/filter_contracts_usdt.py                                                 3078  2025-09-25 08:50:56.813579299 +0000
+/opt/scalp/tools/filter_contracts_usdt_ccxt.py                                            2710  2025-09-25 09:14:08.771786535 +0000
+/opt/scalp/tools/filter_top.py                                                            2629  2025-09-25 16:17:44.245226910 +0000
+/opt/scalp/tools/fix_analyse_a_out.py                                                      602  2025-09-25 15:45:02.878746051 +0000
+/opt/scalp/tools/fix_show_dashboard.py                                                     684  2025-09-25 15:24:29.617851112 +0000
+/opt/scalp/tools/fs_sanitize.sh                                                            388  2025-09-25 07:55:50.069157987 +0000
+/opt/scalp/tools/health_paper.sh                                                           390  2025-09-25 07:17:36.170248523 +0000
+/opt/scalp/tools/healthcheck.sh                                                            634  2025-09-25 07:10:47.569846899 +0000
+/opt/scalp/tools/init_all.sh                                                              1588  2025-09-25 13:07:38.794943571 +0000
+/opt/scalp/tools/init_fs_and_json.sh                                                      1141  2025-09-25 16:46:49.463193961 +0000
+/opt/scalp/tools/install_watchdogs.sh                                                      527  2025-09-25 06:49:15.180598036 +0000
+/opt/scalp/tools/make_top.sh                                                               731  2025-09-25 16:53:16.099649955 +0000
+/opt/scalp/tools/metrics_export.py                                                        1196  2025-09-25 07:55:50.253158208 +0000
+/opt/scalp/tools/ohlcv.py                                                                  549  2025-09-25 08:17:21.450631419 +0000
+/opt/scalp/tools/ohlcv_refresh.py                                                         2327  2025-09-25 09:50:18.703012650 +0000
+/opt/scalp/tools/pack_final_install.sh                                                   22559  2025-09-25 16:46:49.423193914 +0000
+/opt/scalp/tools/paper_loop.sh                                                             515  2025-09-25 07:55:50.309158276 +0000
+/opt/scalp/tools/paper_monitor.py                                                          923  2025-09-25 07:55:50.225158174 +0000
+/opt/scalp/tools/preflight.py                                                              971  2025-09-25 07:55:50.093158015 +0000
+/opt/scalp/tools/priority_runner.sh                                                       1820  2025-09-25 16:18:14.517258511 +0000
+/opt/scalp/tools/rebuild_coins_90d_light.py                                                558  2025-09-25 07:55:50.133158063 +0000
+/opt/scalp/tools/refresh_contracts.py                                                      783  2025-09-25 07:55:50.125158054 +0000
+/opt/scalp/tools/run_analysis_a.py                                                        9100  2025-09-25 10:54:59.737799722 +0000
+/opt/scalp/tools/run_analysis_a_5min.sh                                                    252  2025-09-25 10:55:12.197813586 +0000
+/opt/scalp/tools/run_analysis_a_coin.py                                                   6100  2025-09-25 11:20:26.798075500 +0000
+/opt/scalp/tools/run_analysis_a_for_symbol_hint.sh                                         169  2025-09-25 07:55:50.193158135 +0000
+/opt/scalp/tools/run_analysis_a_guard.sh                                                   562  2025-09-25 12:22:46.376459925 +0000
+/opt/scalp/tools/run_analysis_b.py                                                        7053  2025-09-25 11:56:06.774330914 +0000
+/opt/scalp/tools/run_analysis_b_guard.sh                                                   332  2025-09-25 12:22:57.060473438 +0000
+/opt/scalp/tools/run_analysis_b_minutely.sh                                                708  2025-09-25 07:55:50.293158257 +0000
+/opt/scalp/tools/run_b_synced.sh                                                          1052  2025-09-25 11:35:59.419581073 +0000
+/opt/scalp/tools/run_quality_only.py                                                       665  2025-09-25 07:55:50.109158035 +0000
+/opt/scalp/tools/show_ab.sh                                                                695  2025-09-25 09:53:02.842733044 +0000
+/opt/scalp/tools/show_dashboard.py                                                        3123  2025-09-25 17:04:47.104487497 +0000
+/opt/scalp/tools/show_top_updates.py                                                      1956  2025-09-25 16:03:56.108427048 +0000
+/opt/scalp/tools/signal_router.py                                                         1410  2025-09-25 08:07:54.430006733 +0000
+/opt/scalp/tools/sync_candles_safe.py                                                       99  2025-09-25 07:55:50.141158073 +0000
+/opt/scalp/tools/tg.sh                                                                     405  2025-09-25 07:55:50.061157976 +0000
+/opt/scalp/tools/top_age_table.py                                                          727  2025-09-25 16:54:27.071734089 +0000
+/opt/scalp/tools/top_lags.py                                                               783  2025-09-25 16:41:51.002843421 +0000
+/opt/scalp/tools/update_balance_history.py                                                 724  2025-09-25 07:55:50.241158193 +0000
+
+========== TOP 10 BIGGEST FILES ==========
+/opt/scalp/tools/pack_final_install.sh                                                   22559
+/opt/scalp/tools/run_analysis_a.py                                                        9100
+/opt/scalp/tools/run_analysis_b.py                                                        7053
+/opt/scalp/tools/run_analysis_a_coin.py                                                   6100
+/opt/scalp/tools/show_dashboard.py                                                        3123
+/opt/scalp/tools/filter_contracts_usdt.py                                                 3078
+/opt/scalp/tools/candles_refresh_tf.py                                                    2849
+/opt/scalp/tools/filter_contracts_usdt_ccxt.py                                            2710
+/opt/scalp/tools/filter_top.py                                                            2629
+/opt/scalp/tools/candles_refresh_1m3m_subset.py                                           2386
+
+========== CONCAT CONTENT ==========
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/run_quality_only.py
+Size: 665
+MTime: 2025-09-25 07:55:50.109158035 +0000
+----- CONTENT -----
+#!/usr/bin/env python3
+import json, time
+from pathlib import Path
+D=Path("/opt/scalp/data"); IN=D/"coins_90d.json"; OUT=D/"top.json"; DBG=D/"debug/top_debug.json"
+ts=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+syms=[]
+try:
+    j=json.loads(IN.read_text() or "{}")
+    syms=j.get("symbols") if isinstance(j,dict) else (j if isinstance(j,list) else [])
+except Exception as e:
+    DBG.write_text(json.dumps({"ok":False,"err":str(e),"ts":ts},indent=2)); syms=[]
+OUT.write_text(json.dumps({"symbols":syms,"generated_at":ts,"source":"coins_90d"},indent=2))
+DBG.write_text(json.dumps({"ok":True,"count":len(syms),"ts":ts},indent=2))
+print(f"[quality] {len(syms)}")
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/candles_refresh_opts.patch.py
+Size: 782
+MTime: 2025-09-25 16:26:21.609769424 +0000
+----- CONTENT -----
+# lightweight patcher: inject --top-only and robust TOP read
+from pathlib import Path; import re, json, sys
+p=Path("/opt/scalp/tools/candles_refresh_tf.py"); s=p.read_text()
+
+# argparse: add --top-only flag (defaults to true)
+s=re.sub(r'(parser\s*=\s*argparse\.ArgumentParser\([^\)]*\)\s*)',
+         r'\1\n    parser.add_argument("--top-only", action="store_true", default=True)\n',
+         s)
+
+# robust TOP read (slice to 30 if longer)
+s=re.sub(r'TOP\s*=\s*DATA\s*\/\s*"top\.json".*?\n',
+         'TOP = DATA/"top.json"\n', s)
+s=re.sub(r'jget\([^)]*symbols[^)]*\)',
+         'j.get("symbols", [])[:30]', s)
+
+# message when TOP vide -> skip propre (avec guillemets OK)
+s=s.replace('print("top.json vide, skip', 'print("top.json vide, skip")')
+
+p.write_text(s)
+print("patched", p)
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/_patch_candles_refresh_tf.py
+Size: 354
+MTime: 2025-09-25 15:45:02.778745926 +0000
+----- CONTENT -----
+from pathlib import Path, re as _re
+p=Path("/opt/scalp/tools/candles_refresh_tf.py"); s=p.read_text()
+s=_re.sub(r'def[ ]+ex\(', 'def mk_ex(', s)
+s=s.replace(" ex(", " mk_ex(")
+s=_re.sub(r'\ndef main\(\):\n', '\ndef main():\n    ex = mk_ex()\n', s)
+s=_re.sub(r'j.get\("symbols",\[\]\)', 'j.get("symbols",[])[:30]', s)
+p.write_text(s); print("patched", p)
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/top_age_table.py
+Size: 727
+MTime: 2025-09-25 16:54:27.071734089 +0000
+----- CONTENT -----
+#!/usr/bin/env python3
+import json, time
+from pathlib import Path
+
+DATA=Path("/opt/scalp/data"); C=DATA/"candles"
+TOP=json.loads((DATA/"top.json").read_text())["symbols"][:30]
+
+def last_ts(p):
+    try:
+        a=json.loads(p.read_text()); return int(a[-1][0]) if a else 0
+    except Exception: return 0
+
+def age(ts): 
+    return max(0,int(time.time()*1000-ts)//1000)
+
+def fmt(a): 
+    return f"{a//3600:02d}:{(a%3600)//60:02d}"
+
+print(f"{'symbol':6s} {'5m':>5s} {'15m':>5s} {'30m':>5s}  (âge en mm:ss)")
+for s in TOP:
+    a5=age(last_ts(C/'5m'/f"{s}.json"))
+    a15=age(last_ts(C/'15m'/f"{s}.json"))
+    a30=age(last_ts(C/'30m'/f"{s}.json"))
+    print(f"{s.replace('USDT',''):6s} {fmt(a5):>5s} {fmt(a15):>5s} {fmt(a30):>5s}")
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/enqueue_symbols.py
+Size: 451
+MTime: 2025-09-25 07:55:50.165158102 +0000
+----- CONTENT -----
+#!/usr/bin/env python3
+import sys
+from pathlib import Path
+q=Path("/opt/scalp/run/symbol_queue.txt"); q.parent.mkdir(parents=True, exist_ok=True)
+existing=set(q.read_text().splitlines()) if q.exists() else set(); added=False
+for s in sys.argv[1:]:
+    S=s.strip().upper()
+    if S and S not in existing: existing.add(S); added=True
+q.write_text("\n".join(sorted(existing)) if existing else ""); print(f"[enqueue] total={len(existing)} added={added}")
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/bitget_public.py
+Size: 1736
+MTime: 2025-09-25 08:01:57.469593650 +0000
+----- CONTENT -----
+#!/usr/bin/env python3
+import json, time, math
+from urllib.request import urlopen, Request
+from urllib.parse import urlencode
+from urllib.error import URLError, HTTPError
+
+BASE="https://api.bitget.com"
+
+def _http_json(path, params=None, tries=3, timeout=10):
+    if params: path += ("?" + urlencode(params))
+    for i in range(tries):
+        try:
+            with urlopen(Request(BASE+path, headers={"User-Agent":"scalp/1"}), timeout=timeout) as r:
+                raw=r.read().decode("utf-8")
+                return json.loads(raw)
+        except (URLError, HTTPError):
+            if i+1>=tries: raise
+            time.sleep(0.6*(2**i))
+
+def ticker_last(symbol:str)->float|None:
+    # v2
+    j=_http_json("/api/v2/mix/market/ticker", {"symbol":symbol})
+    data=j.get("data") or {}
+    p=data.get("lastPr") or data.get("last") or data.get("close")
+    try: return float(p)
+    except: return None
+
+def klines(symbol:str, granularity:int, limit:int=300):
+    # try v2 first
+    j=_http_json("/api/v2/mix/market/candles", {"symbol":symbol,"granularity":granularity,"limit":limit})
+    data=j.get("data")
+    if not data:
+        j=_http_json("/api/mix/v1/market/candles", {"symbol":symbol,"granularity":granularity,"limit":limit})
+        data=j.get("data")
+    rows=[]
+    # Bitget renvoie récents→anciens sous forme ["ts","open","high","low","close","volume"]
+    for r in (data or []):
+        try:
+            ts=int(r[0])
+            o,h,l,c=map(float,(r[1],r[2],r[3],r[4]))
+            rows.append((ts,o,h,l,c))
+        except: continue
+    rows.sort(key=lambda x:x[0])  # ancien→récent
+    return rows
+
+# util
+def tf_to_seconds(tf:str)->int:
+    m={"1m":60,"5m":300,"15m":900,"30m":1800,"1h":3600}
+    return m.get(tf,60)
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/run_analysis_a_5min.sh
+Size: 252
+MTime: 2025-09-25 10:55:12.197813586 +0000
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+LOG="/opt/scalp/logs/analysis_a.log"; mkdir -p /opt/scalp/logs
+echo "[$(date -Iseconds)] A:start" >>"$LOG"
+python3 /opt/scalp/tools/run_analysis_a.py >>"$LOG" 2>&1 || true
+echo "[$(date -Iseconds)] A:end" >>"$LOG"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/run_analysis_a_guard.sh
+Size: 562
+MTime: 2025-09-25 12:22:46.376459925 +0000
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+LOG="/opt/scalp/logs/analysis_a_guard.log"; mkdir -p /opt/scalp/logs
+echo "$(date -Is) A:guard start" >>"$LOG"
+python3 /opt/scalp/tools/candles_refresh_tf.py >>"$LOG" 2>&1 || true
+python3 /opt/scalp/tools/a_sanity.py >/dev/null || true
+J=/opt/scalp/data/debug/a_sanity.json
+fail=$(jq -r '.fail' "$J" 2>/dev/null || echo 0)
+if [ "$fail" -gt 0 ]; then
+  echo "$(date -Is) A:inputs not ready fail=$fail" >>"$LOG"
+  exit 0
+fi
+/opt/scalp/tools/run_analysis_a_5min.sh >>"$LOG" 2>&1 || true
+echo "$(date -Is) A:guard end" >>"$LOG"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/ohlcv_refresh.py
+Size: 2327
+MTime: 2025-09-25 09:50:18.703012650 +0000
+----- CONTENT -----
+#!/usr/bin/env python3
+import os, json, time, ccxt, hashlib
+from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+DATA=Path("/opt/scalp/data")
+F_OK=DATA/"coins_90d.json"
+F_PEN=DATA/"coins_pending.json"
+F_TOP=DATA/"top.json"
+F_FIX=Path("/etc/scalp.fixed_top.json")
+
+RUN=Path("/opt/scalp/run"); RUN.mkdir(parents=True, exist_ok=True)
+CACHE_DIR=RUN/"ohlcv_cache"; CACHE_DIR.mkdir(parents=True, exist_ok=True)
+
+LIMIT=int(os.getenv("TUNE_TOP_OHLCV_LIMIT","48"))      # nb bougies 1h stockées
+WORKERS=int(os.getenv("TUNE_TOP_WORKERS","6"))         # parallélisme
+
+def ex():
+    return ccxt.bitget({
+        "apiKey": os.getenv("BITGET_API_KEY",""),
+        "secret": os.getenv("BITGET_API_SECRET",""),
+        "password": os.getenv("BITGET_PASSPHRASE",""),
+        "options": {"defaultType":"swap","defaultSubType":"linear"},
+        "enableRateLimit": True,
+    })
+EX=ex()
+
+def load_list(p):
+    try:
+        j=json.loads(Path(p).read_text() or "{}")
+        return j if isinstance(j,list) else (j.get("symbols") or [])
+    except: return []
+
+def load_fixed():
+    try:
+        j=json.loads(F_FIX.read_text()); lst=j.get("symbols",[])
+        return [s for s in lst if isinstance(s,str)]
+    except: return []
+
+def universe():
+    seen=set(); out=[]
+    for s in load_fixed()+load_list(F_OK)+load_list(F_TOP)+load_list(F_PEN):
+        if s and s not in seen:
+            out.append(s); seen.add(s)
+    return out
+
+def ccxt_symbol(bitget_id:str)->str:
+    return bitget_id.replace("_UMCBL","/USDT:USDT")
+
+def cache_path(sym:str)->Path:
+    h=hashlib.sha1(sym.encode()).hexdigest()[:16]
+    return CACHE_DIR/f"{h}.json"
+
+def refresh_one(sym:str)->bool:
+    try:
+        ohlcv=EX.fetch_ohlcv(ccxt_symbol(sym), timeframe="1h", limit=LIMIT)
+        cache_path(sym).write_text(json.dumps({"ts":time.time(),"data":ohlcv}))
+        return True
+    except Exception:
+        return False
+
+def main():
+    U=universe()
+    ok=0
+    with ThreadPoolExecutor(max_workers=WORKERS) as tp:
+        fut={tp.submit(refresh_one,s):s for s in U}
+        for f in as_completed(fut):
+            ok += 1 if f.result() else 0
+    print(f"[ohlcv_refresh] universe={len(U)} updated={ok} limit={LIMIT} workers={WORKERS}")
+    (RUN/"ohlcv_refresh.stamp").write_text(str(int(time.time())))
+if __name__=="__main__": main()
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/coins90_run.sh
+Size: 348
+MTime: 2025-09-25 06:41:53.068114792 +0000
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+LOG=/opt/scalp/logs/coins90_run.log
+mkdir -p /opt/scalp/logs
+{
+  date -Is
+  # 1) rafraîchir les contrats si besoin
+  /usr/bin/python3 /opt/scalp/tools/refresh_contracts.py || true
+  # 2) construire la liste des coins >=90j
+  /usr/bin/python3 /opt/scalp/tools/rebuild_coins_90d_light.py
+  echo
+} >>"$LOG" 2>&1
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/sync_candles_safe.py
+Size: 99
+MTime: 2025-09-25 07:55:50.141158073 +0000
+----- CONTENT -----
+#!/usr/bin/env python3
+import os; print("[sync] stub OK TF_ORDER=", os.environ.get("TF_ORDER",""))
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/a_sanity_quick.py
+Size: 672
+MTime: 2025-09-25 14:15:14.753695769 +0000
+----- CONTENT -----
+import json, time
+from pathlib import Path
+DATA=Path("/opt/scalp/data"); C=DATA/"candles"
+TTL={"30m":1800,"15m":900,"5m":300}
+def last_ts(tf):
+    latest=0
+    for f in (C/tf).glob("*.json"):
+        try:
+            arr=json.loads(f.read_text())
+            if isinstance(arr,list) and arr:
+                ts=int(arr[-1][0])//1000
+                if ts>latest: latest=ts
+        except: pass
+    return latest
+def probe(tf):
+    ts=last_ts(tf)
+    age=int(time.time())-ts if ts else 1_000_000_000
+    return {"tf":tf,"age_s":age,"ok":age<TTL[tf],"last_ts":ts}
+out={"ts":int(time.time()),"fresh":[probe(tf) for tf in ("30m","15m","5m")]}
+print(json.dumps(out, indent=2))
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/install_watchdogs.sh
+Size: 527
+MTime: 2025-09-25 06:49:15.180598036 +0000
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+( crontab -l 2>/dev/null; echo "* * * * * systemctl is-active --quiet scalp-priority.timer || systemctl restart scalp-priority.timer" ) | crontab -
+( crontab -l 2>/dev/null; echo "*/2 * * * * systemctl is-active --quiet scalp-router.service || systemctl restart scalp-router.service" ) | crontab -
+( crontab -l 2>/dev/null; echo "*/2 * * * * systemctl is-active --quiet scalp-paper-monitor.service || systemctl restart scalp-paper-monitor.service" ) | crontab -
+echo "watchdogs installed"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/check_fresh_top.py
+Size: 1229
+MTime: 2025-09-25 15:17:45.773233160 +0000
+----- CONTENT -----
+#!/usr/bin/env python3
+import json, time, sys
+from pathlib import Path
+
+DATA   = Path("/opt/scalp/data")
+CAND   = DATA/"candles"
+TOP    = (DATA/"top.json").read_text()
+SYMS   = json.loads(TOP).get("symbols", [])[:30]  # top strict
+
+PERIOD = {"5m":300, "15m":900, "30m":1800}
+
+def worst(tf, syms):
+    now = int(time.time())
+    stale, bad = 0, []
+    for s in syms:
+        p = CAND/tf/f"{s}.json"
+        if not p.exists():
+            bad.append((s,"missing")); stale += 1; continue
+        try:
+            a = json.loads(p.read_text())
+            ts = a[-1][0]//1000 if a else 0
+        except Exception:
+            bad.append((s,"corrupt")); stale += 1; continue
+        lag = max(0, now - ts)
+        if lag > PERIOD[tf] + 30:
+            bad.append((s, lag)); stale += 1
+    worst_lag = max([v for _,v in bad if isinstance(v,int)] or [0])
+    return {"tf":tf, "worst_lag":worst_lag, "stale":stale, "bad":bad}
+
+def main():
+    out = {"ts": int(time.time()), "checks": []}
+    ok = True
+    for tf in ("5m","15m","30m"):
+        r = worst(tf, SYMS)
+        out["checks"].append(r)
+        if r["stale"]>0: ok = False
+    print(json.dumps(out, indent=2))
+    sys.exit(0 if ok else 1)
+
+if __name__ == "__main__":
+    main()
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/run_analysis_a_for_symbol_hint.sh
+Size: 169
+MTime: 2025-09-25 07:55:50.193158135 +0000
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+SYM="${1:-}"; [ -n "$SYM" ] || exit 0
+/opt/scalp/tools/run_analysis_a_5min.sh >/dev/null 2>&1 || true
+echo "[A] targeted SYM=$SYM"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/a5_runner.sh
+Size: 746
+MTime: 2025-09-25 12:44:54.428500525 +0000
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+LOG=/opt/scalp/logs/a5_runner.log
+mkdir -p /opt/scalp/logs
+
+ts(){ date -Is; }
+
+{
+  echo "$(ts) A5:start"
+
+  # 1) Rafraîchir les bougies avant A (retire la bougie incomplète)
+  /usr/bin/env python3 /opt/scalp/tools/candles_refresh_tf.py 30m
+  /usr/bin/env python3 /opt/scalp/tools/candles_refresh_tf.py 15m
+  /usr/bin/env python3 /opt/scalp/tools/candles_refresh_tf.py 5m
+
+  # 2) Analyse A (lit les JSON 30m/15m/5m fraîchement maj)
+  /opt/scalp/tools/run_analysis_a_5min.sh
+
+  # 3) Préparer B: ne charger le 1m que pour ctx!=none puis Analyse B
+  /usr/bin/env python3 /opt/scalp/tools/b_refresh_subset_1m.py
+  /usr/bin/env python3 /opt/scalp/tools/run_analysis_b.py
+
+  echo "$(ts) A5:end"
+} >>"$LOG" 2>&1
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/env_compat.sh
+Size: 499
+MTime: 2025-09-25 07:55:50.037157948 +0000
+----- CONTENT -----
+#!/usr/bin/env bash
+set -a
+[ -f /etc/scalp.env ] && source /etc/scalp.env
+[ -z "${TELEGRAM_TOKEN:-}" ] && [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && export TELEGRAM_TOKEN="$TELEGRAM_BOT_TOKEN"
+[ -n "${CHAT_ID:-}" ] && export TELEGRAM_CHAT_ID="$CHAT_ID"
+export BITGET_API_KEY="${BITGET_API_KEY:-}"
+export BITGET_API_SECRET="${BITGET_API_SECRET:-}"
+export BITGET_PASSPHRASE="${BITGET_PASSPHRASE:-}"
+export GIT_TOKEN="${GIT_TOKEN:-}"
+export GIT_USER="${GIT_USER:-}"
+export PYTHONPATH="${PYTHONPATH:-}"
+set +a
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/show_dashboard.py
+Size: 3123
+MTime: 2025-09-25 17:04:47.104487497 +0000
+----- CONTENT -----
+#!/usr/bin/env python3
+import json, time, datetime as dt
+from pathlib import Path
+
+DATA = Path("/opt/scalp/data")
+CAND = DATA/"candles"
+CHECK = [("30m", 1800), ("15m", 900), ("5m", 300)]
+
+def jload(p, d=None):
+    p = Path(p)
+    if not p.exists(): return d
+    try: return json.loads(p.read_text())
+    except Exception: return d
+
+def ttl_left(ts_iso, ttl_s):
+    if not ts_iso: return 0
+    try:
+        ts = dt.datetime.fromisoformat(ts_iso.replace("Z","+00:00")).timestamp()
+    except Exception:
+        return 0
+    return max(0, int(ttl_s - (time.time() - ts)))
+
+def fmt_hm(sec):
+    h = sec//3600; m = (sec%3600)//60
+    return f"{h:02d}h{m:02d}m"
+
+def worst_lag(tf, period_s, syms):
+    now = int(time.time()*1000)
+    worst=0
+    for s in syms:
+        f=CAND/tf/f"{s}.json"
+        if not f.exists(): continue
+        try:
+            a=json.loads(f.read_text())
+            ts=int(a[-1][0]) if a and a[-1][0] else 0
+        except Exception: ts=0
+        if ts<=0: continue
+        lag=(now-ts)//1000
+        worst=max(worst, lag)
+    return worst
+
+def a_out():
+    a=jload(DATA/"analyse_A_out.json", {"generated_at":"", "results":[]})
+    return a if isinstance(a, dict) else {"generated_at":"", "results":[]}
+
+def ctx_counts(results):
+    c={"buy":0,"hold":0,"sell":0,"none":0}
+    for r in results:
+        c[r.get("ctx","none")] = c.get(r.get("ctx","none"),0)+1
+    return c
+
+def pick_for_table(results):
+    fix=["BTCUSDT","ETHUSDT","XRPUSDT","SOLUSDT","BNBUSDT"]
+    index={r.get("symbol"):r for r in results}
+    out=[]
+    for s in fix:
+        r=index.get(s, {"symbol":s,"Sx10":0,"ctx":"none","reasons":["n/a"]})
+        sx10=r.get("Sx10", int(round(10*r.get("S",0))))
+        out.append((s.replace("USDT",""), sx10, r.get("ctx","none"), ", ".join(r.get("reasons",["n/a"])) ))
+    return out
+
+def main():
+    coins90=jload(DATA/"coins_90d.json", {"generated_at":""})
+    top=jload(DATA/"top.json", {"generated_at":"", "symbols":[]})
+    a=a_out()
+    syms=top.get("symbols", [])[:30]
+
+    top_left=ttl_left(top.get("generated_at",""), 2*3600)
+    coins_left=ttl_left(coins90.get("generated_at",""), 48*3600)
+    a_left=ttl_left(a.get("generated_at",""), 5*60)
+
+    print("# Dashboard")
+    print(f"Top>90j : {fmt_hm(coins_left)} restant  {'✅' if coins_left>0 else '❌'}")
+    print(f"Top     : {fmt_hm(top_left)} restant  {'✅' if top_left>0 else '❌'} | n={len(syms)}")
+
+    # Données regroupées en une seule ligne
+    lags=[]
+    for tf,period in CHECK:
+        lag=worst_lag(tf, period, syms)
+        lags.append(f"{tf} {fmt_hm(lag)} {'✅' if lag<=period+60 else '❌'}")
+    print("Data    : "+" | ".join(lags))
+
+    print(f"A_out   : {fmt_hm(a_left)} restant  {'✅' if a_left>0 else '❌'}")
+
+    c=ctx_counts(a.get("results", []))
+    total=sum(c.values())
+    print(f"Contexts buy={c['buy']} hold={c['hold']} sell={c['sell']} none={c['none']}")
+
+    print("\n# Analyse A")
+    print(f"{'symbol':6s} {'Sx10':>4s} {'ctx':6s} reasons")
+    for sym,sx10,ctx,rs in pick_for_table(a.get("results", [])):
+        print(f"{sym:6s} {sx10:4d} {ctx:6s} {rs}")
+
+if __name__=="__main__":
+    main()
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/events_notify.sh
+Size: 1000
+MTime: 2025-09-25 07:55:50.265158222 +0000
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+STATE=/opt/scalp/run/events; mkdir -p "$STATE"
+st(){ stat -c %Y "$1" 2>/dev/null || echo 0; }
+S=/opt/scalp/data/signals.json; if [ -f "$S" ]; then p="$STATE/s.ts"; last=$(cat "$p" 2>/dev/null||echo 0); cur=$(st "$S");
+  if [ "$cur" != "$last" ]; then cnt=$(jq 'length' "$S" 2>/dev/null || echo 0); [ "$cnt" -gt 0 ] && /opt/scalp/tools/tg.sh "📣 $cnt signal(s) prêt(s)"; echo "$cur" >"$p"; fi; fi
+P=/opt/scalp/data/positions.json; if [ -f "$P" ]; then p="$STATE/p.ts"; last=$(cat "$p" 2>/dev/null||echo 0); cur=$(st "$P");
+  if [ "$cur" != "$last" ]; then open=$(jq '[.[]|select(.status=="open")]|length' "$P" 2>/dev/null || echo 0); /opt/scalp/tools/tg.sh "📊 positions ouvertes: $open"; echo "$cur" >"$p"; fi; fi
+L=/opt/scalp/data/orders.log; if [ -f "$L" ]; then p="$STATE/o.ts"; last=$(cat "$p" 2>/dev/null||echo 0); cur=$(st "$L");
+  if [ "$cur" != "$last" ]; then tail -n 1 "$L" | xargs -I{} /opt/scalp/tools/tg.sh "📝 {}"; echo "$cur" >"$p"; fi; fi
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/filter_contracts_usdt_ccxt.py
+Size: 2710
+MTime: 2025-09-25 09:14:08.771786535 +0000
+----- CONTENT -----
+#!/usr/bin/env python3
+import os, time, json, ccxt
+from pathlib import Path
+
+DATA = Path("/opt/scalp/data"); DATA.mkdir(parents=True, exist_ok=True)
+F_CON = DATA/"contracts_usdt.json"     # liste lisible humaine (BTCUSDT, …)
+F_OK  = DATA/"coins_90d.json"          # whitelist >=90j (ids: BTCUSDT_UMCBL, …)
+F_PEN = DATA/"coins_pending.json"      # 80–90j, à rechecker
+F_DBG = DATA/"debug/coins_scan_ccxt.json"
+
+def ex():
+    return ccxt.bitget({
+        "apiKey": os.getenv("BITGET_API_KEY",""),
+        "secret": os.getenv("BITGET_API_SECRET",""),
+        "password": os.getenv("BITGET_PASSPHRASE",""),
+        "options": {"defaultType":"swap","defaultSubType":"linear"},
+        "enableRateLimit": True,
+    })
+
+def main():
+    e = ex()
+    markets = e.load_markets()
+    # USDT linear swaps uniquement
+    mlist = [m for m in markets.values() if m.get("type")=="swap" and m.get("linear") and m.get("settle")=="USDT"]
+    ids   = sorted({ m["id"] for m in mlist })            # ex: BTCUSDT_UMCBL
+    F_CON.write_text(json.dumps([i.replace("_UMCBL","USDT") for i in ids], indent=2))
+
+    now = int(time.time()*1000)
+    need90 = now - 90*24*3600*1000
+    need80 = now - 80*24*3600*1000
+
+    ok, pen, details = [], [], []
+    since = now - 130*24*3600*1000
+    for m in mlist:
+        sym = m["symbol"]      # ex: BTC/USDT:USDT
+        mid = m["id"]          # ex: BTCUSDT_UMCBL
+        try:
+            rows = e.fetch_ohlcv(sym, timeframe="1d", since=since, limit=130)
+            if not rows:
+                pen.append(mid); details.append({"id":mid,"sym":sym,"st":"nodata"}); continue
+            first_ts = rows[0][0]
+            if first_ts <= need90:
+                ok.append(mid); details.append({"id":mid,"sym":sym,"st":"ok90","rows":len(rows),"first":first_ts})
+            elif first_ts <= need80:
+                pen.append(mid); details.append({"id":mid,"sym":sym,"st":"pending80","rows":len(rows),"first":first_ts})
+            else:
+                details.append({"id":mid,"sym":sym,"st":"too_young","rows":len(rows),"first":first_ts})
+        except Exception as err:
+            pen.append(mid); details.append({"id":mid,"sym":sym,"st":"error","err":str(err)[:140]})
+
+    ts = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    F_OK.write_text(json.dumps({"symbols":ok,"generated_at":ts,"source":"ccxt-1d-90d"}, indent=2))
+    F_PEN.write_text(json.dumps({"symbols":pen,"generated_at":ts,"note":"check next run (>=80d)"}, indent=2))
+    F_DBG.write_text(json.dumps({"ts":ts,"contracts":len(ids),"ok90":len(ok),"pending":len(pen),"details":details[:60]}, indent=2))
+    print(f"[ccxt usdt 1d] markets={len(ids)} ok90={len(ok)} pending={len(pen)}")
+if __name__ == "__main__": main()
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/a_export_check.py
+Size: 1234
+MTime: 2025-09-25 07:08:59.501744319 +0000
+----- CONTENT -----
+#!/usr/bin/env python3
+import json, time
+from pathlib import Path
+IN=Path("/opt/scalp/data/analyse_A_out.json")
+DBG=Path("/opt/scalp/data/debug/a_export_check.json")
+def now(): return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+DBG.parent.mkdir(parents=True, exist_ok=True)
+if not IN.exists():
+    DBG.write_text(json.dumps({"ok":False,"err":"missing analyse_A_out.json","ts":now()},indent=2)); print("missing"); raise SystemExit(0)
+try:
+    j=json.loads(IN.read_text() or "[]");  j=[j] if isinstance(j,dict) else j
+except Exception as e:
+    DBG.write_text(json.dumps({"ok":False,"err":f"json:{e}","ts":now()},indent=2)); print("jsonerr"); raise SystemExit(0)
+fixed=[]; miss=0
+for r in j:
+    if not isinstance(r, dict): continue
+    r=dict(r); r.setdefault("timestamp", int(time.time()))
+    ctx=str(r.get("context","none")).lower()
+    r["context"]=ctx if ctx in ("none","buy","sell","hold") else "none"
+    ok=all(k in r and r[k] is not None for k in ("S","pb","ph","ps"))
+    miss += 0 if ok else 1
+    fixed.append(r)
+IN.write_text(json.dumps(fixed, indent=2))
+DBG.write_text(json.dumps({"ok":miss==0,"missing_records":miss,"total":len(fixed),"ts":now()}, indent=2))
+print(f"ok={miss==0} total={len(fixed)} miss={miss}")
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/signal_router.py
+Size: 1410
+MTime: 2025-09-25 08:07:54.430006733 +0000
+----- CONTENT -----
+#!/usr/bin/env python3
+import json, time, random
+from pathlib import Path
+from bitget_http import ticker_price
+
+D=Path("/opt/scalp/data"); D.mkdir(parents=True, exist_ok=True)
+signals=json.loads((D/"signals.json").read_text() or "[]") if (D/"signals.json").exists() else []
+positions=json.loads((D/"positions.json").read_text() or "[]") if (D/"positions.json").exists() else []
+if isinstance(positions,dict) and "positions" in positions: positions=positions["positions"]
+
+orders=[]; now=int(time.time())
+for s in signals:
+    if not isinstance(s,dict): continue
+    sym=s.get("symbol"); side=s.get("side")
+    if not sym or side not in ("buy","sell"): continue
+    px=ticker_price(sym) or 100.0
+    oid=f"paper-{now}-{random.randint(1000,9999)}"
+    entry={"id":oid,"symbol":sym,"side":side,"qty":1.0,"price":px,"ts":now,"status":"open"}
+    positions.append(entry); orders.append(entry)
+
+(D/"positions.json").write_text(json.dumps(positions,indent=2))
+(D/"orders.log").touch(exist_ok=True)
+if orders:
+    with (D/"orders.log").open("a") as f:
+        for o in orders: f.write(f"{o['ts']} NEW {o['side']} {o['symbol']} {o['id']} @ {o['price']}\n")
+if signals: (D/"signals.json").write_text("[]")
+if not (D/"paper_balance.json").exists(): (D/"paper_balance.json").write_text(json.dumps({"equity":0,"ts":"1970-01-01T00:00:00Z"},indent=2))
+print(f"[router] routed={len(orders)} positions_total={len(positions)}")
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/top_lags.py
+Size: 783
+MTime: 2025-09-25 16:41:51.002843421 +0000
+----- CONTENT -----
+#!/usr/bin/env python3
+import json, time
+from pathlib import Path
+DATA=Path("/opt/scalp/data"); C=DATA/"candles"
+TOP=json.loads((DATA/"top.json").read_text()).get("symbols", [])[:30]
+now=int(time.time())
+def last_ts(a):
+    try: return int(a[-1][0]//1000)
+    except: return 0
+def age(tf,s):
+    f=C/tf/(s+".json")
+    if not f.exists(): return None
+    try: a=json.loads(f.read_text())
+    except: return None
+    ts=last_ts(a);  return None if ts==0 else now-ts
+print(f'{"symbol":<12}  {"5m":>6}  {"15m":>6}  {"30m":>6}  (âge mm:ss)')
+for s in TOP:
+    def fmt(x):
+        if x is None: return "--:--"
+        m,sec=divmod(x,60); return f"{int(m):02d}:{int(sec):02d}"
+    print(f'{s.replace("USDT",""):<12}  {fmt(age("5m",s)):>6}  {fmt(age("15m",s)):>6}  {fmt(age("30m",s)):>6}')
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/tg.sh
+Size: 405
+MTime: 2025-09-25 07:55:50.061157976 +0000
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+/opt/scalp/tools/env_compat.sh >/dev/null 2>&1 || true
+[ -n "${TELEGRAM_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ] || exit 0
+TEXT="${1:-}"; [ -n "$TEXT" ] || exit 0
+curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
+  -d chat_id="$TELEGRAM_CHAT_ID" -d text="$TEXT" -d disable_web_page_preview=true -d parse_mode=HTML >/dev/null || true
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/init_all.sh
+Size: 1588
+MTime: 2025-09-25 13:07:38.794943571 +0000
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+ts(){ date -Is; }
+
+DATA=/opt/scalp/data
+
+# TTL (validité)
+TTL_COINS90=$((2*24*3600))   # 2 jours
+TTL_TOP=$((2*3600))          # 2 h
+TTL_AOUT=$((5*60))           # 5 min
+
+fresh(){ # fresh file ttl
+  f=$1; ttl=$2
+  [ -s "$f" ] || return 1
+  ts=$(jq -r '.generated_at // empty' "$f" 2>/dev/null || echo "")
+  [ -n "$ts" ] || return 1
+  now=$(date +%s)
+  ft=$(date -d "$ts" +%s 2>/dev/null || echo 0)
+  age=$(( now - ft ))
+  [ $age -lt $ttl ]
+}
+
+echo "[INIT] $(ts) start"
+
+# Solde initial si absent
+[ -s $DATA/paper_balance.json ] || echo '{"equity":200,"ts":"'"$(ts)"'"}' > $DATA/paper_balance.json
+[ -s $DATA/signals.json ] || echo '[]' > $DATA/signals.json
+[ -s $DATA/history.json ] || echo '[]' > $DATA/history.json
+[ -s $DATA/positions.json ] || echo '{"positions":[]}' > $DATA/positions.json
+
+# 1) Univers
+if ! fresh $DATA/coins_90d.json $TTL_COINS90; then
+  echo "[INIT] coins_90d refresh"
+  python3 /opt/scalp/tools/filter_contracts_usdt_ccxt.py || true
+fi
+
+# 2) Top
+if ! fresh $DATA/top.json $TTL_TOP; then
+  echo "[INIT] top.json refresh"
+  python3 /opt/scalp/tools/filter_top.py || true
+fi
+
+# 3) Analyse A (si expiré)
+if ! fresh $DATA/analyse_A_out.json $TTL_AOUT; then
+  echo "[INIT] Analyse A refresh"
+  python3 /opt/scalp/tools/candles_refresh_tf.py || true
+  bash /opt/scalp/tools/run_analysis_a_guard.sh || true
+fi
+
+# 4) Analyse B (toujours 1m → ctx dépendant)
+echo "[INIT] Analyse B run"
+python3 /opt/scalp/tools/candles_refresh_1m3m_subset.py || true
+bash /opt/scalp/tools/run_analysis_b_guard.sh || true
+
+echo "[INIT] $(ts) done"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/paper_monitor.py
+Size: 923
+MTime: 2025-09-25 07:55:50.225158174 +0000
+----- CONTENT -----
+#!/usr/bin/env python3
+import json, time
+from pathlib import Path
+D=Path("/opt/scalp/data"); D.mkdir(parents=True, exist_ok=True)
+pos_f=D/"positions.json"; bal_f=D/"paper_balance.json"
+positions=json.loads(pos_f.read_text() or "[]") if pos_f.exists() else []
+if isinstance(positions,dict) and "positions" in positions: positions=positions["positions"]
+now=int(time.time()); closed=0
+for p in positions:
+    if isinstance(p,dict) and p.get("status")=="open" and now-int(p.get("ts",now))>20:
+        p["status"]="closed"; p["close_ts"]=now; p["pnl"]=1 if int(str(p.get("id",""))[-1])%2 else -1; closed+=1
+pos_f.write_text(json.dumps(positions,indent=2))
+equity=sum(p.get("pnl",0) for p in positions if isinstance(p,dict) and p.get("status")=="closed")
+bal={"equity":equity,"ts":time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
+bal_f.write_text(json.dumps(bal,indent=2))
+print(f"[monitor] closed={closed} equity={equity}")
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/filter_top.py
+Size: 2629
+MTime: 2025-09-25 16:17:44.245226910 +0000
+----- CONTENT -----
+#!/usr/bin/env python3
+import json, math, time
+import json,sys,os,time
+from pathlib import Path
+import argparse
+
+def _args():
+    ap=argparse.ArgumentParser()
+    ap.add_argument('--universe',required=True)
+    ap.add_argument('--keep',type=int,default=30)
+    ap.add_argument('--fixed',default='')
+    ap.add_argument('--out',required=True)
+    return ap.parse_args()
+
+from pathlib import Path
+
+DATA = Path("/opt/scalp/data")
+CAND = DATA/"candles"
+CONF = Path("/etc/scalp.tuning")
+
+KEEP = 30
+FIXED = []
+
+def load_conf():
+    global KEEP, FIXED
+    if CONF.exists():
+        for ln in CONF.read_text().splitlines():
+            ln=ln.strip()
+            if not ln or ln.startswith("#"): continue
+            if ln.startswith("KEEP="):
+                try: KEEP=int(ln.split("=",1)[1])
+                except: pass
+            elif ln.startswith("FIXED_TOP="):
+                FIXED=[x.strip() for x in ln.split("=",1)[1].split(",") if x.strip()]
+
+def jload(p, d):
+    try: return json.loads(Path(p).read_text())
+    except: return d
+
+def last_close_1h(sym, limit=48):
+    f = CAND/"1h"/f"{sym}.json"
+    if not f.exists(): return []
+    try:
+        a = json.loads(f.read_text())
+    except:
+        return []
+    a = a[-limit-1:]
+    # retire la bougie incomplète si besoin
+    if len(a)>1 and int(time.time()*1000) - a[-1][0] < 3600_000:
+        a = a[:-1]
+    return [x[4] for x in a], [x[5] for x in a]  # close, volume
+
+def score_symbol(sym):
+    closes, vols = (lambda _sym: (last_close_1h(_sym) or ([],[])))(sym)
+    if len(closes) < 8: return 0.0
+    rets = [math.log(closes[i]/closes[i-1]) for i in range(1,len(closes))]
+    mu = sum(rets)/len(rets)
+    var = sum((x-mu)**2 for x in rets)/len(rets)
+    vol = math.sqrt(var)  # non-scalé mais cohérent rank
+    vavg = sum(vols[-24:])/max(1,len(vols[-24:]))
+    # score simple & stable pour le tri
+    return (vol*0.7) + (vavg*0.3)
+
+def main():
+    a=_args()
+    uni=get_universe(a.universe)
+    fixed=[x.strip() for x in a.fixed.split(',') if x.strip()]
+    # score + garde-fous
+    scored=[]
+    for s_ in uni:
+        try:
+            closes, vols = (last_close_1h(s_) or ([],[]))
+            if len(closes)<48:
+                continue
+            sc = score_symbol(s_)
+            scored.append((s_, sc))
+        except Exception:
+            continue
+    scored.sort(key=lambda x:x[1], reverse=True)
+    best=[s for s,_ in scored if s not in fixed][:max(0,a.keep-len(fixed))]
+    out={'symbols': fixed+best, 'keep': a.keep, 'fixed': fixed}
+    Path(a.out).write_text(json.dumps(out, indent=2))
+    return 0
+
+if __name__=='__main__':
+    raise SystemExit(main())
+
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/pack_final_install.sh
+Size: 22559
+MTime: 2025-09-25 16:46:49.423193914 +0000
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+
+# 0) Préparation
+mkdir -p /opt/scalp/{tools,logs,data,run} /opt/scalp/data/{debug,candles}
+apt-get update -y >/dev/null 2>&1 || true
+apt-get install -y jq curl util-linux python3 python3-venv >/dev/null 2>&1 || true
+
+# 1) Fichiers de conf (ne pas écraser /etc/scalp.env)
+[ -f /etc/scalp.app ] || cat >/etc/scalp.app <<'APP'
+DATA_DIR="/opt/scalp/data"
+LOG_DIR="/opt/scalp/logs"
+RUN_DIR="/opt/scalp/run"
+CANDLES_DIR="/opt/scalp/data/candles"
+PYTHON_BIN="/usr/bin/python3"
+SYNC_TF_ORDER="1m,5m,15m,30m"
+FRESH_AGE_SEC=180
+QUEUE_MAX_PER_TICK=10
+QUALITY_EVERY_HOURS=2
+CONTRACTS_PERIOD_H=48
+APPEND_GLOBAL_A_ON_5MIN=1
+A_TARGET_ROWS=600
+A_MIN_ROWS=400
+A_BATCH_SIZE=8
+A_FAST_MODE=1
+APP
+chmod 644 /etc/scalp.app
+
+[ -f /etc/scalp.tuning ] || cat >/etc/scalp.tuning <<'TUNE'
+TUNE_S_THRESHOLD=0.6
+TUNE_PBPHPS_WINDOW=200
+TUNE_CONTEXT_HOLD_MAX_AGE_MIN=30
+TUNE_SIGNAL_CONFIRM_MIN=1
+TUNE_SIGNAL_COOLDOWN_SEC=90
+TUNE_RISK_PER_TRADE_BPS=50
+TUNE_LEVERAGE_MAX=5
+TUNE_SL_MULT=1.2
+TUNE_TP_MULT=2.0
+TUNE_SLIPPAGE_BPS=5
+TUNE_MAX_CONCURRENT_POS=5
+TUNE_ENABLE_SHORT=1
+TUNE_ENABLE_LONG=1
+TUNE_MIN_NOTIONAL_USDT=10
+TUNE_EXIT_TRAIL_ENABLE=1
+TUNE_TRAIL_MULT=1.0
+TUNE_REQUIRE_FIELDS="S,pb,ph,ps,context"
+TUNE_CONTEXT_SET="none,buy,sell,hold"
+TUNE_MIN_BARS_FOR_A=200
+TUNE_MIN_BARS_FOR_B=200
+TUNE_ALERT_SPAM_WINDOW_SEC=300
+TUNE
+chmod 644 /etc/scalp.tuning
+
+# 2) Compat env + TG
+cat >/opt/scalp/tools/env_compat.sh <<'SC'
+#!/usr/bin/env bash
+set -a
+[ -f /etc/scalp.env ] && source /etc/scalp.env
+[ -z "${TELEGRAM_TOKEN:-}" ] && [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && export TELEGRAM_TOKEN="$TELEGRAM_BOT_TOKEN"
+[ -n "${CHAT_ID:-}" ] && export TELEGRAM_CHAT_ID="$CHAT_ID"
+export BITGET_API_KEY="${BITGET_API_KEY:-}"
+export BITGET_API_SECRET="${BITGET_API_SECRET:-}"
+export BITGET_PASSPHRASE="${BITGET_PASSPHRASE:-}"
+export GIT_TOKEN="${GIT_TOKEN:-}"
+export GIT_USER="${GIT_USER:-}"
+export PYTHONPATH="${PYTHONPATH:-}"
+set +a
+SC
+chmod +x /opt/scalp/tools/env_compat.sh
+
+cat >/opt/scalp/tools/tg.sh <<'SHH'
+#!/usr/bin/env bash
+set -euo pipefail
+/opt/scalp/tools/env_compat.sh >/dev/null 2>&1 || true
+[ -n "${TELEGRAM_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ] || exit 0
+TEXT="${1:-}"; [ -n "$TEXT" ] || exit 0
+curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
+  -d chat_id="$TELEGRAM_CHAT_ID" -d text="$TEXT" -d disable_web_page_preview=true -d parse_mode=HTML >/dev/null || true
+SHH
+chmod +x /opt/scalp/tools/tg.sh
+
+# 3) Seeds JSON et FS sanitize
+cat >/opt/scalp/tools/fs_sanitize.sh <<'SAN'
+#!/usr/bin/env bash
+set -euo pipefail
+mkdir -p /opt/scalp/data /opt/scalp/data/debug
+for f in analyse_A_out.json signals.json positions.json balance_history.json; do
+  p="/opt/scalp/data/$f"; [ -f "$p" ] || echo "[]" >"$p"
+done
+[ -f /opt/scalp/data/paper_balance.json ] || echo '{"equity":0,"ts":"1970-01-01T00:00:00Z"}' >/opt/scalp/data/paper_balance.json
+: > /opt/scalp/data/orders.log
+SAN
+chmod +x /opt/scalp/tools/fs_sanitize.sh
+/opt/scalp/tools/fs_sanitize.sh
+
+# 4) Outils pipeline
+cat >/opt/scalp/tools/preflight.py <<'PY'
+#!/usr/bin/env python3
+import os, sys, json, time, shutil
+from pathlib import Path
+OK=True; msgs=[]
+def need(p,t="f"):
+    global OK
+    P=Path(p); ex=(P.is_file() if t=="f" else P.is_dir())
+    if not ex: OK=False; msgs.append(f"missing:{t}:{p}")
+def touch(p): Path(p).parent.mkdir(parents=True, exist_ok=True); Path(p).touch()
+for f in ("/etc/scalp.env","/etc/scalp.app","/etc/scalp.tuning"): need(f,"f")
+for d in ("/opt/scalp/tools","/opt/scalp/logs","/opt/scalp/data","/opt/scalp/data/debug","/opt/scalp/run"): need(d,"d")
+need("/opt/scalp/tools/run_analysis_b_minutely.sh","f")
+for f in ("contracts_usdt.json","coins_90d.json","top.json"): touch(f"/opt/scalp/data/{f}")
+st=shutil.disk_usage("/opt/scalp"); OK = OK and st.free >= 500*1024*1024 or False
+out={"ts":time.strftime("%Y-%m-%dT%H:%M:%SZ",time.gmtime()),"ok":OK,"issues":msgs}
+Path("/opt/scalp/data/debug/preflight.json").write_text(json.dumps(out,indent=2))
+print(json.dumps(out)); sys.exit(0 if OK else 2)
+PY
+chmod +x /opt/scalp/tools/preflight.py
+
+cat >/opt/scalp/tools/run_quality_only.py <<'PY'
+#!/usr/bin/env python3
+import json, time
+from pathlib import Path
+D=Path("/opt/scalp/data"); IN=D/"coins_90d.json"; OUT=D/"top.json"; DBG=D/"debug/top_debug.json"
+ts=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+syms=[]
+try:
+    j=json.loads(IN.read_text() or "{}")
+    syms=j.get("symbols") if isinstance(j,dict) else (j if isinstance(j,list) else [])
+except Exception as e:
+    DBG.write_text(json.dumps({"ok":False,"err":str(e),"ts":ts},indent=2)); syms=[]
+OUT.write_text(json.dumps({"symbols":syms,"generated_at":ts,"source":"coins_90d"},indent=2))
+DBG.write_text(json.dumps({"ok":True,"count":len(syms),"ts":ts},indent=2))
+print(f"[quality] {len(syms)}")
+PY
+chmod +x /opt/scalp/tools/run_quality_only.py
+
+cat >/opt/scalp/tools/refresh_contracts.py <<'PY'
+#!/usr/bin/env python3
+import json, time, requests
+from pathlib import Path
+OUT=Path("/opt/scalp/data/contracts_usdt.json"); DBG=Path("/opt/scalp/data/debug/contracts_usdt_meta.json")
+OUT.parent.mkdir(parents=True, exist_ok=True); DBG.parent.mkdir(parents=True, exist_ok=True)
+try:
+    r=requests.get("https://api.bitget.com/api/mix/v1/market/contracts", params={"productType":"umcbl"}, timeout=15)
+    r.raise_for_status(); j=r.json()
+    syms=sorted({d.get("symbol") for d in j.get("data",[]) if str(d.get("symbol","")).endswith("USDT_UMCBL")})
+except Exception:
+    syms=[]
+ts=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+OUT.write_text(json.dumps(syms,indent=2)); DBG.write_text(json.dumps({"generated_at":ts,"count":len(syms)},indent=2))
+print(f"[contracts] {len(syms)}")
+PY
+chmod +x /opt/scalp/tools/refresh_contracts.py
+
+cat >/opt/scalp/tools/rebuild_coins_90d_light.py <<'PY'
+#!/usr/bin/env python3
+import json, time
+from pathlib import Path
+IN=Path("/opt/scalp/data/contracts_usdt.json"); OUT=Path("/opt/scalp/data/coins_90d.json"); DBG=Path("/opt/scalp/data/debug/coins_90d_light.json")
+ts=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+syms=[]
+try: syms=json.loads(IN.read_text() or "[]")
+except: syms=[]
+OUT.write_text(json.dumps({"symbols":syms,"generated_at":ts,"mode":"fallback"}, indent=2))
+DBG.write_text(json.dumps({"ok":True,"eligible":len(syms),"api_touched":False,"ts":ts}, indent=2))
+print(f"[coins90] {len(syms)}")
+PY
+chmod +x /opt/scalp/tools/rebuild_coins_90d_light.py
+
+# 5) Analyse A stubs + sync + queue
+cat >/opt/scalp/tools/sync_candles_safe.py <<'PY'
+#!/usr/bin/env python3
+import os; print("[sync] stub OK TF_ORDER=", os.environ.get("TF_ORDER",""))
+PY
+chmod +x /opt/scalp/tools/sync_candles_safe.py
+
+cat >/opt/scalp/tools/run_analysis_a_5min.sh <<'SHH'
+#!/usr/bin/env bash
+set -euo pipefail
+LOG="/opt/scalp/logs/analysis_a.log"; OUT="/opt/scalp/data/analyse_A_out.json"
+mkdir -p /opt/scalp/logs /opt/scalp/data
+cat >"$OUT" <<'J'
+[
+  {"symbol":"BTCUSDT_UMCBL","S":0.72,"pb":0.1,"ph":0.2,"ps":0.3,"context":"buy","timestamp":1690000000},
+  {"symbol":"ETHUSDT_UMCBL","S":0.55,"pb":0.1,"ph":0.2,"ps":0.3,"context":"hold","timestamp":1690000001},
+  {"symbol":"XRPUSDT_UMCBL","S":0.81,"pb":0.1,"ph":0.2,"ps":0.3,"context":"sell","timestamp":1690000002}
+]
+J
+echo "$(date -Iseconds) A:stub wrote -> $OUT" >>"$LOG"
+SHH
+chmod +x /opt/scalp/tools/run_analysis_a_5min.sh
+
+cat >/opt/scalp/tools/enqueue_symbols.py <<'PY'
+#!/usr/bin/env python3
+import sys
+from pathlib import Path
+q=Path("/opt/scalp/run/symbol_queue.txt"); q.parent.mkdir(parents=True, exist_ok=True)
+existing=set(q.read_text().splitlines()) if q.exists() else set(); added=False
+for s in sys.argv[1:]:
+    S=s.strip().upper()
+    if S and S not in existing: existing.add(S); added=True
+q.write_text("\n".join(sorted(existing)) if existing else ""); print(f"[enqueue] total={len(existing)} added={added}")
+PY
+chmod +x /opt/scalp/tools/enqueue_symbols.py
+
+cat >/opt/scalp/tools/detect_fresh_symbols.sh <<'SHH'
+#!/usr/bin/env bash
+set -euo pipefail
+source /etc/scalp.app 2>/dev/null || true
+CANDLES_DIR="${CANDLES_DIR:-/opt/scalp/data/candles}"; AGE="${FRESH_AGE_SEC:-180}"
+[ -d "$CANDLES_DIR" ] || exit 0
+tmp=$(mktemp)
+find "$CANDLES_DIR" -type f -mmin -$(( AGE/60 )) \( -name '*.parquet' -o -name '*.json' -o -name '*.csv' \) >"$tmp" || true
+symbols=$(awk -F/ 'NF>=2{for(i=1;i<=NF;i++){if($(i)=="candles"&&i+1<=NF){print $(i+1)}}}' "$tmp" | tr '[:lower:]' '[:upper:]' | sort -u)
+rm -f "$tmp"; [ -n "$symbols" ] || exit 0
+/opt/scalp/tools/enqueue_symbols.py $symbols
+SHH
+chmod +x /opt/scalp/tools/detect_fresh_symbols.sh
+
+cat >/opt/scalp/tools/run_analysis_a_for_symbol_hint.sh <<'SHH'
+#!/usr/bin/env bash
+set -euo pipefail
+SYM="${1:-}"; [ -n "$SYM" ] || exit 0
+/opt/scalp/tools/run_analysis_a_5min.sh >/dev/null 2>&1 || true
+echo "[A] targeted SYM=$SYM"
+SHH
+chmod +x /opt/scalp/tools/run_analysis_a_for_symbol_hint.sh
+
+cat >/opt/scalp/tools/drain_symbol_queue.sh <<'SHH'
+#!/usr/bin/env bash
+set -euo pipefail
+Q="/opt/scalp/run/symbol_queue.txt"; MAX="${QUEUE_MAX_PER_TICK:-10}"
+[ -f "$Q" ] || exit 0
+mapfile -t ALL < <(grep -E '^[A-Z0-9]+' "$Q" 2>/dev/null || true); [ ${#ALL[@]} -eq 0 ] && { rm -f "$Q"; exit 0; }
+KEEP=(); cnt=0
+for S in "${ALL[@]}"; do
+  if [ "$cnt" -lt "$MAX" ]; then /opt/scalp/tools/run_analysis_a_for_symbol_hint.sh "$S" || true; cnt=$((cnt+1)); else KEEP+=("$S"); fi
+done
+( [ ${#KEEP[@]} -gt 0 ] && printf "%s\n" "${KEEP[@]}" > "$Q" ) || rm -f "$Q"
+echo "[drain] processed=$cnt remaining=${#KEEP[@]}"
+SHH
+chmod +x /opt/scalp/tools/drain_symbol_queue.sh
+
+# 6) Analyse B + routage + monitor + balance
+cat >/opt/scalp/tools/run_analysis_b.py <<'PY'
+#!/usr/bin/env python3
+import json, os, time
+from pathlib import Path
+D=Path("/opt/scalp/data"); D.mkdir(parents=True, exist_ok=True)
+T=float(os.environ.get("TUNE_S_THRESHOLD","0.6"))
+A=json.loads((D/"analyse_A_out.json").read_text() or "[]")
+A=[A] if isinstance(A,dict) else A
+signals=[]
+now=int(time.time())
+for r in A:
+    if not isinstance(r,dict): continue
+    ctx=str(r.get("context","none")).lower(); S=float(r.get("S",0) or 0)
+    if ctx in ("buy","sell") and S>=T:
+        signals.append({"symbol":r.get("symbol"),"side":ctx,"score":S,"ts":now,"source":"B"})
+(D/"signals.json").write_text(json.dumps(signals,indent=2))
+print(f"[B] signals={len(signals)} T={T}")
+PY
+chmod +x /opt/scalp/tools/run_analysis_b.py
+
+cat >/opt/scalp/tools/signal_router.py <<'PY'
+#!/usr/bin/env python3
+import json, time, random
+from pathlib import Path
+D=Path("/opt/scalp/data"); D.mkdir(parents=True, exist_ok=True)
+signals=json.loads((D/"signals.json").read_text() or "[]") if (D/"signals.json").exists() else []
+positions=json.loads((D/"positions.json").read_text() or "[]") if (D/"positions.json").exists() else []
+if isinstance(positions,dict) and "positions" in positions: positions=positions["positions"]
+orders=[]; now=int(time.time())
+for s in signals:
+    if not isinstance(s,dict): continue
+    sym=s.get("symbol"); side=s.get("side")
+    if not sym or side not in ("buy","sell"): continue
+    oid=f"paper-{now}-{random.randint(1000,9999)}"
+    entry={"id":oid,"symbol":sym,"side":side,"qty":1.0,"price":100.0,"ts":now,"status":"open"}
+    positions.append(entry); orders.append(entry)
+(D/"positions.json").write_text(json.dumps(positions,indent=2))
+(D/"orders.log").touch(exist_ok=True)
+if orders:
+    with (D/"orders.log").open("a") as f:
+        for o in orders: f.write(f"{o['ts']} NEW {o['side']} {o['symbol']} {o['id']}\n")
+if signals: (D/"signals.json").write_text("[]")
+if not (D/"paper_balance.json").exists(): (D/"paper_balance.json").write_text(json.dumps({"equity":0,"ts":"1970-01-01T00:00:00Z"},indent=2))
+print(f"[router] routed={len(orders)} positions_total={len(positions)}")
+PY
+chmod +x /opt/scalp/tools/signal_router.py
+
+cat >/opt/scalp/tools/paper_monitor.py <<'PY'
+#!/usr/bin/env python3
+import json, time
+from pathlib import Path
+D=Path("/opt/scalp/data"); D.mkdir(parents=True, exist_ok=True)
+pos_f=D/"positions.json"; bal_f=D/"paper_balance.json"
+positions=json.loads(pos_f.read_text() or "[]") if pos_f.exists() else []
+if isinstance(positions,dict) and "positions" in positions: positions=positions["positions"]
+now=int(time.time()); closed=0
+for p in positions:
+    if isinstance(p,dict) and p.get("status")=="open" and now-int(p.get("ts",now))>20:
+        p["status"]="closed"; p["close_ts"]=now; p["pnl"]=1 if int(str(p.get("id",""))[-1])%2 else -1; closed+=1
+pos_f.write_text(json.dumps(positions,indent=2))
+equity=sum(p.get("pnl",0) for p in positions if isinstance(p,dict) and p.get("status")=="closed")
+bal={"equity":equity,"ts":time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
+bal_f.write_text(json.dumps(bal,indent=2))
+print(f"[monitor] closed={closed} equity={equity}")
+PY
+chmod +x /opt/scalp/tools/paper_monitor.py
+
+cat >/opt/scalp/tools/update_balance_history.py <<'PY'
+#!/usr/bin/env python3
+import json, time
+from pathlib import Path
+D=Path("/opt/scalp/data"); H=D/"balance_history.json"; B=D/"paper_balance.json"; DBG=D/"debug/balance_debug.json"
+ts=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+bal={"equity":None,"ts":ts}
+try:
+    j=json.loads(B.read_text() or "{}"); bal["equity"]=float(j.get("equity") or 0); bal["raw"]=j
+except Exception as e:
+    bal["error"]=str(e)
+hist=[]
+try: hist=json.loads(H.read_text() or "[]")
+except: hist=[]
+entry={"ts":ts,"equity":bal["equity"]}
+if entry["equity"] is not None:
+    hist.append(entry); hist=hist[-50000:]; H.write_text(json.dumps(hist,indent=2))
+DBG.write_text(json.dumps(bal,indent=2))
+print(f"[balance] eq={entry['equity']} ts={ts}")
+PY
+chmod +x /opt/scalp/tools/update_balance_history.py
+
+# 7) Alertes / métriques / events
+cat >/opt/scalp/tools/alert_eval.sh <<'AL'
+#!/usr/bin/env bash
+set -euo pipefail
+source /etc/scalp.tuning 2>/dev/null || true
+STATE=/opt/scalp/run/alert.state; mkdir -p /opt/scalp/run
+now=$(date +%s); msg=""
+A=/opt/scalp/data/debug/a_export_check.json; B=/opt/scalp/data/debug/b_status.json; P=/opt/scalp/data/debug/preflight.json
+r(){ jq -r "$2" "$1" 2>/dev/null || echo ""; }
+[ -f "$A" ] && { ok=$(r "$A" .ok); miss=$(r "$A" .missing_records); [ "$ok" != "true" ] && msg+="[A] export NOK (missing=$miss)\n"; }
+[ -f "$B" ] && { ok=$(r "$B" .ok); [ "$ok" != "true" ] && msg+="[B] runner NOK\n"; }
+[ -f "$P" ] && { ok=$(r "$P" .ok); [ "$ok" != "true" ] && msg+="[Preflight] $(r "$P" '.issues|join(",")')\n"; }
+if [ -n "$msg" ]; then last=0; [ -f "$STATE" ] && last=$(cat "$STATE"||echo 0); gap="${TUNE_ALERT_SPAM_WINDOW_SEC:-300}";
+  if [ $((now-last)) -ge "$gap" ]; then echo "$now" >"$STATE"; /opt/scalp/tools/tg.sh "$msg"; fi; fi
+AL
+chmod +x /opt/scalp/tools/alert_eval.sh
+
+cat >/opt/scalp/tools/metrics_export.py <<'PY'
+#!/usr/bin/env python3
+import json, time
+from pathlib import Path
+RUN=Path("/opt/scalp/run"); RUN.mkdir(parents=True, exist_ok=True)
+M=RUN/"metrics.prom"; D=Path("/opt/scalp/data"); DD=D/"debug"
+def J(p,default=None):
+    try: return json.loads(Path(p).read_text())
+    except: return default
+pf=J(DD/"preflight.json",{}); ae=J(DD/"a_export_check.json",{}); bs=J(DD/"b_status.json",{})
+top=J(D/"top.json",{}); coins=J(D/"coins_90d.json",{}); sig=J(D/"signals.json",[])
+now=int(time.time()); L=[]
+def g(n,v,l=None):
+    if v is None: return
+    if isinstance(v,bool): v=1 if v else 0
+    lbl="" if not l else "{"+",".join([f'{k}=\"{str(x)}\"' for k,x in l.items()])+"}"
+    L.append(f"{n}{lbl} {v}")
+g("scalp_ok", pf.get("ok",0), {"comp":"preflight"})
+g("scalp_ok", ae.get("ok",0), {"comp":"analyse_a_export"})
+g("scalp_ok", bs.get("ok",0), {"comp":"analyse_b"})
+g("scalp_counts", len((top or {}).get("symbols",[])), {"name":"top"})
+g("scalp_counts", len((coins or {}).get("symbols",[])), {"name":"coins90"})
+g("scalp_counts", len(sig if isinstance(sig,list) else []), {"name":"signals"})
+g("scalp_timestamp", now, {"name":"export"})
+M.write_text("\n".join(L)+"\n"); print(f"[metrics] wrote {M}")
+PY
+chmod +x /opt/scalp/tools/metrics_export.py
+
+cat >/opt/scalp/tools/events_notify.sh <<'EV'
+#!/usr/bin/env bash
+set -euo pipefail
+STATE=/opt/scalp/run/events; mkdir -p "$STATE"
+st(){ stat -c %Y "$1" 2>/dev/null || echo 0; }
+S=/opt/scalp/data/signals.json; if [ -f "$S" ]; then p="$STATE/s.ts"; last=$(cat "$p" 2>/dev/null||echo 0); cur=$(st "$S");
+  if [ "$cur" != "$last" ]; then cnt=$(jq 'length' "$S" 2>/dev/null || echo 0); [ "$cnt" -gt 0 ] && /opt/scalp/tools/tg.sh "📣 $cnt signal(s) prêt(s)"; echo "$cur" >"$p"; fi; fi
+P=/opt/scalp/data/positions.json; if [ -f "$P" ]; then p="$STATE/p.ts"; last=$(cat "$p" 2>/dev/null||echo 0); cur=$(st "$P");
+  if [ "$cur" != "$last" ]; then open=$(jq '[.[]|select(.status=="open")]|length' "$P" 2>/dev/null || echo 0); /opt/scalp/tools/tg.sh "📊 positions ouvertes: $open"; echo "$cur" >"$p"; fi; fi
+L=/opt/scalp/data/orders.log; if [ -f "$L" ]; then p="$STATE/o.ts"; last=$(cat "$p" 2>/dev/null||echo 0); cur=$(st "$L");
+  if [ "$cur" != "$last" ]; then tail -n 1 "$L" | xargs -I{} /opt/scalp/tools/tg.sh "📝 {}"; echo "$cur" >"$p"; fi; fi
+EV
+chmod +x /opt/scalp/tools/events_notify.sh
+
+# 8) Runner + boucle paper
+cat >/opt/scalp/tools/priority_runner.sh <<'RUN'
+#!/usr/bin/env bash
+set -euo pipefail
+/opt/scalp/tools/env_compat.sh >/dev/null 2>&1 || true
+source /etc/scalp.app 2>/dev/null || true
+source /etc/scalp.tuning 2>/dev/null || true
+LOCK="/tmp/scalp.prio.lock"; exec 9>"$LOCK"; flock -n 9 || { echo "busy"; exit 0; }
+LOG="${LOG_DIR:-/opt/scalp/logs}/priority_runner.log"; RUN="${RUN_DIR:-/opt/scalp/run}"
+mkdir -p "$(dirname "$LOG")" "$RUN" /opt/scalp/data/debug
+TS(){ date -Iseconds; }; echo "$(TS) tick:start pid=$$" >>"$LOG"
+if ! /usr/bin/env ${PYTHON_BIN:-python3} /opt/scalp/tools/preflight.py >>"$LOG" 2>&1; then
+  echo "$(TS) preflight:not-ok -> skip tick" >>"$LOG"; /opt/scalp/tools/alert_eval.sh >>"$LOG" 2>&1 || true; /opt/scalp/tools/metrics_export.py >>"$LOG" 2>&1 || true; /opt/scalp/tools/events_notify.sh >>"$LOG" 2>&1 || true; echo "$(TS) tick:end" >>"$LOG"; exit 0; fi
+if [ -x /opt/scalp/tools/run_analysis_b_minutely.sh ]; then echo "$(TS) B:minutely start" >>"$LOG"; /opt/scalp/tools/run_analysis_b_minutely.sh >>"$LOG" 2>&1 || true; echo "$(TS) B:minutely end" >>"$LOG"; fi
+MIN=$(date +%M)
+if [ $((10#${MIN} % 5)) -eq 0 ]; then
+  echo "$(TS) A:sync start" >>"$LOG"
+  TF_ORDER="${SYNC_TF_ORDER:-1m,5m,15m,30m}" FORCE_CATCHUP=1 TARGET_ROWS="${A_TARGET_ROWS:-600}" /usr/bin/env ${PYTHON_BIN:-python3} /opt/scalp/tools/sync_candles_safe.py >>"$LOG" 2>&1 || true
+  echo "$(TS) A:sync end" >>"$LOG"
+  /opt/scalp/tools/detect_fresh_symbols.sh "${FRESH_AGE_SEC:-180}" >>"$LOG" 2>&1 || true
+  /opt/scalp/tools/drain_symbol_queue.sh >>"$LOG" 2>&1 || true
+  if [ "${APPEND_GLOBAL_A_ON_5MIN:-1}" = "1" ]; then /opt/scalp/tools/run_analysis_a_5min.sh >>"$LOG" 2>&1 || true; fi
+fi
+if [ "$(date +%M)" = "00" ] && [ $((10#$(date +%H) % ${QUALITY_EVERY_HOURS:-2})) -eq 0 ]; then echo "$(TS) quality:start" >>"$LOG"; /usr/bin/env ${PYTHON_BIN:-python3} /opt/scalp/tools/run_quality_only.py >>"$LOG" 2>&1 || true; echo "$(TS) quality:end" >>"$LOG"; fi
+PERIOD_H="${CONTRACTS_PERIOD_H:-48}"; ST="$RUN/contracts.stamp"; now=$(date +%s); last=0; [ -f "$ST" ] && last=$(cat "$ST"||echo 0)
+if [ $(( now - last )) -ge $(( PERIOD_H*3600 )) ]; then echo "$(TS) contracts:start" >>"$LOG"; [ -f /opt/scalp/tools/refresh_contracts.py ] && /usr/bin/env ${PYTHON_BIN:-python3} /opt/scalp/tools/refresh_contracts.py >>"$LOG" 2>&1 || true; [ -f /opt/scalp/tools/rebuild_coins_90d_light.py ] && /usr/bin/env ${PYTHON_BIN:-python3} /opt/scalp/tools/rebuild_coins_90d_light.py >>"$LOG" 2>&1 || true; date +%s > "$ST"; echo "$(TS) contracts:end" >>"$LOG"; fi
+[ -x /opt/scalp/tools/run_analysis_b.sh ] && /opt/scalp/tools/run_analysis_b.sh >>"$LOG" 2>&1 || true
+/opt/scalp/tools/alert_eval.sh >>"$LOG" 2>&1 || true; /opt/scalp/tools/metrics_export.py >>"$LOG" 2>&1 || true; /opt/scalp/tools/events_notify.sh >>"$LOG" 2>&1 || true
+echo "$(TS) tick:end" >>"$LOG"; exit 0
+RUN
+chmod +x /opt/scalp/tools/priority_runner.sh
+
+cat >/opt/scalp/tools/run_analysis_b_minutely.sh <<'BMIN'
+#!/usr/bin/env bash
+set -euo pipefail
+source /etc/scalp.app 2>/dev/null || true
+LOG="${LOG_DIR:-/opt/scalp/logs}/analysis_b.log"; DBG="/opt/scalp/data/debug/b_status.json"; PY="${PYTHON_BIN:-python3}"
+mkdir -p "$(dirname "$LOG")" /opt/scalp/data/debug
+echo "$(date -Iseconds) B:start" >>"$LOG"; ok=true
+/usr/bin/env "$PY" /opt/scalp/tools/run_analysis_b.py >>"$LOG" 2>&1 || ok=false
+[ -f /opt/scalp/data/signals.json ] && /usr/bin/env "$PY" /opt/scalp/tools/signal_router.py >>"$LOG" 2>&1 || true
+echo "$(date -Iseconds) B:end ok=${ok}" >>"$LOG"
+TSISO=$(date -u +%Y-%m-%dT%H:%M:%SZ); if $ok; then echo "{\"ok\": true, \"ts\": \"$TSISO\"}" >"$DBG"; else echo "{\"ok\": false, \"ts\": \"$TSISO\"}" >"$DBG"; fi
+BMIN
+chmod +x /opt/scalp/tools/run_analysis_b_minutely.sh
+
+cat >/opt/scalp/tools/paper_loop.sh <<'PAP'
+#!/usr/bin/env bash
+set -euo pipefail
+/opt/scalp/tools/env_compat.sh >/dev/null 2>&1 || true
+LOG="/opt/scalp/logs/paper_loop.log"; PY="${PYTHON_BIN:-/usr/bin/python3}"
+echo "$(date -Iseconds) paper:loop:start pid=$$" >>"$LOG"
+while true; do
+  "$PY" /opt/scalp/tools/signal_router.py >>"$LOG" 2>&1 || true
+  "$PY" /opt/scalp/tools/paper_monitor.py >>"$LOG" 2>&1 || true
+  "$PY" /opt/scalp/tools/update_balance_history.py >>"$LOG" 2>&1 || true
+  /opt/scalp/tools/events_notify.sh >>"$LOG" 2>&1 || true
+  sleep 5
+done
+PAP
+chmod +x /opt/scalp/tools/paper_loop.sh
+
+# 9) Units systemd
+cat >/etc/systemd/system/scalp-priority.service <<'UNIT'
+[Unit]
+Description=Scalp orchestrateur priorité petits TF
+[Service]
+Type=oneshot
+EnvironmentFile=-/etc/scalp.env
+ExecStartPre=/opt/scalp/tools/env_compat.sh
+ExecStart=/opt/scalp/tools/priority_runner.sh
+WorkingDirectory=/opt/scalp
+Nice=5
+LimitNOFILE=65535
+UNIT
+
+cat >/etc/systemd/system/scalp-priority.timer <<'UNIT'
+[Unit]
+Description=Tick minutely pour priorité petits TF
+[Timer]
+OnBootSec=20s
+OnUnitActiveSec=60s
+AccuracySec=1s
+Persistent=true
+Unit=scalp-priority.service
+[Install]
+WantedBy=timers.target
+UNIT
+
+cat >/etc/systemd/system/scalp-paper-loop.service <<'UNIT'
+[Unit]
+Description=Scalp paper routing + monitor + balance loop (5s)
+After=network-online.target
+[Service]
+Type=simple
+EnvironmentFile=-/etc/scalp.env
+ExecStartPre=/opt/scalp/tools/env_compat.sh
+ExecStart=/opt/scalp/tools/paper_loop.sh
+WorkingDirectory=/opt/scalp
+Restart=always
+RestartSec=1
+Nice=5
+LimitNOFILE=65535
+[Install]
+WantedBy=multi-user.target
+UNIT
+
+systemctl daemon-reload
+systemctl enable --now scalp-priority.timer scalp-paper-loop.service
+
+# 10) Logrotate
+cat >/etc/logrotate.d/scalp <<'ROT'
+/opt/scalp/logs/*.log {
+  daily
+  rotate 7
+  compress
+  missingok
+  notifempty
+  copytruncate
+}
+ROT
+
+echo "[pack_final] OK"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/ohlcv.py
+Size: 549
+MTime: 2025-09-25 08:17:21.450631419 +0000
+----- CONTENT -----
+#!/usr/bin/env python3
+def ema(vals,n):
+    if not vals: return []
+    k=2/(n+1); out=[vals[0]]
+    for x in vals[1:]: out.append(out[-1]+k*(x-out[-1]))
+    return out
+def minmax_pos(vals,win):
+    out=[]
+    for i in range(len(vals)):
+        a=max(0,i-win+1); w=vals[a:i+1]
+        lo=min(w); hi=max(w); rng=(hi-lo) or 1e-9
+        out.append((vals[i]-lo)/rng)
+    return out
+def slope(vals,step=5):
+    out=[0]*len(vals)
+    for i in range(step,len(vals)):
+        prev=vals[i-step] or 1e-9
+        out[i]=(vals[i]-prev)/abs(prev)
+    return out
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/run_analysis_b_minutely.sh
+Size: 708
+MTime: 2025-09-25 07:55:50.293158257 +0000
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+source /etc/scalp.app 2>/dev/null || true
+LOG="${LOG_DIR:-/opt/scalp/logs}/analysis_b.log"; DBG="/opt/scalp/data/debug/b_status.json"; PY="${PYTHON_BIN:-python3}"
+mkdir -p "$(dirname "$LOG")" /opt/scalp/data/debug
+echo "$(date -Iseconds) B:start" >>"$LOG"; ok=true
+/usr/bin/env "$PY" /opt/scalp/tools/run_analysis_b.py >>"$LOG" 2>&1 || ok=false
+[ -f /opt/scalp/data/signals.json ] && /usr/bin/env "$PY" /opt/scalp/tools/signal_router.py >>"$LOG" 2>&1 || true
+echo "$(date -Iseconds) B:end ok=${ok}" >>"$LOG"
+TSISO=$(date -u +%Y-%m-%dT%H:%M:%SZ); if $ok; then echo "{\"ok\": true, \"ts\": \"$TSISO\"}" >"$DBG"; else echo "{\"ok\": false, \"ts\": \"$TSISO\"}" >"$DBG"; fi
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/a_sanity.py
+Size: 1420
+MTime: 2025-09-25 12:14:08.091800209 +0000
+----- CONTENT -----
+#!/usr/bin/env python3
+import json, time, sys
+from pathlib import Path
+BASE=Path("/opt/scalp/data"); C=BASE/"candles"
+TOP=json.loads((BASE/"top.json").read_text()) if (BASE/"top.json").exists() else {"symbols":[]}
+now=int(time.time())
+
+def load(sym, tf):
+    p=C/tf/f"{sym}.json"
+    if not p.exists(): return None, f"missing:{tf}"
+    try:
+        j=json.loads(p.read_text()); k=j.get("data",[])
+        if not k: return None, f"empty:{tf}"
+        # drop bougie incomplète
+        tf_s={"30m":1800,"15m":900,"5m":300}[tf]
+        if now - int(k[-1][0]//1000) < int(0.9*tf_s): k=k[:-1]
+        if len(k)<500: return None, f"bars<{500}:{tf}"
+        age= now - int(k[-1][0]//1000)
+        if age>tf_s*2: return None, f"stale:{tf} age={age}s"
+        return k, "ok"
+    except Exception as e:
+        return None, f"readerr:{tf}:{e}"
+
+issues=[]
+ok=0
+syms=list(TOP.get("symbols",[]))
+for sym in syms:
+    row={"symbol":sym}
+    bad=[]
+    for tf in ("30m","15m","5m"):
+        k,st=load(sym, tf)
+        row[f"{tf}_status"]=st
+        if st!="ok": bad.append(st)
+    if bad: issues.append({**row,"fail":bad})
+    else: ok+=1
+
+out={"ts":now,"checked":len(syms),"ok":ok,"fail":len(issues),"issues":issues[:20]}
+print(json.dumps(out, indent=2))
+# dump complet pour inspection
+DEBUG=BASE/"debug"; DEBUG.mkdir(parents=True, exist_ok=True)
+(DEBUG/"a_sanity.json").write_text(json.dumps({**out,"issues_full":issues}, indent=2))
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/detect_fresh_symbols.sh
+Size: 557
+MTime: 2025-09-25 07:55:50.181158121 +0000
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+source /etc/scalp.app 2>/dev/null || true
+CANDLES_DIR="${CANDLES_DIR:-/opt/scalp/data/candles}"; AGE="${FRESH_AGE_SEC:-180}"
+[ -d "$CANDLES_DIR" ] || exit 0
+tmp=$(mktemp)
+find "$CANDLES_DIR" -type f -mmin -$(( AGE/60 )) \( -name '*.parquet' -o -name '*.json' -o -name '*.csv' \) >"$tmp" || true
+symbols=$(awk -F/ 'NF>=2{for(i=1;i<=NF;i++){if($(i)=="candles"&&i+1<=NF){print $(i+1)}}}' "$tmp" | tr '[:lower:]' '[:upper:]' | sort -u)
+rm -f "$tmp"; [ -n "$symbols" ] || exit 0
+/opt/scalp/tools/enqueue_symbols.py $symbols
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/fs_sanitize.sh
+Size: 388
+MTime: 2025-09-25 07:55:50.069157987 +0000
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+mkdir -p /opt/scalp/data /opt/scalp/data/debug
+for f in analyse_A_out.json signals.json positions.json balance_history.json; do
+  p="/opt/scalp/data/$f"; [ -f "$p" ] || echo "[]" >"$p"
+done
+[ -f /opt/scalp/data/paper_balance.json ] || echo '{"equity":0,"ts":"1970-01-01T00:00:00Z"}' >/opt/scalp/data/paper_balance.json
+: > /opt/scalp/data/orders.log
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/paper_loop.sh
+Size: 515
+MTime: 2025-09-25 07:55:50.309158276 +0000
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+/opt/scalp/tools/env_compat.sh >/dev/null 2>&1 || true
+LOG="/opt/scalp/logs/paper_loop.log"; PY="${PYTHON_BIN:-/usr/bin/python3}"
+echo "$(date -Iseconds) paper:loop:start pid=$$" >>"$LOG"
+while true; do
+  "$PY" /opt/scalp/tools/signal_router.py >>"$LOG" 2>&1 || true
+  "$PY" /opt/scalp/tools/paper_monitor.py >>"$LOG" 2>&1 || true
+  "$PY" /opt/scalp/tools/update_balance_history.py >>"$LOG" 2>&1 || true
+  /opt/scalp/tools/events_notify.sh >>"$LOG" 2>&1 || true
+  sleep 5
+done
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/analysis_a.py
+Size: 2179
+MTime: 2025-09-25 08:18:43.286722941 +0000
+----- CONTENT -----
+#!/usr/bin/env python3
+import json, os, time, math
+from pathlib import Path
+from bitget_http import history_candles, normalize_symbol
+from ohlcv import ema, minmax_pos, slope
+
+DATA=Path("/opt/scalp/data"); TOP=DATA/"top.json"
+OUT=DATA/"analyse_A_out.json"; DBG=DATA/"debug/a_export_check.json"
+WIN=int(os.getenv("TUNE_PBPHPS_WINDOW","200"))
+
+def context_from(pb, ps):
+    if ps>0 and pb>=0.6: return "buy"
+    if ps<0 and pb<=0.4: return "sell"
+    return "hold"
+
+def analyze_symbol(sym):
+    rows=[]; end_ms=int(time.time()*1000); need=600
+    while len(rows)<need:
+        got=history_candles(sym,"1m",limit=min(200,need-len(rows)),end_ms=end_ms)
+        if not got: break
+        rows=got+rows; end_ms=got[0]["ts"]-1
+        if len(got)<200: break
+    if len(rows)<WIN+5: return None
+    closes=[r["c"] for r in rows]; highs=[r["h"] for r in rows]
+    pb=minmax_pos(closes,WIN)[-1]
+    ps=slope(ema(closes,20),step=5)[-1]
+    rng=(max(highs[-WIN:]) - min(closes[-WIN:])) or 1e-9
+    ph=(highs[-1] - max(highs[-WIN:-1]))/rng
+    s_raw=0.5*pb + 0.3*max(0,ph) + 0.2*max(0,ps)
+    S=1/(1+math.exp(-8*(s_raw-0.5)))
+    return {"symbol": normalize_symbol(sym)[0]+"_UMCBL","S":round(S,4),
+            "pb":round(pb,4),"ph":round(ph,4),"ps":round(ps,4),
+            "context":context_from(pb,ps),"timestamp":int(time.time())}
+
+def load_universe():
+    if TOP.exists():
+        try:
+            j=json.loads(TOP.read_text() or "{}"); syms=j.get("symbols") or []
+            if syms: return syms
+        except: pass
+    try: return json.loads((DATA/"contracts_usdt.json").read_text() or "[]")
+    except: return []
+
+def main():
+    syms=load_universe()[:50]; out=[]
+    for s in syms:
+        try:
+            r=analyze_symbol(s)
+            if r: out.append(r)
+        except: pass
+    OUT.write_text(json.dumps(out,indent=2))
+    ok=all(all(k in r for k in ("S","pb","ph","ps","context")) for r in out)
+    DBG.write_text(json.dumps({"ok":bool(ok),"missing_records":0 if ok else 1,"total":len(out),
+                               "ts":time.strftime("%Y-%m-%dT%H:%M:%SZ",time.gmtime())},indent=2))
+    print(f"[A] from_top={len(syms)} out={len(out)}")
+if __name__=="__main__": main()
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/health_paper.sh
+Size: 390
+MTime: 2025-09-25 07:17:36.170248523 +0000
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+systemctl --no-pager status scalp-paper-loop.service | sed -n '1,8p'
+echo; tail -n 80 /opt/scalp/logs/paper_loop.log 2>/dev/null || true
+echo; echo "# balance last:"; tail -n 3 /opt/scalp/data/balance_history.json 2>/dev/null || echo "no history"
+echo; echo "# debug:"; jq -r '.' /opt/scalp/data/debug/balance_debug.json 2>/dev/null || echo "no debug"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/refresh_contracts.py
+Size: 783
+MTime: 2025-09-25 07:55:50.125158054 +0000
+----- CONTENT -----
+#!/usr/bin/env python3
+import json, time, requests
+from pathlib import Path
+OUT=Path("/opt/scalp/data/contracts_usdt.json"); DBG=Path("/opt/scalp/data/debug/contracts_usdt_meta.json")
+OUT.parent.mkdir(parents=True, exist_ok=True); DBG.parent.mkdir(parents=True, exist_ok=True)
+try:
+    r=requests.get("https://api.bitget.com/api/mix/v1/market/contracts", params={"productType":"umcbl"}, timeout=15)
+    r.raise_for_status(); j=r.json()
+    syms=sorted({d.get("symbol") for d in j.get("data",[]) if str(d.get("symbol","")).endswith("USDT_UMCBL")})
+except Exception:
+    syms=[]
+ts=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+OUT.write_text(json.dumps(syms,indent=2)); DBG.write_text(json.dumps({"generated_at":ts,"count":len(syms)},indent=2))
+print(f"[contracts] {len(syms)}")
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/candles_refresh_subset.py
+Size: 1816
+MTime: 2025-09-25 11:35:44.347521368 +0000
+----- CONTENT -----
+#!/usr/bin/env python3
+import os, json, time
+from pathlib import Path
+import ccxt
+
+DATA=Path("/opt/scalp/data")
+CBASE=DATA/"candles"; (CBASE/"1m").mkdir(parents=True, exist_ok=True)
+AOUT=DATA/"analyse_A_out.json"
+LIMIT=520
+
+def ex():
+    return ccxt.bitget({
+        "apiKey": os.getenv("BITGET_API_KEY",""),
+        "secret": os.getenv("BITGET_API_SECRET",""),
+        "password": os.getenv("BITGET_PASSPHRASE",""),
+        "options": {"defaultType":"swap","defaultSubType":"linear"},
+        "enableRateLimit": True,
+    })
+EX=ex()
+
+def b2ccxt(sym): return sym.replace("_UMCBL","/USDT:USDT")
+
+def drop_incomplete(rows):
+    if not rows: return rows
+    if int(time.time()*1000) - rows[-1][0] < int(0.9*60*1000): return rows[:-1]
+    return rows
+
+def load_active_symbols():
+    try:
+        arr=json.loads((AOUT).read_text() or "[]")
+        return [r["symbol"] for r in arr if r.get("context","none")!="none"]
+    except: return []
+
+def save_1m(sym, rows):
+    out={"generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+         "tf":"1m","symbol":sym,"limit":LIMIT,"data":rows}
+    (CBASE/"1m"/f"{sym}.json").write_text(json.dumps(out))
+
+def main():
+    syms=load_active_symbols()
+    ok=0; errs=[]
+    for s in syms:
+        try:
+            rows=EX.fetch_ohlcv(b2ccxt(s), timeframe="1m", limit=LIMIT)
+            rows=drop_incomplete(rows)
+            if len(rows)<100: raise RuntimeError("too few bars")
+            save_1m(s, rows); ok+=1
+        except Exception as e:
+            errs.append({"symbol":s,"err":str(e)[:140]})
+    (DATA/"debug/candles_refresh_subset_1m.json").write_text(json.dumps(
+        {"ts":time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),"updated":ok,"errors":errs}, indent=2))
+    print(f"[subset_1m] updated={ok} errors={len(errs)}")
+if __name__=="__main__": main()
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/e2e_test.sh
+Size: 887
+MTime: 2025-09-25 07:42:28.292125214 +0000
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+echo "[E2E] seed A"
+cat >/opt/scalp/data/analyse_A_out.json <<'J'
+[
+  {"symbol":"BTCUSDT_UMCBL","S":0.9,"pb":0.1,"ph":0.2,"ps":0.3,"context":"buy","timestamp":1690000000},
+  {"symbol":"XRPUSDT_UMCBL","S":0.85,"pb":0.1,"ph":0.2,"ps":0.3,"context":"sell","timestamp":1690000002}
+]
+J
+echo "[E2E] B"
+python3 /opt/scalp/tools/run_analysis_b.py
+echo "[E2E] route"
+python3 /opt/scalp/tools/signal_router.py
+echo "[E2E] monitor 1"
+python3 /opt/scalp/tools/paper_monitor.py
+echo "[E2E] files"
+jq -r '.' /opt/scalp/data/signals.json || true
+jq -r '.' /opt/scalp/data/positions.json
+tail -n 5 /opt/scalp/data/orders.log || true
+jq -r '.' /opt/scalp/data/paper_balance.json
+echo "[E2E] wait 25s for auto-close"
+sleep 25
+python3 /opt/scalp/tools/paper_monitor.py
+jq -r '.' /opt/scalp/data/positions.json | tail -n 40
+jq -r '.' /opt/scalp/data/paper_balance.json
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/bitget_http.py
+Size: 1611
+MTime: 2025-09-25 08:17:10.466619152 +0000
+----- CONTENT -----
+#!/usr/bin/env python3
+import time, json
+from urllib.parse import urlencode
+from urllib.request import Request, urlopen
+from urllib.error import URLError, HTTPError
+BASE="https://api.bitget.com"
+def _get(path, params=None, tries=4, timeout=12):
+    q=f"{BASE}{path}"+(f"?{urlencode(params)}" if params else "")
+    for i in range(tries):
+        try:
+            req=Request(q, headers={"Accept":"application/json"})
+            with urlopen(req, timeout=timeout) as r:
+                return json.loads(r.read().decode("utf-8"))
+        except (URLError,HTTPError):
+            if i+1>=tries: raise
+            time.sleep(0.6*(2**i))
+def normalize_symbol(sym):
+    s=sym.replace("-","_").upper()
+    return (s.replace("_UMCBL",""), "usdt-futures")
+def history_candles(sym, granularity="1m", limit=200, end_ms=None):
+    s, prod=normalize_symbol(sym)
+    p={"symbol":s,"granularity":granularity,"limit":int(limit),"productType":prod}
+    if end_ms: p["endTime"]=int(end_ms)
+    j=_get("/api/v2/mix/market/history-candles", p)
+    raw=j.get("data",[]) if isinstance(j,dict) else j
+    out=[]
+    for k in raw:
+        try:
+            ts=int(k[0]); o,h,l,c=map(float,k[1:5]); v=float(k[5])
+            out.append({"ts":ts,"o":o,"h":h,"l":l,"c":c,"v":v})
+        except: pass
+    out.sort(key=lambda x:x["ts"])
+    return out
+def ticker_price(sym):
+    s, prod=normalize_symbol(sym)
+    j=_get("/api/v2/mix/market/ticker", {"productType":prod,"symbol":s})
+    d=(j or {}).get("data",{})
+    p=d.get("last") or d.get("lastPr") or d.get("close") or d.get("markPrice")
+    return float(p) if p is not None else None
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/coins90_debug.sh
+Size: 1109
+MTime: 2025-09-25 06:42:08.064131295 +0000
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+D=/opt/scalp/data
+echo "== files =="
+for f in contracts_usdt.json coins_90d.json debug/coins_90d_light.json debug/contracts_usdt_meta.json; do
+  p="$D/$f"; [ -f "$p" ] && echo "- $f: $(stat -c %y "$p" 2>/dev/null) bytes=$(stat -c %s "$p")" || echo "- $f: MISSING"
+done
+echo
+echo "== counts =="
+python3 - <<'PY'
+import json,sys
+from pathlib import Path
+D=Path("/opt/scalp/data")
+def load(p): 
+    try: return json.load(open(p))
+    except: return None
+cu=load(D/"contracts_usdt.json") or []
+c90=(load(D/"coins_90d.json") or {}).get("symbols", [])
+dbg=load(D/"debug"/"coins_90d_light.json") or {}
+print({"contracts":len(cu),"coins_90d":len(c90),"debug_keys":list(dbg.keys())[:6]})
+if dbg:
+    samp = {k:dbg.get(k) for k in ("in","eligible","rejected","api_touched","cache_hits","blacklisted","whitelisted") if k in dbg}
+    print("debug:", samp)
+    print("sample_ok:", (dbg.get("samples") or {}).get("ok", [])[:5])
+PY
+echo
+echo "== summary =="
+python3 /opt/scalp/tools/update_debug_summary.py || true
+jq -r '.pipeline // {}' /opt/scalp/data/debug.json 2>/dev/null || true
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/healthcheck.sh
+Size: 634
+MTime: 2025-09-25 07:10:47.569846899 +0000
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+echo "# timers"; systemctl list-timers | grep scalp- || true
+echo; echo "# services"; systemctl --no-pager --type=service | grep -E 'scalp-priority' || true
+echo; echo "# last ticks"; tail -n 60 /opt/scalp/logs/priority_runner.log 2>/dev/null || true
+echo; echo "# preflight"; jq -r '.' /opt/scalp/data/debug/preflight.json 2>/dev/null || echo "no preflight.json"
+echo; echo "# A export"; jq -r '.' /opt/scalp/data/debug/a_export_check.json 2>/dev/null || echo "no a_export_check.json"
+echo; echo "# B status"; jq -r '.' /opt/scalp/data/debug/b_status.json 2>/dev/null || echo "no b_status.json"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/candles_refresh_1m3m_subset.py
+Size: 2386
+MTime: 2025-09-25 12:22:28.052436747 +0000
+----- CONTENT -----
+#!/usr/bin/env python3
+import os, json, time
+from pathlib import Path
+import ccxt
+
+DATA=Path("/opt/scalp/data"); CAND=DATA/"candles"
+AOUT=DATA/"analyse_A_out.json"; TOP=DATA/"top.json"
+LIMIT=600
+TF_LIST=["1m","3m"]               # pour Analyse B
+
+def ex():
+    import ccxt
+    return ccxt.bitget({
+        "apiKey": os.getenv("BITGET_API_KEY",""),
+        "secret": os.getenv("BITGET_API_SECRET",""),
+        "password": os.getenv("BITGET_PASSPHRASE",""),
+        "options": {"defaultType":"swap","defaultSubType":"linear"},
+        "enableRateLimit": True,
+    })
+
+def norm_symbol(mkts, base):
+    if base in mkts: return base
+    if base.endswith("_UMCBL"):
+        q=base.split("_")[0].replace("USDT","/USDT:USDT")
+        if q in mkts: return q
+    if base.endswith("USDT"):
+        q=base.replace("USDT","/USDT:USDT")
+        if q in mkts: return q
+        q=base.replace("USDT","/USDT")
+        if q in mkts: return q
+    for k in mkts:
+        if k.replace(":USDT","").replace("/","").upper()==base.replace("_UMCBL","").upper():
+            return k
+    return None
+
+def drop_incomplete(rows, tf):
+    tf_s={"1m":60,"3m":180}[tf]; now=int(time.time()); last=int(rows[-1][0]//1000)
+    if now-last < int(0.9*tf_s): rows=rows[:-1]
+    return rows
+
+def save_json(path, rows):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({"ts":int(time.time()),"data":rows}))
+
+def subset_symbols():
+    syms=[]
+    try:
+        a=json.loads(AOUT.read_text())
+        syms=[r.get("symbol") for r in a if r.get("context") in ("buy","sell","hold")]
+    except: pass
+    if not syms:
+        try:
+            t=json.loads(TOP.read_text()); syms=t.get("symbols",[])[:30]
+        except: pass
+    return list(dict.fromkeys(syms))  # unique et ordre conservé
+
+def main():
+    e=ex(); mkts=e.load_markets()
+    syms=subset_symbols()
+    ok=wrote=0
+    for base in syms:
+        sid=norm_symbol(mkts, base)
+        if not sid: continue
+        for tf in TF_LIST:
+            try:
+                rows=e.fetch_ohlcv(sid, timeframe=tf, limit=LIMIT)
+                rows=drop_incomplete(rows, tf)
+                if len(rows)<200: continue
+                save_json(CAND/tf/f"{base}.json", rows)
+                wrote+=1
+            except: pass
+        ok+=1
+    print(f"[candles_refresh_1m3m_subset] in={len(syms)} ok={ok} wrote={wrote}")
+if __name__=="__main__": main()
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/metrics_export.py
+Size: 1196
+MTime: 2025-09-25 07:55:50.253158208 +0000
+----- CONTENT -----
+#!/usr/bin/env python3
+import json, time
+from pathlib import Path
+RUN=Path("/opt/scalp/run"); RUN.mkdir(parents=True, exist_ok=True)
+M=RUN/"metrics.prom"; D=Path("/opt/scalp/data"); DD=D/"debug"
+def J(p,default=None):
+    try: return json.loads(Path(p).read_text())
+    except: return default
+pf=J(DD/"preflight.json",{}); ae=J(DD/"a_export_check.json",{}); bs=J(DD/"b_status.json",{})
+top=J(D/"top.json",{}); coins=J(D/"coins_90d.json",{}); sig=J(D/"signals.json",[])
+now=int(time.time()); L=[]
+def g(n,v,l=None):
+    if v is None: return
+    if isinstance(v,bool): v=1 if v else 0
+    lbl="" if not l else "{"+",".join([f'{k}=\"{str(x)}\"' for k,x in l.items()])+"}"
+    L.append(f"{n}{lbl} {v}")
+g("scalp_ok", pf.get("ok",0), {"comp":"preflight"})
+g("scalp_ok", ae.get("ok",0), {"comp":"analyse_a_export"})
+g("scalp_ok", bs.get("ok",0), {"comp":"analyse_b"})
+g("scalp_counts", len((top or {}).get("symbols",[])), {"name":"top"})
+g("scalp_counts", len((coins or {}).get("symbols",[])), {"name":"coins90"})
+g("scalp_counts", len(sig if isinstance(sig,list) else []), {"name":"signals"})
+g("scalp_timestamp", now, {"name":"export"})
+M.write_text("\n".join(L)+"\n"); print(f"[metrics] wrote {M}")
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/filter_contracts_usdt.py
+Size: 3078
+MTime: 2025-09-25 08:50:56.813579299 +0000
+----- CONTENT -----
+#!/usr/bin/env python3
+import json, time, os
+from pathlib import Path
+from urllib.parse import urlencode
+from urllib.request import Request, urlopen
+from bitget_http import history_candles
+
+BASE="https://api.bitget.com"
+D=Path("/opt/scalp/data"); D.mkdir(parents=True, exist_ok=True)
+F_CON=D/"contracts_usdt.json"
+F_OK =D/"coins_90d.json"
+F_PENDING=D/"coins_pending.json"
+F_DBG=D/"debug/coins_scan_1d.json"
+
+SEED=["BTCUSDT","ETHUSDT","XRPUSDT","SOLUSDT","BNBUSDT","ADAUSDT","DOGEUSDT","LTCUSDT","LINKUSDT","DOTUSDT"]
+
+def http_get(path, params=None, tries=4, timeout=12):
+    q=f"{BASE}{path}"+(f"?{urlencode(params)}" if params else "")
+    hdr={"Accept":"application/json","User-Agent":"scalp-bot/1.0"}
+    last=None
+    for i in range(tries):
+        try:
+            with urlopen(Request(q, headers=hdr), timeout=timeout) as r:
+                import json as _j; return _j.loads(r.read().decode("utf-8"))
+        except Exception as e:
+            last=e; time.sleep(0.5*(2**i))
+    raise last
+
+def list_usdt_contracts():
+    try:
+        j=http_get("/api/v2/mix/market/contracts", {"productType":"umcbl"})
+        data=(j or {}).get("data",[]) if isinstance(j,dict) else (j or [])
+        s=sorted({str(d.get("symbol","")).upper() for d in data if str(d.get("symbol","")).upper().endswith("USDT")})
+        return s or SEED
+    except Exception:
+        return SEED
+
+def atomic_write(path: Path, obj):
+    tmp=path.with_suffix(".tmp"); tmp.write_text(json.dumps(obj,indent=2)+"\n"); os.replace(tmp, path)
+
+def main():
+    now_ms=int(time.time()*1000)
+    need90=now_ms-90*24*3600*1000
+    need80=now_ms-80*24*3600*1000
+
+    syms=list_usdt_contracts()
+    atomic_write(F_CON, syms)
+
+    ok=[]; pending=[]; meta=[]
+    for s in syms:
+        try:
+            k=history_candles(s,"1d",limit=120)  # 1 appel par coin
+            if not k:
+                # pas de données -> garder en pending pour recheck
+                pending.append(f"{s}_UMCBL"); meta.append({"symbol":s,"status":"nodata"})
+                continue
+            first_ts=k[0]["ts"]
+            if first_ts<=need90:
+                ok.append(f"{s}_UMCBL"); meta.append({"symbol":s,"status":"ok90","first_ts":first_ts,"rows":len(k)})
+            elif first_ts<=need80:
+                pending.append(f"{s}_UMCBL"); meta.append({"symbol":s,"status":"pending80","first_ts":first_ts,"rows":len(k)})
+            else:
+                meta.append({"symbol":s,"status":"too_young","first_ts":first_ts,"rows":len(k)})
+        except Exception as e:
+            pending.append(f"{s}_UMCBL"); meta.append({"symbol":s,"status":"error","err":str(e)})
+
+    ts=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    atomic_write(F_OK, {"symbols":ok,"generated_at":ts,"source":"bitget-1d-90d"})
+    atomic_write(F_PENDING, {"symbols":pending,"generated_at":ts,"note":"check next run (>=80d)"})
+    atomic_write(F_DBG, {"ts":ts,"total":len(syms),"ok90":len(ok),"pending80_or_err":len(pending),"details":meta})
+    print(f"[usdt 1d] total={len(syms)} ok90={len(ok)} pending={len(pending)}")
+if __name__=="__main__": main()
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/dashboard_live.sh
+Size: 527
+MTime: 2025-09-25 12:53:36.191336189 +0000
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+DATA=/opt/scalp/data
+FILES=("$DATA/top.json" "$DATA/coins_90d.json" "$DATA/analyse_A_out.json" \
+       "$DATA/signals.json" "$DATA/positions.json" "$DATA/history.json" "$DATA/paper_balance.json")
+
+get_mtime(){ stat -c %Y "$1" 2>/dev/null || echo 0; }
+
+prev=""
+while true; do
+  cur=""
+  for f in "${FILES[@]}"; do cur+=$(get_mtime "$f"); cur+=","; done
+  if [[ "$cur" != "$prev" ]]; then
+    clear
+    python3 /opt/scalp/tools/show_dashboard.py || true
+    prev="$cur"
+  fi
+  sleep 2
+done
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/candles_refresh_tf.py
+Size: 2849
+MTime: 2025-09-25 16:53:56.323697633 +0000
+----- CONTENT -----
+#!/usr/bin/env python3
+import os, json, time, math
+from pathlib import Path
+
+# ---- Config de base
+DATA = Path("/opt/scalp/data")
+CAND = DATA / "candles"
+TF_CFG = [("5m", 300), ("15m", 900), ("30m", 1800)]
+LIMIT_FETCH = 800  # marge confortable
+
+def jload(p, d=None):
+    p = Path(p)
+    if not p.exists(): return d
+    try: return json.loads(p.read_text())
+    except Exception: return d
+
+def jsave(p, obj):
+    p = Path(p); p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(json.dumps(obj, ensure_ascii=False))
+
+def load_top():
+    top = jload(DATA/"top.json", {"symbols":[]})
+    syms = top.get("symbols", [])[:30]
+    return syms
+
+def mk_ex():
+    import ccxt
+    ex = ccxt.bitget({"enableRateLimit": True})
+    try: ex.load_markets()
+    except Exception: pass
+    return ex
+
+def fetch_ohlcv_any(ex, sym, tf, limit):
+    # essaie plusieurs notations (linéaire USDT / spot)
+    cands = [sym, sym.replace("USDT", "/USDT:USDT"), sym.replace("USDT", "/USDT")]
+    last_exc = None
+    for s in cands:
+        try:
+            return ex.fetch_ohlcv(s, timeframe=tf, limit=limit)
+        except Exception as e:
+            last_exc = e
+            continue
+    raise last_exc
+
+def merge_append(local, fresh):
+    # concat en évitant les doublons (clé = ts)
+    if not fresh: return local
+    by_ts = {r[0]: r for r in local or []}
+    for r in fresh:
+        if len(r) >= 6 and isinstance(r[0], (int, float)):
+            by_ts[int(r[0])] = r
+    return [by_ts[k] for k in sorted(by_ts)]
+
+def last_ts(local):
+    try:
+        return int((local or [])[-1][0])
+    except Exception:
+        return 0
+
+def stale(local, period_s):
+    ts = last_ts(local)
+    if ts <= 0: return True
+    now = int(time.time()*1000)
+    return (now - ts) > (period_s + 15)*1000
+
+def refresh():
+    syms = load_top()
+    if not syms:
+        print("top.json vide, skip")
+        return {"ok":0,"skip":0,"err":0,"ts":time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
+
+    ex = mk_ex()
+    ok=skip=err=0
+    for tf, period in TF_CFG:
+        for s in syms:
+            fp = CAND/tf/f"{s}.json"
+            local = jload(fp, [])
+            if not stale(local, period):
+                skip += 1
+                continue
+            try:
+                fresh = fetch_ohlcv_any(ex, s, tf, LIMIT_FETCH)
+                merged = merge_append(local, fresh)
+                jsave(fp, merged)
+                ok += 1
+                print(f"{s} {tf} ok (n={len(merged)})")
+            except Exception as e:
+                err += 1
+                print(f"{s} {tf} error: {e}")
+    return {"ok":ok,"skip":skip,"err":err,"ts":time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
+
+if __name__ == "__main__":
+    CAND.mkdir(parents=True, exist_ok=True)
+    for tf,_ in TF_CFG: (CAND/tf).mkdir(parents=True, exist_ok=True)
+    out = refresh()
+    print(json.dumps(out))
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/fix_analyse_a_out.py
+Size: 602
+MTime: 2025-09-25 15:45:02.878746051 +0000
+----- CONTENT -----
+import json, time
+from pathlib import Path
+F=Path("/opt/scalp/data/analyse_A_out.json")
+if not F.exists(): raise SystemExit("missing analyse_A_out.json")
+data=json.loads(F.read_text() or "[]")
+if isinstance(data, list):
+    wrapped={"generated_at":time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "results":data}
+    F.write_text(json.dumps(wrapped, indent=2))
+    print("wrapped list -> object")
+else:
+    if "generated_at" not in data: 
+        data["generated_at"]=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        F.write_text(json.dumps(data, indent=2)); print("stamped generated_at")
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/a_refresh_and_run.sh
+Size: 587
+MTime: 2025-09-25 15:45:02.966746161 +0000
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+LOG="/opt/scalp/logs/a_refresh_and_run.log"; mkdir -p /opt/scalp/logs
+echo "[$(date -Is)] A:refresh start" | tee -a "$LOG"
+python3 /opt/scalp/tools/candles_refresh_tf.py   2>&1 | tee -a "$LOG"
+python3 /opt/scalp/tools/fix_analyse_a_out.py   2>&1 | tee -a "$LOG" || true
+# si l'analyse A existe sous forme de script, on la lance, sinon on passe
+if [ -x /opt/scalp/tools/run_analysis_a_5min.sh ]; then /opt/scalp/tools/run_analysis_a_5min.sh 2>&1 | tee -a "$LOG"; fi
+python3 /opt/scalp/tools/show_dashboard.py | tee /opt/scalp/logs/dashboard_last.txt
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/analysis_b.py
+Size: 1759
+MTime: 2025-09-25 08:18:58.310739771 +0000
+----- CONTENT -----
+#!/usr/bin/env python3
+import json, os, time
+from pathlib import Path
+from bitget_http import history_candles, normalize_symbol
+
+DATA=Path("/opt/scalp/data"); AOUT=DATA/"analyse_A_out.json"; SIG=DATA/"signals.json"
+RUN=Path("/opt/scalp/run"); RUN.mkdir(parents=True, exist_ok=True)
+TH=float(os.getenv("TUNE_S_THRESHOLD","0.6"))
+CONF=int(os.getenv("TUNE_SIGNAL_CONFIRM_MIN","1"))
+COOL=int(os.getenv("TUNE_SIGNAL_COOLDOWN_SEC","90"))
+
+def last_direction(sym):
+    k=history_candles(sym,"1m",limit=max(3,CONF+1))
+    if len(k)<2: return 0
+    ups=sum(1 for i in range(1,len(k)) if k[i]["c"]>k[i-1]["c"])
+    downs=sum(1 for i in range(1,len(k)) if k[i]["c"]<k[i-1]["c"])
+    return 1 if ups>=CONF else (-1 if downs>=CONF else 0)
+
+def cooldown_ok(sym, now):
+    stamp=RUN/f"cooldown_{normalize_symbol(sym)[0]}.stamp"
+    if stamp.exists():
+        try: last=int(stamp.read_text().strip() or "0")
+        except: last=0
+        if now-last<COOL: return False
+    stamp.write_text(str(now)); return True
+
+def main():
+    try:
+        A=json.loads(AOUT.read_text() or "[]"); A=[A] if isinstance(A,dict) else A
+    except: A=[]
+    now=int(time.time()); out=[]
+    for r in A:
+        if not isinstance(r,dict): continue
+        ctx=str(r.get("context","hold")).lower(); S=float(r.get("S",0) or 0)
+        if ctx=="hold" or S<TH: continue
+        sym=r.get("symbol") or ""
+        dirn=last_direction(sym)
+        if ctx=="buy" and dirn<1: continue
+        if ctx=="sell" and dirn>-1: continue
+        if not cooldown_ok(sym, now): continue
+        out.append({"symbol":sym,"side":ctx,"score":S,"ts":now,"source":"Bv2"})
+    SIG.write_text(json.dumps(out,indent=2))
+    print(f"[B] signals={len(out)} th={TH} conf={CONF} cool={COOL}")
+if __name__=="__main__": main()
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/bitget_check.py
+Size: 1267
+MTime: 2025-09-25 08:58:04.842328945 +0000
+----- CONTENT -----
+#!/usr/bin/env python3
+import os, time, hmac, hashlib, base64, requests
+
+BASE = "https://api.bitget.com"
+
+def sign(message: str, secret: str) -> str:
+    return base64.b64encode(
+        hmac.new(secret.encode(), message.encode(), hashlib.sha256).digest()
+    ).decode()
+
+def auth_headers(path: str, method="GET", body="") -> dict:
+    api_key     = os.getenv("BITGET_API_KEY")
+    api_secret  = os.getenv("BITGET_API_SECRET")
+    passphrase  = os.getenv("BITGET_PASSPHRASE")
+    ts          = str(int(time.time() * 1000))
+    prehash     = ts + method.upper() + path + body
+    sig         = sign(prehash, api_secret)
+    return {
+        "ACCESS-KEY": api_key,
+        "ACCESS-SIGN": sig,
+        "ACCESS-TIMESTAMP": ts,
+        "ACCESS-PASSPHRASE": passphrase,
+        "Content-Type": "application/json"
+    }
+
+def main():
+    # --- public check (no auth needed) ---
+    r = requests.get(BASE + "/api/v2/mix/market/contracts", params={"productType":"usdt-futures"})
+    print("[PUBLIC]", r.status_code, r.text[:200])
+
+    # --- private check (auth required) ---
+    path = "/api/v2/user/fee/query"
+    url  = BASE + path
+    r = requests.get(url, headers=auth_headers(path))
+    print("[PRIVATE]", r.status_code, r.text[:200])
+
+if __name__=="__main__":
+    main()
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/bitget_ohlcv.py
+Size: 786
+MTime: 2025-09-25 09:01:02.514612658 +0000
+----- CONTENT -----
+#!/usr/bin/env python3
+import requests
+
+BASE = "https://api.bitget.com"
+
+def get_ohlcv(symbol="BTCUSDT_UMCBL", granularity="1day", limit=5):
+    """
+    Récupère les bougies OHLCV pour un symbole donné
+    granularity: "1min", "5min", "15min", "1hour", "4hour", "1day", "1week"
+    limit: nombre de bougies à récupérer
+    """
+    path = "/api/v2/mix/market/candles"
+    params = {
+        "symbol": symbol,
+        "granularity": granularity,
+        "limit": limit
+    }
+    try:
+        r = requests.get(BASE + path, params=params, timeout=10)
+        r.raise_for_status()
+        return r.status_code, r.json()
+    except Exception as e:
+        return 500, {"error": str(e)}
+
+if __name__ == "__main__":
+    code, data = get_ohlcv()
+    print("[OHLCV]", code)
+    print(data)
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/run_b_synced.sh
+Size: 1052
+MTime: 2025-09-25 11:35:59.419581073 +0000
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+
+PY=$(command -v python3)
+
+/usr/bin/env ${PY} - <<'PY'
+import os, time, ccxt, math
+ex=ccxt.bitget({
+  "apiKey": os.getenv("BITGET_API_KEY",""),
+  "secret": os.getenv("BITGET_API_SECRET",""),
+  "password": os.getenv("BITGET_PASSPHRASE",""),
+  "options": {"defaultType":"swap","defaultSubType":"linear"},
+  "enableRateLimit": True,
+})
+# temps serveur Bitget en ms
+srv_ms = ex.milliseconds()
+loc_ms = int(time.time()*1000)
+offset = srv_ms - loc_ms  # positif si serveur "en avance"
+# calcul du prochain top de minute côté serveur
+next_min = ((srv_ms//60000)+1)*60000
+sleep_ms = (next_min - srv_ms) + 800  # +0.8s de marge
+if sleep_ms>0:
+    time.sleep(sleep_ms/1000.0)
+print(f"[sync] offset_ms={offset} slept_ms={sleep_ms}")
+PY
+
+# 1) refresh 1m ciblé (seulement context != none)
+/usr/bin/env python3 /opt/scalp/tools/candles_refresh_subset.py >/opt/scalp/logs/b_subset_1m.log 2>&1 || true
+
+# 2) lancer Analyse B
+/usr/bin/env python3 /opt/scalp/tools/run_analysis_b.py >>/opt/scalp/logs/analysis_b.log 2>&1 || true
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/priority_runner.sh
+Size: 1820
+MTime: 2025-09-25 16:18:14.517258511 +0000
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+LOG="/opt/scalp/logs/priority_runner.log"; mkdir -p /opt/scalp/logs
+now_s=$(date +%s)
+
+jget_ts() {
+  # lit .generated_at sinon mtime
+  local f="$1" ; local ttl="$2"
+  if [ ! -s "$f" ]; then echo "0"; return; fi
+  if command -v jq >/dev/null 2>&1; then
+    local ts
+    ts=$(jq -r '.generated_at // empty' "$f" 2>/dev/null || true)
+    if [ -n "$ts" ]; then date -d "$ts" +%s 2>/dev/null || echo "0"; return; fi
+  fi
+  stat -c %Y "$f" 2>/dev/null || echo "0"
+}
+
+fresh() {
+  # fresh <file> <ttl_seconds>
+  local f="$1" ttl="$2"
+  local ft; ft=$(jget_ts "$f" "$ttl")
+  [ "$ft" -gt 0 ] && [ $(( now_s - ft )) -lt "$ttl" ]
+}
+
+echo "$(date -Is) tick:start" >>"$LOG"
+
+# TTL
+TTL_COINS90=$((48*3600))
+TTL_TOP=$((2*3600))
+TTL_A=$((5*60))
+
+F_COINS="/opt/scalp/data/coins_90d.json"
+F_TOP="/opt/scalp/data/top.json"
+F_A="/opt/scalp/data/analyse_A_out.json"
+
+# 1) Univers USDT >=90j (48h)
+if ! fresh "$F_COINS" "$TTL_COINS90"; then
+  echo "$(date -Is) refresh coins_90d" >>"$LOG"
+  /usr/bin/env python3 /opt/scalp/tools/filter_contracts_usdt_ccxt.py >>"$LOG" 2>&1 || true
+fi
+
+# 2) Top (2h)
+if ! fresh "$F_TOP" "$TTL_TOP"; then
+  echo "$(date -Is) refresh OHLCV only (top.json protected)" >>"$LOG"
+  /usr/bin/env python3 /opt/scalp/tools/filter_top.py >>"$LOG" 2>&1 || true
+fi
+
+# 3) Analyse A (5min) -> ne rafraîchit TF que si A expiré
+if ! fresh "$F_A" "$TTL_A"; then
+  echo "$(date -Is) refresh A (TF 30/15/5 + A)" >>"$LOG"
+  /usr/bin/env python3 /opt/scalp/tools/candles_refresh_tf.py >>"$LOG" 2>&1 || true
+  /opt/scalp/tools/run_analysis_a_guard.sh >>"$LOG" 2>&1 || true
+fi
+
+# 4) Analyse B chaque minute, sync 1m (coins ctx != none) puis B
+/opt/scalp/tools/run_b_synced.sh >>"$LOG" 2>&1 || /opt/scalp/tools/run_analysis_b_guard.sh >>"$LOG" 2>&1 || true
+
+echo "$(date -Is) tick:end" >>"$LOG"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/run_analysis_a_coin.py
+Size: 6100
+MTime: 2025-09-25 11:20:26.798075500 +0000
+----- CONTENT -----
+#!/usr/bin/env python3
+import os, json, time, math, argparse, statistics as stats
+from pathlib import Path
+
+DATA=Path("/opt/scalp/data")
+CBASE=DATA/"candles"
+OUT =DATA/"analyse_A_out.json"
+STATE=Path("/opt/scalp/run/a_state.json")
+
+# Tuning
+W_EMA,W_MACD,W_RSI,W_ADX,W_OBV = 0.35,0.25,0.20,0.10,0.10
+TAU = {"30m":0.35,"15m":0.30,"5m":0.25}
+ALPHA={"30m":0.5,"15m":0.3,"5m":0.2}
+ATR_GATE={"30m":0.0025,"15m":0.0018,"5m":0.0012}
+
+def ema(x,n):
+    if not x: return []
+    k=2/(n+1); o=[x[0]]
+    for v in x[1:]: o.append(o[-1]+k*(v-o[-1]))
+    return o
+def stdev(x):
+    if len(x)<2: return 0.0
+    mu=sum(x)/len(x)
+    return (sum((v-mu)**2 for v in x)/len(x))**0.5
+def atr(h,l,c,n=14):
+    trs=[]; prev=c[0]
+    for i in range(len(c)):
+        trs.append(max(h[i]-l[i], abs(h[i]-prev), abs(l[i]-prev))); prev=c[i]
+    return ema(trs,n)
+def macd_hist(c, fast=12, slow=26, sig=9):
+    m=[a-b for a,b in zip(ema(c,fast), ema(c,slow))]
+    s=ema(m,sig); n=min(len(m),len(s))
+    return [m[-n+i]-s[-n+i] for i in range(n)]
+def rsi(c,n=14):
+    if len(c)<n+1: return [50.0]*len(c)
+    g=[0.0]; d=[0.0]
+    for i in range(1,len(c)):
+        ch=c[i]-c[i-1]; g.append(max(ch,0.0)); d.append(max(-ch,0.0))
+    ag=ema(g,n); ad=ema(d,n)
+    out=[]
+    for x,y in zip(ag,ad):
+        rs=x/(y+1e-12); out.append(100-100/(1+rs))
+    return out
+def adx(h,l,c,n=14):
+    if len(c)<n+1: return [20.0]*len(c)
+    pd=[0.0]; md=[0.0]; TR=[0.0]
+    for i in range(1,len(c)):
+        up=h[i]-h[i-1]; dn=l[i-1]-l[i]
+        pd.append(up if (up>dn and up>0) else 0.0)
+        md.append(dn if (dn>up and dn>0) else 0.0)
+        TR.append(max(h[i]-l[i], abs(h[i]-c[i-1]), abs(l[i]-c[i-1])))
+    pdi=[100*(x/(y+1e-12)) for x,y in zip(ema(pd,n), ema(TR,n))]
+    mdi=[100*(x/(y+1e-12)) for x,y in zip(ema(md,n), ema(TR,n))]
+    DX=[100*abs(a-b)/(a+b+1e-12) for a,b in zip(pdi,mdi)]
+    return ema(DX,n)
+def obv(c,v):
+    o=[0.0]
+    for i in range(1,len(c)):
+        o.append(o[-1] + (v[i] if c[i]>c[i-1] else (-v[i] if c[i]<c[i-1] else 0.0)))
+    return o
+
+def load_tf(sym, tf):
+    p=CBASE/tf/f"{sym}.json"
+    j=json.loads(p.read_text())
+    k=j["data"]
+    if len(k)<500: raise RuntimeError(f"{sym} {tf} <500 bars")
+    # colonnes
+    o=[r[1] for r in k]; h=[r[2] for r in k]; l=[r[3] for r in k]; c=[r[4] for r in k]; v=[r[5] for r in k]
+    return o,h,l,c,v,k[-1][0]
+
+def subscores_tf(o,h,l,c,v, tf):
+    # EMA spread / ATR gate
+    atr14 = atr(h,l,c,14)[-1]
+    base = max(1.5*atr14,1e-9)
+    s_ema = math.tanh( (ema(c,12)[-1] - ema(c,26)[-1]) / base )
+
+    # MACD hist / sigma100
+    hist = macd_hist(c)
+    sigma = stdev(hist[-100:]) if len(hist)>=100 else stdev(hist)
+    s_macd = math.tanh( (hist[-1])/(sigma+1e-12) )
+
+    # RSI
+    s_rsi = max(-1.0,min(1.0,(rsi(c,14)[-1]-50.0)/50.0))
+
+    # ADX
+    s_adx = max(-1.0,min(1.0,(adx(h,l,c,14)[-1]-20.0)/20.0))
+
+    # OBV slope(20)/median(|OBV|_200)
+    ob = obv(c,v)
+    slope = ob[-1]-ob[-21] if len(ob)>=21 else 0.0
+    denom = stats.median([abs(x) for x in (ob[-200:] if len(ob)>=200 else ob)]) or 1.0
+    s_obv = math.tanh(slope/denom)
+
+    # ATR% gate
+    gate = (atr14 / c[-1]) < ATR_GATE[tf]
+    w_ema = W_EMA*0.5 if gate else W_EMA
+    w_macd= W_MACD*0.5 if gate else W_MACD
+    num = w_ema*s_ema + w_macd*s_macd + W_RSI*s_rsi + W_ADX*s_adx + W_OBV*s_obv
+    den = (w_ema + w_macd + W_RSI + W_ADX + W_OBV)
+    S = num/den if den>0 else 0.0
+
+    # Softmax tri-state
+    t=TAU[tf]
+    epos=math.exp(S/t); eneg=math.exp(-S/t); den3=epos+1+eneg
+    pb=epos/den3; ph=1/den3; ps=eneg/den3
+
+    return {"S":S,"pb":pb,"ph":ph,"ps":ps,"atrpct":atr14/c[-1]}
+
+def persist(symbol, candidate, bar_ts):
+    try: st=json.loads(STATE.read_text() or "{}")
+    except: st={}
+    rec=st.get(symbol, {"last":"none","streak":0,"ts":0})
+    if candidate!="none":
+        if rec["last"]==candidate and rec.get("ts")!=bar_ts:
+            rec["streak"]=min(2, rec.get("streak",0)+1)
+        else:
+            rec["streak"]=1
+        rec["last"]=candidate; rec["ts"]=bar_ts
+    else:
+        if rec.get("ts")!=bar_ts:
+            rec={"last":"none","streak":0,"ts":bar_ts}
+    st[symbol]=rec
+    STATE.write_text(json.dumps(st))
+    return candidate if rec["streak"]>=2 else "none"
+
+def decide_context(pb,ph,ps,res):
+    bull = pb>=0.60 and (res["30m"]["pb"]>=0.55) and (res["15m"]["pb"]>=0.55)
+    bear = ps>=0.60 and (res["30m"]["ps"]>=0.55) and (res["15m"]["ps"]>=0.55)
+    veto_buy = res["5m"]["S"]<0
+    veto_sell= res["5m"]["S"]>0
+    if bull and not veto_buy: return "buy"
+    if bear and not veto_sell: return "sell"
+    if 0.40 <= res["30m"]["ph"] <= 0.60: return "hold"
+    return "none"
+
+def upsert_out(rec):
+    try: arr=json.loads(OUT.read_text() or "[]")
+    except: arr=[]
+    m={r["symbol"]:i for i,r in enumerate(arr) if isinstance(r,dict) and "symbol" in r}
+    if rec["symbol"] in m:
+        arr[m[rec["symbol"]]]=rec
+    else:
+        arr.append(rec)
+    OUT.write_text(json.dumps(arr, indent=2))
+
+def main():
+    ap=argparse.ArgumentParser()
+    ap.add_argument("--symbol", required=True)
+    a=ap.parse_args()
+    sym=a.symbol
+
+    # load TFs
+    o30,h30,l30,c30,v30,ts30 = load_tf(sym,"30m")
+    o15,h15,l15,c15,v15,ts15 = load_tf(sym,"15m")
+    o5 ,h5 ,l5 ,c5 ,v5 ,ts5  = load_tf(sym,"5m")
+
+    r30=subscores_tf(o30,h30,l30,c30,v30,"30m")
+    r15=subscores_tf(o15,h15,l15,c15,v15,"15m")
+    r5 =subscores_tf(o5 ,h5 ,l5 ,c5 ,v5 ,"5m")
+
+    # agrégation
+    S = ALPHA["30m"]*r30["S"] + ALPHA["15m"]*r15["S"] + ALPHA["5m"]*r5["S"]
+    pb= ALPHA["30m"]*r30["pb"]+ ALPHA["15m"]*r15["pb"]+ ALPHA["5m"]*r5["pb"]
+    ph= ALPHA["30m"]*r30["ph"]+ ALPHA["15m"]*r15["ph"]+ ALPHA["5m"]*r5["ph"]
+    ps= ALPHA["30m"]*r30["ps"]+ ALPHA["15m"]*r15["ps"]+ ALPHA["5m"]*r5["ps"]
+    s=pb+ph+ps; 
+    if s>0: pb,ph,ps = pb/s, ph/s, ps/s
+
+    ctx_cand=decide_context(pb,ph,ps, {"30m":r30,"15m":r15,"5m":r5})
+    ctx = persist(sym, ctx_cand, ts5)
+
+    rec={"symbol":sym,"S":round(S,6),"pb":round(pb,6),"ph":round(ph,6),"ps":round(ps,6),
+         "context":ctx,"ts":int(ts5//1000)}
+    upsert_out(rec)
+    print(f"[A-coin] {sym} ctx={ctx} S={rec['S']}")
+if __name__=="__main__":
+    main()
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/update_balance_history.py
+Size: 724
+MTime: 2025-09-25 07:55:50.241158193 +0000
+----- CONTENT -----
+#!/usr/bin/env python3
+import json, time
+from pathlib import Path
+D=Path("/opt/scalp/data"); H=D/"balance_history.json"; B=D/"paper_balance.json"; DBG=D/"debug/balance_debug.json"
+ts=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+bal={"equity":None,"ts":ts}
+try:
+    j=json.loads(B.read_text() or "{}"); bal["equity"]=float(j.get("equity") or 0); bal["raw"]=j
+except Exception as e:
+    bal["error"]=str(e)
+hist=[]
+try: hist=json.loads(H.read_text() or "[]")
+except: hist=[]
+entry={"ts":ts,"equity":bal["equity"]}
+if entry["equity"] is not None:
+    hist.append(entry); hist=hist[-50000:]; H.write_text(json.dumps(hist,indent=2))
+DBG.write_text(json.dumps(bal,indent=2))
+print(f"[balance] eq={entry['equity']} ts={ts}")
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/alert_eval.sh
+Size: 889
+MTime: 2025-09-25 07:55:50.245158198 +0000
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+source /etc/scalp.tuning 2>/dev/null || true
+STATE=/opt/scalp/run/alert.state; mkdir -p /opt/scalp/run
+now=$(date +%s); msg=""
+A=/opt/scalp/data/debug/a_export_check.json; B=/opt/scalp/data/debug/b_status.json; P=/opt/scalp/data/debug/preflight.json
+r(){ jq -r "$2" "$1" 2>/dev/null || echo ""; }
+[ -f "$A" ] && { ok=$(r "$A" .ok); miss=$(r "$A" .missing_records); [ "$ok" != "true" ] && msg+="[A] export NOK (missing=$miss)\n"; }
+[ -f "$B" ] && { ok=$(r "$B" .ok); [ "$ok" != "true" ] && msg+="[B] runner NOK\n"; }
+[ -f "$P" ] && { ok=$(r "$P" .ok); [ "$ok" != "true" ] && msg+="[Preflight] $(r "$P" '.issues|join(",")')\n"; }
+if [ -n "$msg" ]; then last=0; [ -f "$STATE" ] && last=$(cat "$STATE"||echo 0); gap="${TUNE_ALERT_SPAM_WINDOW_SEC:-300}";
+  if [ $((now-last)) -ge "$gap" ]; then echo "$now" >"$STATE"; /opt/scalp/tools/tg.sh "$msg"; fi; fi
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/run_analysis_a.py
+Size: 9100
+MTime: 2025-09-25 10:54:59.737799722 +0000
+----- CONTENT -----
+#!/usr/bin/env python3
+import os, json, time, math, hashlib, statistics as stats
+from pathlib import Path
+import ccxt
+
+# --------- Paths / I/O ----------
+DATA = Path("/opt/scalp/data"); DATA.mkdir(parents=True, exist_ok=True)
+RUN  = Path("/opt/scalp/run");  RUN.mkdir(parents=True, exist_ok=True)
+STATE = RUN/"a_state.json"                # persistance 2 barres
+OUT   = DATA/"analyse_A_out.json"         # sortie
+
+# univers
+TOP = DATA/"top.json"
+
+# cache OHLCV par TF (compact et TTL court)
+C_DIR = RUN/"ohlcv_cache_tf"; C_DIR.mkdir(parents=True, exist_ok=True)
+TTL = {"30m":1800, "15m":1200, "5m":900}  # secondes
+LIMIT = 520                               # >= 500, marge pour EMA/ATR
+
+# --------- Tuning ----------
+W_EMA, W_MACD, W_RSI, W_ADX, W_OBV = 0.35, 0.25, 0.20, 0.10, 0.10
+TAU   = {"30m":0.35, "15m":0.30, "5m":0.25}           # softmax temp
+ALPHA = {"30m":0.5, "15m":0.3, "5m":0.2}             # poids TF
+ATR_GATE = {"30m":0.0025, "15m":0.0018, "5m":0.0012} # ATR% seuils
+
+# --------- CCXT ----------
+def ex():
+    return ccxt.bitget({
+        "apiKey": os.getenv("BITGET_API_KEY",""),
+        "secret": os.getenv("BITGET_API_SECRET",""),
+        "password": os.getenv("BITGET_PASSPHRASE",""),
+        "options": {"defaultType":"swap","defaultSubType":"linear"},
+        "enableRateLimit": True,
+    })
+EX = ex()
+
+def b2ccxt(s):  # BTCUSDT_UMCBL -> BTC/USDT:USDT
+    return s.replace("_UMCBL","/USDT:USDT")
+
+# --------- Utils ----------
+def ema(series, n):
+    if not series: return []
+    k = 2/(n+1)
+    out=[series[0]]
+    for x in series[1:]:
+        out.append(out[-1] + k*(x-out[-1]))
+    return out
+def stdev(xs):
+    if len(xs)<2: return 0.0
+    mu = sum(xs)/len(xs)
+    return math.sqrt(sum((x-mu)**2 for x in xs)/len(xs))
+
+def atr_ohlc(h,l,c,n=14):
+    trs=[]; prev=c[0]
+    for i in range(len(c)):
+        hi,lo,cl=h[i],l[i],c[i]
+        tr=max(hi-lo, abs(hi-prev), abs(lo-prev))
+        trs.append(tr); prev=cl
+    return ema(trs, n)
+
+def macd_hist(cl, fast=12, slow=26, sig=9):
+    macd_line=[a-b for a,b in zip(ema(cl,fast), ema(cl,slow))]
+    signal = ema(macd_line, sig)
+    # aligne
+    n=min(len(macd_line), len(signal))
+    return [macd_line[-n+i]-signal[-n+i] for i in range(n)]
+
+def rsi14(cl, n=14):
+    if len(cl)<n+1: return [50.0]*len(cl)
+    gains=[0.0]; losses=[0.0]
+    for i in range(1,len(cl)):
+        ch=cl[i]-cl[i-1]
+        gains.append(max(ch,0.0)); losses.append(max(-ch,0.0))
+    avgG=ema(gains,n); avgL=ema(losses,n)
+    out=[]
+    for g,l in zip(avgG,avgL):
+        rs = g/(l+1e-12)
+        out.append(100.0 - 100.0/(1.0+rs))
+    return out
+
+def adx14(h,l,c,n=14):
+    # DM+/DM-, TR; DX=100*|+DI - -DI|/(+DI + -DI); ADX=EMA(DX,n)
+    if len(c)<n+1: return [20.0]*len(c)
+    plusDM=[0.0]; minusDM=[0.0]; TR=[0.0]
+    for i in range(1,len(c)):
+        up=h[i]-h[i-1]; dn=l[i-1]-l[i]
+        plusDM.append( up if (up>dn and up>0) else 0.0 )
+        minusDM.append( dn if (dn>up and dn>0) else 0.0 )
+        TR.append( max(h[i]-l[i], abs(h[i]-c[i-1]), abs(l[i]-c[i-1])) )
+    plusDI   = [100*(x/(y+1e-12)) for x,y in zip(ema(plusDM,n), ema(TR,n))]
+    minusDI  = [100*(x/(y+1e-12)) for x,y in zip(ema(minusDM,n), ema(TR,n))]
+    DX = [100*abs(p-m)/(p+m+1e-12) for p,m in zip(plusDI, minusDI)]
+    return ema(DX, n)
+
+def obv(cl, vol):
+    out=[0.0]
+    for i in range(1,len(cl)):
+        if cl[i]>cl[i-1]: out.append(out[-1]+vol[i])
+        elif cl[i]<cl[i-1]: out.append(out[-1]-vol[i])
+        else: out.append(out[-1])
+    return out
+
+def cache_key(sym, tf):
+    h = hashlib.sha1((sym+"|"+tf).encode()).hexdigest()[:16]
+    return C_DIR/f"{h}.json"
+
+def fetch_ohlcv(sym, tf):
+    """Retourne OHLCV fermé (bougie incomplète retirée)."""
+    p=cache_key(sym, tf)
+    ttl=TTL[tf]
+    now=time.time()
+    if p.exists():
+        try:
+            j=json.loads(p.read_text())
+            if now - j.get("ts",0) <= ttl: 
+                o=j.get("data",[])
+                if o: 
+                    # drop last if incomplète
+                    ms = {"30m":30, "15m":15, "5m":5}[tf]*60*1000
+                    if int(time.time()*1000) - o[-1][0] < 0.9*ms: o=o[:-1]
+                return o
+        except: pass
+    raw = EX.fetch_ohlcv(b2ccxt(sym), timeframe=tf, limit=LIMIT)
+    if raw:
+        ms = {"30m":30, "15m":15, "5m":5}[tf]*60*1000
+        if int(time.time()*1000) - raw[-1][0] < 0.9*ms: raw=raw[:-1]
+    p.write_text(json.dumps({"ts":now,"data":raw}))
+    return raw
+
+# --------- Sous-score par TF ----------
+def subscores_tf(ohlcv, tf):
+    # colonnes
+    o=[r[1] for r in ohlcv]; h=[r[2] for r in ohlcv]; l=[r[3] for r in ohlcv]
+    c=[r[4] for r in ohlcv]; v=[r[5] for r in ohlcv]
+    if len(c)<500: return None
+
+    # EMA spread / ATR gate
+    atr = atr_ohlc(h,l,c,14)
+    ema12 = ema(c,12); ema26 = ema(c,26)
+    n=min(len(atr),len(ema12),len(ema26))
+    atr14=atr[-1]; base=max(1.5*atr14,1e-9)
+    s_ema = math.tanh( (ema12[-1]-ema26[-1]) / base )
+
+    # MACD hist normalisé par sigma_100
+    hist = macd_hist(c)
+    sigma = stdev(hist[-100:]) if len(hist)>=100 else stdev(hist)
+    s_macd = math.tanh( (hist[-1])/(sigma+1e-12) )
+
+    # RSI
+    r = rsi14(c)
+    r_last = r[-1] if r else 50.0
+    s_rsi = max(-1.0, min(1.0, (r_last-50.0)/50.0 ))
+
+    # ADX
+    adx = adx14(h,l,c,14)
+    a_last = adx[-1] if adx else 20.0
+    s_adx = max(-1.0, min(1.0, (a_last-20.0)/20.0 ))
+
+    # OBV slope(20) / median(|OBV|_200)
+    ob = obv(c,v)
+    if len(ob)>=220:
+        slope = ob[-1]-ob[-21]
+        denom = stats.median([abs(x) for x in ob[-200:]]) or 1.0
+    else:
+        slope = ob[-1]-ob[-min(21,len(ob)-1)]
+        denom = stats.median([abs(x) for x in ob]) or 1.0
+    s_obv = math.tanh(slope/denom)
+
+    # ATR% gate: si trop faible → demi-poids sur EMA+MACD
+    gate = (atr14 / c[-1]) < ATR_GATE[tf]
+    w_ema = W_EMA*0.5 if gate else W_EMA
+    w_macd= W_MACD*0.5 if gate else W_MACD
+
+    # Score TF ∈ [-1,1]
+    num = w_ema*s_ema + w_macd*s_macd + W_RSI*s_rsi + W_ADX*s_adx + W_OBV*s_obv
+    den = (w_ema + w_macd + W_RSI + W_ADX + W_OBV)
+    S = num/den if den>0 else 0.0
+
+    # Softmax tri-state
+    t = TAU[tf]
+    epos = math.exp(S/t); eneg = math.exp(-S/t); den3 = epos + 1.0 + eneg
+    pb = epos/den3; ph = 1.0/den3; ps = eneg/den3
+
+    return {
+        "S": S, "pb": pb, "ph": ph, "ps": ps,
+        "gate": gate, "atrpct": atr14/c[-1],
+        "last_ts": ohlcv[-1][0]
+    }
+
+# --------- Agrégation multi-TF + contexte ----------
+def aggregate(tf_res):
+    # pondération et renormalisation
+    S = sum(ALPHA[k]*tf_res[k]["S"] for k in tf_res)
+    pb= sum(ALPHA[k]*tf_res[k]["pb"] for k in tf_res)
+    ph= sum(ALPHA[k]*tf_res[k]["ph"] for k in tf_res)
+    ps= sum(ALPHA[k]*tf_res[k]["ps"] for k in tf_res)
+    s = pb+ph+ps
+    if s>0: pb,ph,ps = pb/s, ph/s, ps/s
+    return S, pb, ph, ps
+
+def veto_context(tf_res, S5):
+    # util pour veto 5m
+    return (S5<0), (S5>0)
+
+def decide_context(pb,ph,ps, tf_res):
+    # candidats
+    bull = pb>=0.60 and (tf_res["30m"]["pb"]>=0.55) and (tf_res["15m"]["pb"]>=0.55)
+    bear = ps>=0.60 and (tf_res["30m"]["ps"]>=0.55) and (tf_res["15m"]["ps"]>=0.55)
+    veto_buy, veto_sell = veto_context(tf_res, tf_res["5m"]["S"])
+    if bull and not veto_buy: return "buy"
+    if bear and not veto_sell: return "sell"
+    if 0.40 <= ph <= 0.60: return "hold"
+    return "none"
+
+def persist(symbol, candidate, bar_ts):
+    # persistance sur 2 barres: on exige 2 occurrences consécutives du même candidat
+    try:
+        st=json.loads(STATE.read_text() or "{}")
+    except: st={}
+    s=st.get(symbol, {"last":"none","streak":0,"ts":0})
+    if candidate!="none":
+        if s.get("last")==candidate and s.get("ts")!=bar_ts:
+            s["streak"]=min(2, s.get("streak",0)+1)
+        else:
+            s["streak"]=1
+        s["last"]=candidate; s["ts"]=bar_ts
+    else:
+        # reset seulement si on change de barre
+        if s.get("ts")!=bar_ts:
+            s["streak"]=0; s["last"]="none"; s["ts"]=bar_ts
+    st[symbol]=s
+    STATE.write_text(json.dumps(st))
+    return candidate if st[symbol]["streak"]>=2 else "none"
+
+# --------- Main ----------
+def run_symbol(sym):
+    # fetch trois TF
+    res={}
+    for tf in ("30m","15m","5m"):
+        k = fetch_ohlcv(sym, tf)
+        if not k or len(k)<500: return None
+        r = subscores_tf(k, tf)
+        if not r: return None
+        res[tf]=r
+    S,pb,ph,ps = aggregate(res)
+    # contexte + persistance
+    cand = decide_context(pb,ph,ps,res)
+    final = persist(sym, cand, res["5m"]["last_ts"])
+    return {
+        "symbol": sym,
+        "S": round(S,6),
+        "pb": round(pb,6),
+        "ph": round(ph,6),
+        "ps": round(ps,6),
+        "context": final,
+        "ts": int(res["5m"]["last_ts"]//1000)
+    }
+
+def main():
+    try:
+        syms = (json.loads(TOP.read_text()).get("symbols")) or []
+    except: syms=[]
+    out=[]
+    for s in syms:
+        try:
+            r=run_symbol(s)
+            if r: out.append(r)
+        except Exception as e:
+            # silencieux pour robustesse en prod
+            pass
+    OUT.write_text(json.dumps(out, indent=2))
+    print(f"[A] analysed={len(out)}")
+if __name__=="__main__":
+    main()
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/fix_show_dashboard.py
+Size: 684
+MTime: 2025-09-25 15:24:29.617851112 +0000
+----- CONTENT -----
+from pathlib import Path
+import json
+
+F = Path("/opt/scalp/data/analyse_A_out.json")
+if not F.exists():
+    print("analyse_A_out.json missing")
+    exit(1)
+
+aout = json.loads(F.read_text())
+
+# si c’est l’ancien format (liste brute), on stoppe
+if isinstance(aout, list):
+    print("❌ analyse_A_out.json encore liste brute, relancer fix_analyse_a_out.py")
+    exit(1)
+
+# sinon on récupère results
+results = aout.get("results", [])
+
+# vérification structure
+if not results or not isinstance(results, list):
+    print("❌ pas de results lisibles")
+    exit(1)
+
+print("✅ analyse_A_out.json ok, results =", len(results))
+print("1er record =", results[0] if results else "vide")
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/ccxt_check.py
+Size: 848
+MTime: 2025-09-25 09:13:49.483758594 +0000
+----- CONTENT -----
+#!/usr/bin/env python3
+import os, ccxt
+
+def ex():
+    return ccxt.bitget({
+        "apiKey": os.getenv("BITGET_API_KEY",""),
+        "secret": os.getenv("BITGET_API_SECRET",""),
+        "password": os.getenv("BITGET_PASSPHRASE",""),
+        "options": {"defaultType":"swap","defaultSubType":"linear"},
+        "enableRateLimit": True,
+    })
+
+def main():
+    e = ex()
+    sym = "BTC/USDT:USDT"
+    t = e.fetch_ticker(sym)
+    ohlcv = e.fetch_ohlcv(sym, timeframe="1d", limit=5)
+    print("[PUBLIC] ticker_bid", t.get("bid"), "ohlcv_len", len(ohlcv))
+    try:
+        bal = e.fetch_balance(params={"type":"swap"})
+        total = (bal.get("total") or {}).get("USDT", 0)
+        print("[PRIVATE] USDT_total", total)
+    except Exception as err:
+        print("[PRIVATE] error", str(err)[:160]); raise SystemExit(2)
+
+if __name__ == "__main__": main()
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/show_top_updates.py
+Size: 1956
+MTime: 2025-09-25 16:03:56.108427048 +0000
+----- CONTENT -----
+#!/usr/bin/env python3
+import json, time, datetime as dt
+from pathlib import Path
+
+DATA = Path("/opt/scalp/data")
+CAND = DATA/"candles"
+TOPF = DATA/"top.json"
+TFS = [("5m", 300), ("15m", 900), ("30m", 1800)]
+
+def load_top():
+    try:
+        j = json.loads(TOPF.read_text())
+        syms = j.get("symbols", [])
+        return [s for s in syms if isinstance(s, str)]
+    except Exception:
+        return []
+
+def last_ts(sym, tf):
+    f = CAND/tf/(sym + ".json")
+    if not f.exists():
+        return None
+    try:
+        a = json.loads(f.read_text())
+        if not a:
+            return None
+        return int(a[-1][0]//1000)
+    except Exception:
+        return None
+
+def hhmm(ts):
+    if ts is None:
+        return "—"
+    # system is set to UTC; display HH:MM
+    return dt.datetime.utcfromtimestamp(ts).strftime("%H:%M")
+
+def main():
+    syms = load_top()
+    if not syms:
+        print("top.json: aucun symbole trouvé")
+        return
+    # header
+    print("# Top updates (UTC)")
+    header = ["symbol","5m","15m","30m","lag(max)"]
+    colw = [max(6, max(len(s.replace("USDT","")) for s in syms)), 5, 5, 5, 8]
+    print(f"{header[0]:<{colw[0]}}  {header[1]:^{colw[1]}}  {header[2]:^{colw[2]}}  {header[3]:^{colw[3]}}  {header[4]:>{colw[4]}}")
+    now = int(time.time())
+    worst_lag = 0
+    rows = []
+    for s in syms:
+        ts5  = last_ts(s, "5m")
+        ts15 = last_ts(s, "15m")
+        ts30 = last_ts(s, "30m")
+        # compute lag
+        lags = [x for x in [now-(ts5 or 0), now-(ts15 or 0), now-(ts30 or 0)] if x>0]
+        lag = max(lags) if lags else 0
+        worst_lag = max(worst_lag, lag)
+        rows.append((s.replace("USDT",""), hhmm(ts5), hhmm(ts15), hhmm(ts30), lag))
+
+    for sym, t5, t15, t30, lag in rows:
+        print(f"{sym:<{colw[0]}}  {t5:^{colw[1]}}  {t15:^{colw[2]}}  {t30:^{colw[3]}}  {lag/60:>{colw[4]}.0f}m")
+
+    print(f"\nMax retard: {worst_lag//60}m {worst_lag%60}s")
+
+if __name__ == "__main__":
+    main()
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/init_fs_and_json.sh
+Size: 1141
+MTime: 2025-09-25 16:46:49.463193961 +0000
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Dossiers
+mkdir -p /opt/scalp/{data,logs,run} \
+         /opt/scalp/data/{debug,candles} \
+         /opt/scalp/tools
+
+# J
+fiSON seed
+ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+cat > /opt/scalp/data/contracts_usdt.json <<'J'; echo; J
+[]
+
+cat > /opt/scalp/data/coins_90d.json <<J
+{"symbols": [], "generated_at": "$ts"}
+J
+
+if [ ! -s /opt/scalp/data/top.json ]; then cat > /opt/scalp/data/top.json <<J
+{"symbols": [], "generated_at": "$ts"}
+J
+
+cat > /opt/scalp/data/analyse_A_out.json <<'J'; echo; J
+[]
+
+cat > /opt/scalp/data/signals.json <<'J'; echo; J
+[]
+
+cat > /opt/scalp/data/positions.json <<'J'; echo; J
+[]
+
+: > /opt/scalp/data/orders.log
+
+cat > /opt/scalp/data/paper_balance.json <<J
+{"equity": 0, "ts": "$ts"}
+J
+
+cat > /opt/scalp/data/balance_history.json <<'J'; echo; J
+[]
+
+cat > /opt/scalp/data/debug/preflight.json <<J
+{"ts":"$ts","ok":true,"issues":[]}
+J
+
+cat > /opt/scalp/data/debug/a_export_check.json <<J
+{"ok":false,"err":"bootstrap","ts":"$ts","missing_records":0,"total":0}
+J
+
+cat > /opt/scalp/data/debug/b_status.json <<J
+{"ok":true,"ts":"$ts"}
+J
+
+echo "[init] dossiers et JSON seeds créés."
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/make_top.sh
+Size: 731
+MTime: 2025-09-25 16:53:16.099649955 +0000
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+
+DATA=/opt/scalp/data
+UNIVERSE="$DATA/coins_90d.json"
+OUT="$DATA/top.json"
+KEEP=${KEEP:-30}
+CFG=/etc/scalp.tuning
+
+# Options (fixes) facultatives via /etc/scalp.tuning :
+#   KEEP=30
+#   FIXED_TOP=BTCUSDT,ETHUSDT,XRPUSDT,SOLUSDT,BNBUSDT
+if [ -f "$CFG" ]; then . "$CFG"; fi
+FIXED_ARG=()
+[ -n "${FIXED_TOP:-}" ] && FIXED_ARG=(--fixed "$FIXED_TOP")
+
+# (re)construit top.json à partir de l’univers 90j
+python3 /opt/scalp/tools/filter_top.py \
+  --universe "$UNIVERSE" \
+  --keep "$KEEP" \
+  "${FIXED_ARG[@]}" \
+  --out "$OUT"
+
+# Vérrou léger optionnel pour éviter tout écrasement indésirable
+# chattr +i "$OUT" 2>/dev/null || true
+
+# Affiche n pour vérif CI
+jq -r '.symbols|length' "$OUT"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/run_analysis_b.py
+Size: 7053
+MTime: 2025-09-25 11:56:06.774330914 +0000
+----- CONTENT -----
+#!/usr/bin/env python3
+import os, json, time, math, statistics as stats
+from pathlib import Path
+import ccxt
+
+DATA=Path("/opt/scalp/data"); DATA.mkdir(parents=True, exist_ok=True)
+CBASE=DATA/"candles"
+A_OUT=DATA/"analyse_A_out.json"
+SIG=DATA/"signals.json"
+STATE=Path("/opt/scalp/run/b_state.json")
+DBG_REJ=DATA/"debug/b_rejects.json"
+
+RISK_PCT=float(os.getenv("B_RISK_PCT","0.003"))
+MAX_EXPO=float(os.getenv("B_MAX_PAIR_PCT","0.10"))
+LEV=int(os.getenv("B_LEVERAGE","10"))
+MIN_NOTIONAL=float(os.getenv("B_MIN_NOTIONAL","5"))
+LOT_STEP=float(os.getenv("B_LOT_STEP","0.001"))
+
+def ex():
+    return ccxt.bitget({
+        "apiKey": os.getenv("BITGET_API_KEY",""),
+        "secret": os.getenv("BITGET_API_SECRET",""),
+        "password": os.getenv("BITGET_PASSPHRASE",""),
+        "options": {"defaultType":"swap","defaultSubType":"linear"},
+        "enableRateLimit": True,
+    })
+EX=ex()
+
+def ema(x,n):
+    if not x: return []
+    k=2/(n+1); o=[x[0]]
+    for v in x[1:]: o.append(o[-1]+k*(v-o[-1]))
+    return o
+def atr(h,l,c,n=14):
+    trs=[]; prev=c[0]
+    for i in range(len(c)):
+        trs.append(max(h[i]-l[i], abs(h[i]-prev), abs(l[i]-prev))); prev=c[i]
+    return ema(trs,n)
+def macd_hist(c, fast=12, slow=26, sig=9):
+    m=[a-b for a,b in zip(ema(c,fast), ema(c,slow))]
+    s=ema(m,sig); n=min(len(m),len(s))
+    return [m[-n+i]-s[-n+i] for i in range(n)]
+def rsi(c,n=7):
+    if len(c)<n+1: return [50.0]*len(c)
+    g=[0.0]; d=[0.0]
+    for i in range(1,len(c)):
+        ch=c[i]-c[i-1]; g.append(max(ch,0.0)); d.append(max(-ch,0.0))
+    ag=ema(g,n); ad=ema(d,n)
+    out=[]
+    for x,y in zip(ag,ad):
+        rs=x/(y+1e-12); out.append(100-100/(1+rs))
+    return out
+
+def load_tf(sym, tf):
+    p=CBASE/tf/f"{sym}.json"
+    if not p.exists(): return None
+    j=json.loads(p.read_text()); k=j["data"]
+    if len(k)<100: return None
+    ms={"1m":60,"3m":180,"5m":300}[tf]*1000
+    if int(time.time()*1000)-k[-1][0] < 0.9*ms: k=k[:-1]
+    o=[r[1] for r in k]; h=[r[2] for r in k]; l=[r[3] for r in k]; c=[r[4] for r in k]; v=[r[5] for r in k]
+    return {"o":o,"h":h,"l":l,"c":c,"v":v,"ts":k[-1][0]}
+
+def prefilters(sym, ctx, d1):
+    reasons=[]
+    if not d1:
+        return False,["no-1m"]
+    c,h,l=d1["c"],d1["h"],d1["l"]
+    atr14=atr(h,l,c,14)[-1]; atrpct=atr14/c[-1]
+    if atrpct<0.001: reasons.append("atr%<0.10%")
+    # cooldown
+    try: st=json.loads(STATE.read_text() or "{}")
+    except: st={}
+    last=st.get(sym,0)
+    if time.time()-last<5*60: reasons.append("cooldown")
+    # spread
+    try:
+        t=EX.fetch_ticker(sym.replace("_UMCBL","/USDT:USDT"))
+        if (t["ask"]-t["bid"])/t["bid"]>0.002: reasons.append("spread>0.2%")
+    except: pass
+    return (len(reasons)==0, reasons if reasons else ["ok"])
+
+def detect_pullback(sym, ctx, d1):
+    c,h,l,v=d1["c"],d1["h"],d1["l"],d1["v"]
+    ema20=ema(c,20)[-1]; last=c[-1]; rsi7=rsi(c,7)[-1]
+    ma20=sum(v[-20:])/20; vol=v[-1]
+    if ctx=="buy" and last<=ema20 and rsi7>=60 and vol>1.3*ma20:
+        atr14=atr(h,l,c,14)[-1]; sl=last-1.2*atr14; tp=last+1.8*atr14
+        return {"trigger":"pullback","side":"buy","entry":last,"sl":sl,"tp":tp,
+                "why":["ema20-touch","rsi>=60","vol>1.3x20"]}
+    if ctx=="sell" and last>=ema20 and rsi7<=40 and vol>1.3*ma20:
+        atr14=atr(h,l,c,14)[-1]; sl=last+1.2*atr14; tp=last-1.8*atr14
+        return {"trigger":"pullback","side":"sell","entry":last,"sl":sl,"tp":tp,
+                "why":["ema20-touch","rsi<=40","vol>1.3x20"]}
+    return None
+
+def detect_breakout(sym, ctx, d1,d5):
+    if not d5: return None
+    c,h,l=d1["c"],d1["h"],d1["l"]
+    # ADX 5m simple
+    def _adx5(d5):
+        ch=d5["c"]; hh=max(d5["h"][-15:]); ll=min(d5["l"][-15:])
+        rng=hh-ll
+        return 25.0 if rng>0 and (ch[-1]-ch[-6])>0 else 15.0
+    adx5=_adx5(d5)
+    if adx5<20: return None
+    hh=max(h[-20:]); ll=min(l[-20:])
+    last=c[-1]; macd_acc=macd_hist(c)[-1]>0
+    if ctx=="buy" and last>hh and macd_acc:
+        sl=ll; tp=last+(hh-ll)*1.5
+        return {"trigger":"breakout","side":"buy","entry":last,"sl":sl,"tp":tp,
+                "why":["HH20-break","macd-accel","ADX5>=20"]}
+    if ctx=="sell" and last<ll and macd_acc:
+        sl=hh; tp=last-(hh-ll)*1.5
+        return {"trigger":"breakout","side":"sell","entry":last,"sl":sl,"tp":tp,
+                "why":["LL20-break","macd-accel","ADX5>=20"]}
+    return None
+
+def detect_mr(sym, ctx, d1):
+    if ctx!="hold": return None
+    c=d1["c"]; rsi7=rsi(c,7)[-1]; last=c[-1]
+    mid=sum(c[-20:])/20; std=stats.pstdev(c[-20:])
+    up=mid+2*std; dn=mid-2*std
+    if last>up and rsi7<60:
+        return {"trigger":"meanrev","side":"sell","entry":last,"sl":last-std,"tp":mid,
+                "why":["BB2sigma-touch","RSI<60","reversal"]}
+    if last<dn and rsi7>40:
+        return {"trigger":"meanrev","side":"buy","entry":last,"sl":last+std,"tp":mid,
+                "why":["BB2sigma-touch","RSI>40","reversal"]}
+    return None
+
+def size_trade(balance, entry, sl):
+    D=abs(entry-sl)
+    R=balance*RISK_PCT
+    if D<=0: return 0
+    qty=R/D
+    notional=qty*entry
+    if notional<MIN_NOTIONAL: qty=MIN_NOTIONAL/entry
+    max_notional=balance*MAX_EXPO*LEV
+    if qty*entry>max_notional: qty=max_notional/entry
+    step=LOT_STEP
+    qty=math.floor(qty/step)*step
+    return qty
+
+def main():
+    try: arrA=json.loads(A_OUT.read_text())
+    except: arrA=[]
+    try: sigs=json.loads(SIG.read_text())
+    except: sigs=[]
+    balance=float(os.getenv("B_BALANCE","100"))
+    rejects=[]
+    added=[]
+    for r in arrA:
+        sym,ctx=r.get("symbol"),r.get("context")
+        if ctx=="none": 
+            rejects.append({"symbol":sym,"ctx":"none","reasons":["ctx-none"]}); 
+            continue
+        d1=load_tf(sym,"1m"); d5=load_tf(sym,"5m")
+        ok,pre=prefilters(sym,ctx,d1)
+        if not ok:
+            rejects.append({"symbol":sym,"ctx":ctx,"reasons":pre}); 
+            continue
+        cand=detect_pullback(sym,ctx,d1) or detect_breakout(sym,ctx,d1,d5) or detect_mr(sym,ctx,d1)
+        if not cand:
+            rejects.append({"symbol":sym,"ctx":ctx,"reasons":["no-trigger"]}); 
+            continue
+        entry=cand["entry"]; sl=cand["sl"]; qty=size_trade(balance, entry, sl)
+        if qty<=0:
+            rejects.append({"symbol":sym,"ctx":ctx,"reasons":["qty<=0"]}); 
+            continue
+        sig={"symbol":sym,"side":cand["side"],"type":cand["trigger"],
+             "entry":entry,"sl":sl,"tp":cand["tp"],"qty":qty,"leverage":LEV,
+             "timestamp":int(time.time()),"expires":int(time.time()+1500),
+             "reasons":cand.get("why",[])}
+        sigs.append(sig); added.append(sig)
+        # cooldown
+        try: st=json.loads(STATE.read_text() or "{}")
+        except: st={}
+        st[sym]=time.time(); STATE.write_text(json.dumps(st))
+    SIG.write_text(json.dumps(sigs, indent=2))
+    DBG_REJ.write_text(json.dumps({"ts":time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                                   "added":len(added),"rejects":rejects}, indent=2))
+    print(f"[B] added={len(added)} total={len(sigs)}")
+if __name__=="__main__":
+    main()
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/drain_symbol_queue.sh
+Size: 554
+MTime: 2025-09-25 07:55:50.201158146 +0000
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+Q="/opt/scalp/run/symbol_queue.txt"; MAX="${QUEUE_MAX_PER_TICK:-10}"
+[ -f "$Q" ] || exit 0
+mapfile -t ALL < <(grep -E '^[A-Z0-9]+' "$Q" 2>/dev/null || true); [ ${#ALL[@]} -eq 0 ] && { rm -f "$Q"; exit 0; }
+KEEP=(); cnt=0
+for S in "${ALL[@]}"; do
+  if [ "$cnt" -lt "$MAX" ]; then /opt/scalp/tools/run_analysis_a_for_symbol_hint.sh "$S" || true; cnt=$((cnt+1)); else KEEP+=("$S"); fi
+done
+( [ ${#KEEP[@]} -gt 0 ] && printf "%s\n" "${KEEP[@]}" > "$Q" ) || rm -f "$Q"
+echo "[drain] processed=$cnt remaining=${#KEEP[@]}"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/run_analysis_b_guard.sh
+Size: 332
+MTime: 2025-09-25 12:22:57.060473438 +0000
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+LOG="/opt/scalp/logs/analysis_b_guard.log"; mkdir -p /opt/scalp/logs
+echo "$(date -Is) B:guard start" >>"$LOG"
+python3 /opt/scalp/tools/candles_refresh_1m3m_subset.py >>"$LOG" 2>&1 || true
+python3 /opt/scalp/tools/run_analysis_b.py >>"$LOG" 2>&1 || true
+echo "$(date -Is) B:guard end" >>"$LOG"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/show_ab.sh
+Size: 695
+MTime: 2025-09-25 09:53:02.842733044 +0000
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+
+# 1) Analyse A
+/opt/scalp/tools/run_analysis_a_5min.sh
+
+# 2) Analyse B
+python3 /opt/scalp/tools/run_analysis_b.py
+
+echo -e "\n# === A: résumé ==="
+jq -r '"count=" + ((.symbols|length)|tostring)' /opt/scalp/data/analyse_A_out.json
+echo -e "\n# top 10 par score"
+jq -r '.symbols | sort_by(.score) | reverse | .[:10]' /opt/scalp/data/analyse_A_out.json
+
+echo -e "\n# === B: signaux ==="
+jq -r '.signals | length as $n | "count=" + ($n|tostring)' /opt/scalp/data/signals.json
+jq -r '.signals | group_by(.side) | map({side: .[0].side, n: length})' /opt/scalp/data/signals.json
+echo -e "\n# premiers signaux"
+jq -r '.signals[:20]' /opt/scalp/data/signals.json
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/preflight.py
+Size: 971
+MTime: 2025-09-25 07:55:50.093158015 +0000
+----- CONTENT -----
+#!/usr/bin/env python3
+import os, sys, json, time, shutil
+from pathlib import Path
+OK=True; msgs=[]
+def need(p,t="f"):
+    global OK
+    P=Path(p); ex=(P.is_file() if t=="f" else P.is_dir())
+    if not ex: OK=False; msgs.append(f"missing:{t}:{p}")
+def touch(p): Path(p).parent.mkdir(parents=True, exist_ok=True); Path(p).touch()
+for f in ("/etc/scalp.env","/etc/scalp.app","/etc/scalp.tuning"): need(f,"f")
+for d in ("/opt/scalp/tools","/opt/scalp/logs","/opt/scalp/data","/opt/scalp/data/debug","/opt/scalp/run"): need(d,"d")
+need("/opt/scalp/tools/run_analysis_b_minutely.sh","f")
+for f in ("contracts_usdt.json","coins_90d.json","top.json"): touch(f"/opt/scalp/data/{f}")
+st=shutil.disk_usage("/opt/scalp"); OK = OK and st.free >= 500*1024*1024 or False
+out={"ts":time.strftime("%Y-%m-%dT%H:%M:%SZ",time.gmtime()),"ok":OK,"issues":msgs}
+Path("/opt/scalp/data/debug/preflight.json").write_text(json.dumps(out,indent=2))
+print(json.dumps(out)); sys.exit(0 if OK else 2)
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/tools/rebuild_coins_90d_light.py
+Size: 558
+MTime: 2025-09-25 07:55:50.133158063 +0000
+----- CONTENT -----
+#!/usr/bin/env python3
+import json, time
+from pathlib import Path
+IN=Path("/opt/scalp/data/contracts_usdt.json"); OUT=Path("/opt/scalp/data/coins_90d.json"); DBG=Path("/opt/scalp/data/debug/coins_90d_light.json")
+ts=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+syms=[]
+try: syms=json.loads(IN.read_text() or "[]")
+except: syms=[]
+OUT.write_text(json.dumps({"symbols":syms,"generated_at":ts,"mode":"fallback"}, indent=2))
+DBG.write_text(json.dumps({"ok":True,"eligible":len(syms),"api_touched":False,"ts":ts}, indent=2))
+print(f"[coins90] {len(syms)}")
+----- FILE END -----
