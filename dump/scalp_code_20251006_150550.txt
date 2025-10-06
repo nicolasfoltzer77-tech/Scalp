@@ -1,0 +1,713 @@
+# Scalp Project Code Dump
+# Generated: 2025-10-06 13:05:50 UTC
+# Root: /opt/scalp
+# Caps: 512KB/file, max 4000 files
+# Exclusions: hidden, .git, __pycache__, venv/.venv, var, logs, data, reports, dump
+# Extensions: py, pyi, sh, bash, ini, cfg, conf, toml, yaml/yml, md, txt, sql, json, csv
+
+========== TREE (size, mtime) ==========
+/opt/scalp/project/scripts/analysis_B_ws.py                                               4960  2025-10-06 13:11:59.279386532 +0200
+/opt/scalp/project/scripts/backup_db.sh                                                    379  2025-10-06 13:01:11.159865671 +0200
+/opt/scalp/project/scripts/bitget_ws_probe.py                                             1032  2025-10-06 12:33:52.089730966 +0200
+/opt/scalp/project/scripts/fetch_tf_ohlcv.py                                               932  2025-10-06 11:54:34.406828872 +0200
+/opt/scalp/project/scripts/health_ping.sh                                                  381  2025-10-06 13:00:59.607851605 +0200
+/opt/scalp/project/scripts/paper_daily.sh                                                  501  2025-10-06 14:15:25.185455713 +0200
+/opt/scalp/project/scripts/paper_exec.py                                                  3341  2025-10-06 13:48:28.042280796 +0200
+/opt/scalp/project/scripts/paper_purge.sh                                                  189  2025-10-06 14:17:03.329449243 +0200
+/opt/scalp/project/scripts/paper_watch.sh                                                  473  2025-10-06 14:38:09.202577538 +0200
+/opt/scalp/project/scripts/purge_db.sh                                                    1042  2025-10-06 12:53:57.451334238 +0200
+/opt/scalp/project/scripts/router_dry.py                                                  1980  2025-10-06 12:47:56.834883813 +0200
+/opt/scalp/project/scripts/sim_exec.py                                                    4016  2025-10-06 13:08:59.535603249 +0200
+/opt/scalp/project/scripts/top90_build.py                                                  617  2025-10-06 11:54:34.378828842 +0200
+/opt/scalp/project/scripts/top90_scores_build.py                                          1278  2025-10-06 11:54:34.386828851 +0200
+/opt/scalp/project/scripts/watchdog.sh                                                    1266  2025-10-06 13:02:41.791975899 +0200
+
+========== TOP 10 BIGGEST FILES ==========
+/opt/scalp/project/scripts/analysis_B_ws.py                                               4960
+/opt/scalp/project/scripts/sim_exec.py                                                    4016
+/opt/scalp/project/scripts/paper_exec.py                                                  3341
+/opt/scalp/project/scripts/router_dry.py                                                  1980
+/opt/scalp/project/scripts/top90_scores_build.py                                          1278
+/opt/scalp/project/scripts/watchdog.sh                                                    1266
+/opt/scalp/project/scripts/purge_db.sh                                                    1042
+/opt/scalp/project/scripts/bitget_ws_probe.py                                             1032
+/opt/scalp/project/scripts/fetch_tf_ohlcv.py                                               932
+/opt/scalp/project/scripts/top90_build.py                                                  617
+
+========== CONCAT CONTENT ==========
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/sim_exec.py
+Size: 4016
+MTime: 2025-10-06 13:08:59.535603249 +0200
+----- CONTENT -----
+#!/usr/bin/env python3
+import os, time, sqlite3, math
+DB="data/scalp.db"
+TP_BPS     = float(os.getenv("TP_BPS","15"))       # take profit en bps
+SL_BPS     = float(os.getenv("SL_BPS","20"))       # stop loss   en bps
+MAX_HOLD   = int(os.getenv("MAX_HOLD_SEC","900"))  # 15 min
+FEES_BPS   = float(os.getenv("FEES_BPS","1"))      # aller+retour
+POLL       = 0.5
+
+def connect():
+    con=sqlite3.connect(DB, timeout=20, isolation_level=None)
+    con.execute("PRAGMA journal_mode=WAL")
+    con.execute("PRAGMA busy_timeout=20000")
+    con.execute("PRAGMA synchronous=NORMAL")
+    return con
+
+def last_price(con, symbol, default):
+    row=con.execute("SELECT last FROM last_ticks WHERE symbol=?", (symbol,)).fetchone()
+    return (row[0] if row else default) or default
+
+def ensure_qty(q): return 1.0 if (q is None or q==0.0) else float(q)
+
+def open_new_positions(con, now):
+    rows=con.execute("""
+      SELECT id,symbol,side,COALESCE(qty,0),COALESCE(price,0),created_ts
+      FROM orders_sim
+      WHERE status='SIMULATED' AND id NOT IN (SELECT order_id FROM positions_sim)
+      ORDER BY id ASC LIMIT 500
+    """).fetchall()
+    if not rows: return 0
+    con.execute("BEGIN IMMEDIATE")
+    for oid,sym,side,qty,px,ts in rows:
+        px = px or last_price(con, sym, None) or 0.0
+        q  = ensure_qty(qty)
+        con.execute("""INSERT OR IGNORE INTO positions_sim
+            (order_id,symbol,side,qty,entry_price,entry_ts,status)
+            VALUES(?,?,?,?,?,?, 'OPEN')""", (oid,sym,side,q,px,ts or now))
+    con.execute("COMMIT")
+    return len(rows)
+
+def close_if_needed(con, now):
+    rows=con.execute("""
+      SELECT id, order_id, symbol, side, qty, entry_price, entry_ts
+      FROM positions_sim WHERE status='OPEN'
+      ORDER BY id ASC LIMIT 1000
+    """).fetchall()
+    if not rows: return 0
+    n_closed=0
+    con.execute("BEGIN IMMEDIATE")
+    for pid,oid,sym,side,qty,entry,ets in rows:
+        last=last_price(con, sym, entry)
+        hold= now - (ets or now)
+        # Targets
+        tp = entry*(1 + (TP_BPS/10000.0)) if side.upper()=='BUY'  else entry*(1 - (TP_BPS/10000.0))
+        sl = entry*(1 - (SL_BPS/10000.0)) if side.upper()=='BUY'  else entry*(1 + (SL_BPS/10000.0))
+        reason=None; exit_px=None
+        if side.upper()=='BUY':
+            if last>=tp: exit_px=last; reason='TP'
+            elif last<=sl: exit_px=last; reason='SL'
+        else: # SELL
+            if last<=tp: exit_px=last; reason='TP'
+            elif last>=sl: exit_px=last; reason='SL'
+        if reason is None and hold>=MAX_HOLD:
+            exit_px=last; reason='TIME'
+        if reason is None:
+            # Reverse signal ferme la position si ordre plus récent sens opposé
+            rev = con.execute("""
+              SELECT 1 FROM orders_sim
+              WHERE symbol=? AND created_ts>? AND
+                    ((side='BUY'  AND ?='SELL') OR (side='SELL' AND ?='BUY'))
+              LIMIT 1
+            """,(sym, ets or 0, side.upper(), side.upper())).fetchone()
+            if rev: exit_px=last; reason='REV'
+        if exit_px is not None:
+            # PnL: BUY => (exit-entry)*qty ; SELL => (entry-exit)*qty ; moins fees
+            gross = (exit_px-entry)*qty if side.upper()=='BUY' else (entry-exit_px)*qty
+            fees  = (entry+exit_px)*qty*(FEES_BPS/10000.0)
+            pnl   = gross - fees
+            pnl_bps = (pnl/ (entry*qty)) * 10000.0 if entry>0 and qty>0 else 0.0
+            con.execute("""UPDATE positions_sim
+                           SET exit_price=?, exit_ts=?, pnl_abs=?, pnl_bps=?,
+                               fees_abs=?, status='CLOSED', close_reason=?
+                           WHERE id=?""",
+                           (exit_px, now, pnl, pnl_bps, fees, reason, pid))
+            n_closed+=1
+    con.execute("COMMIT")
+    return n_closed
+
+def main():
+    con=connect()
+    while True:
+        now=int(time.time())
+        opened=open_new_positions(con, now)
+        closed=close_if_needed(con, now)
+        if opened==0 and closed==0:
+            time.sleep(POLL)
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/purge_db.sh
+Size: 1042
+MTime: 2025-10-06 12:53:57.451334238 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+DB="/opt/scalp/project/data/scalp.db"
+N_KEEP="${N_KEEP_SIGNALS:-100000}"       # nb de signaux à garder
+DAYS_KEEP="${DAYS_KEEP_SIGNALS:-14}"     # rétention (jours)
+
+sqlite3 "$DB" <<SQL
+PRAGMA journal_mode=WAL;
+PRAGMA busy_timeout=20000;
+
+-- Cohérence : supprime ordres orphelins
+DELETE FROM orders_sim
+ WHERE signal_id NOT IN (SELECT id FROM signals_B);
+
+-- Purge signals_B hors fenêtre (id anciens ET plus vieux que X jours)
+DELETE FROM signals_B
+ WHERE id NOT IN (SELECT id FROM signals_B ORDER BY id DESC LIMIT $N_KEEP)
+   AND created_ts < strftime('%s','now','-$DAYS_KEEP days');
+
+-- Index utiles (idempotents)
+CREATE INDEX IF NOT EXISTS idx_signalsB_created ON signals_B(created_ts);
+CREATE INDEX IF NOT EXISTS idx_orders_sim_signal ON orders_sim(signal_id);
+CREATE INDEX IF NOT EXISTS idx_orders_sim_created ON orders_sim(created_ts);
+
+PRAGMA optimize;
+PRAGMA wal_checkpoint(TRUNCATE);
+SQL
+
+# VACUUM hebdo (verrou exclusif, court)
+if [ "$(date +%u)" = "7" ]; then
+  sqlite3 "$DB" "VACUUM;"
+fi
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/paper_daily.sh
+Size: 501
+MTime: 2025-10-06 14:15:25.185455713 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+cd /opt/scalp/project
+[ -f .venv/bin/activate ] && source .venv/bin/activate || true
+mkdir -p logs
+/usr/bin/sqlite3 data/scalp.db <<SQL
+.output logs/paper_daily_20251006.log
+SELECT datetime("now","localtime") AS ts,
+       balance,
+       equity,
+       ROUND(equity - balance, 3) AS floating_pnl,
+       (SELECT COUNT(*) FROM positions_open)  AS open_positions,
+       (SELECT COUNT(*) FROM trades_closed)   AS closed_trades
+FROM account_sim;
+.output stdout
+SQL
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/fetch_tf_ohlcv.py
+Size: 932
+MTime: 2025-10-06 11:54:34.406828872 +0200
+----- CONTENT -----
+#!/usr/bin/env python3
+import os,ccxt,sqlite3
+DB="data/scalp.db"; TF={"5m":"ohlcv_5m","15m":"ohlcv_15m","30m":"ohlcv_30m"}
+con=sqlite3.connect(DB); con.execute("PRAGMA busy_timeout=20000")
+syms=[r[0] for r in con.execute("SELECT symbol FROM v_top35").fetchall()]
+ex=ccxt.bitget({'options': {'defaultType':'swap'}, 'enableRateLimit': True}); ex.load_markets()
+mkt={m['base']:s for s,m in ex.markets.items() if m.get('swap') and m.get('quote')=='USDT'}
+for base in syms:
+    sym=mkt.get(base); 
+    if not sym: continue
+    for tf,table in TF.items():
+        try:
+            rows=ex.fetch_ohlcv(sym, timeframe=tf, limit=200)
+            con.executemany(f"INSERT OR REPLACE INTO {table}(symbol,ts,open,high,low,close,volume) VALUES(?,?,?,?,?,?,?)",
+                            [(base,int(t[0]/1000),t[1],t[2],t[3],t[4],t[5]) for t in rows])
+            con.commit()
+        except Exception: pass
+con.close(); print("OHLCV fetched")
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/analysis_B_ws.py
+Size: 4960
+MTime: 2025-10-06 13:11:59.279386532 +0200
+----- CONTENT -----
+#!/usr/bin/env python3
+import os, time, json, sqlite3, asyncio, websockets
+
+DB = "/opt/scalp/project/data/scalp.db"
+URI = os.getenv("WS_URL", "wss://ws.bitget.com/mix/v1/stream")   # pas de ?compress=
+HEARTBEAT = int(os.getenv("WS_HEARTBEAT_SEC", "20"))
+RESUB_AFTER = int(os.getenv("WS_RESUB_AFTER_SEC", "10"))
+MAX_BACKOFF = int(os.getenv("WS_MAX_BACKOFF_SEC", "60"))
+
+def connect_db():
+    con = sqlite3.connect(DB, timeout=20, isolation_level=None)
+    con.execute("PRAGMA journal_mode=WAL")
+    con.execute("PRAGMA busy_timeout=20000")
+    con.execute("""CREATE TABLE IF NOT EXISTS last_ticks(
+        symbol TEXT PRIMARY KEY, last REAL NOT NULL, ts INTEGER NOT NULL)""")
+    con.execute("""CREATE TABLE IF NOT EXISTS signals_B(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        symbol TEXT, side TEXT, ctx TEXT, size REAL, leverage INTEGER,
+        sl REAL, tp REAL, reason TEXT, created_ts INTEGER)""")
+    return con
+
+def load_symbols():
+    # 1) top90_active.json si présent, sinon BTCUSDT
+    p = "/opt/scalp/project/data/top90_active.json"
+    try:
+        with open(p,"r") as f:
+            data = json.load(f)
+        if isinstance(data, dict):
+            syms = list(data.keys())
+        elif isinstance(data, list):
+            syms = data
+        else:
+            syms = []
+    except Exception:
+        syms = []
+    if not syms:
+        syms = ["BTCUSDT"]
+    # normalise
+    syms = [s.upper().replace("-","").strip() for s in syms if isinstance(s,str)]
+    return sorted(set(syms))
+
+def build_sub(syms):
+    # Bitget: {"op":"subscribe","args":[{"instType":"MC","channel":"ticker","instId":"BTCUSDT"}, ...]}
+    return {"op":"subscribe","args":[{"instType":"MC","channel":"ticker","instId":s} for s in syms]}
+
+async def run():
+    con = connect_db()
+    syms = load_symbols()
+    sub = build_sub(syms)
+    print("Connecting to:", URI, "symbols:", len(syms))
+    backoff = 1
+    px_prev = {}  # mémoire pour delta
+    while True:
+        try:
+            async with websockets.connect(
+                URI, ping_interval=HEARTBEAT, ping_timeout=HEARTBEAT, close_timeout=5, max_size=2**20
+            ) as ws:
+                await asyncio.sleep(1)
+                await ws.send(json.dumps(sub))
+                print("SUB sent")
+                start = time.time()
+                while True:
+                    msg = await asyncio.wait_for(ws.recv(), timeout=max(HEARTBEAT*2, 30))
+                    if isinstance(msg,(bytes,bytearray)):
+                        msg = msg.decode(errors="ignore")
+                    try:
+                        d = json.loads(msg)
+                    except Exception:
+                        continue
+                    # ACK subscribe
+                    if d.get("event") in ("subscribe","subscribed") or d.get("code") in (0,"0"):
+                        continue
+                    # données
+                    data = d.get("data")
+                    if not data:
+                        continue
+                    now = int(time.time())
+                    for it in data:
+                        inst = (it.get("instId") or it.get("symbol") or "").upper().replace("-","")
+                        last_str = it.get("last") or it.get("price") or it.get("close")
+                        try:
+                            last = float(last_str)
+                        except Exception:
+                            continue
+                        # UPSERT last_ticks
+                        con.execute("""INSERT INTO last_ticks(symbol,last,ts)
+                                       VALUES(?,?,?)
+                                       ON CONFLICT(symbol) DO UPDATE SET last=excluded.last, ts=excluded.ts""",
+                                    (inst, last, now))
+                        # émission simple côté B sur variation
+                        prev = px_prev.get(inst)
+                        if prev and prev > 0:
+                            delta_bps = abs((last-prev)/prev)*10000.0
+                            if delta_bps > 0:  # seuil minimal si besoin
+                                side = "buy" if last>prev else "sell"
+                                con.execute("""INSERT INTO signals_B(symbol,side,ctx,size,leverage,sl,tp,reason,created_ts)
+                                               VALUES(?,?,?,?,?,?,?,?,?)""",
+                                            (inst, side, "TICK", 0.0, 3, None, None, f"tick={delta_bps:.5f}", now))
+                        px_prev[inst] = last
+                    # resub périodique pour sécurité
+                    if time.time() - start > RESUB_AFTER*60:
+                        await ws.send(json.dumps(sub))
+                        start = time.time()
+                # fin boucle messages
+        except Exception as e:
+            print("WS error:", type(e).__name__, str(e)[:200])
+            await asyncio.sleep(backoff)
+            backoff = min(backoff*2, MAX_BACKOFF)
+
+if __name__ == "__main__":
+    asyncio.run(run())
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/paper_exec.py
+Size: 3341
+MTime: 2025-10-06 13:48:28.042280796 +0200
+----- CONTENT -----
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import sqlite3, time, random, os
+
+DB = "/opt/scalp/project/data/scalp.db"
+BUSY_MS = 20000
+INIT_BALANCE = 100.0
+
+def conn():
+    cx = sqlite3.connect(DB, check_same_thread=False)
+    cx.row_factory = sqlite3.Row
+    cx.execute("PRAGMA journal_mode=WAL;")
+    cx.execute(f"PRAGMA busy_timeout={BUSY_MS};")
+    return cx
+
+def init_db(cx):
+    cx.executescript("""
+    CREATE TABLE IF NOT EXISTS account_sim (
+        id INTEGER PRIMARY KEY CHECK (id=1),
+        balance REAL DEFAULT 0,
+        equity REAL DEFAULT 0,
+        used_margin REAL DEFAULT 0,
+        updated_ts INTEGER
+    );
+    CREATE TABLE IF NOT EXISTS positions_open (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        symbol TEXT,
+        side TEXT,
+        qty REAL,
+        entry_price REAL,
+        last REAL,
+        u_pnl REAL,
+        opened_ts INTEGER
+    );
+    CREATE TABLE IF NOT EXISTS trades_closed (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        symbol TEXT,
+        side TEXT,
+        qty REAL,
+        entry_price REAL,
+        exit_price REAL,
+        pnl REAL,
+        reason TEXT,
+        opened_ts INTEGER,
+        closed_ts INTEGER
+    );
+    """)
+
+    cur = cx.execute("SELECT COUNT(*) AS n FROM account_sim")
+    if cur.fetchone()["n"] == 0:
+        ts = int(time.time())
+        cx.execute("INSERT INTO account_sim(id,balance,equity,used_margin,updated_ts) VALUES(1,?,?,?,?)",
+                   (INIT_BALANCE, INIT_BALANCE, 0, ts))
+        cx.commit()
+
+def fetch_signal(cx):
+    row = cx.execute("""
+        SELECT id, symbol, side, reason, created_ts
+        FROM signals_B
+        WHERE id NOT IN (SELECT signal_id FROM orders_sim)
+        ORDER BY id DESC LIMIT 1
+    """).fetchone()
+    return row
+
+def update_equity(cx):
+    ts = int(time.time())
+    bal, eq = cx.execute("SELECT balance, equity FROM account_sim WHERE id=1").fetchone()
+    cx.execute("UPDATE account_sim SET equity=?, updated_ts=? WHERE id=1", (eq, ts))
+    cx.commit()
+
+def simulate_order(cx, sig):
+    symbol = sig["symbol"]
+    side = sig["side"]
+    price = random.uniform(0.95, 1.05) * random.uniform(1, 100)
+    qty = 1.0
+    ts = int(time.time())
+    cx.execute("""
+        INSERT INTO positions_open(symbol,side,qty,entry_price,last,u_pnl,opened_ts)
+        VALUES(?,?,?,?,?,?,?)
+    """, (symbol, side, qty, price, price, 0, ts))
+    cx.commit()
+
+def close_random_positions(cx):
+    rows = cx.execute("SELECT * FROM positions_open ORDER BY opened_ts ASC LIMIT 5").fetchall()
+    for r in rows:
+        pnl = random.uniform(-2, 5)
+        ts = int(time.time())
+        cx.execute("""
+            INSERT INTO trades_closed(symbol,side,qty,entry_price,exit_price,pnl,reason,opened_ts,closed_ts)
+            VALUES(?,?,?,?,?,?,?,?,?)
+        """, (r["symbol"], r["side"], r["qty"], r["entry_price"],
+              r["entry_price"]*(1+pnl/100), pnl, "SIM_CLOSE", r["opened_ts"], ts))
+        cx.execute("DELETE FROM positions_open WHERE id=?", (r["id"],))
+    cx.commit()
+
+def loop():
+    cx = conn()
+    init_db(cx)
+    print("=== PAPER EXEC SIM ===")
+    for _ in range(5):
+        sig = fetch_signal(cx)
+        if sig:
+            simulate_order(cx, sig)
+        close_random_positions(cx)
+        update_equity(cx)
+        time.sleep(1)
+    print("Simulation terminée.")
+
+if __name__ == "__main__":
+    loop()
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/paper_watch.sh
+Size: 473
+MTime: 2025-10-06 14:38:09.202577538 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+DB="/opt/scalp/project/data/scalp.db"
+
+clear
+echo "=== 🧾 PAPER MONITOR LIVE (maj 2s) ==="
+while true; do
+    echo
+    date "+%Y-%m-%d %H:%M:%S"
+    sqlite3 -cmd ".headers on" -cmd ".mode column" "$DB" "
+        SELECT updated, balance, equity, floating_pnl, used_margin,
+               open_positions, closed_trades,
+               sig_1min, sig_5min, ord_1min, ord_5min, avg_pos_pnl
+        FROM v_paper_monitor;"
+    sleep 2
+done
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/top90_scores_build.py
+Size: 1278
+MTime: 2025-10-06 11:54:34.386828851 +0200
+----- CONTENT -----
+#!/usr/bin/env python3
+import json,time,sqlite3,ccxt
+from pathlib import Path
+DB="data/scalp.db"; bases=json.loads(Path("data/top90_active.json").read_text())
+ex=ccxt.bitget({'options': {'defaultType':'swap'}, 'enableRateLimit': True}); ex.load_markets()
+mkt={m['base']:s for s,m in ex.markets.items() if m.get('swap') and m.get('quote')=='USDT'}
+rows=[]
+def spread_bps(sym):
+    try:
+        ob=ex.fetch_order_book(sym,limit=5)
+        bid=ob['bids'][0][0]; ask=ob['asks'][0][0]; mid=(bid+ask)/2
+        return (ask-bid)/mid*10000.0
+    except Exception: return 100.0
+for b in bases[:120]:
+    sym=mkt.get(b); 
+    if not sym: continue
+    try:
+        h=ex.fetch_ohlcv(sym,'1h',limit=24)
+        vol=sum(c*v for _,_,_,_,c,v in h[-24:]) if h else 0
+        sp=spread_bps(sym)
+        score=max(0, vol/1e7) - min(1.0, sp/100.0)
+        rows.append((b,score,None,sp,vol,None,None,"ok",int(time.time())))
+    except Exception:
+        rows.append((b,None,None,None,None,None,None,"error",int(time.time())))
+con=sqlite3.connect(DB)
+with con:
+    con.execute("DELETE FROM top_scores")
+    con.executemany("""INSERT INTO top_scores(symbol,score,rank,spread_bps,vol24,turn7,vola7,status,updated_ts)
+                       VALUES(?,?,?,?,?,?,?,?,?)""",rows)
+print("scores:",len(rows))
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/bitget_ws_probe.py
+Size: 1032
+MTime: 2025-10-06 12:33:52.089730966 +0200
+----- CONTENT -----
+#!/usr/bin/env python3
+import asyncio, time, json, websockets
+URI="wss://ws.bitget.com/mix/v1/stream"
+CANDS=[
+  {"instType":"USDT-FUTURES","channel":"ticker","instId":"BTCUSDT"},
+  {"instType":"MC","channel":"ticker","instId":"BTCUSDT"},
+  {"instType":"UMCBL","channel":"ticker","instId":"BTCUSDT"} # legacy
+]
+async def main():
+  async with websockets.connect(URI, ping_interval=20, ping_timeout=20, close_timeout=5, max_size=2**20) as ws:
+    await asyncio.sleep(1)
+    for a in CANDS: await ws.send(json.dumps({"op":"subscribe","args":[a]}))
+    start=time.time()
+    while time.time()-start<20:
+      msg=await asyncio.wait_for(ws.recv(), timeout=20)
+      if isinstance(msg,(bytes,bytearray)): msg=msg.decode("utf-8","ignore")
+      try: d=json.loads(msg)
+      except: continue
+      if d.get("event") in ("subscribe","subscribed") or d.get("code")==0:
+        print("ACK:", d)
+      if "data" in d and "arg" in d:
+        print("DATA_OK:", d["arg"]); return
+    print("FAIL: no data"); raise SystemExit(1)
+asyncio.run(main())
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/router_dry.py
+Size: 1980
+MTime: 2025-10-06 12:47:56.834883813 +0200
+----- CONTENT -----
+#!/usr/bin/env python3
+import os, time, sqlite3, re
+DB="data/scalp.db"
+SLEEP=float(os.getenv("ROUTER_POLL_SEC","0.5"))
+BATCH=int(os.getenv("MAX_CONCURRENT","200"))
+MIN_QTY=float(os.getenv("ORDER_MIN_QTY","0.0"))
+TICK_RE=re.compile(r'^tick=([0-9]*\.?[0-9]+)$')
+def parse_price(r): 
+    m=TICK_RE.match(r or ""); return float(m.group(1)) if m else None
+def connect():
+    con=sqlite3.connect(DB, timeout=20, isolation_level=None, cached_statements=2000)
+    con.execute("PRAGMA journal_mode=WAL")
+    con.execute("PRAGMA busy_timeout=20000")
+    con.execute("PRAGMA synchronous=NORMAL")
+    con.execute("PRAGMA temp_store=MEMORY")
+    con.execute("PRAGMA mmap_size=268435456")  # 256MB
+    con.execute("""CREATE TABLE IF NOT EXISTS orders_sim(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        signal_id INTEGER UNIQUE, symbol TEXT, side TEXT,
+        qty REAL, price REAL, status TEXT, created_ts INTEGER)""")
+    con.execute("CREATE INDEX IF NOT EXISTS idx_orders_sim_signal ON orders_sim(signal_id)")
+    return con
+def loop():
+    con=connect()
+    while True:
+        rows=con.execute("""
+          SELECT s.id,s.symbol,s.side,s.reason
+          FROM signals_B s
+          LEFT JOIN orders_sim o ON o.signal_id=s.id
+          WHERE o.signal_id IS NULL
+          ORDER BY s.id ASC
+          LIMIT ?""",(BATCH,)).fetchall()
+        if not rows:
+            time.sleep(SLEEP); continue
+        now=int(time.time())
+        payload=[]
+        for sid,sym,side,reason in rows:
+            payload.append((sid,sym,side,MIN_QTY,parse_price(reason), 'SIMULATED', now))
+        try:
+            con.execute("BEGIN IMMEDIATE")
+            con.executemany("""INSERT OR IGNORE INTO orders_sim
+                (signal_id,symbol,side,qty,price,status,created_ts)
+                VALUES(?,?,?,?,?,?,?)""", payload)
+            con.execute("COMMIT")
+        except sqlite3.OperationalError:
+            con.execute("ROLLBACK")
+            time.sleep(SLEEP)
+if __name__=="__main__": loop()
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/top90_build.py
+Size: 617
+MTime: 2025-10-06 11:54:34.378828842 +0200
+----- CONTENT -----
+#!/usr/bin/env python3
+import ccxt, json
+from pathlib import Path
+EXCLUDE={"USDT","USDC","FDUSD","TUSD","DAI","EUR","TRY","USD"}
+EX_LEV=("UP","DOWN","BULL","BEAR","3L","3S","5L","5S")
+out=Path("data/top90_active.json")
+ex=ccxt.bitget({'options': {'defaultType':'swap'}, 'enableRateLimit': True})
+ex.load_markets()
+bases=set()
+for s,m in ex.markets.items():
+    if m.get('swap') and m.get('quote')=='USDT':
+        b=(m.get('base') or '').upper()
+        if b not in EXCLUDE and not any(t in b for t in EX_LEV):
+            bases.add(b)
+out.write_text(json.dumps(sorted(bases), indent=2))
+print("ACTIVE:", len(bases))
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/paper_purge.sh
+Size: 189
+MTime: 2025-10-06 14:17:03.329449243 +0200
+----- CONTENT -----
+set -euo pipefail
+cd /opt/scalp/project
+find logs/ -type f -name 'paper_daily_*.log' -mtime +14 -print -delete || true
+echo "[2025-10-06 14:17:03] Purge terminée." >> logs/paper_purge.log
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/watchdog.sh
+Size: 1266
+MTime: 2025-10-06 13:02:41.791975899 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+DB="/opt/scalp/project/data/scalp.db"
+LAG_MAX="${LAG_MAX_SEC:-60}"
+
+latest_sig=$(sqlite3 "$DB" "SELECT COALESCE(MAX(created_ts),0) FROM signals_B;")
+latest_ord=$(sqlite3 "$DB" "SELECT COALESCE(MAX(created_ts),0) FROM orders_sim;")
+backlog=$(sqlite3 "$DB" "SELECT COUNT(*) FROM signals_B s LEFT JOIN orders_sim o ON o.signal_id=s.id WHERE o.id IS NULL;")
+
+now=$(date +%s)
+lag=$(( latest_sig - latest_ord ))
+age_last_ord=$(( now - latest_ord ))
+
+msg="WATCHDOG:
+lag=${lag}s  age_last_order=${age_last_ord}s  backlog=${backlog}
+sig_ts=$(date -d @${latest_sig} +'%F %T')  ord_ts=$(date -d @${latest_ord} +'%F %T')"
+
+if [ "$lag" -gt "$LAG_MAX" ] || [ "$age_last_ord" -gt "$LAG_MAX" ]; then
+  systemctl restart scalp-router.service || true
+  if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${CHAT_ID:-}" ]; then
+    curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+      -d chat_id="${CHAT_ID}" -d text="$msg
+ACTION: restart scalp-router.service" >/dev/null || true
+  fi
+else
+  if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${CHAT_ID:-}" ]; then
+    curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+      -d chat_id="${CHAT_ID}" -d text="$msg" >/dev/null || true
+  fi
+fi
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/backup_db.sh
+Size: 379
+MTime: 2025-10-06 13:01:11.159865671 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+DB="/opt/scalp/project/data/scalp.db"
+OUT="/opt/scalp/project/backups/scalp_$(date +%Y%m%d_%H%M%S).db.gz"
+sqlite3 "$DB" "PRAGMA wal_checkpoint(FULL);"
+sqlite3 "$DB" ".backup /tmp/scalp_backup.db"
+gzip -c /tmp/scalp_backup.db > "$OUT"
+rm -f /tmp/scalp_backup.db
+find /opt/scalp/project/backups -type f -name 'scalp_*.db.gz' -mtime +7 -delete
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/health_ping.sh
+Size: 381
+MTime: 2025-10-06 13:00:59.607851605 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+DB="/opt/scalp/project/data/scalp.db"
+N_SIG=$(sqlite3 "$DB" "SELECT COUNT(*) FROM signals_B;")
+N_ORD=$(sqlite3 "$DB" "SELECT COUNT(*) FROM orders_sim;")
+MSG="SCALP Health:
+signals_B=$N_SIG
+orders_sim=$N_ORD"
+curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+  -d chat_id="${CHAT_ID}" -d text="$MSG" >/dev/null
+----- FILE END -----
