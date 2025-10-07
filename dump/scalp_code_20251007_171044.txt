@@ -1,0 +1,3969 @@
+# Scalp Project Code Dump
+# Generated: 2025-10-07 15:10:44 UTC
+# Root: /opt/scalp
+# Caps: 512KB/file, max 4000 files
+# Exclusions: hidden, .git, __pycache__, venv/.venv, var, logs, data, reports, dump
+# Extensions: py, pyi, sh, bash, ini, cfg, conf, toml, yaml/yml, md, txt, sql, json, csv
+
+========== TREE (size, mtime) ==========
+/opt/scalp/project/scripts/analyse_A.py                                                   2205  2025-10-07 12:56:22.538016383 +0200
+/opt/scalp/project/scripts/analyse_A_ctx.py                                               4112  2025-10-07 15:01:12.594275936 +0200
+/opt/scalp/project/scripts/analyse_B.py                                                   1123  2025-10-07 12:56:31.854029996 +0200
+/opt/scalp/project/scripts/analyse_B_sql.sh                                               9242  2025-10-07 15:18:52.590793157 +0200
+/opt/scalp/project/scripts/analysis_B_ws.py                                               2088  2025-10-07 09:38:44.956021873 +0200
+/opt/scalp/project/scripts/analyze_A.py                                                    687  2025-10-07 10:12:39.955877887 +0200
+/opt/scalp/project/scripts/analyze_A_ohlcv.py                                             1449  2025-10-07 10:19:20.982646059 +0200
+/opt/scalp/project/scripts/analyze_B.py                                                   1281  2025-10-07 10:12:40.015878450 +0200
+/opt/scalp/project/scripts/analyze_topA_B.sh                                              4046  2025-10-07 10:05:36.388863238 +0200
+/opt/scalp/project/scripts/backfill_tf_ohlcv_top30.py                                     1185  2025-10-07 13:17:59.610139921 +0200
+/opt/scalp/project/scripts/backup_db.sh                                                    379  2025-10-06 13:01:11.159865671 +0200
+/opt/scalp/project/scripts/bitget_ws_probe.py                                             1032  2025-10-06 12:33:52.089730966 +0200
+/opt/scalp/project/scripts/check_ctx_ticks.sh                                             1063  2025-10-07 15:35:40.038270705 +0200
+/opt/scalp/project/scripts/closer_tp_sl.py                                                2290  2025-10-07 09:45:21.482448600 +0200
+/opt/scalp/project/scripts/db_repair_and_prune.sh                                         3102  2025-10-07 13:49:24.681148680 +0200
+/opt/scalp/project/scripts/db_unlock_repair.sh                                            1998  2025-10-07 12:49:03.541433778 +0200
+/opt/scalp/project/scripts/fetch_tf_ohlcv.py                                              1533  2025-10-07 07:19:45.678268446 +0200
+/opt/scalp/project/scripts/fetch_top35_ohlcv.py                                           1550  2025-10-07 10:18:58.510532176 +0200
+/opt/scalp/project/scripts/health.sh                                                       190  2025-10-07 09:39:54.675659883 +0200
+/opt/scalp/project/scripts/health_ping.sh                                                  381  2025-10-06 13:00:59.607851605 +0200
+/opt/scalp/project/scripts/list_top_candidates.py                                          502  2025-10-07 12:51:48.477636515 +0200
+/opt/scalp/project/scripts/materialize_indicators.py                                       745  2025-10-07 13:41:20.424284602 +0200
+/opt/scalp/project/scripts/materialize_indicators_incremental.py                          1927  2025-10-07 15:01:20.426285687 +0200
+/opt/scalp/project/scripts/monitor_live.sh                                                1300  2025-10-07 06:46:49.723549422 +0200
+/opt/scalp/project/scripts/normalize_ohlcv.py                                             1236  2025-10-07 10:18:33.210399384 +0200
+/opt/scalp/project/scripts/paper_daily.sh                                                  515  2025-10-07 06:47:12.322730967 +0200
+/opt/scalp/project/scripts/paper_exec.py                                                  8120  2025-10-06 17:01:54.788922174 +0200
+/opt/scalp/project/scripts/paper_purge.sh                                                  189  2025-10-06 14:17:03.329449243 +0200
+/opt/scalp/project/scripts/paper_reset.sh                                                 1223  2025-10-06 15:16:01.080792954 +0200
+/opt/scalp/project/scripts/paper_watch.sh                                                  455  2025-10-07 06:46:59.259200097 +0200
+/opt/scalp/project/scripts/patch_db.sh                                                     731  2025-10-07 07:12:03.805988295 +0200
+/opt/scalp/project/scripts/patch_health_views.sh                                          2694  2025-10-07 10:22:14.591413905 +0200
+/opt/scalp/project/scripts/patch_top_scores.sh                                             733  2025-10-07 10:28:52.296653475 +0200
+/opt/scalp/project/scripts/progress_watch.sh                                               527  2025-10-07 09:29:11.317634024 +0200
+/opt/scalp/project/scripts/purge_db.sh                                                    1042  2025-10-06 12:53:57.451334238 +0200
+/opt/scalp/project/scripts/reset_300.sh                                                   1642  2025-10-07 09:28:45.757602917 +0200
+/opt/scalp/project/scripts/reset_sim.sh                                                    858  2025-10-07 09:49:03.105934774 +0200
+/opt/scalp/project/scripts/router.py                                                      1350  2025-10-06 18:39:46.108607256 +0200
+/opt/scalp/project/scripts/router_debug.sh                                                 710  2025-10-07 09:42:01.279107537 +0200
+/opt/scalp/project/scripts/router_dry.py                                                  1425  2025-10-06 16:53:55.604110778 +0200
+/opt/scalp/project/scripts/router_simple.py                                               4203  2025-10-07 09:44:57.478516275 +0200
+/opt/scalp/project/scripts/run_AB.sh                                                       580  2025-10-07 12:56:40.210042235 +0200
+/opt/scalp/project/scripts/run_top30_update.sh                                             579  2025-10-07 10:55:23.627712022 +0200
+/opt/scalp/project/scripts/sigB_debug.sh                                                  1035  2025-10-07 15:26:52.366256350 +0200
+/opt/scalp/project/scripts/sim_exec.py                                                    4016  2025-10-06 13:08:59.535603249 +0200
+/opt/scalp/project/scripts/ticks_rest_loop.py                                             1157  2025-10-07 16:26:27.931745910 +0200
+/opt/scalp/project/scripts/top30_from_candidates.py                                       1310  2025-10-07 12:51:53.873643535 +0200
+/opt/scalp/project/scripts/top30_from_tops.py                                              919  2025-10-07 10:30:02.080822135 +0200
+/opt/scalp/project/scripts/top30_real_bitget.py                                           3128  2025-10-07 10:39:16.661892414 +0200
+/opt/scalp/project/scripts/top30_real_bitget_fast.py                                      3517  2025-10-07 10:55:08.983687887 +0200
+/opt/scalp/project/scripts/top35_select.py                                                1163  2025-10-07 10:12:39.907877436 +0200
+/opt/scalp/project/scripts/top90_build.py                                                  617  2025-10-06 11:54:34.378828842 +0200
+/opt/scalp/project/scripts/top90_scores_build.py                                          1278  2025-10-06 11:54:34.386828851 +0200
+/opt/scalp/project/scripts/topA_B_live.sh                                                  618  2025-10-07 10:12:39.891877285 +0200
+/opt/scalp/project/scripts/watchdog.sh                                                    1266  2025-10-06 13:02:41.791975899 +0200
+/opt/scalp/project/scripts/ws_ctx_ticks.py                                                2841  2025-10-07 10:57:31.707919305 +0200
+/opt/scalp/project/scripts/ws_ctx_ticks_single.py                                         2593  2025-10-07 12:51:53.941643624 +0200
+/opt/scalp/project/scripts/ws_guard.sh                                                     429  2025-10-07 07:19:15.053863718 +0200
+/opt/scalp/project/scripts/ws_probe.py                                                    1112  2025-10-07 15:53:19.107744315 +0200
+/opt/scalp/project/scripts/ws_probe_one.py                                                 930  2025-10-07 12:53:03.849736458 +0200
+/opt/scalp/project/scripts/ws_probe_robust.py                                             3616  2025-10-07 15:56:53.492498184 +0200
+/opt/scalp/project/scripts/ws_ticks_writer.py                                             1708  2025-10-07 15:40:03.738378860 +0200
+/opt/scalp/project/scripts/ws_ticks_writer_v3.py                                          3646  2025-10-07 16:24:18.875477419 +0200
+/opt/scalp/project/ws_test.py                                                              591  2025-10-06 15:40:48.870588277 +0200
+/opt/scalp/project/ws_test_new.py                                                          747  2025-10-06 15:42:39.186722724 +0200
+/opt/scalp/project/ws_try.py                                                              1386  2025-10-06 15:49:44.843242039 +0200
+/opt/scalp/scripts/ctxA_sql.sh                                                           14503  2025-10-07 11:22:25.976212501 +0200
+/opt/scalp/scripts/reset_ctxA.sh                                                           650  2025-10-07 11:54:07.666248498 +0200
+
+========== TOP 10 BIGGEST FILES ==========
+/opt/scalp/scripts/ctxA_sql.sh                                                           14503
+/opt/scalp/project/scripts/analyse_B_sql.sh                                               9242
+/opt/scalp/project/scripts/paper_exec.py                                                  8120
+/opt/scalp/project/scripts/router_simple.py                                               4203
+/opt/scalp/project/scripts/analyse_A_ctx.py                                               4112
+/opt/scalp/project/scripts/analyze_topA_B.sh                                              4046
+/opt/scalp/project/scripts/sim_exec.py                                                    4016
+/opt/scalp/project/scripts/ws_ticks_writer_v3.py                                          3646
+/opt/scalp/project/scripts/ws_probe_robust.py                                             3616
+/opt/scalp/project/scripts/top30_real_bitget_fast.py                                      3517
+
+========== CONCAT CONTENT ==========
+
+----- FILE BEGIN -----
+Path: /opt/scalp/scripts/ctxA_sql.sh
+Size: 14503
+MTime: 2025-10-07 11:22:25.976212501 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+DB="${DB:-/opt/scalp/project/data/scalp.db}"
+
+sqlite3 "$DB" <<'SQL'
+PRAGMA journal_mode=WAL;
+PRAGMA synchronous=NORMAL;
+
+-- ===== Univers TOP30 + 5 fixes =====
+DROP VIEW IF EXISTS v_universe_35;
+CREATE VIEW v_universe_35 AS
+WITH latest AS (SELECT MAX(ts) AS ts FROM top_scores WHERE name='TOP30'),
+base AS (
+  SELECT symbol FROM top_scores
+  WHERE name='TOP30' AND ts=(SELECT ts FROM latest)
+  ORDER BY score DESC LIMIT 30
+),
+fix AS (
+  SELECT 'BTCUSDT' AS symbol UNION ALL
+  SELECT 'ETHUSDT' UNION ALL
+  SELECT 'BNBUSDT' UNION ALL
+  SELECT 'SOLUSDT' UNION ALL
+  SELECT 'XRPUSDT'
+)
+SELECT DISTINCT symbol FROM (SELECT symbol FROM base UNION ALL SELECT symbol FROM fix)
+LIMIT 35;
+
+-- ===== Helpers communs =====
+DROP VIEW IF EXISTS v_now_unix;
+CREATE VIEW v_now_unix AS SELECT CAST(strftime('%s','now') AS INTEGER) AS now_ts;
+
+-- ====== FEATS + CONTEXTE PAR TF ======
+-- 5m
+DROP VIEW IF EXISTS v_feat_5m;
+CREATE VIEW v_feat_5m AS
+WITH b AS (
+  SELECT o.symbol,o.ts,o.open,o.high,o.low,o.close,o.volume,
+         LAG(o.close) OVER (PARTITION BY o.symbol ORDER BY o.ts) AS pc,
+         o.close - LAG(o.close) OVER (PARTITION BY o.symbol ORDER BY o.ts) AS dclose
+  FROM ohlcv_5m o
+  WHERE o.symbol IN (SELECT symbol FROM v_universe_35)
+),
+c AS (
+  SELECT *,
+         CASE WHEN dclose>0 THEN dclose ELSE 0 END AS gain,
+         CASE WHEN dclose<0 THEN -dclose ELSE 0 END AS loss,
+         MAX(high-low, MAX(ABS(high-COALESCE(pc,close)), ABS(low-COALESCE(pc,close)))) AS tr,
+         AVG(close) OVER (PARTITION BY symbol ORDER BY ts ROWS BETWEEN 8  PRECEDING AND CURRENT ROW) AS sma9,
+         AVG(close) OVER (PARTITION BY symbol ORDER BY ts ROWS BETWEEN 20 PRECEDING AND CURRENT ROW) AS sma21,
+         AVG(close) OVER (PARTITION BY symbol ORDER BY ts ROWS BETWEEN 49 PRECEDING AND CURRENT ROW) AS sma50,
+         AVG(gain)  OVER (PARTITION BY symbol ORDER BY ts ROWS BETWEEN 6  PRECEDING AND CURRENT ROW) AS avg_gain7,
+         AVG(loss)  OVER (PARTITION BY symbol ORDER BY ts ROWS BETWEEN 6  PRECEDING AND CURRENT ROW) AS avg_loss7,
+         AVG(tr)    OVER (PARTITION BY symbol ORDER BY ts ROWS BETWEEN 13 PRECEDING AND CURRENT ROW) AS atr14
+  FROM b
+)
+SELECT *,
+       CASE WHEN avg_loss7>0 THEN 100 - 100.0/(1.0 + (avg_gain7/avg_loss7)) ELSE 100 END AS rsi7,
+       CASE WHEN COALESCE(sma50,0)!=0 THEN (sma9 - sma50)/sma50 ELSE 0 END AS d_9_50,
+       CASE WHEN close!=0 THEN ABS(COALESCE(sma21,close)-COALESCE(sma50,close))/close*10000 ELSE 0 END AS adx_proxy
+FROM c;
+
+DROP VIEW IF EXISTS v_ctx_tf_5m;
+CREATE VIEW v_ctx_tf_5m AS
+WITH r AS (
+  SELECT f.*,
+         ROW_NUMBER() OVER (PARTITION BY f.symbol ORDER BY f.ts DESC) AS rn,
+         -- D clampé ~[-1,1]
+         ( (CASE WHEN (f.d_9_50/0.0015)>1 THEN 1 WHEN (f.d_9_50/0.0015)<-1 THEN -1 ELSE (f.d_9_50/0.0015) END)
+         + (CASE WHEN ((f.rsi7-50)/12)>1 THEN 1 WHEN ((f.rsi7-50)/12)<-1 THEN -1 ELSE ((f.rsi7-50)/12) END)
+         )*0.5 AS D
+  FROM v_feat_5m f
+)
+SELECT symbol, ts,
+       CASE
+         WHEN adx_proxy>=22 AND sma9>sma21 AND sma21>sma50 THEN 'trend_up'
+         WHEN adx_proxy>=22 AND sma9<sma21 AND sma21<sma50 THEN 'trend_down'
+         WHEN adx_proxy<=18 AND ABS(d_9_50)<=0.0015         THEN 'range'
+         ELSE 'squeeze'
+       END AS regime,
+       D,
+       CASE WHEN (CASE
+         WHEN adx_proxy>=22 AND sma9>sma21 AND sma21>sma50 THEN 'trend_up'
+         WHEN adx_proxy>=22 AND sma9<sma21 AND sma21<sma50 THEN 'trend_down'
+         WHEN adx_proxy<=18 AND ABS(d_9_50)<=0.0015         THEN 'range'
+         ELSE 'squeeze' END) IN ('trend_up','range')
+         THEN MIN(1.0, MAX(0.0, 0.55 + 0.35*D))
+         ELSE MAX(0.0, 0.5*D + 0.3) END AS pB5,
+       CASE WHEN (CASE
+         WHEN adx_proxy>=22 AND sma9>sma21 AND sma21>sma50 THEN 'trend_up'
+         WHEN adx_proxy>=22 AND sma9<sma21 AND sma21<sma50 THEN 'trend_down'
+         WHEN adx_proxy<=18 AND ABS(d_9_50)<=0.0015         THEN 'range'
+         ELSE 'squeeze' END) IN ('trend_down','range')
+         THEN MIN(1.0, MAX(0.0, 0.55 - 0.35*D))
+         ELSE MAX(0.0, -0.5*D + 0.3) END AS pS5,
+       CASE WHEN (CASE
+         WHEN adx_proxy>=22 AND sma9>sma21 AND sma21>sma50 THEN 'trend_up'
+         WHEN adx_proxy>=22 AND sma9<sma21 AND sma21<sma50 THEN 'trend_down'
+         WHEN adx_proxy<=18 AND ABS(d_9_50)<=0.0015         THEN 'range'
+         ELSE 'squeeze' END) IN ('trend_up','trend_down')
+         THEN 0.40 ELSE 0.25 END AS pH5
+FROM r WHERE rn=1;
+
+-- 15m
+DROP VIEW IF EXISTS v_feat_15m;
+CREATE VIEW v_feat_15m AS
+WITH b AS (
+  SELECT o.symbol,o.ts,o.open,o.high,o.low,o.close,o.volume,
+         LAG(o.close) OVER (PARTITION BY o.symbol ORDER BY o.ts) AS pc,
+         o.close - LAG(o.close) OVER (PARTITION BY o.symbol ORDER BY o.ts) AS dclose
+  FROM ohlcv_15m o
+  WHERE o.symbol IN (SELECT symbol FROM v_universe_35)
+),
+c AS (
+  SELECT *,
+         CASE WHEN dclose>0 THEN dclose ELSE 0 END AS gain,
+         CASE WHEN dclose<0 THEN -dclose ELSE 0 END AS loss,
+         MAX(high-low, MAX(ABS(high-COALESCE(pc,close)), ABS(low-COALESCE(pc,close)))) AS tr,
+         AVG(close) OVER (PARTITION BY symbol ORDER BY ts ROWS BETWEEN 8  PRECEDING AND CURRENT ROW) AS sma9,
+         AVG(close) OVER (PARTITION BY symbol ORDER BY ts ROWS BETWEEN 20 PRECEDING AND CURRENT ROW) AS sma21,
+         AVG(close) OVER (PARTITION BY symbol ORDER BY ts ROWS BETWEEN 49 PRECEDING AND CURRENT ROW) AS sma50,
+         AVG(gain)  OVER (PARTITION BY symbol ORDER BY ts ROWS BETWEEN 6  PRECEDING AND CURRENT ROW) AS avg_gain7,
+         AVG(loss)  OVER (PARTITION BY symbol ORDER BY ts ROWS BETWEEN 6  PRECEDING AND CURRENT ROW) AS avg_loss7,
+         AVG(tr)    OVER (PARTITION BY symbol ORDER BY ts ROWS BETWEEN 13 PRECEDING AND CURRENT ROW) AS atr14
+  FROM b
+)
+SELECT *,
+       CASE WHEN avg_loss7>0 THEN 100 - 100.0/(1.0 + (avg_gain7/avg_loss7)) ELSE 100 END AS rsi7,
+       CASE WHEN COALESCE(sma50,0)!=0 THEN (sma9 - sma50)/sma50 ELSE 0 END AS d_9_50,
+       CASE WHEN close!=0 THEN ABS(COALESCE(sma21,close)-COALESCE(sma50,close))/close*10000 ELSE 0 END AS adx_proxy
+FROM c;
+
+DROP VIEW IF EXISTS v_ctx_tf_15m;
+CREATE VIEW v_ctx_tf_15m AS
+WITH r AS (
+  SELECT f.*,
+         ROW_NUMBER() OVER (PARTITION BY f.symbol ORDER BY f.ts DESC) AS rn,
+         ( (CASE WHEN (f.d_9_50/0.0015)>1 THEN 1 WHEN (f.d_9_50/0.0015)<-1 THEN -1 ELSE (f.d_9_50/0.0015) END)
+         + (CASE WHEN ((f.rsi7-50)/12)>1 THEN 1 WHEN ((f.rsi7-50)/12)<-1 THEN -1 ELSE ((f.rsi7-50)/12) END)
+         )*0.5 AS D
+  FROM v_feat_15m f
+)
+SELECT symbol, ts,
+       CASE
+         WHEN adx_proxy>=22 AND sma9>sma21 AND sma21>sma50 THEN 'trend_up'
+         WHEN adx_proxy>=22 AND sma9<sma21 AND sma21<sma50 THEN 'trend_down'
+         WHEN adx_proxy<=18 AND ABS(d_9_50)<=0.0015         THEN 'range'
+         ELSE 'squeeze'
+       END AS regime,
+       D,
+       CASE WHEN (CASE
+         WHEN adx_proxy>=22 AND sma9>sma21 AND sma21>sma50 THEN 'trend_up'
+         WHEN adx_proxy>=22 AND sma9<sma21 AND sma21<sma50 THEN 'trend_down'
+         WHEN adx_proxy<=18 AND ABS(d_9_50)<=0.0015         THEN 'range'
+         ELSE 'squeeze' END) IN ('trend_up','range')
+         THEN MIN(1.0, MAX(0.0, 0.55 + 0.35*D))
+         ELSE MAX(0.0, 0.5*D + 0.3) END AS pB15,
+       CASE WHEN (CASE
+         WHEN adx_proxy>=22 AND sma9>sma21 AND sma21>sma50 THEN 'trend_up'
+         WHEN adx_proxy>=22 AND sma9<sma21 AND sma21<sma50 THEN 'trend_down'
+         WHEN adx_proxy<=18 AND ABS(d_9_50)<=0.0015         THEN 'range'
+         ELSE 'squeeze' END) IN ('trend_down','range')
+         THEN MIN(1.0, MAX(0.0, 0.55 - 0.35*D))
+         ELSE MAX(0.0, -0.5*D + 0.3) END AS pS15,
+       CASE WHEN (CASE
+         WHEN adx_proxy>=22 AND sma9>sma21 AND sma21>sma50 THEN 'trend_up'
+         WHEN adx_proxy>=22 AND sma9<sma21 AND sma21<sma50 THEN 'trend_down'
+         WHEN adx_proxy<=18 AND ABS(d_9_50)<=0.0015         THEN 'range'
+         ELSE 'squeeze' END) IN ('trend_up','trend_down')
+         THEN 0.40 ELSE 0.25 END AS pH15
+FROM r WHERE rn=1;
+
+-- 30m
+DROP VIEW IF EXISTS v_feat_30m;
+CREATE VIEW v_feat_30m AS
+WITH b AS (
+  SELECT o.symbol,o.ts,o.open,o.high,o.low,o.close,o.volume,
+         LAG(o.close) OVER (PARTITION BY o.symbol ORDER BY o.ts) AS pc,
+         o.close - LAG(o.close) OVER (PARTITION BY o.symbol ORDER BY o.ts) AS dclose
+  FROM ohlcv_30m o
+  WHERE o.symbol IN (SELECT symbol FROM v_universe_35)
+),
+c AS (
+  SELECT *,
+         CASE WHEN dclose>0 THEN dclose ELSE 0 END AS gain,
+         CASE WHEN dclose<0 THEN -dclose ELSE 0 END AS loss,
+         MAX(high-low, MAX(ABS(high-COALESCE(pc,close)), ABS(low-COALESCE(pc,close)))) AS tr,
+         AVG(close) OVER (PARTITION BY symbol ORDER BY ts ROWS BETWEEN 8  PRECEDING AND CURRENT ROW) AS sma9,
+         AVG(close) OVER (PARTITION BY symbol ORDER BY ts ROWS BETWEEN 20 PRECEDING AND CURRENT ROW) AS sma21,
+         AVG(close) OVER (PARTITION BY symbol ORDER BY ts ROWS BETWEEN 49 PRECEDING AND CURRENT ROW) AS sma50,
+         AVG(gain)  OVER (PARTITION BY symbol ORDER BY ts ROWS BETWEEN 6  PRECEDING AND CURRENT ROW) AS avg_gain7,
+         AVG(loss)  OVER (PARTITION BY symbol ORDER BY ts ROWS BETWEEN 6  PRECEDING AND CURRENT ROW) AS avg_loss7,
+         AVG(tr)    OVER (PARTITION BY symbol ORDER BY ts ROWS BETWEEN 13 PRECEDING AND CURRENT ROW) AS atr14
+  FROM b
+)
+SELECT *,
+       CASE WHEN avg_loss7>0 THEN 100 - 100.0/(1.0 + (avg_gain7/avg_loss7)) ELSE 100 END AS rsi7,
+       CASE WHEN COALESCE(sma50,0)!=0 THEN (sma9 - sma50)/sma50 ELSE 0 END AS d_9_50,
+       CASE WHEN close!=0 THEN ABS(COALESCE(sma21,close)-COALESCE(sma50,close))/close*10000 ELSE 0 END AS adx_proxy
+FROM c;
+
+DROP VIEW IF EXISTS v_ctx_tf_30m;
+CREATE VIEW v_ctx_tf_30m AS
+WITH r AS (
+  SELECT f.*,
+         ROW_NUMBER() OVER (PARTITION BY f.symbol ORDER BY f.ts DESC) AS rn,
+         ( (CASE WHEN (f.d_9_50/0.0015)>1 THEN 1 WHEN (f.d_9_50/0.0015)<-1 THEN -1 ELSE (f.d_9_50/0.0015) END)
+         + (CASE WHEN ((f.rsi7-50)/12)>1 THEN 1 WHEN ((f.rsi7-50)/12)<-1 THEN -1 ELSE ((f.rsi7-50)/12) END)
+         )*0.5 AS D
+  FROM v_feat_30m f
+)
+SELECT symbol, ts,
+       CASE
+         WHEN adx_proxy>=22 AND sma9>sma21 AND sma21>sma50 THEN 'trend_up'
+         WHEN adx_proxy>=22 AND sma9<sma21 AND sma21<sma50 THEN 'trend_down'
+         WHEN adx_proxy<=18 AND ABS(d_9_50)<=0.0015         THEN 'range'
+         ELSE 'squeeze'
+       END AS regime,
+       D,
+       CASE WHEN (CASE
+         WHEN adx_proxy>=22 AND sma9>sma21 AND sma21>sma50 THEN 'trend_up'
+         WHEN adx_proxy>=22 AND sma9<sma21 AND sma21<sma50 THEN 'trend_down'
+         WHEN adx_proxy<=18 AND ABS(d_9_50)<=0.0015         THEN 'range'
+         ELSE 'squeeze' END) IN ('trend_up','range')
+         THEN MIN(1.0, MAX(0.0, 0.55 + 0.35*D))
+         ELSE MAX(0.0, 0.5*D + 0.3) END AS pB30,
+       CASE WHEN (CASE
+         WHEN adx_proxy>=22 AND sma9>sma21 AND sma21>sma50 THEN 'trend_up'
+         WHEN adx_proxy>=22 AND sma9<sma21 AND sma21<sma50 THEN 'trend_down'
+         WHEN adx_proxy<=18 AND ABS(d_9_50)<=0.0015         THEN 'range'
+         ELSE 'squeeze' END) IN ('trend_down','range')
+         THEN MIN(1.0, MAX(0.0, 0.55 - 0.35*D))
+         ELSE MAX(0.0, -0.5*D + 0.3) END AS pS30,
+       CASE WHEN (CASE
+         WHEN adx_proxy>=22 AND sma9>sma21 AND sma21>sma50 THEN 'trend_up'
+         WHEN adx_proxy>=22 AND sma9<sma21 AND sma21<sma50 THEN 'trend_down'
+         WHEN adx_proxy<=18 AND ABS(d_9_50)<=0.0015         THEN 'range'
+         ELSE 'squeeze' END) IN ('trend_up','trend_down')
+         THEN 0.40 ELSE 0.25 END AS pH30
+FROM r WHERE rn=1;
+
+-- ===== Agrégation multi-TF -> ctx_A =====
+DROP TABLE IF EXISTS ctx_A;
+CREATE TABLE ctx_A(
+  symbol TEXT PRIMARY KEY,
+  ts     INTEGER NOT NULL,
+  regime TEXT NOT NULL,
+  D      REAL    NOT NULL,
+  pB REAL NOT NULL, pS REAL NOT NULL, pH REAL NOT NULL, pN REAL NOT NULL,
+  pB5 REAL, pS5 REAL, pH5 REAL,
+  pB15 REAL, pS15 REAL, pH15 REAL,
+  pB30 REAL, pS30 REAL, pH30 REAL
+);
+
+WITH u AS (SELECT symbol FROM v_universe_35),
+a AS (SELECT * FROM v_ctx_tf_5m),
+b AS (SELECT * FROM v_ctx_tf_15m),
+c AS (SELECT * FROM v_ctx_tf_30m),
+m AS (
+  SELECT u.symbol,
+         COALESCE(a.ts,b.ts,c.ts) AS ts,
+         -- régime priorité trend_up/down puis range sinon squeeze/none
+         CASE
+           WHEN (a.regime='trend_up' OR b.regime='trend_up' OR c.regime='trend_up') THEN 'trend_up'
+           WHEN (a.regime='trend_down' OR b.regime='trend_down' OR c.regime='trend_down') THEN 'trend_down'
+           WHEN (a.regime='range'     OR b.regime='range'     OR c.regime='range')     THEN 'range'
+           ELSE COALESCE(a.regime,b.regime,c.regime,'none')
+         END AS regime,
+         -- D global simple
+         COALESCE(a.D,0)*0.40 + COALESCE(b.D,0)*0.35 + COALESCE(c.D,0)*0.25 AS D_raw,
+         -- moyennes pondérées des probas (valeur neutre 0.25 si manquante)
+         (0.40*COALESCE(a.pB5,0.25)+0.35*COALESCE(b.pB15,0.25)+0.25*COALESCE(c.pB30,0.25)) AS Bw,
+         (0.40*COALESCE(a.pS5,0.25)+0.35*COALESCE(b.pS15,0.25)+0.25*COALESCE(c.pS30,0.25)) AS Sw,
+         (0.40*COALESCE(a.pH5,0.25)+0.35*COALESCE(b.pH15,0.25)+0.25*COALESCE(c.pH30,0.25)) AS Hw,
+         a.pB5,a.pS5,a.pH5, b.pB15,b.pS15,b.pH15, c.pB30,c.pS30,c.pH30
+  FROM u
+  LEFT JOIN a ON a.symbol=u.symbol
+  LEFT JOIN b ON b.symbol=u.symbol
+  LEFT JOIN c ON c.symbol=u.symbol
+),
+n AS (
+  SELECT symbol, ts, regime,
+         D_raw AS D,
+         -- normalisation
+         (Bw/(Bw+Sw+Hw)) AS pB,
+         (Sw/(Bw+Sw+Hw)) AS pS,
+         (Hw/(Bw+Sw+Hw)) AS pH,
+         MAX(0.0, 1.0 - ( (Bw/(Bw+Sw+Hw)) + (Sw/(Bw+Sw+Hw)) + (Hw/(Bw+Sw+Hw)) )) AS pN,
+         a_pB5, a_pS5, a_pH5, b_pB15, b_pS15, b_pH15, c_pB30, c_pS30, c_pH30
+  FROM (
+    SELECT symbol, ts, regime, D_raw, Bw, Sw, Hw,
+           a_pB5, a_pS5, a_pH5, b_pB15, b_pS15, b_pH15, c_pB30, c_pS30, c_pH30
+    FROM m
+  )
+)
+INSERT INTO ctx_A(symbol,ts,regime,D,pB,pS,pH,pN,
+                  pB5,pS5,pH5,pB15,pS15,pH15,pB30,pS30,pH30)
+SELECT symbol, (SELECT now_ts FROM v_now_unix), regime, D, pB, pS, pH, pN,
+       a_pB5, a_pS5, a_pH5, b_pB15, b_pS15, b_pH15, c_pB30, c_pS30, c_pH30
+FROM n;
+
+-- ===== Vues finales =====
+DROP VIEW IF EXISTS v_ctx_A;
+CREATE VIEW v_ctx_A AS
+SELECT symbol, ts, regime, D, pB, pS, pH, pN,
+       CASE
+         WHEN pB>=0.55 AND pS<=0.35 THEN 'BUY'
+         WHEN pS>=0.55 AND pB<=0.35 THEN 'SELL'
+         WHEN pH>=pB AND pH>=pS AND pH>=pN THEN 'HOLD'
+         ELSE 'NONE'
+       END AS decision
+FROM ctx_A
+ORDER BY symbol;
+
+DROP VIEW IF EXISTS v_ctx_tradeable;
+CREATE VIEW v_ctx_tradeable AS
+SELECT * FROM v_ctx_A WHERE decision!='NONE';
+SQL
+
+echo "[OK] ctxA SQL patch appliqué sur $DB"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/scripts/reset_ctxA.sh
+Size: 650
+MTime: 2025-10-07 11:54:07.666248498 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+DB="/opt/scalp/project/data/scalp.db"
+
+sqlite3 -cmd ".timeout 4000" "$DB" "PRAGMA wal_checkpoint(TRUNCATE);"
+rm -f "$DB-wal" "$DB-shm" 2>/dev/null || true
+
+sqlite3 -cmd ".timeout 4000" "$DB" "VACUUM;"
+
+# Drop dans l'ordre pour éviter les dépendances
+sqlite3 -cmd ".timeout 4000" "$DB" "
+BEGIN IMMEDIATE;
+DROP VIEW IF EXISTS v_ctx_tradeable;
+DROP VIEW IF EXISTS v_ctx_A;
+DROP VIEW IF EXISTS v_ctx_tf_5m;
+DROP VIEW IF EXISTS v_ctx_tf_15m;
+DROP VIEW IF EXISTS v_ctx_tf_30m;
+DROP VIEW IF EXISTS v_feat_5m;
+DROP VIEW IF EXISTS v_feat_15m;
+DROP VIEW IF EXISTS v_feat_30m;
+DROP VIEW IF EXISTS v_universe_35;
+COMMIT;"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/sigB_debug.sh
+Size: 1035
+MTime: 2025-10-07 15:26:52.366256350 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+DB="/opt/scalp/project/data/scalp.db"
+
+echo "== ROWS =="
+sqlite3 "$DB" "SELECT 'signals_B', COUNT(*) UNION ALL SELECT 'signals_B_plan', COUNT(*) UNION ALL SELECT 'b_state', COUNT(*);"
+
+echo -e "\n== LAST signals_B =="
+sqlite3 -csv "$DB" "SELECT symbol,side,ROUND(score,3),ROUND(entry,2),datetime(created_ts,'unixepoch','localtime') AS dt FROM signals_B ORDER BY id DESC LIMIT 12;"
+
+echo -e "\n== LAST plan =="
+sqlite3 -csv "$DB" "SELECT symbol,side,ROUND(score,3),ROUND(entry,2),ROUND(sl,2),ROUND(tp,2),datetime(created_ts,'unixepoch','localtime') AS dt FROM signals_B_plan ORDER BY id DESC LIMIT 15;"
+
+echo -e "\n== plan par ctx =="
+sqlite3 -csv "$DB" "SELECT COALESCE(ctx,'?') AS ctx, COUNT(*) FROM signals_B_plan GROUP BY ctx ORDER BY 2 DESC;"
+
+echo -e "\n== contexts_A latest =="
+sqlite3 -csv "$DB" "SELECT symbol,ctx,ROUND(pb,3),ROUND(ph,3),ROUND(ps,3),ts FROM v_contexts_A_latest ORDER BY ts DESC LIMIT 15;"
+
+echo -e "\n== contraintes =="
+sqlite3 "$DB" ".schema signals_B" | sed -n '1,120p'
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/patch_top_scores.sh
+Size: 733
+MTime: 2025-10-07 10:28:52.296653475 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+DB="/opt/scalp/project/data/scalp.db"
+has_name() { sqlite3 "$DB" "PRAGMA table_info(top_scores);" | awk -F'|' '$2=="name"{f=1}END{exit !f}'; }
+
+sqlite3 "$DB" "CREATE TABLE IF NOT EXISTS top_scores(id INTEGER PRIMARY KEY AUTOINCREMENT, symbol TEXT, score REAL, ts INTEGER);"
+
+if ! has_name; then
+  sqlite3 "$DB" "
+  PRAGMA foreign_keys=OFF;
+  BEGIN;
+  CREATE TABLE top_scores_new(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT,
+    symbol TEXT,
+    score REAL,
+    ts INTEGER
+  );
+  INSERT INTO top_scores_new(name,symbol,score,ts)
+  SELECT 'TOP30', symbol, score, ts FROM top_scores;
+  DROP TABLE top_scores;
+  ALTER TABLE top_scores_new RENAME TO top_scores;
+  COMMIT;"
+fi
+echo "[OK] top_scores prêt"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/sim_exec.py
+Size: 4016
+MTime: 2025-10-06 13:08:59.535603249 +0200
+----- CONTENT -----
+#!/usr/bin/env python3
+import os, time, sqlite3, math
+DB="data/scalp.db"
+TP_BPS     = float(os.getenv("TP_BPS","15"))       # take profit en bps
+SL_BPS     = float(os.getenv("SL_BPS","20"))       # stop loss   en bps
+MAX_HOLD   = int(os.getenv("MAX_HOLD_SEC","900"))  # 15 min
+FEES_BPS   = float(os.getenv("FEES_BPS","1"))      # aller+retour
+POLL       = 0.5
+
+def connect():
+    con=sqlite3.connect(DB, timeout=20, isolation_level=None)
+    con.execute("PRAGMA journal_mode=WAL")
+    con.execute("PRAGMA busy_timeout=20000")
+    con.execute("PRAGMA synchronous=NORMAL")
+    return con
+
+def last_price(con, symbol, default):
+    row=con.execute("SELECT last FROM last_ticks WHERE symbol=?", (symbol,)).fetchone()
+    return (row[0] if row else default) or default
+
+def ensure_qty(q): return 1.0 if (q is None or q==0.0) else float(q)
+
+def open_new_positions(con, now):
+    rows=con.execute("""
+      SELECT id,symbol,side,COALESCE(qty,0),COALESCE(price,0),created_ts
+      FROM orders_sim
+      WHERE status='SIMULATED' AND id NOT IN (SELECT order_id FROM positions_sim)
+      ORDER BY id ASC LIMIT 500
+    """).fetchall()
+    if not rows: return 0
+    con.execute("BEGIN IMMEDIATE")
+    for oid,sym,side,qty,px,ts in rows:
+        px = px or last_price(con, sym, None) or 0.0
+        q  = ensure_qty(qty)
+        con.execute("""INSERT OR IGNORE INTO positions_sim
+            (order_id,symbol,side,qty,entry_price,entry_ts,status)
+            VALUES(?,?,?,?,?,?, 'OPEN')""", (oid,sym,side,q,px,ts or now))
+    con.execute("COMMIT")
+    return len(rows)
+
+def close_if_needed(con, now):
+    rows=con.execute("""
+      SELECT id, order_id, symbol, side, qty, entry_price, entry_ts
+      FROM positions_sim WHERE status='OPEN'
+      ORDER BY id ASC LIMIT 1000
+    """).fetchall()
+    if not rows: return 0
+    n_closed=0
+    con.execute("BEGIN IMMEDIATE")
+    for pid,oid,sym,side,qty,entry,ets in rows:
+        last=last_price(con, sym, entry)
+        hold= now - (ets or now)
+        # Targets
+        tp = entry*(1 + (TP_BPS/10000.0)) if side.upper()=='BUY'  else entry*(1 - (TP_BPS/10000.0))
+        sl = entry*(1 - (SL_BPS/10000.0)) if side.upper()=='BUY'  else entry*(1 + (SL_BPS/10000.0))
+        reason=None; exit_px=None
+        if side.upper()=='BUY':
+            if last>=tp: exit_px=last; reason='TP'
+            elif last<=sl: exit_px=last; reason='SL'
+        else: # SELL
+            if last<=tp: exit_px=last; reason='TP'
+            elif last>=sl: exit_px=last; reason='SL'
+        if reason is None and hold>=MAX_HOLD:
+            exit_px=last; reason='TIME'
+        if reason is None:
+            # Reverse signal ferme la position si ordre plus récent sens opposé
+            rev = con.execute("""
+              SELECT 1 FROM orders_sim
+              WHERE symbol=? AND created_ts>? AND
+                    ((side='BUY'  AND ?='SELL') OR (side='SELL' AND ?='BUY'))
+              LIMIT 1
+            """,(sym, ets or 0, side.upper(), side.upper())).fetchone()
+            if rev: exit_px=last; reason='REV'
+        if exit_px is not None:
+            # PnL: BUY => (exit-entry)*qty ; SELL => (entry-exit)*qty ; moins fees
+            gross = (exit_px-entry)*qty if side.upper()=='BUY' else (entry-exit_px)*qty
+            fees  = (entry+exit_px)*qty*(FEES_BPS/10000.0)
+            pnl   = gross - fees
+            pnl_bps = (pnl/ (entry*qty)) * 10000.0 if entry>0 and qty>0 else 0.0
+            con.execute("""UPDATE positions_sim
+                           SET exit_price=?, exit_ts=?, pnl_abs=?, pnl_bps=?,
+                               fees_abs=?, status='CLOSED', close_reason=?
+                           WHERE id=?""",
+                           (exit_px, now, pnl, pnl_bps, fees, reason, pid))
+            n_closed+=1
+    con.execute("COMMIT")
+    return n_closed
+
+def main():
+    con=connect()
+    while True:
+        now=int(time.time())
+        opened=open_new_positions(con, now)
+        closed=close_if_needed(con, now)
+        if opened==0 and closed==0:
+            time.sleep(POLL)
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/analyse_B_sql.sh
+Size: 9242
+MTime: 2025-10-07 15:18:52.590793157 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+DB="/opt/scalp/project/data/scalp.db"
+
+sqlite3 "$DB" <<'SQL'
+PRAGMA journal_mode=WAL;
+PRAGMA synchronous=NORMAL;
+
+-- Sécurités de base
+CREATE TABLE IF NOT EXISTS signals_B_plan(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  symbol TEXT, ctx TEXT, score REAL, side TEXT,
+  entry REAL, sl REAL, tp REAL,
+  qty REAL, margin REAL, notional REAL,
+  created_ts INTEGER
+);
+CREATE TABLE IF NOT EXISTS signals_B(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  symbol TEXT, side TEXT, price REAL, reason TEXT, created_ts INTEGER
+);
+CREATE INDEX IF NOT EXISTS idx_sigB_ts ON signals_B(created_ts);
+CREATE TABLE IF NOT EXISTS b_state(
+  symbol TEXT PRIMARY KEY,
+  last_side TEXT,
+  consec INTEGER,
+  last_ts INTEGER
+);
+CREATE TABLE IF NOT EXISTS account_sim(equity REAL, leverage REAL);
+INSERT INTO account_sim(rowid,equity,leverage)
+  SELECT 1,300,50 WHERE NOT EXISTS(SELECT 1 FROM account_sim);
+
+-- Paramètres (1 seule ligne)
+DROP TABLE IF EXISTS params;
+CREATE TEMP TABLE params AS
+SELECT
+  0.10  AS ATR_MIN_PCT,
+  5     AS COOLDOWN_1M,
+  1.00  AS SPREAD_MAX_PCT,
+  1.3   AS VOL_MULT_PULLBACK,
+  20    AS N_BREAKOUT,
+  0.25  AS TAU_LOW,
+  0.5   AS WEIGHT_PULLBACK,
+  0.3   AS WEIGHT_BREAKOUT,
+  0.2   AS WEIGHT_MEANREV,
+  0.60  AS SCORE_TRIGGER,
+  2     AS PERSIST_BARS_B,
+  1     AS VETO_5M_EMA,
+  1.2   AS ATR_SL_K,
+  1.8   AS ATR_TP_K,
+  1.0   AS TRAIL_K,
+  25    AS TIMEOUT_MINUTES,
+  0.005 AS RISK_PCT;
+
+-- Univers = TOP + 5 fixes
+DROP TABLE IF EXISTS t_universe;
+CREATE TEMP TABLE t_universe AS
+SELECT symbol FROM v_universe;
+
+-- Dernière barre 1m par symbole (avec LAG)
+DROP TABLE IF EXISTS t_last1;
+CREATE TEMP TABLE t_last1 AS
+SELECT *
+FROM (
+  SELECT
+    i.symbol, i.ts, i.open, i.high, i.low, i.close, i.volume,
+    i.spread_frac, i.vol_sma20, i.sma9, i.sma21, i.sma50,
+    i.atr14, i.atr_pct, i.hh_20_excl, i.ll_20_excl,
+    LAG(i.close)  OVER (PARTITION BY i.symbol ORDER BY i.ts) AS prev_close,
+    LAG(i.volume) OVER (PARTITION BY i.symbol ORDER BY i.ts) AS prev_vol,
+    ROW_NUMBER()  OVER (PARTITION BY i.symbol ORDER BY i.ts DESC) AS rn
+  FROM v_indic_1m i
+  WHERE i.symbol IN (SELECT symbol FROM t_universe)
+)
+WHERE rn=1;
+
+-- Gates
+DROP TABLE IF EXISTS t_gates;
+CREATE TEMP TABLE t_gates AS
+SELECT
+  l.*,
+  CASE WHEN l.atr_pct >= (SELECT ATR_MIN_PCT FROM params) THEN 1 ELSE 0 END AS gate_atr,
+  CASE WHEN (l.spread_frac*100.0) <= (SELECT SPREAD_MAX_PCT FROM params) THEN 1 ELSE 0 END AS gate_spread
+FROM t_last1 l;
+
+-- Evidences
+DROP TABLE IF EXISTS t_ev;
+CREATE TEMP TABLE t_ev AS
+SELECT
+  g.*,
+  CASE WHEN g.close >= g.hh_20_excl THEN 1.0 ELSE 0.0 END AS e_breakout_up,
+  CASE WHEN g.close <= g.ll_20_excl THEN 1.0 ELSE 0.0 END AS e_breakout_dn,
+  CASE WHEN g.close>=g.sma9 AND g.prev_close < g.sma9
+            AND g.volume >= (SELECT VOL_MULT_PULLBACK FROM params)*g.vol_sma20
+       THEN 1.0 ELSE 0.0 END AS e_pullback_up,
+  CASE WHEN g.close<=g.sma9 AND g.prev_close > g.sma9
+            AND g.volume >= (SELECT VOL_MULT_PULLBACK FROM params)*g.vol_sma20
+       THEN 1.0 ELSE 0.0 END AS e_pullback_dn,
+  CASE WHEN g.sma21 IS NOT NULL AND g.atr14>0
+       THEN MAX(0.0, MIN(1.0, (g.sma21 - g.close)/g.atr14)) ELSE 0.0 END AS e_mean_buy,
+  CASE WHEN g.sma21 IS NOT NULL AND g.atr14>0
+       THEN MAX(0.0, MIN(1.0, (g.close - g.sma21)/g.atr14)) ELSE 0.0 END AS e_mean_sell
+FROM t_gates g;
+
+-- Score brut
+DROP TABLE IF EXISTS t_score;
+CREATE TEMP TABLE t_score AS
+SELECT
+  e.*,
+  ((SELECT WEIGHT_PULLBACK FROM params)*e.e_pullback_up
+   +(SELECT WEIGHT_BREAKOUT FROM params)*e.e_breakout_up
+   +(SELECT WEIGHT_MEANREV  FROM params)*e.e_mean_buy)  AS s_buy_raw,
+  ((SELECT WEIGHT_PULLBACK FROM params)*e.e_pullback_dn
+   +(SELECT WEIGHT_BREAKOUT FROM params)*e.e_breakout_dn
+   +(SELECT WEIGHT_MEANREV  FROM params)*e.e_mean_sell) AS s_sell_raw
+FROM t_ev e;
+
+-- Softmax
+DROP TABLE IF EXISTS t_prob;
+CREATE TEMP TABLE t_prob AS
+SELECT
+  s.*,
+  CASE WHEN s.s_buy_raw  <0 THEN 0 WHEN s.s_buy_raw  >1 THEN 1 ELSE s.s_buy_raw  END AS b0,
+  CASE WHEN s.s_sell_raw <0 THEN 0 WHEN s.s_sell_raw >1 THEN 1 ELSE s.s_sell_raw END AS s0
+FROM t_score s;
+
+DROP TABLE IF EXISTS t_mix;
+CREATE TEMP TABLE t_mix AS
+SELECT
+  p.*,
+  exp(b0/(SELECT TAU_LOW FROM params)) AS eb,
+  exp(s0/(SELECT TAU_LOW FROM params)) AS es,
+  1.0                                  AS eh
+FROM t_prob p;
+
+DROP TABLE IF EXISTS t_class;
+CREATE TEMP TABLE t_class AS
+SELECT
+  m.*,
+  (m.eb+m.es+m.eh) AS denom,
+  (m.eb/(m.eb+m.es+m.eh)) AS pb,
+  (m.es/(m.eb+m.es+m.eh)) AS ps,
+  (m.eh/(m.eb+m.es+m.eh)) AS ph
+FROM t_mix m;
+
+-- Veto 5m
+DROP TABLE IF EXISTS t_veto;
+CREATE TEMP TABLE t_veto AS
+SELECT
+  c.*,
+  vf.sma9  AS sma9_5,
+  vf.sma21 AS sma21_5
+FROM t_class c
+LEFT JOIN v_indic5m_fast vf
+  ON vf.symbol=c.symbol
+ AND vf.ts=(SELECT MAX(ts) FROM v_indic5m_fast v2 WHERE v2.symbol=c.symbol);
+
+-- Décision brute
+DROP TABLE IF EXISTS t_decide;
+CREATE TEMP TABLE t_decide AS
+SELECT
+  v.*,
+  CASE
+    WHEN v.pb>=v.ps AND v.pb>=(SELECT SCORE_TRIGGER FROM params) THEN 'buy'
+    WHEN v.ps> v.pb AND v.ps>=(SELECT SCORE_TRIGGER FROM params) THEN 'sell'
+    ELSE 'none'
+  END AS side_raw,
+  CASE
+    WHEN (SELECT VETO_5M_EMA FROM params)=1
+         AND v.pb>=v.ps AND v.sma9_5 IS NOT NULL AND v.sma21_5 IS NOT NULL
+         AND v.sma9_5 < v.sma21_5
+    THEN 0 ELSE 1 END AS veto_buy,
+  CASE
+    WHEN (SELECT VETO_5M_EMA FROM params)=1
+         AND v.ps>v.pb AND v.sma9_5 IS NOT NULL AND v.sma21_5 IS NOT NULL
+         AND v.sma9_5 > v.sma21_5
+    THEN 0 ELSE 1 END AS veto_sell
+FROM t_veto v;
+
+-- Cooldown
+DROP TABLE IF EXISTS t_cool;
+CREATE TEMP TABLE t_cool AS
+SELECT
+  d.*,
+  COALESCE((SELECT MAX(created_ts) FROM signals_B sb WHERE sb.symbol=d.symbol),0) AS last_sig_ts
+FROM t_decide d;
+
+-- Filtre final
+DROP TABLE IF EXISTS t_filt;
+CREATE TEMP TABLE t_filt AS
+SELECT
+  c.*,
+  (c.gate_atr=1 AND c.gate_spread=1) AS ok_base,
+  (strftime('%s','now') - c.last_sig_ts) >= ((SELECT COOLDOWN_1M FROM params)*60) AS ok_cool,
+  CASE WHEN c.side_raw='buy'  THEN (c.veto_buy=1)
+       WHEN c.side_raw='sell' THEN (c.veto_sell=1)
+       ELSE 0 END AS ok_veto
+FROM t_cool c;
+
+-- Candidats retenus
+DROP TABLE IF EXISTS t_cands;
+CREATE TEMP TABLE t_cands AS
+SELECT
+  f.symbol, f.ts, f.close AS entry, f.atr14, f.atr_pct,
+  CASE WHEN f.side_raw IN('buy','sell') AND f.ok_base=1 AND f.ok_cool=1 AND f.ok_veto=1
+       THEN f.side_raw ELSE 'none' END AS side,
+  f.pb, f.ps, f.ph
+FROM t_filt f;
+
+-- Plan SL/TP + sizing
+DROP TABLE IF EXISTS t_plan;
+CREATE TEMP TABLE t_plan AS
+SELECT
+  c.symbol,
+  'B' AS ctx,
+  CASE WHEN c.side='buy' THEN c.pb ELSE c.ps END AS score,
+  c.side,
+  c.entry,
+  CASE WHEN c.side='buy'  THEN c.entry - (SELECT ATR_SL_K FROM params)*c.atr14
+       WHEN c.side='sell' THEN c.entry + (SELECT ATR_SL_K FROM params)*c.atr14
+       ELSE NULL END AS sl,
+  CASE WHEN c.side='buy'  THEN c.entry + (SELECT ATR_TP_K FROM params)*c.atr14
+       WHEN c.side='sell' THEN c.entry - (SELECT ATR_TP_K FROM params)*c.atr14
+       ELSE NULL END AS tp,
+  ((SELECT COALESCE(equity,300) FROM account_sim LIMIT 1)
+    * (SELECT RISK_PCT FROM params)
+    * (SELECT COALESCE(leverage,50) FROM account_sim LIMIT 1)) / c.entry AS qty,
+  ((SELECT COALESCE(equity,300) FROM account_sim LIMIT 1)
+    * (SELECT RISK_PCT FROM params)) AS margin,
+  ((SELECT COALESCE(equity,300) FROM account_sim LIMIT 1)
+    * (SELECT RISK_PCT FROM params)
+    * (SELECT COALESCE(leverage,50) FROM account_sim LIMIT 1)) AS notional
+FROM t_cands c
+WHERE c.side IN ('buy','sell');
+
+-- Nettoyage des plans du tick courant, puis insert
+DELETE FROM signals_B_plan WHERE created_ts>=strftime('%s','now')-10;
+INSERT INTO signals_B_plan(symbol,ctx,score,side,entry,sl,tp,qty,margin,notional,created_ts)
+SELECT symbol,ctx,score,side,entry,sl,tp,qty,margin,notional,strftime('%s','now')
+FROM t_plan;
+
+-- Persistance: calcule consec_new
+DROP TABLE IF EXISTS _upd;
+CREATE TEMP TABLE _upd AS
+SELECT p.symbol, p.side, p.entry
+FROM signals_B_plan p
+WHERE p.created_ts=(SELECT MAX(created_ts) FROM signals_B_plan);
+
+DROP TABLE IF EXISTS _st;
+CREATE TEMP TABLE _st AS
+SELECT
+  u.symbol,
+  CASE
+    WHEN EXISTS(SELECT 1 FROM b_state b WHERE b.symbol=u.symbol AND b.last_side=u.side)
+      THEN (SELECT consec FROM b_state b WHERE b.symbol=u.symbol)+1
+    ELSE 1
+  END AS consec_new,
+  u.side
+FROM _upd u;
+
+-- Ecriture des signaux si persistance atteinte
+INSERT INTO signals_B(symbol,side,price,reason,created_ts)
+SELECT u.symbol, u.side, u.entry, 'B', strftime('%s','now')
+FROM _st s JOIN _upd u USING(symbol)
+WHERE s.consec_new >= (SELECT PERSIST_BARS_B FROM params);
+
+-- MAJ b_state par delete+insert
+DELETE FROM b_state WHERE symbol IN (SELECT symbol FROM _upd);
+INSERT INTO b_state(symbol,last_side,consec,last_ts)
+SELECT u.symbol, u.side, s.consec_new, (SELECT MAX(created_ts) FROM signals_B_plan)
+FROM _upd u JOIN _st s USING(symbol);
+SQL
+
+# Résumés
+sqlite3 "$DB" "
+SELECT COUNT(*) AS new_plan FROM signals_B_plan WHERE created_ts>=strftime('%s','now')-10;
+SELECT COUNT(*) AS new_signals FROM signals_B WHERE created_ts>=strftime('%s','now')-10;
+SELECT symbol,side,ROUND(score,3),ROUND(entry,6),ROUND(sl,6),ROUND(tp,6),ROUND(qty,6)
+FROM signals_B_plan ORDER BY id DESC LIMIT 12;
+SELECT symbol,side,price,datetime(created_ts,'unixepoch','localtime')
+FROM signals_B ORDER BY id DESC LIMIT 12;
+"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/purge_db.sh
+Size: 1042
+MTime: 2025-10-06 12:53:57.451334238 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+DB="/opt/scalp/project/data/scalp.db"
+N_KEEP="${N_KEEP_SIGNALS:-100000}"       # nb de signaux à garder
+DAYS_KEEP="${DAYS_KEEP_SIGNALS:-14}"     # rétention (jours)
+
+sqlite3 "$DB" <<SQL
+PRAGMA journal_mode=WAL;
+PRAGMA busy_timeout=20000;
+
+-- Cohérence : supprime ordres orphelins
+DELETE FROM orders_sim
+ WHERE signal_id NOT IN (SELECT id FROM signals_B);
+
+-- Purge signals_B hors fenêtre (id anciens ET plus vieux que X jours)
+DELETE FROM signals_B
+ WHERE id NOT IN (SELECT id FROM signals_B ORDER BY id DESC LIMIT $N_KEEP)
+   AND created_ts < strftime('%s','now','-$DAYS_KEEP days');
+
+-- Index utiles (idempotents)
+CREATE INDEX IF NOT EXISTS idx_signalsB_created ON signals_B(created_ts);
+CREATE INDEX IF NOT EXISTS idx_orders_sim_signal ON orders_sim(signal_id);
+CREATE INDEX IF NOT EXISTS idx_orders_sim_created ON orders_sim(created_ts);
+
+PRAGMA optimize;
+PRAGMA wal_checkpoint(TRUNCATE);
+SQL
+
+# VACUUM hebdo (verrou exclusif, court)
+if [ "$(date +%u)" = "7" ]; then
+  sqlite3 "$DB" "VACUUM;"
+fi
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/backfill_tf_ohlcv_top30.py
+Size: 1185
+MTime: 2025-10-07 13:17:59.610139921 +0200
+----- CONTENT -----
+#!/usr/bin/env python3
+import sqlite3, time, ccxt
+DB="/opt/scalp/project/data/scalp.db"
+TF_MAP={"5m":"ohlcv_5m","15m":"ohlcv_15m","30m":"ohlcv_30m"}
+MS={"5m":5*60*1000,"15m":15*60*1000,"30m":30*60*1000}
+LIMIT=300
+ex=ccxt.bitget({'options':{'defaultType':'swap'},'enableRateLimit':True})
+con=sqlite3.connect(DB, timeout=15, isolation_level=None)
+cur=con.cursor()
+syms=[r[0] for r in cur.execute("""
+  SELECT symbol FROM top_scores
+  WHERE name='TOP30' AND ts=(SELECT MAX(ts) FROM top_scores WHERE name='TOP30')
+  ORDER BY score DESC, symbol ASC LIMIT 30
+""")]
+now=int(time.time()*1000)
+for s in syms:
+    for tf, tbl in TF_MAP.items():
+        try:
+            rows=ex.fetch_ohlcv(s, timeframe=tf, since=now-LIMIT*MS[tf], limit=LIMIT)
+            if not rows: 
+                print("EMPTY", s, tf); 
+                continue
+            cur.executemany(f"INSERT OR REPLACE INTO {tbl}(symbol,ts,open,high,low,close,volume) VALUES(?,?,?,?,?,?,?)",
+                            [(s,int(t[0]//1000),float(t[1]),float(t[2]),float(t[3]),float(t[4]),float(t[5])) for t in rows])
+            print(s, tf, len(rows))
+        except Exception as e:
+            print("ERR", s, tf, e)
+con.close()
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/analyze_topA_B.sh
+Size: 4046
+MTime: 2025-10-07 10:05:36.388863238 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -e
+BASE="/opt/scalp/project"
+DATA="$BASE/data"
+LOG="$BASE/logs"
+mkdir -p "$DATA" "$LOG"
+
+echo "[1] Sélection dynamique de coins..."
+cat > "$BASE/scripts/top35_select.py" <<'PY'
+#!/usr/bin/env python3
+import sqlite3, json, time
+DB="/opt/scalp/project/data/scalp.db"
+
+con=sqlite3.connect(DB)
+cur=con.cursor()
+
+cur.execute("""
+CREATE TABLE IF NOT EXISTS tops(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT, symbol TEXT, vol REAL, vola REAL,
+  turnover REAL, spread REAL, ts INTEGER
+);
+""")
+
+# Simule la récupération des coins avec indicateurs (vol24h, turnover, volatilité)
+symbols = [
+    ("BTCUSDT", 1.0, 0.9, 1.0, 0.01),
+    ("ETHUSDT", 0.8, 0.7, 0.8, 0.015),
+    ("BNBUSDT", 0.7, 0.6, 0.7, 0.02),
+    ("SOLUSDT", 0.6, 0.5, 0.6, 0.025),
+    ("XRPUSDT", 0.5, 0.4, 0.5, 0.03)
+]
+# Ajoute 30 symboles factices pour simuler le tri
+for i in range(30):
+    symbols.append((f"ALT{i}USDT", 0.1+i*0.02, 0.1+i*0.015, 0.2+i*0.01, 0.05))
+
+# Sélection par volatilité × volume
+symbols.sort(key=lambda x: x[1]*x[2]*x[3]/x[4], reverse=True)
+top35 = symbols[:35]
+ts = int(time.time())
+
+for sym in top35:
+    cur.execute("INSERT INTO tops(name,symbol,vol,vola,turnover,spread,ts) VALUES(?,?,?,?,?,?,?)",
+                ("TOP35", sym[0], sym[1], sym[2], sym[3], sym[4], ts))
+con.commit()
+print(f"[TOP35] Enregistrés {len(top35)} paires à {ts}")
+PY
+
+chmod +x "$BASE/scripts/top35_select.py"
+python3 "$BASE/scripts/top35_select.py" | tee "$LOG/top35_select.log"
+
+echo "[2] Analyse A : génération de contexte"
+cat > "$BASE/scripts/analyze_A.py" <<'PY'
+#!/usr/bin/env python3
+import sqlite3, json, time, statistics
+DB="/opt/scalp/project/data/scalp.db"
+OUT="/opt/scalp/project/data/analyse_A_out.json"
+con=sqlite3.connect(DB)
+cur=con.cursor()
+rows=cur.execute("SELECT symbol,vol,vola,turnover,spread FROM tops WHERE ts=(SELECT MAX(ts) FROM tops)").fetchall()
+out={}
+for sym,vol,vola,turn,sp in rows:
+    ctx={
+        "symbol":sym,
+        "strength":round(vol*vola*turn/(sp+1e-6),6),
+        "trend":"bull" if vola>0.5 else "bear",
+        "volatility":vola,
+        "turnover":turn,
+        "spread":sp
+    }
+    out[sym]=ctx
+with open(OUT,"w") as f: json.dump(out,f,indent=2)
+print(f"[AnalyseA] {len(out)} contextes écrits dans {OUT}")
+PY
+
+chmod +x "$BASE/scripts/analyze_A.py"
+python3 "$BASE/scripts/analyze_A.py" | tee "$LOG/analyze_A.log"
+
+echo "[3] Analyse B : signaux affinés"
+cat > "$BASE/scripts/analyze_B.py" <<'PY'
+#!/usr/bin/env python3
+import json, time, random, sqlite3
+IN="/opt/scalp/project/data/analyse_A_out.json"
+OUT="/opt/scalp/project/data/signals_B.json"
+DB="/opt/scalp/project/data/scalp.db"
+
+with open(IN) as f:
+    ctx=json.load(f)
+
+signals=[]
+for sym,data in ctx.items():
+    # score basé sur strength et trend
+    strength=data["strength"]
+    bias=1 if data["trend"]=="bull" else -1
+    r=random.uniform(-0.3,0.3)
+    signal_strength=strength*(1+r)
+    if abs(signal_strength)>0.3:
+        signals.append({
+            "symbol":sym,
+            "side":"buy" if bias>0 else "sell",
+            "score":round(signal_strength,4),
+            "reason":"ctx_strength",
+            "created_ts":int(time.time())
+        })
+
+# écriture JSON
+with open(OUT,"w") as f: json.dump(signals,f,indent=2)
+print(f"[AnalyseB] {len(signals)} signaux raffinés -> {OUT}")
+
+# insertion DB
+con=sqlite3.connect(DB)
+con.execute("""
+CREATE TABLE IF NOT EXISTS signals_B(
+ id INTEGER PRIMARY KEY AUTOINCREMENT,
+ symbol TEXT, side TEXT, price REAL, reason TEXT, created_ts INTEGER
+)
+""")
+for s in signals:
+    con.execute("INSERT INTO signals_B(symbol,side,price,reason,created_ts) VALUES(?,?,?,?,?)",
+                (s["symbol"], s["side"], 0.0, s["reason"], s["created_ts"]))
+con.commit()
+con.close()
+PY
+
+chmod +x "$BASE/scripts/analyze_B.py"
+python3 "$BASE/scripts/analyze_B.py" | tee "$LOG/analyze_B.log"
+
+echo "[4] Vérification du flux DB"
+sqlite3 "$DATA/scalp.db" "SELECT COUNT(*) FROM tops;"
+sqlite3 "$DATA/scalp.db" "SELECT COUNT(*) FROM signals_B;"
+echo "[OK] Pipeline Top35 → AnalyseA → AnalyseB terminé"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/analyze_B.py
+Size: 1281
+MTime: 2025-10-07 10:12:40.015878450 +0200
+----- CONTENT -----
+#!/usr/bin/env python3
+import json, time, random, sqlite3
+IN="/opt/scalp/project/data/analyse_A_out.json"
+OUT="/opt/scalp/project/data/signals_B.json"
+DB="/opt/scalp/project/data/scalp.db"
+
+with open(IN) as f:
+    ctx=json.load(f)
+
+signals=[]
+for sym,data in ctx.items():
+    # score basé sur strength et trend
+    strength=data["strength"]
+    bias=1 if data["trend"]=="bull" else -1
+    r=random.uniform(-0.3,0.3)
+    signal_strength=strength*(1+r)
+    if abs(signal_strength)>0.3:
+        signals.append({
+            "symbol":sym,
+            "side":"buy" if bias>0 else "sell",
+            "score":round(signal_strength,4),
+            "reason":"ctx_strength",
+            "created_ts":int(time.time())
+        })
+
+# écriture JSON
+with open(OUT,"w") as f: json.dump(signals,f,indent=2)
+print(f"[AnalyseB] {len(signals)} signaux raffinés -> {OUT}")
+
+# insertion DB
+con=sqlite3.connect(DB)
+con.execute("""
+CREATE TABLE IF NOT EXISTS signals_B(
+ id INTEGER PRIMARY KEY AUTOINCREMENT,
+ symbol TEXT, side TEXT, price REAL, reason TEXT, created_ts INTEGER
+)
+""")
+for s in signals:
+    con.execute("INSERT INTO signals_B(symbol,side,price,reason,created_ts) VALUES(?,?,?,?,?)",
+                (s["symbol"], s["side"], 0.0, s["reason"], s["created_ts"]))
+con.commit()
+con.close()
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/router_debug.sh
+Size: 710
+MTime: 2025-10-07 09:42:01.279107537 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+DB=/opt/scalp/project/data/scalp.db
+CFG=/opt/scalp/project/config.env
+echo "== CONFIG =="; grep -E '^(RISK_PCT|LEVERAGE|MAX_OPEN|COOLDOWN_MS|MAX_MARGIN_PCT)=' "$CFG" || true
+echo; echo "== ACCOUNT =="; sqlite3 "$DB" "SELECT balance,equity,used_margin,leverage,datetime(updated,'unixepoch','localtime') FROM account_sim;"
+echo; echo "== OPEN POS =="; sqlite3 "$DB" "SELECT COUNT(*) FROM positions_open;"
+echo; echo "== SIGNALS =="; sqlite3 "$DB" "SELECT MAX(id) AS max_sig FROM signals_B;"
+echo; echo "== ROUTER STATE =="; sqlite3 "$DB" "SELECT k,v FROM router_state;"
+echo; echo "== ORDERS 60s =="; sqlite3 "$DB" "SELECT COUNT(*) FROM orders_sim WHERE created_ts>=strftime('%s','now')-60;"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/paper_reset.sh
+Size: 1223
+MTime: 2025-10-06 15:16:01.080792954 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+
+DB="/opt/scalp/project/data/scalp.db"
+
+echo "🧹 Reset complet scalp paper trader..."
+
+# 1️⃣ Stop tous les services avant nettoyage
+systemctl stop scalp-paper.service scalp-router.service scalp-B.service 2>/dev/null || true
+
+# 2️⃣ Réinitialise les tables clés
+sqlite3 "$DB" <<"SQL"
+PRAGMA foreign_keys=off;
+DELETE FROM signals_B;
+DELETE FROM orders_sim;
+DELETE FROM positions_open;
+DELETE FROM trades_closed;
+
+UPDATE account_sim
+   SET balance=100.0,
+       equity=100.0,
+       used_margin=0.0,
+       updated_ts=strftime('%s','now')
+ WHERE id=1;
+PRAGMA foreign_keys=on;
+SQL
+
+# 3️⃣ Vérifie structure minimale
+echo "📊 Tables présentes :"
+sqlite3 "$DB" ".tables" | tr ' ' '\n' | grep -E 'signals_B|orders_sim|account_sim'
+
+# 4️⃣ Relance services dans l'ordre logique
+echo "🚀 Relance des services..."
+systemctl restart scalp-B.service
+sleep 2
+systemctl restart scalp-router.service
+sleep 2
+systemctl restart scalp-paper.service
+sleep 3
+
+# 5️⃣ Vérifie santé et dernier signal
+echo
+echo "📈 État rapide :"
+sqlite3 "$DB" -cmd ".mode column" -cmd ".headers on" "SELECT COUNT(*) AS signals_B FROM signals_B;"
+
+echo
+echo "✅ Reset complet et relance OK."
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/patch_health_views.sh
+Size: 2694
+MTime: 2025-10-07 10:22:14.591413905 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+DB="/opt/scalp/project/data/scalp.db"
+
+sqlite3 "$DB" <<'SQL'
+PRAGMA foreign_keys=OFF;
+
+-- 1) Champs requis
+CREATE TABLE IF NOT EXISTS orders_sim(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  signal_id INTEGER, symbol TEXT, side TEXT,
+  qty REAL, price REAL, used_margin REAL, created_ts INTEGER, ts INTEGER
+);
+-- ajoute created_ts si manquant
+WITH t AS (SELECT name FROM sqlite_master WHERE type='table' AND name='orders_sim')
+SELECT 1 FROM t;  -- no-op
+-- add column if needed
+-- (ALTER TABLE fails if exists, so guarded)
+WITH cols AS (SELECT name AS col FROM pragma_table_info('orders_sim'))
+SELECT 1 FROM cols WHERE col='created_ts';
+
+-- si la colonne n'existe pas, on l'ajoute
+-- sqlite3 ne supporte pas IF NOT EXISTS ici, on teste côté shell
+SQL
+# si la colonne n'existe pas, l'ajouter
+if ! sqlite3 "$DB" "PRAGMA table_info(orders_sim);" | awk -F'|' '$2=="created_ts"{f=1}END{exit !f}'; then
+  sqlite3 "$DB" "ALTER TABLE orders_sim ADD COLUMN created_ts INTEGER;"
+fi
+
+# 2) Vues santé
+sqlite3 "$DB" <<'SQL'
+DROP VIEW IF EXISTS v_health;
+CREATE VIEW v_health AS
+WITH
+s AS (
+  SELECT
+    COALESCE(MAX(created_ts),0) AS last_sig,
+    COUNT(*) FILTER (WHERE created_ts >= strftime('%s','now')-60) AS ticks_60s
+  FROM signals_B
+),
+o AS (
+  SELECT
+    COALESCE(MAX(created_ts),0) AS last_ord,
+    COUNT(*) FILTER (WHERE created_ts >= strftime('%s','now')-60) AS orders_60s
+  FROM orders_sim
+)
+SELECT
+  datetime(s.last_sig,'unixepoch','localtime') AS last_sig_dt,
+  datetime(o.last_ord,'unixepoch','localtime') AS last_ord_dt,
+  s.ticks_60s,
+  o.orders_60s
+FROM s,o;
+
+DROP VIEW IF EXISTS v_progress;
+CREATE VIEW v_progress AS
+WITH
+a AS (SELECT balance,equity,COALESCE(used_margin,0) AS used_margin, COALESCE(leverage,50) AS leverage, updated FROM account_sim LIMIT 1),
+rp AS (SELECT COALESCE(SUM(pnl),0) AS realized_pnl FROM trades_closed),
+op AS (SELECT COALESCE(SUM(u_pnl),0) AS open_pnl FROM positions_open),
+s AS (SELECT COALESCE(MAX(created_ts),0) AS last_sig FROM signals_B),
+o AS (SELECT COALESCE(MAX(created_ts),0) AS last_ord FROM orders_sim)
+SELECT
+  datetime((SELECT last_sig FROM s),'unixepoch','localtime') AS last_sig_dt,
+  datetime((SELECT last_ord FROM o),'unixepoch','localtime') AS last_ord_dt,
+  (SELECT COUNT(*) FROM signals_B WHERE created_ts>=strftime('%s','now')-60) AS ticks_60s,
+  (SELECT COUNT(*) FROM orders_sim WHERE created_ts>=strftime('%s','now')-60) AS orders_60s,
+  a.balance, a.equity, a.used_margin, a.leverage,
+  ROUND((SELECT realized_pnl FROM rp),6) AS realized_pnl,
+  ROUND((SELECT open_pnl FROM op),6)     AS open_pnl,
+  datetime(a.updated,'unixepoch','localtime') AS updated
+FROM a;
+
+SQL
+
+echo "[OK] v_health et v_progress recréées."
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/reset_300.sh
+Size: 1642
+MTime: 2025-10-07 09:28:45.757602917 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+DB="/opt/scalp/project/data/scalp.db"
+
+sqlite3 "$DB" <<'SQL'
+PRAGMA foreign_keys=OFF;
+
+-- Tables minimales
+CREATE TABLE IF NOT EXISTS account_sim(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  balance REAL, equity REAL, used_margin REAL,
+  updated INTEGER, leverage REAL
+);
+CREATE TABLE IF NOT EXISTS router_state(k TEXT PRIMARY KEY, v INTEGER);
+
+-- Remise à zéro du compte
+WITH cur AS (SELECT COALESCE(leverage,50.0) AS lev FROM account_sim LIMIT 1)
+INSERT INTO account_sim(balance,equity,used_margin,updated,leverage)
+SELECT 300.0, 300.0, 0.0, strftime('%s','now'), COALESCE((SELECT lev FROM cur),50.0)
+WHERE NOT EXISTS (SELECT 1 FROM account_sim);
+UPDATE account_sim
+   SET balance=300.0,
+       equity=300.0,
+       used_margin=0.0,
+       updated=strftime('%s','now');
+
+-- Purge ordres/positions/trades
+DROP TABLE IF EXISTS positions_open;
+DROP TABLE IF EXISTS trades_closed;
+CREATE TABLE positions_open(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  order_id INTEGER, symbol TEXT, side TEXT,
+  qty REAL, entry_price REAL, last REAL, u_pnl REAL,
+  opened_ts INTEGER
+);
+CREATE TABLE trades_closed(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  symbol TEXT, side TEXT, qty REAL,
+  entry_price REAL, exit_price REAL, pnl REAL,
+  opened_ts INTEGER, closed_ts INTEGER
+);
+
+-- Garder orders_sim mais le vider proprement
+DELETE FROM orders_sim;
+
+-- Router: repartir depuis ~100 ticks avant le dernier disponible
+INSERT OR IGNORE INTO router_state(k,v) VALUES('last_signal_id',0);
+WITH m AS (SELECT COALESCE(MAX(id),0) AS mx FROM signals_B)
+UPDATE router_state SET v=MAX(0,(SELECT mx FROM m)-100) WHERE k='last_signal_id';
+
+VACUUM;
+SQL
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/top35_select.py
+Size: 1163
+MTime: 2025-10-07 10:12:39.907877436 +0200
+----- CONTENT -----
+#!/usr/bin/env python3
+import sqlite3, json, time
+DB="/opt/scalp/project/data/scalp.db"
+
+con=sqlite3.connect(DB)
+cur=con.cursor()
+
+cur.execute("""
+CREATE TABLE IF NOT EXISTS tops(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT, symbol TEXT, vol REAL, vola REAL,
+  turnover REAL, spread REAL, ts INTEGER
+);
+""")
+
+# Simule la récupération des coins avec indicateurs (vol24h, turnover, volatilité)
+symbols = [
+    ("BTCUSDT", 1.0, 0.9, 1.0, 0.01),
+    ("ETHUSDT", 0.8, 0.7, 0.8, 0.015),
+    ("BNBUSDT", 0.7, 0.6, 0.7, 0.02),
+    ("SOLUSDT", 0.6, 0.5, 0.6, 0.025),
+    ("XRPUSDT", 0.5, 0.4, 0.5, 0.03)
+]
+# Ajoute 30 symboles factices pour simuler le tri
+for i in range(30):
+    symbols.append((f"ALT{i}USDT", 0.1+i*0.02, 0.1+i*0.015, 0.2+i*0.01, 0.05))
+
+# Sélection par volatilité × volume
+symbols.sort(key=lambda x: x[1]*x[2]*x[3]/x[4], reverse=True)
+top35 = symbols[:35]
+ts = int(time.time())
+
+for sym in top35:
+    cur.execute("INSERT INTO tops(name,symbol,vol,vola,turnover,spread,ts) VALUES(?,?,?,?,?,?,?)",
+                ("TOP35", sym[0], sym[1], sym[2], sym[3], sym[4], ts))
+con.commit()
+print(f"[TOP35] Enregistrés {len(top35)} paires à {ts}")
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/reset_sim.sh
+Size: 858
+MTime: 2025-10-07 09:49:03.105934774 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+DB="/opt/scalp/project/data/scalp.db"
+
+has_col(){ sqlite3 "$DB" "PRAGMA table_info(account_sim);" | awk -F'|' -v c="$1" '$2==c{f=1}END{exit !f}'; }
+
+# purge
+sqlite3 "$DB" "
+PRAGMA foreign_keys=OFF;
+DELETE FROM orders_sim;
+DELETE FROM positions_open;
+DELETE FROM trades_closed;
+DELETE FROM signals_B;
+UPDATE router_state SET v=0 WHERE k='last_signal_id';
+DELETE FROM account_sim;
+"
+
+# insert selon schéma présent
+if has_col floating_pnl; then
+  sqlite3 "$DB" "
+  INSERT INTO account_sim(balance,equity,floating_pnl,used_margin,updated,leverage)
+  VALUES(300.0,300.0,0.0,0.0,strftime('%s','now'),50);
+  VACUUM;"
+else
+  sqlite3 "$DB" "
+  INSERT INTO account_sim(balance,equity,used_margin,updated,leverage)
+  VALUES(300.0,300.0,0.0,strftime('%s','now'),50);
+  VACUUM;"
+fi
+
+echo '[RESET] OK: balance=equity=300, used_margin=0, leverage=50'
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/paper_daily.sh
+Size: 515
+MTime: 2025-10-07 06:47:12.322730967 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+cd /opt/scalp/project
+[ -f .venv/bin/activate ] && source .venv/bin/activate || true
+mkdir -p logs
+LOG="logs/paper_daily_$(date +%F).log"
+/usr/bin/sqlite3 data/scalp.db <<SQL
+.output $LOG
+SELECT datetime('now','localtime') AS ts,
+       balance,
+       equity,
+       ROUND(equity - balance, 3) AS floating_pnl,
+       (SELECT COUNT(*) FROM positions_open)  AS open_positions,
+       (SELECT COUNT(*) FROM trades_closed)   AS closed_trades
+FROM account_sim;
+.output stdout
+SQL
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/check_ctx_ticks.sh
+Size: 1063
+MTime: 2025-10-07 15:35:40.038270705 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+DB="/opt/scalp/project/data/scalp.db"
+
+echo "=== CONTEXTES A ==="
+sqlite3 -csv "$DB" "
+SELECT symbol,ctx,ROUND(pb,3),ROUND(ph,3),ROUND(ps,3),
+       datetime(ts,'unixepoch','localtime')
+FROM v_contexts_A_latest
+ORDER BY ts DESC LIMIT 20;
+"
+
+echo -e "\n=== OHLCV comptages ==="
+sqlite3 -csv "$DB" "
+SELECT 'ohlcv_1m',COUNT(*) FROM ohlcv_1m UNION ALL
+SELECT 'ohlcv_5m',COUNT(*) FROM ohlcv_5m UNION ALL
+SELECT 'ohlcv_15m',COUNT(*) FROM ohlcv_15m UNION ALL
+SELECT 'ohlcv_30m',COUNT(*) FROM ohlcv_30m;
+"
+
+echo -e "\n=== DERNIERS TICKS 60s ==="
+if sqlite3 "$DB" "SELECT 1 FROM sqlite_master WHERE type='table' AND name='ticks';" | grep -q 1; then
+  sqlite3 -csv "$DB" "
+  SELECT symbol,COUNT(*) AS ticks_60s
+  FROM ticks
+  WHERE ts >= strftime('%s','now')-60
+  GROUP BY symbol
+  ORDER BY ticks_60s DESC;
+  "
+else
+  echo "table ticks absente"
+fi
+
+echo -e "\n=== SIGNAUX B (derniers) ==="
+sqlite3 -csv "$DB" "
+SELECT symbol,side,ROUND(price,2),datetime(created_ts,'unixepoch','localtime')
+FROM signals_B
+ORDER BY id DESC LIMIT 15;
+"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/top30_from_tops.py
+Size: 919
+MTime: 2025-10-07 10:30:02.080822135 +0200
+----- CONTENT -----
+#!/usr/bin/env python3
+import sqlite3, time
+DB="/opt/scalp/project/data/scalp.db"
+FIX=["BTCUSDT","ETHUSDT","BNBUSDT","SOLUSDT","XRPUSDT"]
+
+con=sqlite3.connect(DB); c=con.cursor()
+ts=c.execute("SELECT MAX(ts) FROM tops").fetchone()[0]
+if ts is None:
+    print("tops vide"); exit(0)
+
+rows=c.execute("""
+SELECT symbol, (vol*vola*turnover)/(CASE WHEN spread=0 THEN 1e-9 ELSE spread END) AS score
+FROM tops WHERE ts=? ORDER BY score DESC
+""",(ts,)).fetchall()
+
+seen=set(); sel=[]
+for sym,sc in rows:
+    s = sym if sym.endswith("USDT") else sym+"USDT"
+    if s not in seen:
+        sel.append((s, float(sc))); seen.add(s)
+for f in FIX:
+    if f not in seen:
+        sel.append((f, 0.0)); seen.add(f)
+sel=sel[:30]
+
+now=int(time.time())
+c.executemany("INSERT INTO top_scores(name,symbol,score,ts) VALUES('TOP30',?,?,?)",
+              [(s,sc,now) for s,sc in sel])
+con.commit(); con.close()
+print(f"TOP30 écrit: {len(sel)}")
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/list_top_candidates.py
+Size: 502
+MTime: 2025-10-07 12:51:48.477636515 +0200
+----- CONTENT -----
+#!/usr/bin/env python3
+import ccxt
+ex = ccxt.bitget({'options': {'defaultType':'swap'}, 'enableRateLimit': True})
+m = ex.load_markets()
+rows=[]
+for s,x in m.items():
+    if x.get('swap') and x.get('quote')=='USDT':
+        v=(x.get('info',{}) or {}).get('baseVolume') or x.get('volume') or 0
+        try: rows.append((s.replace(':USDT','').replace('/','').upper(), float(v or 0)))
+        except: pass
+rows.sort(key=lambda t:t[1], reverse=True)
+for sym,vol in rows[:150]:
+    print(f"{sym}|{vol:.0f}")
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/top30_real_bitget.py
+Size: 3128
+MTime: 2025-10-07 10:39:16.661892414 +0200
+----- CONTENT -----
+#!/usr/bin/env python3
+import time, sqlite3, ccxt
+
+DB = "/opt/scalp/project/data/scalp.db"
+FIX = ["BTCUSDT","ETHUSDT","BNBUSDT","SOLUSDT","XRPUSDT"]
+
+def instid(s):  # "BTC/USDT:USDT" -> "BTCUSDT"
+    return s.replace(":USDT","").replace("/","").upper()
+
+def has_90d_history(ex, sym):
+    """
+    Test léger: demande des bougies 1D autour de J-90.
+    Critère: on a au moins une bougie ≤ (now-88j).
+    """
+    now_ms = int(time.time()*1000)
+    since = now_ms - 95*24*3600*1000
+    try:
+        rows = ex.fetch_ohlcv(sym, timeframe='1d', since=since, limit=10)
+    except Exception:
+        return False
+    if not rows:
+        return False
+    # une bougie assez ancienne?
+    threshold = now_ms - 88*24*3600*1000
+    return any(r[0] <= threshold for r in rows)
+
+def quote_volume(ex, sym):
+    """
+    Récupère le volume quote du ticker si dispo.
+    Fallback sur baseVolume sinon.
+    """
+    try:
+        t = ex.fetch_ticker(sym)
+    except Exception:
+        return 0.0
+    for k in ("quoteVolume","quoteVolume24h","info"):
+        if k in t and t[k]:
+            if k=="info":
+                # Bitget renvoie souvent 'baseVolume' ou 'quoteVolume' dans info
+                v = t["info"].get("quoteVolume") or t["info"].get("baseVolume")
+            else:
+                v = t[k]
+            try:
+                return float(v)
+            except Exception:
+                pass
+    # fallback très faible
+    try:
+        return float(t.get("baseVolume") or 0.0)
+    except Exception:
+        return 0.0
+
+def main():
+    ex = ccxt.bitget({'options': {'defaultType':'swap'}, 'enableRateLimit': True})
+    markets = ex.load_markets()
+
+    # 1) candidats USDT-SWAP
+    cands = [s for s,m in markets.items() if m.get('swap') and m.get('quote')=='USDT']
+
+    # 2) filtre 90j
+    keep = []
+    for s in cands:
+        if has_90d_history(ex, s):
+            keep.append(s)
+        # throttle léger
+        time.sleep(0.03)
+
+    # 3) scoring volume
+    scored = []
+    for s in keep:
+        volq = quote_volume(ex, s)
+        scored.append((instid(s), volq))
+        time.sleep(0.03)
+
+    # tri décroissant volume
+    scored.sort(key=lambda x: x[1], reverse=True)
+
+    # 4) top30 réel + 5 fixes garantis
+    seen=set()
+    sel=[]
+    for sym,sc in scored:
+        if sym not in seen:
+            sel.append((sym, float(sc)))
+            seen.add(sym)
+        if len(sel) >= 25:
+            break
+    for f in FIX:
+        if f not in seen:
+            sel.append((f, 0.0))
+            seen.add(f)
+    sel = sel[:30]
+
+    # 5) enregistrement dans top_scores
+    con = sqlite3.connect(DB); c = con.cursor()
+    c.execute("""CREATE TABLE IF NOT EXISTS top_scores(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT, symbol TEXT, score REAL, ts INTEGER
+    )""")
+    now = int(time.time())
+    c.executemany("INSERT INTO top_scores(name,symbol,score,ts) VALUES('TOP30',?,?,?)",
+                  [(s,sc,now) for s,sc in sel])
+    con.commit(); con.close()
+
+    print(f"[TOP30 REAL] kept={len(keep)} sel={len(sel)} @ {now}")
+    for s,sc in sel[:10]:
+        print(s, sc)
+
+if __name__ == "__main__":
+    main()
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/analyse_B.py
+Size: 1123
+MTime: 2025-10-07 12:56:31.854029996 +0200
+----- CONTENT -----
+#!/usr/bin/env python3
+import sqlite3, time
+
+DB="/opt/scalp/project/data/scalp.db"
+NOW=int(time.time())
+
+con=sqlite3.connect(DB, timeout=10, isolation_level=None)
+c=con.cursor()
+c.execute("PRAGMA journal_mode=WAL"); c.execute("PRAGMA synchronous=NORMAL")
+
+c.execute("""CREATE TABLE IF NOT EXISTS signals_B_refined(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  symbol TEXT, side TEXT, price REAL, reason TEXT, created_ts INTEGER
+)""")
+
+# symboles avec contexte non nul
+syms=[r[0] for r in c.execute("SELECT symbol FROM contexts_A WHERE ctx IS NOT NULL AND ts=(SELECT MAX(ts) FROM contexts_A);").fetchall()]
+
+inserted=0
+for s in syms:
+  rows=c.execute("SELECT ts,close FROM ohlcv_1m WHERE symbol=? ORDER BY ts DESC LIMIT 30;", (s,)).fetchall()
+  if len(rows)<20: continue
+  rows=rows[::-1]
+  closes=[x[1] for x in rows]
+  last=closes[-1]
+  sma30=sum(closes)/len(closes)
+  side= "buy" if last>sma30 else "sell"
+  c.execute("""INSERT INTO signals_B_refined(symbol,side,price,reason,created_ts)
+               VALUES(?,?,?,?,?)""",(s,side,float(last),"A:sma30",NOW))
+  inserted+=1
+
+print(f"[AnalyseB] refined={inserted} ts={NOW}")
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/topA_B_live.sh
+Size: 618
+MTime: 2025-10-07 10:12:39.891877285 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -e
+BASE="/opt/scalp/project"
+LOG="$BASE/logs"
+mkdir -p "$LOG"
+
+# 1) Sélection TOP35 (existant)
+"$BASE/scripts/analyze_topA_B.sh" || true
+
+# 2) OHLCV réels pour TOP35
+python3 "$BASE/scripts/fetch_top35_ohlcv.py" | tee "$LOG/fetch_top35_ohlcv.log"
+
+# 3) WS sur les symboles avec contexte valide
+pkill -f ws_ctx_ticks.py 2>/dev/null || true
+nohup "$BASE/scripts/ws_ctx_ticks.py" >"$LOG/ws_ctx_ticks.log" 2>&1 &
+sleep 3
+tail -n 50 "$LOG/ws_ctx_ticks.log" || true
+
+# 4) Vérifs
+sqlite3 "$BASE/data/scalp.db" "SELECT COUNT(*) AS ticks_60s FROM signals_B WHERE created_ts>=strftime('%s','now')-60;"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/fetch_tf_ohlcv.py
+Size: 1533
+MTime: 2025-10-07 07:19:45.678268446 +0200
+----- CONTENT -----
+#!/usr/bin/env python3
+import json, sqlite3, ccxt
+from pathlib import Path
+
+DB="/opt/scalp/project/data/scalp.db"
+TF={"5m":"ohlcv_5m","15m":"ohlcv_15m","30m":"ohlcv_30m"}
+
+DDL = """
+CREATE TABLE IF NOT EXISTS {t}(
+  symbol TEXT, ts INTEGER PRIMARY KEY,
+  open REAL, high REAL, low REAL, close REAL, volume REAL
+);
+"""
+
+def ensure(con):
+    for tbl in TF.values():
+        con.execute(DDL.format(t=tbl))
+
+def main():
+    bases = []
+    p = Path("/opt/scalp/project/data/top90_active.json")
+    if p.exists(): bases = json.loads(p.read_text())
+    if not bases: return
+    ex = ccxt.bitget({'options': {'defaultType':'swap'}, 'enableRateLimit': True})
+    ex.load_markets()
+    mkt = {m['base']: s for s,m in ex.markets.items() if m.get('swap') and m.get('quote')=='USDT'}
+    con = sqlite3.connect(DB, timeout=10)
+    con.execute("PRAGMA journal_mode=WAL"); con.execute("PRAGMA synchronous=NORMAL")
+    ensure(con)
+    for base in bases:
+        sym = mkt.get(base)
+        if not sym: continue
+        for tf, table in TF.items():
+            try:
+                rows = ex.fetch_ohlcv(sym, timeframe=tf, limit=200)
+                con.executemany(
+                    f"INSERT OR REPLACE INTO {table}(symbol,ts,open,high,low,close,volume) VALUES(?,?,?,?,?,?,?)",
+                    [(base, int(t[0]/1000), t[1], t[2], t[3], t[4], t[5]) for t in rows]
+                )
+                con.commit()
+            except Exception:
+                pass
+    con.close()
+    print("OHLCV fetched")
+
+if __name__ == "__main__":
+    main()
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/patch_db.sh
+Size: 731
+MTime: 2025-10-07 07:12:03.805988295 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+DB="/opt/scalp/project/data/scalp.db"
+
+# positions_open.side NULL -> 'buy'
+sqlite3 "$DB" "UPDATE positions_open SET side='buy' WHERE side IS NULL OR TRIM(side)='';"
+
+# créer account_sim si absent
+sqlite3 "$DB" "CREATE TABLE IF NOT EXISTS account_sim(balance REAL, equity REAL);"
+
+# ajouter colonne updated si absente
+if ! sqlite3 "$DB" "PRAGMA table_info(account_sim);" | awk -F'|' '$2=="updated"{f=1}END{exit !f}'; then
+  sqlite3 "$DB" "ALTER TABLE account_sim ADD COLUMN updated INTEGER;"
+fi
+
+# initialiser une ligne si vide
+if [ "$(sqlite3 "$DB" "SELECT COUNT(*) FROM account_sim;")" = "0" ]; then
+  sqlite3 "$DB" "INSERT INTO account_sim(balance,equity,updated) VALUES(1000,1000,strftime('%s','now'));"
+fi
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/ws_probe.py
+Size: 1112
+MTime: 2025-10-07 15:53:19.107744315 +0200
+----- CONTENT -----
+import json,time,sqlite3,asyncio,websockets
+DB="/opt/scalp/project/data/scalp.db"
+URI="wss://ws.bitget.com/v2/ws/public"
+SUB={"op":"subscribe","args":[{"instType":"mc","channel":"ticker","instId":"BTCUSDT"}]}
+
+async def main():
+    async with websockets.connect(URI, ping_interval=20, close_timeout=2) as ws:
+        await ws.send(json.dumps(SUB))
+        t0=time.time()
+        while time.time()-t0<12:    # attend jusqu'à 12s
+            msg=json.loads(await asyncio.wait_for(ws.recv(), timeout=6))
+            if "data" in msg:
+                d=msg["data"][0]
+                ts=int(d.get("systemTime", time.time()*1000))//1000
+                row=("BTCUSDT", ts, float(d["last"]), float(d["bestBid"]), float(d["bestAsk"]))
+                con=sqlite3.connect(DB, timeout=10, isolation_level=None)
+                con.execute("PRAGMA busy_timeout=8000")
+                con.execute("PRAGMA journal_mode=WAL")
+                con.execute("INSERT INTO ticks(symbol,ts,price,best_bid,best_ask) VALUES (?,?,?,?,?)", row)
+                print("WROTE", *row); return
+        print("TIMEOUT")
+asyncio.run(main())
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/analysis_B_ws.py
+Size: 2088
+MTime: 2025-10-07 09:38:44.956021873 +0200
+----- CONTENT -----
+#!/usr/bin/env python3
+import asyncio, json, sqlite3, time, websockets
+
+DB="/opt/scalp/project/data/scalp.db"
+URI="wss://ws.bitget.com/mix/v1/stream"
+SUB={"op":"subscribe","args":[{"channel":"ticker","instType":"mc","instId":"BTCUSDT"}]}
+
+def db():
+    c=sqlite3.connect(DB, timeout=5, isolation_level=None)
+    c.execute("PRAGMA journal_mode=WAL"); c.execute("PRAGMA synchronous=NORMAL")
+    c.execute("""CREATE TABLE IF NOT EXISTS signals_B(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      symbol TEXT, side TEXT, price REAL, reason TEXT, created_ts INTEGER
+    )""")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_sig_cts ON signals_B(created_ts)")
+    return c
+
+def price(it):
+    for k in ("last","lastPr","price","close"):
+        v=it.get(k)
+        if v is None: continue
+        try: return float(v)
+        except: pass
+    return None
+
+async def run():
+    con=db()
+    last_emit_sec = -1
+    while True:
+        try:
+            async with websockets.connect(URI, ping_interval=20, ping_timeout=20, close_timeout=5) as ws:
+                await ws.send(json.dumps(SUB))
+                print("MODE=OLD")
+                while True:
+                    raw=await ws.recv()
+                    if isinstance(raw,(bytes,bytearray)): raw=raw.decode(errors="ignore")
+                    try: msg=json.loads(raw)
+                    except: continue
+                    data=msg.get("data") or []
+                    now=int(time.time())
+                    for it in data:
+                        p=price(it)
+                        if not p: continue
+                        # déduplication: max 1 tick inséré par seconde
+                        if now==last_emit_sec: continue
+                        con.execute("INSERT INTO signals_B(symbol,side,price,reason,created_ts) VALUES(?,?,?,?,?)",
+                                    ("BTCUSDT","buy",p,"mc_ticker",now))
+                        last_emit_sec = now
+        except Exception as e:
+            print("WS FAIL", type(e).__name__, e)
+            await asyncio.sleep(2)
+
+if __name__=="__main__":
+    asyncio.run(run())
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/paper_exec.py
+Size: 8120
+MTime: 2025-10-06 17:01:54.788922174 +0200
+----- CONTENT -----
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Paper trader minimal :
+- consomme /opt/scalp/project/data/scalp.db
+- lit orders_sim (id, signal_id, symbol, side, qty, price, ts, created_ts)
+- tient positions_open (netting par symbole) et trades_closed
+- met à jour account_sim (balance, equity, used_margin, updated_ts)
+"""
+
+import sqlite3, time, math, pathlib, os
+
+DB = "/opt/scalp/project/data/scalp.db"
+LOOP_SEC = 2
+
+SCHEMA = """
+PRAGMA journal_mode=WAL;
+PRAGMA synchronous=NORMAL;
+
+CREATE TABLE IF NOT EXISTS account_sim(
+  id INTEGER PRIMARY KEY CHECK(id=1),
+  balance REAL NOT NULL,
+  equity  REAL NOT NULL,
+  used_margin REAL NOT NULL DEFAULT 0,
+  updated_ts INTEGER NOT NULL
+);
+
+INSERT OR IGNORE INTO account_sim(id,balance,equity,used_margin,updated_ts)
+VALUES(1,100.0,100.0,0,CAST(strftime('%s','now') AS INTEGER));
+
+CREATE TABLE IF NOT EXISTS positions_open(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  symbol TEXT NOT NULL,
+  qty    REAL NOT NULL,             -- qty signée (>0 long, <0 short)
+  entry_price REAL NOT NULL,
+  last   REAL NOT NULL,
+  u_pnl  REAL NOT NULL,
+  opened_ts INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_pos_symbol ON positions_open(symbol);
+
+CREATE TABLE IF NOT EXISTS trades_closed(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  symbol TEXT NOT NULL,
+  qty    REAL NOT NULL,
+  entry_price REAL NOT NULL,
+  exit_price  REAL NOT NULL,
+  pnl   REAL NOT NULL,
+  opened_ts INTEGER NOT NULL,
+  closed_ts INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS paper_state(
+  id INTEGER PRIMARY KEY CHECK(id=1),
+  last_ord_id INTEGER NOT NULL
+);
+INSERT OR IGNORE INTO paper_state(id,last_ord_id) VALUES(1,0);
+"""
+
+def qrow(cur, q, args=()):
+    cur.execute(q, args); r=cur.fetchone(); return r
+
+def qval(cur, q, args=(), default=None):
+    r=qrow(cur,q,args); return r[0] if r and r[0] is not None else default
+
+def mark_last_id(cur, last_id):
+    cur.execute("UPDATE paper_state SET last_ord_id=? WHERE id=1", (last_id,))
+
+def load_last_id(cur):
+    return qval(cur,"SELECT last_ord_id FROM paper_state WHERE id=1",(),0)
+
+def up_equity(cur):
+    bal = qval(cur,"SELECT balance FROM account_sim WHERE id=1",(),0.0)
+    upnl = qval(cur,"SELECT COALESCE(SUM(u_pnl),0) FROM positions_open",(),0.0)
+    now = int(time.time())
+    cur.execute("UPDATE account_sim SET equity=?, updated_ts=? WHERE id=1",
+                (bal+upnl, now))
+
+def realize(cur, sym, qty_to_close, price, now):
+    """Ferme contre la position existante (FIFO simple)."""
+    # Une seule ligne par symbole (netting), donc qty_signée suffit
+    row = qrow(cur, "SELECT id, qty, entry_price, opened_ts FROM positions_open WHERE symbol=?", (sym,))
+    if not row: return 0.0
+    pid, pos_qty, entry, opened_ts = row
+    # sens inverse pour fermer
+    remain = pos_qty + qty_to_close  # qty_to_close est signée (opposée)
+    # PnL réalisé sur la portion fermée = (prix_sortie - prix_entree) * qty_signée_initiale_fermée
+    closed_qty = -qty_to_close if pos_qty*qty_to_close < 0 else 0.0
+    if closed_qty == 0.0:  # rien à fermer
+        return 0.0
+    pnl = (price - entry) * (closed_qty if pos_qty>0 else -closed_qty)
+    # balance++
+    bal = qval(cur,"SELECT balance FROM account_sim WHERE id=1",(),0.0)
+    cur.execute("UPDATE account_sim SET balance=? WHERE id=1", (bal+pnl,))
+    # trade
+    cur.execute("""INSERT INTO trades_closed(symbol,qty,entry_price,exit_price,pnl,opened_ts,closed_ts)
+                   VALUES(?,?,?,?,?,?,?)""",
+                (sym, closed_qty if pos_qty>0 else -closed_qty, entry, price, pnl, opened_ts, now))
+    # position restante (si 0 => on efface)
+    if abs(remain) < 1e-12:
+        cur.execute("DELETE FROM positions_open WHERE id=?", (pid,))
+    else:
+        # Si on a inversé, on ouvre à ce nouveau prix
+        if pos_qty*remain < 0:
+            cur.execute("""UPDATE positions_open
+                           SET qty=?, entry_price=?, last=?, u_pnl=0, opened_ts=?
+                           WHERE id=?""",
+                        (remain, price, price, now, pid))
+        else:
+            cur.execute("""UPDATE positions_open
+                           SET qty=?, last=?, u_pnl=(? - entry_price)*CASE WHEN qty>0 THEN qty ELSE -qty END
+                           WHERE id=?""",
+                        (remain, price, price, pid))
+    return pnl
+
+def apply_order(cur, sym, side, qty, price, ts):
+    if qty is None: qty = 0.0
+    if qty == 0.0:  # rien à faire
+        return
+    now = int(time.time())
+    signed = qty if side=="buy" else -qty
+    # existe ?
+    row = qrow(cur,"SELECT id, qty, entry_price FROM positions_open WHERE symbol=?", (sym,))
+    if not row:
+        # ouverture directe si même sens, sinon c'est un short/long selon signed
+        cur.execute("""INSERT INTO positions_open(symbol,qty,entry_price,last,u_pnl,opened_ts)
+                       VALUES(?,?,?,?,0,?)""",
+                    (sym, signed, price, price, now))
+        return
+    # position existe : fermer partiellement si sens inverse
+    pid, pos_qty, entry = row
+    if pos_qty * signed < 0:
+        # on ferme jusqu'à min(|pos|, |signed|)
+        close_part = -math.copysign(min(abs(pos_qty),abs(signed)), signed)  # opposé à la position
+        realize(cur, sym, close_part, price, now)
+        signed_after = pos_qty + signed
+        # si il reste du sens de l'ordre -> se retrouve dans apply suivant
+        row2 = qrow(cur,"SELECT id, qty, entry_price FROM positions_open WHERE symbol=?", (sym,))
+        if row2:
+            pid2, qty2, entry2 = row2
+            cur.execute("""UPDATE positions_open
+                           SET last=?, u_pnl=(? - entry_price)*CASE WHEN qty>0 THEN qty ELSE -qty END
+                           WHERE id=?""",
+                        (price, price, pid2))
+        else:
+            if abs(signed_after) > 1e-12:
+                cur.execute("""INSERT INTO positions_open(symbol,qty,entry_price,last,u_pnl,opened_ts)
+                               VALUES(?,?,?,?,0,?)""",
+                            (sym, signed_after, price, price, now))
+    else:
+        # même sens : on moyenne le prix d'entrée
+        new_qty = pos_qty + signed
+        if abs(new_qty) < 1e-12:
+            # s'annule exactement -> trade clos
+            realize(cur, sym, -signed, price, now)
+        else:
+            new_entry = (pos_qty*entry + signed*price)/new_qty
+            cur.execute("""UPDATE positions_open
+                           SET qty=?, entry_price=?, last=?, u_pnl=(? - ?)*CASE WHEN ?>0 THEN ? ELSE -? END
+                           WHERE id=?""",
+                        (new_qty, new_entry, price, price, new_entry, new_qty, new_qty, new_qty, pid))
+
+def main():
+    pathlib.Path("/opt/scalp/project/scripts").mkdir(parents=True, exist_ok=True)
+    with sqlite3.connect(DB, timeout=5) as con:
+        con.execute("PRAGMA foreign_keys=ON;")
+        con.executescript(SCHEMA)
+        con.commit()
+
+        while True:
+            cur = con.cursor()
+            last_id = load_last_id(cur)
+            rows = cur.execute(
+                "SELECT id, symbol, side, COALESCE(qty,0.0), price, ts FROM orders_sim WHERE id>? ORDER BY id ASC",
+                (last_id,)
+            ).fetchall()
+
+            for (oid, sym, side, qty, price, ts) in rows:
+                try:
+                    apply_order(cur, sym, side, float(qty), float(price), int(ts or time.time()))
+                except Exception:
+                    pass
+                mark_last_id(cur, oid)
+
+            # recalcul u_pnl avec dernier prix connu en base (ici: last dans positions_open)
+            cur.execute("""UPDATE positions_open
+                           SET u_pnl=(last - entry_price)*CASE WHEN qty>0 THEN qty ELSE -qty END""")
+            up_equity(cur)
+            con.commit()
+
+            # petit résumé console (optionnel)
+            acc = qrow(cur,"SELECT balance, equity, updated_ts FROM account_sim WHERE id=1")
+            if acc:
+                bal, eq, uts = acc
+                print(f"updated {time.strftime('%Y-%m-%d %H:%M:%S')}  balance={bal:.2f}  equity={eq:.2f}")
+
+            time.sleep(LOOP_SEC)
+
+if __name__ == "__main__":
+    main()
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/analyze_A.py
+Size: 687
+MTime: 2025-10-07 10:12:39.955877887 +0200
+----- CONTENT -----
+#!/usr/bin/env python3
+import sqlite3, json, time, statistics
+DB="/opt/scalp/project/data/scalp.db"
+OUT="/opt/scalp/project/data/analyse_A_out.json"
+con=sqlite3.connect(DB)
+cur=con.cursor()
+rows=cur.execute("SELECT symbol,vol,vola,turnover,spread FROM tops WHERE ts=(SELECT MAX(ts) FROM tops)").fetchall()
+out={}
+for sym,vol,vola,turn,sp in rows:
+    ctx={
+        "symbol":sym,
+        "strength":round(vol*vola*turn/(sp+1e-6),6),
+        "trend":"bull" if vola>0.5 else "bear",
+        "volatility":vola,
+        "turnover":turn,
+        "spread":sp
+    }
+    out[sym]=ctx
+with open(OUT,"w") as f: json.dump(out,f,indent=2)
+print(f"[AnalyseA] {len(out)} contextes écrits dans {OUT}")
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/paper_watch.sh
+Size: 455
+MTime: 2025-10-07 06:46:59.259200097 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+DB="/opt/scalp/project/data/scalp.db"
+
+clear
+echo "=== PAPER MONITOR LIVE (maj 2s) ==="
+while true; do
+    echo
+    date "+%Y-%m-%d %H:%M:%S"
+    sqlite3 -cmd ".headers on" -cmd ".mode column" "$DB" "
+        SELECT updated, balance, equity, floating_pnl, used_margin,
+               open_positions, closed_trades,
+               sig_1min, sig_5min, ord_1min, ord_5min
+        FROM v_paper_monitor;"
+    sleep 2
+done
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/closer_tp_sl.py
+Size: 2290
+MTime: 2025-10-07 09:45:21.482448600 +0200
+----- CONTENT -----
+#!/usr/bin/env python3
+import os, time, sqlite3, math
+DB="/opt/scalp/project/data/scalp.db"
+CFG="/opt/scalp/project/config.env"
+def load_env():
+    if os.path.exists(CFG):
+        for line in open(CFG):
+            s=line.strip()
+            if not s or s.startswith("#") or "=" not in s: continue
+            k,v=s.split("=",1)
+            os.environ[k]=v.split("#",1)[0].strip()
+load_env()
+def envf(k,d):
+    try: return float(os.environ.get(k,str(d)))
+    except: return float(d)
+TP_PCT=envf("TP_PCT",0.002)
+SL_PCT=envf("SL_PCT",0.002)
+def q(c,s,p=()): return c.execute(s,p)
+def lev(c):
+    r=q(c,"SELECT COALESCE(leverage,50) FROM account_sim LIMIT 1").fetchone()
+    return float(r[0]) if r else 50.0
+def last_price(c):
+    r=q(c,"SELECT price FROM signals_B ORDER BY id DESC LIMIT 1").fetchone()
+    return float(r[0]) if r else None
+def pnl(entry,last,qty): return round((last-entry)*qty,6)
+def main():
+    con=sqlite3.connect(DB, timeout=5, isolation_level=None)
+    q(con,"PRAGMA journal_mode=WAL"); q(con,"PRAGMA synchronous=NORMAL")
+    while True:
+        L=lev(con)
+        pos=q(con,"SELECT id,symbol,qty,entry_price,opened_ts FROM positions_open").fetchall()
+        if not pos: time.sleep(0.3); continue
+        now=math.trunc(time.time())
+        lp=last_price(con)
+        if not lp: time.sleep(0.3); continue
+        for pid,sym,qty,entry,opened_ts in pos:
+            up=pnl(entry,lp,qty); q(con,"UPDATE positions_open SET last=?, u_pnl=? WHERE id=?",(lp,up,pid))
+            move=(lp-entry)/entry
+            if move>=TP_PCT or move<=-SL_PCT:
+                realized=pnl(entry,lp,qty)
+                q(con,"INSERT INTO trades_closed(symbol,side,qty,entry_price,exit_price,pnl,opened_ts,closed_ts) VALUES(?,?,?,?,?,?,?,strftime('%s','now'))",
+                  (sym,"buy",qty,entry,lp,realized,opened_ts))
+                q(con,"DELETE FROM positions_open WHERE id=?",(pid,))
+                eq=q(con,"SELECT equity FROM account_sim LIMIT 1").fetchone()
+                eq=float(eq[0]) if eq else 300.0
+                q(con,"UPDATE account_sim SET equity=?, used_margin=(SELECT COALESCE(SUM(qty*entry_price/?),0) FROM positions_open), updated=strftime('%s','now')",
+                  (round(eq+realized,6), L))
+        time.sleep(0.3)
+if __name__=="__main__": main()
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/fetch_top35_ohlcv.py
+Size: 1550
+MTime: 2025-10-07 10:18:58.510532176 +0200
+----- CONTENT -----
+#!/usr/bin/env python3
+import sqlite3, time, ccxt
+DB="/opt/scalp/project/data/scalp.db"
+TFs=("1m","5m","15m","30m")
+
+def latest_top35(con):
+    rows=con.execute("SELECT symbol FROM tops WHERE ts=(SELECT MAX(ts) FROM tops) AND name='TOP35'").fetchall()
+    bases=[r[0].replace("USDT","") for r in rows]
+    for fx in ("BTC","ETH","BNB","SOL","XRP"):
+        if fx not in bases: bases.append(fx)
+    return bases
+
+def markets():
+    ex=ccxt.bitget({'options':{'defaultType':'swap'},'enableRateLimit':True}); ex.load_markets()
+    mp={}
+    for s,m in ex.markets.items():
+        if m.get('swap') and m.get('quote')=='USDT': mp[m['base']]=s
+    return ex, mp
+
+def main():
+    con=sqlite3.connect(DB,timeout=15); con.execute("PRAGMA journal_mode=WAL"); con.execute("PRAGMA synchronous=NORMAL")
+    bases=latest_top35(con)
+    ex,mp=markets()
+    for base in bases:
+        sym=mp.get(base); if not sym: continue
+        for tf in TFs:
+            t=f"ohlcv_{tf}"
+            try:
+                rows=ex.fetch_ohlcv(sym,timeframe=tf,limit=300)
+                payload=[(sym.split(':')[0].replace('/USDT','USDT').replace('/',''), int(r[0]//1000), r[1],r[2],r[3],r[4],r[5]) for r in rows]
+                con.executemany(f"INSERT OR REPLACE INTO {t}(symbol,ts,open,high,low,close,volume) VALUES(?,?,?,?,?,?,?)", payload)
+                con.commit()
+                print(base, tf, len(payload))
+            except Exception as e:
+                print("ERR", base, tf, type(e).__name__, e); time.sleep(0.2)
+    con.close()
+if __name__=="__main__": main()
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/progress_watch.sh
+Size: 527
+MTime: 2025-10-07 09:29:11.317634024 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+DB="/opt/scalp/project/data/scalp.db"
+clear
+echo "=== PROGRESS 300 USDT ==="
+while true; do
+  date "+%F %T"
+  sqlite3 -cmd ".headers on" -cmd ".mode column" "$DB" "SELECT * FROM v_progress;"
+  echo
+  echo "-- last positions --"
+  sqlite3 -cmd ".headers on" -cmd ".mode column" "$DB" "SELECT * FROM v_last_positions;"
+  echo
+  echo "-- last trades --"
+  sqlite3 -cmd ".headers on" -cmd ".mode column" "$DB" "SELECT * FROM v_last_trades;"
+  echo "---------------------------------------------"
+  sleep 3
+done
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/health.sh
+Size: 190
+MTime: 2025-10-07 09:39:54.675659883 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+DB="/opt/scalp/project/data/scalp.db"
+while true; do
+  date "+%F %T"
+  sqlite3 -cmd ".headers on" -cmd ".mode column" "$DB" "SELECT * FROM v_pipe_health;"
+  sleep 3
+done
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/top90_scores_build.py
+Size: 1278
+MTime: 2025-10-06 11:54:34.386828851 +0200
+----- CONTENT -----
+#!/usr/bin/env python3
+import json,time,sqlite3,ccxt
+from pathlib import Path
+DB="data/scalp.db"; bases=json.loads(Path("data/top90_active.json").read_text())
+ex=ccxt.bitget({'options': {'defaultType':'swap'}, 'enableRateLimit': True}); ex.load_markets()
+mkt={m['base']:s for s,m in ex.markets.items() if m.get('swap') and m.get('quote')=='USDT'}
+rows=[]
+def spread_bps(sym):
+    try:
+        ob=ex.fetch_order_book(sym,limit=5)
+        bid=ob['bids'][0][0]; ask=ob['asks'][0][0]; mid=(bid+ask)/2
+        return (ask-bid)/mid*10000.0
+    except Exception: return 100.0
+for b in bases[:120]:
+    sym=mkt.get(b); 
+    if not sym: continue
+    try:
+        h=ex.fetch_ohlcv(sym,'1h',limit=24)
+        vol=sum(c*v for _,_,_,_,c,v in h[-24:]) if h else 0
+        sp=spread_bps(sym)
+        score=max(0, vol/1e7) - min(1.0, sp/100.0)
+        rows.append((b,score,None,sp,vol,None,None,"ok",int(time.time())))
+    except Exception:
+        rows.append((b,None,None,None,None,None,None,"error",int(time.time())))
+con=sqlite3.connect(DB)
+with con:
+    con.execute("DELETE FROM top_scores")
+    con.executemany("""INSERT INTO top_scores(symbol,score,rank,spread_bps,vol24,turn7,vola7,status,updated_ts)
+                       VALUES(?,?,?,?,?,?,?,?,?)""",rows)
+print("scores:",len(rows))
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/ws_ticks_writer.py
+Size: 1708
+MTime: 2025-10-07 15:40:03.738378860 +0200
+----- CONTENT -----
+import asyncio, json, sqlite3, time, websockets, sys
+DB="/opt/scalp/project/data/scalp.db"
+SYMS=sys.argv[1:] or ["BTCUSDT","ETHUSDT","BNBUSDT","SOLUSDT","XRPUSDT"]
+
+def con():
+    c=sqlite3.connect(DB,timeout=8, isolation_level=None)
+    c.execute("PRAGMA journal_mode=WAL"); c.execute("PRAGMA synchronous=NORMAL")
+    c.execute("""CREATE TABLE IF NOT EXISTS ticks(
+        symbol TEXT, ts INTEGER, price REAL, best_bid REAL, best_ask REAL, volume REAL,
+        PRIMARY KEY(symbol,ts))""")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_ticks_ts ON ticks(ts)")
+    return c
+
+async def run():
+    uri="wss://ws.bitget.com/v1/stream"   # format OLD OK
+    subs=[{"op":"subscribe","args":[{"instType":"mc","channel":"ticker","instId":s}]} for s in SYMS]
+    db=con()
+    while True:
+        try:
+            async with websockets.connect(uri, ping_interval=20, ping_timeout=20) as ws:
+                for sub in subs: await ws.send(json.dumps(sub))
+                while True:
+                    m=json.loads(await ws.recv())
+                    if "data" not in m: continue
+                    d=m["data"][0]; sym=d.get("instId",""); now=int(time.time())
+                    pr=float(d.get("last") or d.get("markPrice") or 0.0)
+                    bb=float(d.get("bestBid") or 0.0); ba=float(d.get("bestAsk") or 0.0)
+                    vol=float(d.get("tradeTurnover","0") or 0.0)
+                    if not sym or pr<=0: continue
+                    db.execute("INSERT OR IGNORE INTO ticks(symbol,ts,price,best_bid,best_ask,volume) VALUES(?,?,?,?,?,?)",
+                               (sym, now, pr, bb, ba, vol))
+        except Exception:
+            await asyncio.sleep(1)  # retry loop
+asyncio.run(run())
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/ticks_rest_loop.py
+Size: 1157
+MTime: 2025-10-07 16:26:27.931745910 +0200
+----- CONTENT -----
+import time, sqlite3, requests, os
+DB="/opt/scalp/project/data/scalp.db"
+SYMS=os.environ.get("SYMS","BTCUSDT,ETHUSDT,BNBUSDT,SOLUSDT,XRPUSDT").split(",")
+def write(sym,last,bid,ask):
+    ts=int(time.time())
+    con=sqlite3.connect(DB,timeout=8, isolation_level=None)
+    con.execute("PRAGMA busy_timeout=8000"); con.execute("PRAGMA journal_mode=WAL")
+    con.execute("""CREATE TABLE IF NOT EXISTS ticks(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      symbol TEXT, ts INTEGER, price REAL, best_bid REAL, best_ask REAL)""")
+    con.execute("INSERT INTO ticks(symbol,ts,price,best_bid,best_ask) VALUES(?,?,?,?,?)",(sym,ts,last,bid,ask))
+    con.close()
+while True:
+    try:
+        j=requests.get("https://api.bitget.com/api/v2/mix/market/tickers?productType=umcbl", timeout=6).json()
+        m={it["symbol"].replace("_UMCBL",""):it for it in j.get("data",[])}
+        for s in SYMS:
+            d=m.get(s); 
+            if not d: continue
+            last=float(d.get("lastPr") or 0); bid=float(d.get("bestBid") or last); ask=float(d.get("bestAsk") or last)
+            if last>0: write(s,last,bid,ask)
+    except Exception:
+        pass
+    time.sleep(2)
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/db_repair_and_prune.sh
+Size: 3102
+MTime: 2025-10-07 13:49:24.681148680 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+DB="/opt/scalp/project/data/scalp.db"
+BASE="/opt/scalp/project"
+
+echo "[1] stop writers"
+pkill -f ws_ctx_ticks || true
+pkill -f analyse_A_ctx.py || true
+pkill -f materialize_indicators || true
+
+echo "[2] purge WAL/locks"
+command -v fuser >/dev/null && fuser -k "$DB" 2>/dev/null || true
+rm -f "${DB}-wal" "${DB}-shm"
+
+echo "[3] backup"
+cp -f "$DB" "${DB}.bak.$(date +%s)"
+
+echo "[4] integrity_check"
+if ! sqlite3 "$DB" "PRAGMA quick_check;" | grep -qx "ok"; then
+  echo "[4a] recover -> new db"
+  if sqlite3 "$DB" ".recover" >/opt/scalp/project/data/recover.sql 2>/dev/null; then
+    mv "$DB" "${DB}.broken.$(date +%s)" || true
+    sqlite3 "$DB" ".read /opt/scalp/project/data/recover.sql"
+  else
+    echo "[4b] dump fallback"
+    sqlite3 "$DB" ".output /opt/scalp/project/data/dump.sql" ".dump" ".output stdout"
+    mv "$DB" "${DB}.broken.$(date +%s)" || true
+    sqlite3 "$DB" ".read /opt/scalp/project/data/dump.sql"
+  fi
+fi
+
+echo "[5] DDL index OHLCV"
+sqlite3 "$DB" <<'SQL'
+PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;
+CREATE TABLE IF NOT EXISTS ohlcv_5m (symbol TEXT, ts INTEGER, open REAL, high REAL, low REAL, close REAL, volume REAL, PRIMARY KEY(symbol,ts));
+CREATE TABLE IF NOT EXISTS ohlcv_15m AS SELECT * FROM ohlcv_5m WHERE 0;
+CREATE TABLE IF NOT EXISTS ohlcv_30m AS SELECT * FROM ohlcv_5m WHERE 0;
+CREATE INDEX IF NOT EXISTS idx_ohlcv_5m_sym_ts  ON ohlcv_5m(symbol,ts);
+CREATE INDEX IF NOT EXISTS idx_ohlcv_15m_sym_ts ON ohlcv_15m(symbol,ts);
+CREATE INDEX IF NOT EXISTS idx_ohlcv_30m_sym_ts ON ohlcv_30m(symbol,ts);
+SQL
+
+echo "[6] DDL tables indic matérialisées"
+sqlite3 "$DB" <<'SQL'
+CREATE TABLE IF NOT EXISTS indic_5m(
+  symbol TEXT, ts INTEGER,
+  close REAL, sma20 REAL, sma50 REAL,
+  macd REAL, macd_sig REAL, macd_hist REAL,
+  rsi14 REAL, atr14 REAL, atr_pct REAL, obv REAL,
+  PRIMARY KEY(symbol,ts)
+);
+CREATE TABLE IF NOT EXISTS indic_15m AS SELECT * FROM indic_5m WHERE 0;
+CREATE TABLE IF NOT EXISTS indic_30m AS SELECT * FROM indic_5m WHERE 0;
+CREATE INDEX IF NOT EXISTS idx_indic5m_symbol_ts  ON indic_5m(symbol,ts);
+CREATE INDEX IF NOT EXISTS idx_indic15m_symbol_ts ON indic_15m(symbol,ts);
+CREATE INDEX IF NOT EXISTS idx_indic30m_symbol_ts ON indic_30m(symbol,ts);
+SQL
+
+echo "[7] Retention: garde N barres récentes"
+# 5m: 4000 (~14 j), 15m: 3000 (~31 j), 30m: 3000 (~62 j)
+sqlite3 "$DB" <<'SQL'
+WITH mx AS (SELECT MAX(ts) mx FROM ohlcv_5m)
+DELETE FROM ohlcv_5m WHERE ts < (SELECT mx-4000*300 FROM mx);
+WITH mx AS (SELECT MAX(ts) mx FROM ohlcv_15m)
+DELETE FROM ohlcv_15m WHERE ts < (SELECT mx-3000*900 FROM mx);
+WITH mx AS (SELECT MAX(ts) mx FROM ohlcv_30m)
+DELETE FROM ohlcv_30m WHERE ts < (SELECT mx-3000*1800 FROM mx);
+
+WITH mx AS (SELECT MAX(ts) mx FROM indic_5m)
+DELETE FROM indic_5m WHERE ts < (SELECT mx-4000*300 FROM mx);
+WITH mx AS (SELECT MAX(ts) mx FROM indic_15m)
+DELETE FROM indic_15m WHERE ts < (SELECT mx-3000*900 FROM mx);
+WITH mx AS (SELECT MAX(ts) mx FROM indic_30m)
+DELETE FROM indic_30m WHERE ts < (SELECT mx-3000*1800 FROM mx);
+SQL
+
+echo "[8] VACUUM + ANALYZE"
+sqlite3 "$DB" "VACUUM; ANALYZE;"
+
+echo "[9] OK"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/run_top30_update.sh
+Size: 579
+MTime: 2025-10-07 10:55:23.627712022 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -e
+BASE="/opt/scalp/project"
+LOG="$BASE/logs"
+mkdir -p "$LOG"
+
+MODE="${1:-fast}"  # fast|weekly
+
+if [ "$MODE" = "weekly" ]; then
+  export TOP30_BYPASS_CACHE=1
+  export SKIP_90D=0
+else
+  export TOP30_BYPASS_CACHE=1
+  export SKIP_90D=1
+fi
+
+python3 "$BASE/scripts/top30_real_bitget_fast.py" | tee -a "$LOG/top30_update.log"
+
+# relance WS multi-symboles pour prendre le nouveau TOP30
+pkill -f ws_ctx_ticks.py 2>/dev/null || true
+nohup "$BASE/scripts/ws_ctx_ticks.py" >"$LOG/ws_ctx_ticks.log" 2>&1 &
+echo "[TOP30] WS reloaded" | tee -a "$LOG/top30_update.log"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/ws_ctx_ticks_single.py
+Size: 2593
+MTime: 2025-10-07 12:51:53.941643624 +0200
+----- CONTENT -----
+#!/usr/bin/env python3
+import asyncio, json, sqlite3, time, websockets
+DB="/opt/scalp/project/data/scalp.db"; URI="wss://ws.bitget.com/mix/v1/stream"
+
+def db():
+    c=sqlite3.connect(DB,timeout=5, isolation_level=None)
+    c.execute("PRAGMA journal_mode=WAL"); c.execute("PRAGMA synchronous=NORMAL")
+    c.execute("""CREATE TABLE IF NOT EXISTS signals_B(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      symbol TEXT, side TEXT, price REAL, reason TEXT, created_ts INTEGER)""")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_sig_cts ON signals_B(created_ts)")
+    return c
+
+def top_symbols(con):
+    r=con.execute("""SELECT symbol FROM top_scores
+      WHERE name='TOP30' AND ts=(SELECT MAX(ts) FROM top_scores WHERE name='TOP30')
+      ORDER BY score DESC, symbol ASC LIMIT 30""").fetchall()
+    syms=[x[0] for x in r]
+    for f in ("BTCUSDT","ETHUSDT","BNBUSDT","SOLUSDT","XRPUSDT"):
+        if f not in syms: syms.append(f)
+    return syms[:30]
+
+def price_of(it):
+    for k in ("last","lastPr","price","close"):
+        v=it.get(k)
+        if v is None: continue
+        try: return float(v)
+        except: pass
+    return None
+
+async def worker(sym, con):
+    sub={"op":"subscribe","args":[{"channel":"ticker","instType":"mc","instId":sym}]}
+    backoff=1
+    while True:
+        try:
+            async with websockets.connect(URI, ping_interval=20, ping_timeout=20, close_timeout=5) as ws:
+                await ws.send(json.dumps(sub))
+                print("SUB", sym, flush=True)
+                last=-1
+                while True:
+                    raw=await ws.recv()
+                    if isinstance(raw,(bytes,bytearray)): raw=raw.decode(errors="ignore")
+                    try: msg=json.loads(raw)
+                    except: continue
+                    data=msg.get("data") or []
+                    now=int(time.time())
+                    for it in data:
+                        p=price_of(it)
+                        if not p: continue
+                        if last==now: continue
+                        con.execute("INSERT INTO signals_B(symbol,side,price,reason,created_ts) VALUES(?,?,?,?,?)",
+                                    (sym,"buy",p,"ctx_ws",now))
+                        last=now
+            backoff=1
+        except Exception as e:
+            print("WS FAIL", sym, type(e).__name__, flush=True)
+            await asyncio.sleep(backoff); backoff=min(30, backoff*2)
+
+async def main():
+    con=db()
+    tasks=[asyncio.create_task(worker(s, con)) for s in top_symbols(con)]
+    await asyncio.gather(*tasks)
+
+if __name__=="__main__":
+    asyncio.run(main())
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/bitget_ws_probe.py
+Size: 1032
+MTime: 2025-10-06 12:33:52.089730966 +0200
+----- CONTENT -----
+#!/usr/bin/env python3
+import asyncio, time, json, websockets
+URI="wss://ws.bitget.com/mix/v1/stream"
+CANDS=[
+  {"instType":"USDT-FUTURES","channel":"ticker","instId":"BTCUSDT"},
+  {"instType":"MC","channel":"ticker","instId":"BTCUSDT"},
+  {"instType":"UMCBL","channel":"ticker","instId":"BTCUSDT"} # legacy
+]
+async def main():
+  async with websockets.connect(URI, ping_interval=20, ping_timeout=20, close_timeout=5, max_size=2**20) as ws:
+    await asyncio.sleep(1)
+    for a in CANDS: await ws.send(json.dumps({"op":"subscribe","args":[a]}))
+    start=time.time()
+    while time.time()-start<20:
+      msg=await asyncio.wait_for(ws.recv(), timeout=20)
+      if isinstance(msg,(bytes,bytearray)): msg=msg.decode("utf-8","ignore")
+      try: d=json.loads(msg)
+      except: continue
+      if d.get("event") in ("subscribe","subscribed") or d.get("code")==0:
+        print("ACK:", d)
+      if "data" in d and "arg" in d:
+        print("DATA_OK:", d["arg"]); return
+    print("FAIL: no data"); raise SystemExit(1)
+asyncio.run(main())
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/router_dry.py
+Size: 1425
+MTime: 2025-10-06 16:53:55.604110778 +0200
+----- CONTENT -----
+#!/usr/bin/env python3
+import sqlite3, time
+
+DB = "/opt/scalp/project/data/scalp.db"
+
+SQL_FETCH = """
+SELECT id, symbol, side, COALESCE(price,0.0) AS price, created_ts
+FROM signals_B
+WHERE id > ?
+ORDER BY id ASC
+LIMIT 100;
+"""
+
+SQL_INSERT_ORD = """
+INSERT INTO orders_sim(signal_id, symbol, side, qty, price, ts)
+VALUES(?,?,?,?,?,strftime('%s','now'));
+"""
+
+def route_once(con, last_id):
+    cur = con.cursor()
+    rows = cur.execute(SQL_FETCH, (last_id,)).fetchall()
+    n = 0
+    for sid, sym, side, price, _ in rows:
+        cur.execute(SQL_INSERT_ORD, (sid, sym, side, 0.0, float(price or 0.0)))
+        last_id = sid
+        n += 1
+    con.commit()
+    return n, last_id
+
+def main():
+    con = sqlite3.connect(DB)
+    con.execute("PRAGMA foreign_keys=ON;")
+    con.execute("""CREATE TABLE IF NOT EXISTS orders_sim(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        signal_id INTEGER REFERENCES signals_B(id) ON DELETE CASCADE,
+        symbol TEXT NOT NULL, side TEXT NOT NULL CHECK(side IN ('buy','sell')),
+        qty REAL DEFAULT 0, price REAL NOT NULL, ts INTEGER NOT NULL
+    );""")
+    last_id = 0
+    print("== Router dry-run started (signals_B -> orders_sim) ==")
+    total = 0
+    for _ in range(10):
+        n, last_id = route_once(con, last_id)
+        if n == 0: break
+        total += n
+        time.sleep(0.2)
+    print(f"routed {total} order(s)")
+    con.close()
+
+if __name__ == "__main__":
+    main()
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/router_simple.py
+Size: 4203
+MTime: 2025-10-07 09:44:57.478516275 +0200
+----- CONTENT -----
+#!/usr/bin/env python3
+import os, time, sqlite3
+
+DB="/opt/scalp/project/data/scalp.db"
+CFG="/opt/scalp/project/config.env"
+
+def load_env():
+    if os.path.exists(CFG):
+        for line in open(CFG):
+            s=line.strip()
+            if not s or s.startswith("#") or "=" not in s: continue
+            k,v=s.split("=",1)
+            os.environ[k]=v.split("#",1)[0].strip()
+load_env()
+
+def envf(k,d): 
+    try: return float(os.environ.get(k,str(d)))
+    except: return float(d)
+
+RISK_PCT   = envf("RISK_PCT",0.005)
+MAX_OPEN   = int(envf("MAX_OPEN",200))
+COOLDOWN_MS= int(envf("COOLDOWN_MS",150))
+MAX_MARGIN = envf("MAX_MARGIN_PCT",0.95)
+DEF_LEV    = envf("LEVERAGE",50)
+
+def q(c,s,p=()): return c.execute(s,p)
+def ensure(c):
+    q(c,"PRAGMA journal_mode=WAL"); q(c,"PRAGMA synchronous=NORMAL")
+    q(c,"CREATE TABLE IF NOT EXISTS router_state(k TEXT PRIMARY KEY, v INTEGER)")
+    q(c,"INSERT OR IGNORE INTO router_state(k,v) VALUES('last_signal_id',0)")
+    q(c,"""CREATE TABLE IF NOT EXISTS positions_open(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      order_id INTEGER, symbol TEXT, side TEXT,
+      qty REAL, entry_price REAL, last REAL, u_pnl REAL, opened_ts INTEGER)""")
+    q(c,"""CREATE TABLE IF NOT EXISTS orders_sim(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      signal_id INTEGER, symbol TEXT, side TEXT,
+      qty REAL, price REAL, used_margin REAL, created_ts INTEGER, ts INTEGER)""")
+
+def has_col(c,t,col): return any(r[1]==col for r in q(c,f"PRAGMA table_info({t})"))
+def acct(c):
+    r=q(c,"SELECT equity,COALESCE(leverage,?),COALESCE(used_margin,0) FROM account_sim LIMIT 1",(DEF_LEV,)).fetchone()
+    return (float(r[0]),float(r[1]),float(r[2])) if r else (300.0,DEF_LEV,0.0)
+def load_last(c):
+    last=q(c,"SELECT v FROM router_state WHERE k='last_signal_id'").fetchone()[0]
+    mx=q(c,"SELECT COALESCE(MAX(id),0) FROM signals_B").fetchone()[0] or 0
+    if last==0 or last>mx: last=max(0,mx-100); q(c,"UPDATE router_state SET v=? WHERE k='last_signal_id'",(last,))
+    return last
+def save_last(c,v): q(c,"UPDATE router_state SET v=? WHERE k='last_signal_id'",(v,))
+def open_cnt(c): return q(c,"SELECT COUNT(*) FROM positions_open").fetchone()[0] or 0
+def last_ord_ms(c): return int((q(c,"SELECT COALESCE(MAX(created_ts),0) FROM orders_sim").fetchone()[0] or 0)*1000)
+
+def main():
+    con=sqlite3.connect(DB, timeout=5, isolation_level=None); ensure(con)
+    use_ts=has_col(con,"orders_sim","ts")
+    last=load_last(con)
+    while True:
+        eq,lev,used=acct(con)
+        if used > MAX_MARGIN*eq or open_cnt(con) >= MAX_OPEN:
+            time.sleep(0.2); last=load_last(con); continue
+        rows=q(con,"SELECT id,symbol,price,created_ts FROM signals_B WHERE id>? ORDER BY id ASC LIMIT 200",(last,)).fetchall()
+        if not rows: time.sleep(0.2); continue
+        for sid,sym,price,cts in rows:
+            if int(time.time()*1000)-last_ord_ms(con) < COOLDOWN_MS: last=sid; continue
+            if not price or price<=0: last=sid; continue
+            qty  = round((eq*RISK_PCT*lev)/float(price), 6)
+            if qty<=0: last=sid; continue
+            used_m = round(qty*float(price)/lev, 6)
+            if use_ts:
+                q(con,"INSERT INTO orders_sim(signal_id,symbol,side,qty,price,used_margin,created_ts,ts) VALUES(?,?,?,?,?,?,?,?)",
+                  (sid,sym,"buy",qty,float(price),used_m,int(cts),int(cts)))
+            else:
+                q(con,"INSERT INTO orders_sim(signal_id,symbol,side,qty,price,used_margin,created_ts) VALUES(?,?,?,?,?,?,?)",
+                  (sid,sym,"buy",qty,float(price),used_m,int(cts)))
+            oid=q(con,"SELECT last_insert_rowid()").fetchone()[0]
+            q(con,"INSERT INTO positions_open(order_id,symbol,side,qty,entry_price,last,u_pnl,opened_ts) VALUES(?,?,?,?,?,?,?,?)",
+              (oid,sym,"buy",qty,float(price),float(price),0.0,int(cts)))
+            last=sid
+        save_last(con,last)
+        try:
+            tot=q(con,"SELECT COALESCE(SUM(qty*entry_price/?),0) FROM positions_open",(lev,)).fetchone()[0] or 0.0
+            q(con,"UPDATE account_sim SET used_margin=?, updated=strftime('%s','now')",(round(tot,6),))
+        except sqlite3.OperationalError: pass
+
+if __name__=="__main__": main()
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/materialize_indicators_incremental.py
+Size: 1927
+MTime: 2025-10-07 15:01:20.426285687 +0200
+----- CONTENT -----
+#!/usr/bin/env python3
+import sqlite3, time
+
+DB="/opt/scalp/project/data/scalp.db"
+TF=({"name":"5m","secs":300},{"name":"15m","secs":900},{"name":"30m","secs":1800})
+VIEW=lambda tf: f"v_indic_{tf}"
+TBL =lambda tf: f"indic_{tf}"
+WARMUP_BARS=100  # recalcule 100 barres avant le max ts connu (pour SMA/RSI/MACD)
+
+con=sqlite3.connect(DB, timeout=30, isolation_level=None)
+cur=con.cursor()
+cur.execute("PRAGMA journal_mode=WAL"); cur.execute("PRAGMA synchronous=NORMAL")
+
+# symbols à maintenir (TOP30 courant)
+syms=[r[0] for r in cur.execute("""
+SELECT DISTINCT symbol FROM top_scores
+WHERE name='TOP30' AND ts=(SELECT MAX(ts) FROM top_scores WHERE name='TOP30')
+LIMIT 30
+""")]
+
+for tf in TF:
+    tfname=tf["name"]; secs=tf["secs"]
+    view=VIEW(tfname); tbl=TBL(tfname)
+
+    # sécurités
+    cur.execute(f"""CREATE TABLE IF NOT EXISTS {tbl}(
+      symbol TEXT, ts INTEGER,
+      close REAL, sma20 REAL, sma50 REAL,
+      macd REAL, macd_sig REAL, macd_hist REAL,
+      rsi14 REAL, atr14 REAL, atr_pct REAL, obv REAL,
+      PRIMARY KEY(symbol,ts)
+    )""")
+    cur.execute(f"CREATE INDEX IF NOT EXISTS idx_{tbl}_sym_ts ON {tbl}(symbol,ts)")
+
+    for s in syms:
+        row=cur.execute(f"SELECT MAX(ts) FROM {tbl} WHERE symbol=?",(s,)).fetchone()
+        max_ts = row[0] or 0
+        cutoff = max(0, max_ts - WARMUP_BARS*secs)
+
+        # purge la zone à reconstituer
+        cur.execute(f"DELETE FROM {tbl} WHERE symbol=? AND ts>=?", (s, cutoff))
+
+        # réinsère depuis la vue récente seulement
+        cur.execute(f"""
+        INSERT OR REPLACE INTO {tbl}(symbol,ts,close,sma20,sma50,macd,macd_sig,macd_hist,rsi14,atr14,atr_pct,obv)
+        SELECT symbol,ts,close,sma20,sma50,macd,macd_sig,macd_hist,rsi14,atr14,atr_pct,obv
+        FROM {view}
+        WHERE symbol=? AND ts>=?;
+        """, (s, cutoff))
+
+    n = cur.execute(f"SELECT COUNT(*) FROM {tbl}").fetchone()[0]
+    print(f"[INC] {tfname} rows={n}")
+
+con.close()
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/ws_probe_robust.py
+Size: 3616
+MTime: 2025-10-07 15:56:53.492498184 +0200
+----- CONTENT -----
+import asyncio, json, os, time, sqlite3, websockets, aiohttp, random
+DB="/opt/scalp/project/data/scalp.db"
+SYM=os.environ.get("SYM","BTCUSDT")
+
+URI="wss://ws.bitget.com/v2/ws/public"
+SUB_NEW={"op":"subscribe","args":[{"instType":"USDT-FUTURES","channel":"ticker","instId":f"{SYM}_UMCBL"}]}
+SUB_OLD={"op":"subscribe","args":[{"instType":"mc","channel":"ticker","instId":SYM}]}
+
+def db_write(sym, ts, last, bid, ask):
+    with sqlite3.connect(DB, timeout=10, isolation_level=None) as con:
+        con.execute("PRAGMA busy_timeout=8000")
+        con.execute("PRAGMA journal_mode=WAL")
+        con.execute("""CREATE TABLE IF NOT EXISTS ticks(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            symbol TEXT, ts INTEGER, price REAL, best_bid REAL, best_ask REAL)""")
+        con.execute("CREATE INDEX IF NOT EXISTS idx_ticks_sym_ts ON ticks(symbol,ts)")
+        con.execute("INSERT INTO ticks(symbol,ts,price,best_bid,best_ask) VALUES (?,?,?,?,?)",
+                    (sym, ts, last, bid, ask))
+
+async def ws_once(sub):
+    async with websockets.connect(URI, ping_interval=20, close_timeout=2) as ws:
+        await ws.send(json.dumps(sub))
+        t0=time.time()
+        while time.time()-t0<25:  # 25s par branche
+            msg=json.loads(await asyncio.wait_for(ws.recv(), timeout=8))
+            # OLD = {"action":"snapshot"/"update", "data":[...]}
+            # NEW = {"event":"subscribe"} puis "data"
+            d=None
+            if "data" in msg:
+                d=msg["data"][0]
+            elif msg.get("action") in ("snapshot","update") and msg.get("data"):
+                d=msg["data"][0]
+            if not d: 
+                continue
+            last=float(d.get("last") or d.get("lastPr") or d.get("pr") or 0.0)
+            bid=float(d.get("bestBid") or d.get("bidPx") or last)
+            ask=float(d.get("bestAsk") or d.get("askPx") or last)
+            ts=int((d.get("systemTime") or d.get("ts") or time.time()*1000)//1000)
+            if last>0:
+                db_write(SYM, ts, last, bid, ask)
+                print("WROTE", SYM, ts, last, bid, ask)
+                return True
+        return False
+
+async def rest_fallback():
+    url=f"https://api.bitget.com/api/v2/mix/market/tickers?productType=umcbl"  # USDT-perp
+    try:
+        timeout=aiohttp.ClientTimeout(total=8)
+        async with aiohttp.ClientSession(timeout=timeout) as ses:
+            async with ses.get(url) as r:
+                j=await r.json()
+        for it in j.get("data",[]):
+            if it.get("symbol")==f"{SYM}_UMCBL":
+                last=float(it.get("lastPr") or 0)
+                bid=float(it.get("bestBid") or last)
+                ask=float(it.get("bestAsk") or last)
+                ts=int(time.time())
+                if last>0:
+                    db_write(SYM, ts, last, bid, ask)
+                    print("REST_WROTE", SYM, ts, last, bid, ask)
+                    return True
+    except Exception as e:
+        print("REST_FAIL", e)
+    return False
+
+async def main():
+    # 3 tentatives avec backoff
+    for attempt in range(3):
+        # course NEW + OLD, on garde le premier qui écrit
+        done, pending = await asyncio.wait(
+            [asyncio.create_task(ws_once(SUB_NEW)), asyncio.create_task(ws_once(SUB_OLD))],
+            return_when=asyncio.FIRST_COMPLETED)
+        ok = any(t.result() for t in done if not t.cancelled())
+        for p in pending: p.cancel()
+        if ok:
+            return
+        # fallback REST
+        if await rest_fallback():
+            return
+        await asyncio.sleep(1.5*(attempt+1)+random.random())
+    print("TIMEOUT_ALL")
+asyncio.run(main())
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/ws_ctx_ticks.py
+Size: 2841
+MTime: 2025-10-07 10:57:31.707919305 +0200
+----- CONTENT -----
+#!/usr/bin/env python3
+import asyncio, json, sqlite3, time, websockets
+
+DB  = "/opt/scalp/project/data/scalp.db"
+URI = "wss://ws.bitget.com/mix/v1/stream"
+
+def db():
+    c = sqlite3.connect(DB, timeout=5, isolation_level=None)
+    c.execute("PRAGMA journal_mode=WAL"); c.execute("PRAGMA synchronous=NORMAL")
+    c.execute("""CREATE TABLE IF NOT EXISTS signals_B(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      symbol TEXT, side TEXT, price REAL, reason TEXT, created_ts INTEGER
+    )""")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_sig_cts ON signals_B(created_ts)")
+    return c
+
+def top_symbols(con):
+    rows = con.execute("""
+      SELECT symbol FROM top_scores
+      WHERE name='TOP30' AND ts=(SELECT MAX(ts) FROM top_scores WHERE name='TOP30')
+      ORDER BY score DESC LIMIT 20
+    """).fetchall()
+    syms = [r[0] for r in rows]
+    for f in ("BTCUSDT","ETHUSDT","BNBUSDT","SOLUSDT","XRPUSDT"):
+        if f not in syms: syms.append(f)
+    return syms[:20]
+
+def price_of(item):
+    for k in ("last","lastPr","price","close"):
+        v = item.get(k)
+        if v is None: continue
+        try: return float(v)
+        except: pass
+    return None
+
+async def sub_batch(ws, syms):
+    args = [{"channel":"ticker","instType":"mc","instId":s} for s in syms]
+    sub = {"op":"subscribe","args":args}
+    await ws.send(json.dumps(sub))
+    print("SUB", len(syms), flush=True)
+
+async def run():
+    con = db()
+    symbols = top_symbols(con)
+    # group par 2 ou 3 symboles max
+    groups = [symbols[i:i+3] for i in range(0,len(symbols),3)]
+    print("GROUPS", len(groups), flush=True)
+
+    while True:
+        for grp in groups:
+            try:
+                async with websockets.connect(URI, ping_interval=20, ping_timeout=20, close_timeout=5) as ws:
+                    await sub_batch(ws, grp)
+                    while True:
+                        raw = await ws.recv()
+                        if isinstance(raw,(bytes,bytearray)): raw = raw.decode(errors="ignore")
+                        try: msg = json.loads(raw)
+                        except: continue
+                        data = msg.get("data") or []
+                        arg  = msg.get("arg") or {}
+                        inst = arg.get("instId") if isinstance(arg,dict) else ""
+                        now = int(time.time())
+                        for it in data:
+                            p = price_of(it)
+                            if not p: continue
+                            con.execute("INSERT INTO signals_B(symbol,side,price,reason,created_ts) VALUES(?,?,?,?,?)",
+                                        (inst or it.get("instId"), "buy", p, "ctx_ws", now))
+            except Exception as e:
+                print("WS FAIL:", type(e).__name__, e, flush=True)
+                await asyncio.sleep(3)
+
+if __name__=="__main__":
+    asyncio.run(run())
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/top90_build.py
+Size: 617
+MTime: 2025-10-06 11:54:34.378828842 +0200
+----- CONTENT -----
+#!/usr/bin/env python3
+import ccxt, json
+from pathlib import Path
+EXCLUDE={"USDT","USDC","FDUSD","TUSD","DAI","EUR","TRY","USD"}
+EX_LEV=("UP","DOWN","BULL","BEAR","3L","3S","5L","5S")
+out=Path("data/top90_active.json")
+ex=ccxt.bitget({'options': {'defaultType':'swap'}, 'enableRateLimit': True})
+ex.load_markets()
+bases=set()
+for s,m in ex.markets.items():
+    if m.get('swap') and m.get('quote')=='USDT':
+        b=(m.get('base') or '').upper()
+        if b not in EXCLUDE and not any(t in b for t in EX_LEV):
+            bases.add(b)
+out.write_text(json.dumps(sorted(bases), indent=2))
+print("ACTIVE:", len(bases))
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/paper_purge.sh
+Size: 189
+MTime: 2025-10-06 14:17:03.329449243 +0200
+----- CONTENT -----
+set -euo pipefail
+cd /opt/scalp/project
+find logs/ -type f -name 'paper_daily_*.log' -mtime +14 -print -delete || true
+echo "[2025-10-06 14:17:03] Purge terminée." >> logs/paper_purge.log
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/top30_real_bitget_fast.py
+Size: 3517
+MTime: 2025-10-07 10:55:08.983687887 +0200
+----- CONTENT -----
+#!/usr/bin/env python3
+import os, time, json, sqlite3, ccxt, concurrent.futures as fut
+
+DB = "/opt/scalp/project/data/scalp.db"
+CACHE = "/opt/scalp/project/data/top30_cache.json"
+FIX = ["BTCUSDT","ETHUSDT","BNBUSDT","SOLUSDT","XRPUSDT"]
+
+TARGET     = int(os.getenv("TARGET", "30"))
+CAND_LIMIT = int(os.getenv("CAND_LIMIT", "120"))
+WORKERS    = int(os.getenv("WORKERS", "6"))
+BYPASS_CACHE = os.getenv("TOP30_BYPASS_CACHE", "0") == "1"
+SKIP_90D     = os.getenv("SKIP_90D", "0") == "1"
+
+def instid(s): return s.replace(":USDT","").replace("/","").upper()
+
+def save_top(symbols_scores):
+    con = sqlite3.connect(DB); c=con.cursor()
+    c.execute("""CREATE TABLE IF NOT EXISTS top_scores(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT, symbol TEXT, score REAL, ts INTEGER)""")
+    now = int(time.time())
+    c.executemany("INSERT INTO top_scores(name,symbol,score,ts) VALUES('TOP30',?,?,?)",
+                  [(sym, float(sc), now) for sym,sc in symbols_scores[:TARGET]])
+    con.commit(); con.close()
+    return now
+
+def load_cache():
+    if BYPASS_CACHE: return None
+    try:
+        st = os.stat(CACHE)
+        if time.time() - st.st_mtime < 24*3600:
+            return json.load(open(CACHE))
+    except Exception: pass
+    return None
+
+def save_cache(d):
+    try: json.dump(d, open(CACHE,"w"))
+    except Exception: pass
+
+def has_90d_history(ex, sym):
+    if SKIP_90D: return True
+    now_ms = int(time.time()*1000)
+    since  = now_ms - 100*24*3600*1000
+    try:
+        rows = ex.fetch_ohlcv(sym, timeframe='1w', since=since, limit=20)
+        return bool(rows) and len(rows) >= 13
+    except Exception:
+        return False
+
+def quote_volume_of_ticker(ex, sym):
+    try:
+        t = ex.fetch_ticker(sym)
+        v = t.get("quoteVolume") or (t.get("info",{}) or {}).get("quoteVolume") \
+            or t.get("baseVolume") or (t.get("info",{}) or {}).get("baseVolume") or 0
+        return float(v or 0)
+    except Exception:
+        return 0.0
+
+def main():
+    cache = load_cache()
+    if cache:
+        now = save_top(cache["top"])
+        print(f"[TOP30 FAST] cache {len(cache['top'])} @ {now}"); return
+
+    ex = ccxt.bitget({'options': {'defaultType':'swap'}, 'enableRateLimit': True})
+    markets = ex.load_markets()
+
+    vols = []
+    for s,m in markets.items():
+        if not m.get('swap') or m.get('quote')!='USDT': continue
+        raw = (m.get('info',{}) or {}).get('baseVolume') or m.get('volume') or 0
+        try: vol = float(raw or 0)
+        except: vol = 0.0
+        vols.append((s, vol))
+    vols.sort(key=lambda x: x[1], reverse=True)
+    cands = [s for s,_ in vols[:CAND_LIMIT]]
+
+    def check(sym):
+        exi = ccxt.bitget({'options': {'defaultType':'swap'}, 'enableRateLimit': True})
+        if not has_90d_history(exi, sym): return None
+        vq = quote_volume_of_ticker(exi, sym)
+        return (instid(sym), vq)
+
+    results = []
+    with fut.ThreadPoolExecutor(max_workers=WORKERS) as pool:
+        for r in pool.map(check, cands):
+            if r: results.append(r)
+
+    results.sort(key=lambda x: x[1], reverse=True)
+    seen=set(); top=[]
+    for sym,sc in results:
+        if sym not in seen:
+            top.append((sym, sc)); seen.add(sym)
+        if len(top) >= TARGET-5: break
+    for f in FIX:
+        if f not in seen:
+            top.append((f, 0.0)); seen.add(f)
+    top = top[:TARGET]
+
+    now = save_top(top)
+    save_cache({"top": top, "ts": now})
+    print(f"[TOP30 FAST] kept={len(results)} sel={len(top)} @ {now}")
+
+if __name__=="__main__":
+    main()
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/monitor_live.sh
+Size: 1300
+MTime: 2025-10-07 06:46:49.723549422 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+DB=/opt/scalp/project/data/scalp.db
+
+sqlite3 "$DB" -cmd ".headers on" -cmd ".mode column" "
+-- === Snapshot global ===
+SELECT datetime(updated,'unixepoch','localtime') AS updated,
+       ROUND(balance,6)  AS balance,
+       ROUND(equity,6)   AS equity,
+       ROUND(floating_pnl,6) AS floating_pnl,
+       used_margin,
+       open_positions, closed_trades,
+       sig_1min, sig_5min, ord_1min, ord_5min
+FROM v_paper_monitor;
+
+-- === Totaux PnL ===
+SELECT ROUND(COALESCE(SUM(u_pnl),0),6) AS open_pnl FROM positions_open;
+SELECT ROUND(COALESCE(SUM(pnl),0),6)    AS realized_pnl FROM trades_closed;
+
+-- === Positions ouvertes (10 récentes) ===
+SELECT id,symbol,
+       ROUND(qty,6) AS qty,
+       ROUND(entry_price,6) AS entry,
+       ROUND(last,6) AS last,
+       ROUND(u_pnl,6) AS u_pnl,
+       datetime(opened_ts,'unixepoch','localtime') AS opened
+FROM positions_open
+ORDER BY opened_ts DESC
+LIMIT 10;
+
+-- === Dernières positions fermées (10 dernières) ===
+SELECT id,symbol,
+       ROUND(qty,6) AS qty,
+       ROUND(entry_price,6) AS entry,
+       ROUND(exit_price,6) AS exit,
+       ROUND(pnl,6) AS pnl,
+       datetime(opened_ts,'unixepoch','localtime') AS opened,
+       datetime(closed_ts,'unixepoch','localtime') AS closed
+FROM trades_closed
+ORDER BY id DESC
+LIMIT 10;
+"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/ws_guard.sh
+Size: 429
+MTime: 2025-10-07 07:19:15.053863718 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -e
+LOG="/opt/scalp/project/logs/ws.log"
+DB="/opt/scalp/project/data/scalp.db"
+# si pas de tick depuis 90s → restart
+LAST=$(sqlite3 "$DB" "SELECT COALESCE(MAX(created_ts),0) FROM signals_B;")
+NOW=$(date +%s)
+if [ $((NOW - LAST)) -gt 90 ]; then
+  pkill -f analysis_B_ws.py 2>/dev/null || true
+  nohup /opt/scalp/project/scripts/analysis_B_ws.py >"$LOG" 2>&1 &
+  echo "WS_RESTART $(date -Is)" >> "$LOG"
+fi
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/ws_ticks_writer_v3.py
+Size: 3646
+MTime: 2025-10-07 16:24:18.875477419 +0200
+----- CONTENT -----
+import asyncio, json, os, time, sqlite3, websockets
+
+DB="/opt/scalp/project/data/scalp.db"
+URI="wss://ws.bitget.com/v2/ws/public"
+SYMS=os.environ.get("SYMS","BTCUSDT,ETHUSDT,BNBUSDT,SOLUSDT,XRPUSDT").split(",")
+
+def db():
+    con=sqlite3.connect(DB, timeout=12, isolation_level=None)
+    con.execute("PRAGMA busy_timeout=8000"); con.execute("PRAGMA journal_mode=WAL")
+    con.execute("""CREATE TABLE IF NOT EXISTS ticks(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      symbol TEXT, ts INTEGER, price REAL, best_bid REAL, best_ask REAL)""")
+    con.execute("CREATE INDEX IF NOT EXISTS idx_ticks_sym_ts ON ticks(symbol,ts)")
+    return con
+
+def parse_msg(msg):
+    # Retourne liste [(symbol, ts, last, bid, ask)]
+    out=[]
+    # Format "OLD": {"action":"snapshot"/"update", "arg":{instType:"mc"...}, "data":[{instId,last,bestBid,bestAsk,systemTime}]}
+    act=msg.get("action")
+    if act in ("snapshot","update") and isinstance(msg.get("data"),list):
+        for d in msg["data"]:
+            sym=d.get("instId"); last=d.get("last"); bid=d.get("bestBid"); ask=d.get("bestAsk")
+            ts=int((d.get("systemTime") or time.time()*1000)//1000)
+            if sym and last:
+                out.append((sym, ts, float(last), float(bid or last), float(ask or last)))
+        return out
+    # Format "NEW mix": {"arg":{instType:"USDT-FUTURES",instId:"BTCUSDT_UMCBL"}, "data":[{lastPr,bestBid,bestAsk,ts}]}
+    if isinstance(msg.get("data"),list) and isinstance(msg.get("arg"),dict):
+        sym=msg["arg"].get("instId","").replace("_UMCBL","")
+        for d in msg["data"]:
+            last=d.get("lastPr") or d.get("pr")
+            bid=d.get("bestBid") or d.get("bidPx") or last
+            ask=d.get("bestAsk") or d.get("askPx") or last
+            ts=int((d.get("ts") or time.time()*1000)//1000)
+            if sym and last:
+                out.append((sym, ts, float(last), float(bid), float(ask)))
+        return out
+    return out
+
+async def run():
+    # Prépare deux listes d’abonnements
+    sub_old={"op":"subscribe","args":[{"instType":"mc","channel":"ticker","instId":s} for s in SYMS]}
+    sub_new={"op":"subscribe","args":[{"instType":"USDT-FUTURES","channel":"ticker","instId":f"{s}_UMCBL"} for s in SYMS]}
+    while True:
+        try:
+            async with websockets.connect(URI, ping_interval=20, ping_timeout=20, close_timeout=5) as ws, db() as con:
+                # Envoie les deux abonnements. Celui qui parle sera pris en compte.
+                await ws.send(json.dumps(sub_old))
+                await ws.send(json.dumps(sub_new))
+                last_write=time.time()
+                while True:
+                    try:
+                        raw=await asyncio.wait_for(ws.recv(), timeout=30)
+                    except asyncio.TimeoutError:
+                        # ping keep-alive par re-subscribe léger
+                        await ws.send(json.dumps({"op":"subscribe","args":[{"channel":"ping"}]}))
+                        continue
+                    try:
+                        msg=json.loads(raw)
+                    except Exception:
+                        continue
+                    rows=parse_msg(msg)
+                    if not rows:
+                        continue
+                    for sym,ts,pr,bid,ask in rows:
+                        # normalise sym: OLD renvoie déjà BTCUSDT, NEW on a retiré _UMCBL
+                        con.execute("INSERT INTO ticks(symbol,ts,price,best_bid,best_ask) VALUES(?,?,?,?,?)",(sym,ts,pr,bid,ask))
+                    last_write=time.time()
+        except Exception as e:
+            await asyncio.sleep(2)
+
+if __name__=="__main__":
+    asyncio.run(run())
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/materialize_indicators.py
+Size: 745
+MTime: 2025-10-07 13:41:20.424284602 +0200
+----- CONTENT -----
+#!/usr/bin/env python3
+import sqlite3, time
+
+DB="/opt/scalp/project/data/scalp.db"
+VIEWMAP={"5m":"v_indic_5m","15m":"v_indic_15m","30m":"v_indic_30m"}
+TBLMAP ={"5m":"indic_5m","15m":"indic_15m","30m":"indic_30m"}
+
+con=sqlite3.connect(DB,timeout=30,isolation_level=None)
+cur=con.cursor()
+
+for tf in ("5m","15m","30m"):
+    view=VIEWMAP[tf]; tbl=TBLMAP[tf]
+    cur.execute(f"DELETE FROM {tbl};")
+    cur.execute(f"""
+    INSERT INTO {tbl}(symbol,ts,close,sma20,sma50,macd,macd_sig,macd_hist,rsi14,atr14,atr_pct,obv)
+    SELECT symbol,ts,close,sma20,sma50,macd,macd_sig,macd_hist,rsi14,atr14,atr_pct,obv
+    FROM {view};
+    """)
+    n=cur.execute(f"SELECT COUNT(*) FROM {tbl};").fetchone()[0]
+    print(f"[MATERIALIZE] {tf} rows={n}")
+con.close()
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/db_unlock_repair.sh
+Size: 1998
+MTime: 2025-10-07 12:49:03.541433778 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+DB="/opt/scalp/project/data/scalp.db"
+BASE="/opt/scalp/project"
+LOG="$BASE/logs"; mkdir -p "$LOG"
+
+echo "[1] stop writers"
+systemctl stop scalp-ws.service 2>/dev/null || true
+systemctl stop scalp-router.service 2>/dev/null || true
+systemctl stop scalp-closer.service 2>/dev/null || true
+pkill -f ws_ctx_ticks 2>/dev/null || true
+pkill -f router_simple.py 2>/dev/null || true
+pkill -f closer_tp_sl.py 2>/dev/null || true
+pkill -f analysis_B_ws.py 2>/dev/null || true
+sleep 1
+
+echo "[2] kill handles if any"
+command -v fuser >/dev/null && fuser -k "$DB" 2>/dev/null || true
+
+echo "[3] clean WAL files"
+rm -f "${DB}-wal" "${DB}-shm"
+
+echo "[4] quick integrity check"
+IC=$(sqlite3 "$DB" "PRAGMA busy_timeout=8000; PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL; PRAGMA integrity_check;")
+echo "integrity_check=$IC"
+
+if [ "$IC" != "ok" ]; then
+  echo "[5] dump+restore"
+  cp -f "$DB" "${DB}.bak.$(date +%s)"
+  sqlite3 "$DB" ".timeout 8000" ".mode insert" ".output $DB.recover.sql" ".dump"
+  mv "$DB" "${DB}.corrupt.$(date +%s)"
+  sqlite3 "$DB" < "$DB.recover.sql"
+  rm -f "$DB.recover.sql"
+  echo "[6] post-restore check"
+  sqlite3 "$DB" "PRAGMA integrity_check;"
+fi
+
+echo "[7] vacuum"
+sqlite3 "$DB" "PRAGMA busy_timeout=8000; VACUUM;"
+
+echo "[8] ensure required tables"
+sqlite3 "$DB" "
+PRAGMA busy_timeout=8000;
+CREATE TABLE IF NOT EXISTS top_scores(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT,symbol TEXT,score REAL,ts INTEGER);
+CREATE TABLE IF NOT EXISTS signals_B(id INTEGER PRIMARY KEY AUTOINCREMENT,symbol TEXT,side TEXT,price REAL,reason TEXT,created_ts INTEGER);
+CREATE INDEX IF NOT EXISTS idx_sig_cts ON signals_B(created_ts);
+"
+
+echo "[9] regenerate TOP30 from candidates"
+python3 "$BASE/scripts/top30_from_candidates.py"
+
+echo "[10] restart WS single-per-symbol"
+nohup "$BASE/scripts/ws_ctx_ticks_single.py" >"$LOG/ws_ctx_ticks.log" 2>&1 &
+sleep 3
+sqlite3 "$DB" "SELECT * FROM v_health;" | sed -n '1,1p'
+tail -n 30 "$LOG/ws_ctx_ticks.log" || true
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/analyse_A_ctx.py
+Size: 4112
+MTime: 2025-10-07 15:01:12.594275936 +0200
+----- CONTENT -----
+#!/usr/bin/env python3
+import sqlite3, time
+DB="/opt/scalp/project/data/scalp.db"
+
+TF_USED=["5m","15m","30m"]
+W_TF={"5m":0.20,"15m":0.30,"30m":0.50}
+TAU={"5m":0.25,"15m":0.30,"30m":0.35}
+ATR_GATE={"5m":0.12,"15m":0.18,"30m":0.25}  # en %
+
+def smx(pos,neg,t):
+    import math
+    b=math.exp(max(pos,0)/max(t,1e-6))
+    s=math.exp(max(neg,0)/max(t,1e-6))
+    h=1.0
+    z=b+s+h
+    return b/z, s/z, h/z
+
+def con():
+    c=sqlite3.connect(DB, timeout=10, isolation_level=None)
+    c.execute("PRAGMA journal_mode=WAL"); c.execute("PRAGMA synchronous=NORMAL")
+    c.execute("""CREATE TABLE IF NOT EXISTS contexts_A(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      symbol TEXT, ctx TEXT, pb REAL, ps REAL, ph REAL, score REAL, ts INTEGER)""")
+    c.execute("""CREATE TABLE IF NOT EXISTS contexts_A_state(
+      symbol TEXT PRIMARY KEY, last_ctx TEXT, persist INT, since_ts INT)""")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_ctxA_symbol_ts ON contexts_A(symbol,ts)")
+    return c
+
+def top30(c):
+    return [r[0] for r in c.execute("""
+      SELECT symbol FROM v_universe ORDER BY symbol LIMIT 35
+    """)]
+
+def last_row(c, tf, sym):
+    view={"5m":"indic_5m","15m":"indic_15m","30m":"indic_30m"}[tf]
+    q=f"""SELECT close, sma20, sma50, macd, macd_sig, macd_hist, rsi14, atr_pct, obv
+          FROM {view}
+          WHERE symbol=?
+          ORDER BY ts DESC LIMIT 1"""
+    r=c.execute(q,(sym,)).fetchone()
+    return r
+
+def main():
+    c=con(); now=int(time.time())
+    syms=top30(c)
+    ins=0; with_ctx=0
+    for s in syms:
+        agg_score=agg_pb=agg_ps=agg_ph=0.0; wsum=0.0; seen=False
+        for tf in TF_USED:
+            r=last_row(c,tf,s)
+            if not r: continue
+            seen=True
+            close,sma20,sma50,macd,sig,hist,rsi,atr_pct,obv=r
+            # scores élémentaires sur signaux SQL
+            s_ema = 0.0 if sma20 is None or sma50 is None or close is None else ( (sma20 - sma50) / (close*0.01 + 1e-12) )
+            s_macd = 0.0 if macd is None or sig is None else ( (macd - sig) / (abs(macd)+1e-9) )
+            s_rsi = 0.0 if rsi is None else ((rsi-50.0)/50.0)
+            s_obv = 0.0 if obv is None else max(-1.0, min(1.0, obv / 1e9))
+            # simple proxy ADX via amplitude MACD hist
+            s_adx = 0.0 if hist is None else max(-1.0, min(1.0, abs(hist)/ (abs(macd)+1e-9) ))
+            score_raw = 0.35*s_ema + 0.25*s_macd + 0.20*s_rsi + 0.10*s_adx + 0.10*s_obv
+            score_raw = max(-1.0, min(1.0, score_raw))
+            gate = 1.0 if (atr_pct or 0.0) >= ATR_GATE[tf] else 0.0
+            score = gate * score_raw
+            pb,ps,ph = smx(max(score,0), max(-score,0), TAU[tf])
+            w=W_TF[tf]; wsum+=w
+            agg_score += w*score; agg_pb += w*pb; agg_ps += w*ps; agg_ph += w*ph
+        if not seen or wsum==0:
+            c.execute("INSERT INTO contexts_A(symbol,ctx,pb,ps,ph,score,ts) VALUES(?,?,?,?,?,?,?)",
+                      (s,"none",0.0,0.0,1.0,0.0,now)); ins+=1; continue
+        agg_score/=wsum; agg_pb/=wsum; agg_ps/=wsum; agg_ph/=wsum
+        # hysteresis minimale
+        row=c.execute("SELECT last_ctx,persist FROM contexts_A_state WHERE symbol=?",(s,)).fetchone()
+        prev,pers=(row[0],row[1]) if row else ("none",0)
+        ctx = "buy" if agg_pb>=0.60 and agg_pb>agg_ps else ("sell" if agg_ps>=0.60 and agg_ps>agg_pb else ("hold" if agg_ph>=max(agg_pb,agg_ps) else "hold"))
+        if prev in("buy","sell") and ctx!=prev and max(agg_pb,agg_ps)<0.45: ctx=prev
+        pers = (pers+1) if ctx==prev else 1
+        if ctx!=prev and pers<2: ctx=prev
+        c.execute("INSERT INTO contexts_A(symbol,ctx,pb,ps,ph,score,ts) VALUES(?,?,?,?,?,?,?)",
+                  (s,ctx,agg_pb,agg_ps,agg_ph,agg_score,now))
+        c.execute("INSERT INTO contexts_A_state(symbol,last_ctx,persist,since_ts) VALUES(?,?,?,?) \
+                   ON CONFLICT(symbol) DO UPDATE SET last_ctx=excluded.last_ctx,persist=excluded.persist,since_ts=excluded.since_ts",
+                  (s,ctx,pers,now))
+        ins+=1; with_ctx+= int(ctx!='none')
+    print(f"[AnalyseA] inserted={ins} with_ctx={with_ctx} ts={now}")
+
+if __name__=="__main__":
+    main()
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/watchdog.sh
+Size: 1266
+MTime: 2025-10-06 13:02:41.791975899 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+DB="/opt/scalp/project/data/scalp.db"
+LAG_MAX="${LAG_MAX_SEC:-60}"
+
+latest_sig=$(sqlite3 "$DB" "SELECT COALESCE(MAX(created_ts),0) FROM signals_B;")
+latest_ord=$(sqlite3 "$DB" "SELECT COALESCE(MAX(created_ts),0) FROM orders_sim;")
+backlog=$(sqlite3 "$DB" "SELECT COUNT(*) FROM signals_B s LEFT JOIN orders_sim o ON o.signal_id=s.id WHERE o.id IS NULL;")
+
+now=$(date +%s)
+lag=$(( latest_sig - latest_ord ))
+age_last_ord=$(( now - latest_ord ))
+
+msg="WATCHDOG:
+lag=${lag}s  age_last_order=${age_last_ord}s  backlog=${backlog}
+sig_ts=$(date -d @${latest_sig} +'%F %T')  ord_ts=$(date -d @${latest_ord} +'%F %T')"
+
+if [ "$lag" -gt "$LAG_MAX" ] || [ "$age_last_ord" -gt "$LAG_MAX" ]; then
+  systemctl restart scalp-router.service || true
+  if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${CHAT_ID:-}" ]; then
+    curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+      -d chat_id="${CHAT_ID}" -d text="$msg
+ACTION: restart scalp-router.service" >/dev/null || true
+  fi
+else
+  if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${CHAT_ID:-}" ]; then
+    curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+      -d chat_id="${CHAT_ID}" -d text="$msg" >/dev/null || true
+  fi
+fi
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/backup_db.sh
+Size: 379
+MTime: 2025-10-06 13:01:11.159865671 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+DB="/opt/scalp/project/data/scalp.db"
+OUT="/opt/scalp/project/backups/scalp_$(date +%Y%m%d_%H%M%S).db.gz"
+sqlite3 "$DB" "PRAGMA wal_checkpoint(FULL);"
+sqlite3 "$DB" ".backup /tmp/scalp_backup.db"
+gzip -c /tmp/scalp_backup.db > "$OUT"
+rm -f /tmp/scalp_backup.db
+find /opt/scalp/project/backups -type f -name 'scalp_*.db.gz' -mtime +7 -delete
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/top30_from_candidates.py
+Size: 1310
+MTime: 2025-10-07 12:51:53.873643535 +0200
+----- CONTENT -----
+#!/usr/bin/env python3
+import sqlite3, time, os
+DB="/opt/scalp/project/data/scalp.db"
+SRC="/opt/scalp/project/data/top_candidates.txt"
+FIX=["BTCUSDT","ETHUSDT","BNBUSDT","SOLUSDT","XRPUSDT"]
+TARGET=int(os.getenv("TARGET","30"))
+
+pairs=[]
+for line in open(SRC):
+    line=line.strip()
+    if not line or '|' not in line: continue
+    sym,vol=line.split('|',1)
+    try: pairs.append((sym.strip().upper(), float(vol)))
+    except: pass
+pairs.sort(key=lambda x:x[1], reverse=True)
+
+seen=set(); sel=[]
+for sym,sc in pairs:
+    if sym not in seen:
+        sel.append((sym, float(sc))); seen.add(sym)
+    if len(sel) >= max(0,TARGET-5): break
+for f in FIX:
+    if f not in seen:
+        sel.append((f, 0.0)); seen.add(f)
+while len(sel) < TARGET:  # si pool <25, complète avec fixes en double score 0
+    for f in FIX:
+        if len(sel) >= TARGET: break
+        sel.append((f, 0.0))
+
+con=sqlite3.connect(DB, timeout=10, isolation_level=None)
+c=con.cursor()
+c.execute("""CREATE TABLE IF NOT EXISTS top_scores(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT, symbol TEXT, score REAL, ts INTEGER
+)""")
+now=int(time.time())
+c.executemany("INSERT INTO top_scores(name,symbol,score,ts) VALUES('TOP30',?,?,?)",
+              [(s,sc,now) for s,sc in sel[:TARGET]])
+print(f"[TOP30] {len(sel[:TARGET])} écrits @ {now}")
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/health_ping.sh
+Size: 381
+MTime: 2025-10-06 13:00:59.607851605 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+DB="/opt/scalp/project/data/scalp.db"
+N_SIG=$(sqlite3 "$DB" "SELECT COUNT(*) FROM signals_B;")
+N_ORD=$(sqlite3 "$DB" "SELECT COUNT(*) FROM orders_sim;")
+MSG="SCALP Health:
+signals_B=$N_SIG
+orders_sim=$N_ORD"
+curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+  -d chat_id="${CHAT_ID}" -d text="$MSG" >/dev/null
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/ws_probe_one.py
+Size: 930
+MTime: 2025-10-07 12:53:03.849736458 +0200
+----- CONTENT -----
+#!/usr/bin/env python3
+import asyncio, json, websockets, time
+URI="wss://ws.bitget.com/mix/v1/stream"
+SUB={"op":"subscribe","args":[{"channel":"ticker","instType":"mc","instId":"BTCUSDT"}]}
+def price_of(it):
+    for k in ("last","lastPr","price","close"):
+        v=it.get(k)
+        if v is None: continue
+        try: return float(v)
+        except: pass
+    return None
+async def main():
+    n=0
+    async with websockets.connect(URI,ping_interval=20,ping_timeout=20,close_timeout=5) as ws:
+        await ws.send(json.dumps(SUB))
+        while n<5:
+            raw=await ws.recv()
+            if isinstance(raw,(bytes,bytearray)): raw=raw.decode()
+            try: msg=json.loads(raw)
+            except: continue
+            for it in msg.get("data") or []:
+                p=price_of(it)
+                if p is not None:
+                    n+=1
+                    print("TICK", n, p, int(time.time()))
+asyncio.run(main())
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/router.py
+Size: 1350
+MTime: 2025-10-06 18:39:46.108607256 +0200
+----- CONTENT -----
+#!/usr/bin/env python3
+# Route les nouveaux signaux vers orders_sim (qty=0.0, price=signal.price)
+import sqlite3, time, argparse
+
+DB = "/opt/scalp/project/data/scalp.db"
+
+def conn():
+    con = sqlite3.connect(DB, timeout=5, isolation_level=None)
+    con.execute("PRAGMA journal_mode=WAL")
+    con.execute("PRAGMA synchronous=NORMAL")
+    return con
+
+def route_once(con):
+    last_id = con.execute("SELECT COALESCE(MAX(signal_id),0) FROM orders_sim").fetchone()[0]
+    rows = con.execute(
+        "SELECT id,symbol,side,price,created_ts FROM signals_B WHERE id>? ORDER BY id LIMIT 1000",
+        (last_id,)
+    ).fetchall()
+    n = 0
+    now = int(time.time())
+    for sig_id,symbol,side,price,sig_ts in rows:
+        con.execute("""INSERT INTO orders_sim(signal_id,symbol,side,qty,price,ts,created_ts)
+                       VALUES(?,?,?,?,?,?,?)""",
+                    (sig_id,symbol,side,0.0,price,int(sig_ts),now))
+        n += 1
+    return n
+
+def loop():
+    con = conn()
+    while True:
+        n = route_once(con)
+        if n:
+            print(f"routed {n} order(s)", flush=True)
+        time.sleep(1)
+
+if __name__ == "__main__":
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--once", action="store_true")
+    args = ap.parse_args()
+    if args.once:
+        print(f"routed {route_once(conn())} order(s)")
+    else:
+        loop()
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/normalize_ohlcv.py
+Size: 1236
+MTime: 2025-10-07 10:18:33.210399384 +0200
+----- CONTENT -----
+#!/usr/bin/env python3
+import sqlite3
+DB="/opt/scalp/project/data/scalp.db"
+TFs=("1m","5m","15m","30m")
+
+DDL=lambda t: f"""CREATE TABLE IF NOT EXISTS {t}(
+  symbol TEXT NOT NULL,
+  ts INTEGER NOT NULL,
+  open REAL, high REAL, low REAL, close REAL, volume REAL,
+  PRIMARY KEY(symbol,ts)
+);"""
+
+def has_col(c,t,col): return any(r[1]==col for r in c.execute(f"PRAGMA table_info({t})"))
+
+con=sqlite3.connect(DB); c=con.cursor()
+c.execute("PRAGMA journal_mode=WAL"); c.execute("PRAGMA synchronous=NORMAL")
+
+for tf in TFs:
+  t=f"ohlcv_{tf}"
+  c.execute(DDL(t))
+  # migrate if old column 'base'
+  if has_col(c,t,"base") and not has_col(c,t,"symbol"):
+    c.execute(f"CREATE TABLE _new_{t}(symbol TEXT, ts INTEGER, open REAL, high REAL, low REAL, close REAL, volume REAL, PRIMARY KEY(symbol,ts))")
+    c.execute(f"INSERT OR IGNORE INTO _new_{t}(symbol,ts,open,high,low,close,volume) SELECT base,ts,open,high,low,close,volume FROM {t}")
+    c.execute(f"DROP TABLE {t}")
+    c.execute(f"ALTER TABLE _new_{t} RENAME TO {t}")
+  # migrate if symbol missing entirely (some stray schema)
+  if not has_col(c,t,"symbol"):
+    c.execute(f"ALTER TABLE {t} ADD COLUMN symbol TEXT")
+con.commit(); con.close()
+print("OK: OHLCV normalized for 1m/5m/15m/30m")
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/analyze_A_ohlcv.py
+Size: 1449
+MTime: 2025-10-07 10:19:20.982646059 +0200
+----- CONTENT -----
+#!/usr/bin/env python3
+import sqlite3, json, math
+DB="/opt/scalp/project/data/scalp.db"
+OUT="/opt/scalp/project/data/analyse_A_out.json"
+
+def series(con, sym, tf, n):
+    return con.execute(f"SELECT close FROM ohlcv_{tf} WHERE symbol=? ORDER BY ts DESC LIMIT ?",(sym,n)).fetchall()
+
+def mom(v): return (v[0]-v[-1])/v[-1] if len(v)>1 and v[-1] else 0.0
+def vola(v): 
+    if len(v)<2: return 0.0
+    m=sum(v)/len(v); return math.sqrt(sum((x-m)**2 for x in v)/len(v))/m if m else 0.0
+
+con=sqlite3.connect(DB)
+syms=[r[0] for r in con.execute("SELECT symbol FROM tops WHERE ts=(SELECT MAX(ts) FROM tops) AND name='TOP35'")]
+# normaliser les ids vers 'BASEUSDT'
+norm=lambda s: s if s.endswith("USDT") else s.replace("/USDT","USDT").split(':')[0].replace('/','')
+ctx={}
+for s in syms:
+    base = norm(s)
+    v5  = [x[0] for x in series(con, base,  "5m",  60)]
+    v15 = [x[0] for x in series(con, base, "15m", 60)]
+    v30 = [x[0] for x in series(con, base, "30m", 60)]
+    if not v5 or not v15 or not v30: 
+        continue
+    m5,m15,m30 = mom(v5), mom(v15), mom(v30)
+    vol = 0.5*vola(v5)+0.3*vola(v15)+0.2*vola(v30)
+    score = 0.5*m5 + 0.3*m15 + 0.2*m30
+    trend = "bull" if score>0 else "bear"
+    strength = round((abs(score)* (1+vol)),6)
+    ctx[base]={"symbol":base+"USDT","trend":trend,"strength":strength,"volatility":vol}
+with open(OUT,"w") as f: json.dump(ctx,f,indent=2)
+print(f"[AnalyseA/OHLCV] {len(ctx)} contextes -> {OUT}")
+con.close()
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/analyse_A.py
+Size: 2205
+MTime: 2025-10-07 12:56:22.538016383 +0200
+----- CONTENT -----
+#!/usr/bin/env python3
+import sqlite3, json, time, statistics as st
+
+DB="/opt/scalp/project/data/scalp.db"
+OUT_JSON="/opt/scalp/project/data/analyse_A_out.json"
+
+NOW=int(time.time())
+REQ_1M=200; REQ_5M=200; REQ_15M=100; REQ_30M=60
+
+con=sqlite3.connect(DB, timeout=10, isolation_level=None)
+c=con.cursor()
+c.execute("PRAGMA journal_mode=WAL"); c.execute("PRAGMA synchronous=NORMAL")
+
+c.execute("""CREATE TABLE IF NOT EXISTS contexts_A(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  symbol TEXT, has_1m INT, has_5m INT, has_15m INT, has_30m INT,
+  ctx TEXT, ts INTEGER
+)""")
+
+# pull TOP30
+syms=[r[0] for r in c.execute("""
+  SELECT symbol FROM top_scores
+  WHERE ts=(SELECT MAX(ts) FROM top_scores) AND name='TOP30'
+  ORDER BY score DESC, symbol ASC LIMIT 30
+""").fetchall()]
+
+def enough(tbl, sym, need):
+  row=c.execute(f"SELECT COUNT(*) FROM {tbl} WHERE symbol=?;", (sym,)).fetchone()
+  return (row and row[0] >= need)
+
+contexts=[]
+ts=NOW
+for s in syms:
+  h1=enough("ohlcv_1m", s, REQ_1M)
+  h5=enough("ohlcv_5m", s, REQ_5M)
+  h15=enough("ohlcv_15m", s, REQ_15M)
+  h30=enough("ohlcv_30m", s, REQ_30M)
+
+  ctx=None
+  if h1:
+    # mini-contexte: slope sur 1m via 50 dernières closes
+    rows=c.execute("SELECT close FROM ohlcv_1m WHERE symbol=? ORDER BY ts DESC LIMIT 50;", (s,)).fetchall()
+    closes=[r[0] for r in rows][::-1]
+    if len(closes)>=20:
+      sma20=sum(closes[-20:])/20.0
+      sma50=sum(closes)/len(closes)
+      mom=closes[-1]-closes[-5] if len(closes)>=5 else 0.0
+      vol=st.pstdev(closes[-20:]) if len(closes)>=20 else 0.0
+      trend="up" if sma20>sma50 else "down"
+      ctx=json.dumps({"trend":trend,"mom":mom,"vol":vol}, separators=(",",":"))
+
+  c.execute("""INSERT INTO contexts_A(symbol,has_1m,has_5m,has_15m,has_30m,ctx,ts)
+               VALUES(?,?,?,?,?,?,?)""",(s,int(h1),int(h5),int(h15),int(h30),ctx,ts))
+  contexts.append({"symbol":s,"has_1m":h1,"has_5m":h5,"has_15m":h15,"has_30m":h30,"ctx":json.loads(ctx) if ctx else None})
+
+# export json
+with open(OUT_JSON,"w") as f: json.dump({"ts":ts,"contexts":contexts}, f)
+
+# print summary
+total=len(contexts)
+with_ctx=sum(1 for x in contexts if x["ctx"] is not None)
+print(f"[AnalyseA] contexts={total} with_ctx={with_ctx} ts={ts}")
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/run_AB.sh
+Size: 580
+MTime: 2025-10-07 12:56:40.210042235 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -e
+DB="/opt/scalp/project/data/scalp.db"
+
+python3 /opt/scalp/project/scripts/analyse_A.py
+python3 /opt/scalp/project/scripts/analyse_B.py
+
+# Compteurs
+sqlite3 "$DB" "
+SELECT 'contexts_total', COUNT(*) FROM contexts_A WHERE ts=(SELECT MAX(ts) FROM contexts_A);
+SELECT 'contexts_with_ctx', COUNT(*) FROM contexts_A WHERE ts=(SELECT MAX(ts) FROM contexts_A) AND ctx IS NOT NULL;
+SELECT 'signals_B_refined_ts', MAX(created_ts) FROM signals_B_refined;
+SELECT 'signals_B_refined_60s', COUNT(*) FROM signals_B_refined WHERE created_ts>=strftime('%s','now')-60;
+"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/ws_test_new.py
+Size: 747
+MTime: 2025-10-06 15:42:39.186722724 +0200
+----- CONTENT -----
+import asyncio, json, time, websockets
+
+URI = "wss://ws.bitget.com/mix/v1/stream?compress=false"
+# ✅ format mis à jour : instType doit être 'umcbl' et instId inclut le suffixe
+SUB = {
+    "op": "subscribe",
+    "args": [
+        {"channel": "ticker", "instId": "BTCUSDT_UMCBL"},
+        {"channel": "books1", "instId": "BTCUSDT_UMCBL"}
+    ]
+}
+
+async def main():
+    async with websockets.connect(URI, ping_interval=20, ping_timeout=20) as ws:
+        await ws.send(json.dumps(SUB))
+        print("✅ Subscribed to Bitget BTCUSDT_UMCBL ticker/books1")
+        start = time.time()
+        while time.time() - start < 15:
+            msg = await asyncio.wait_for(ws.recv(), timeout=10)
+            print("🔹", msg[:200])
+
+asyncio.run(main())
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/ws_try.py
+Size: 1386
+MTime: 2025-10-06 15:49:44.843242039 +0200
+----- CONTENT -----
+#!/usr/bin/env python3
+import asyncio, time, ujson as json, websockets
+
+URI = "wss://ws.bitget.com/mix/v1/stream"   # endpoint WS Bitget
+# ✅ marché MC (Market Composite)
+SUB = {"op":"subscribe","args":[
+    {"instType":"MC","channel":"ticker","instId":"BTCUSDT"}
+]}
+
+async def main():
+    try:
+        async with websockets.connect(
+            URI, ping_interval=20, ping_timeout=20, close_timeout=5, max_size=2**20
+        ) as ws:
+            await asyncio.sleep(1)
+            await ws.send(json.dumps(SUB))
+            print("✅ Subscribed to Bitget MC BTCUSDT ticker")
+            start = time.time()
+            while time.time() - start < 20:
+                msg = await asyncio.wait_for(ws.recv(), timeout=20)
+                if isinstance(msg, (bytes, bytearray)):
+                    msg = msg.decode(errors="ignore")
+                try:
+                    data = json.loads(msg)
+                except Exception:
+                    continue
+                if "data" in data:
+                    print("📊 WS OK:", str(data)[:200])
+                    return
+                if data.get("event") in ("subscribe","subscribed") or data.get("code") in (0,"0"):
+                    print("📩 SUB ACK:", data)
+            print("❌ WS FAIL: no data received in 20s")
+    except Exception as e:
+        print("🚨 WS FAIL:", type(e).__name__, e)
+
+asyncio.run(main())
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/ws_test.py
+Size: 591
+MTime: 2025-10-06 15:40:48.870588277 +0200
+----- CONTENT -----
+import asyncio, json, time, websockets
+
+URI = "wss://ws.bitget.com/mix/v1/stream?compress=false"
+SUB = {"op": "subscribe", "args": [{"instType": "USDT-FUTURES", "channel": "ticker", "instId": "BTCUSDT"}]}
+
+async def main():
+    async with websockets.connect(URI, ping_interval=20, ping_timeout=20) as ws:
+        await ws.send(json.dumps(SUB))
+        print("✅ Subscribed to Bitget BTCUSDT ticker")
+        start = time.time()
+        while time.time() - start < 15:
+            msg = await asyncio.wait_for(ws.recv(), timeout=10)
+            print("🔹", msg[:160])
+
+asyncio.run(main())
+----- FILE END -----
