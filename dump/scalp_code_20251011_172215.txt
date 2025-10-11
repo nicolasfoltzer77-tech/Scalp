@@ -1,0 +1,3810 @@
+# Scalp Project Code Dump
+# Generated: 2025-10-11 15:22:15 UTC
+# Root: /opt/scalp
+# Caps: 512KB/file, max 4000 files
+# Exclusions: hidden, .git, __pycache__, venv/.venv, var, logs, data, reports, dump
+# Extensions: py, pyi, sh, bash, ini, cfg, conf, toml, yaml/yml, md, txt, sql, json, csv
+
+========== TREE (size, mtime) ==========
+/opt/scalp/project/bin/analyse_B_sql.sh                                                   6557  2025-10-10 14:15:05.343972736 +0200
+/opt/scalp/project/bin/b_manifest_init.sh                                                  526  2025-10-10 14:32:55.129133983 +0200
+/opt/scalp/project/bin/b_manifest_verify.sh                                                684  2025-10-10 14:33:02.993142524 +0200
+/opt/scalp/project/bin/b_selftest.sh                                                      1825  2025-10-10 14:47:53.946110660 +0200
+/opt/scalp/project/bin/build_a_once.sh                                                    4783  2025-10-10 10:02:24.808261099 +0200
+/opt/scalp/project/bin/build_b_once.sh                                                    3461  2025-10-10 12:20:01.641717624 +0200
+/opt/scalp/project/bin/build_features_1m.sh                                               2687  2025-10-10 14:14:47.279953166 +0200
+/opt/scalp/project/bin/build_indicators_from_5m.sh                                        3125  2025-10-10 12:41:49.050302349 +0200
+/opt/scalp/project/bin/build_ohlcv1m_from_ticks.sh                                        1177  2025-10-10 14:14:21.383925110 +0200
+/opt/scalp/project/bin/build_universe.sh                                                  6373  2025-10-09 19:35:45.183683140 +0200
+/opt/scalp/project/bin/build_v_indic5m_fast.sh                                            1622  2025-10-10 12:39:30.449613024 +0200
+/opt/scalp/project/bin/build_x_stats.sh                                                   2811  2025-10-10 16:18:18.804102884 +0200
+/opt/scalp/project/bin/build_x_trades.sh                                                  1493  2025-10-10 16:15:53.911365714 +0200
+/opt/scalp/project/bin/check_a_db.sh                                                       569  2025-10-11 14:10:20.760427892 +0200
+/opt/scalp/project/bin/check_a_final.sh                                                    844  2025-10-10 09:55:08.608324494 +0200
+/opt/scalp/project/bin/check_ab_interface.sh                                              1407  2025-10-10 13:20:20.369488912 +0200
+/opt/scalp/project/bin/check_b_final.sh                                                    559  2025-10-10 12:20:01.681717597 +0200
+/opt/scalp/project/bin/check_b_health.sh                                                   615  2025-10-10 14:15:51.312022548 +0200
+/opt/scalp/project/bin/check_b_signals.sh                                                  471  2025-10-11 14:23:48.028744063 +0200
+/opt/scalp/project/bin/check_health_full.sh                                               3187  2025-10-10 16:24:37.514013198 +0200
+/opt/scalp/project/bin/check_health_uoatbx.sh                                             4284  2025-10-10 16:34:36.709010618 +0200
+/opt/scalp/project/bin/check_o_final.sh                                                    696  2025-10-10 09:20:14.708528537 +0200
+/opt/scalp/project/bin/check_t_db.sh                                                       278  2025-10-11 14:17:48.024565565 +0200
+/opt/scalp/project/bin/check_t_final.sh                                                    256  2025-10-10 11:08:33.524816606 +0200
+/opt/scalp/project/bin/check_uoatbx.sh                                                    3364  2025-10-10 16:48:44.222800429 +0200
+/opt/scalp/project/bin/check_uoatbx_clean.sh                                              3820  2025-10-11 14:27:49.216880238 +0200
+/opt/scalp/project/bin/check_x_health.sh                                                   256  2025-10-10 14:55:38.126615076 +0200
+/opt/scalp/project/bin/ensure_ab_indicators.sh                                            4187  2025-10-10 13:19:55.841515700 +0200
+/opt/scalp/project/bin/ensure_ab_indicators_atomic.sh                                     4902  2025-10-10 14:45:53.465979735 +0200
+/opt/scalp/project/bin/env_ab.sh                                                           102  2025-10-10 13:19:46.245526882 +0200
+/opt/scalp/project/bin/fetch_klines_binance.sh                                             454  2025-10-10 13:58:10.798881184 +0200
+/opt/scalp/project/bin/fetch_ohlcv_once.sh                                                 599  2025-10-10 09:16:45.563809860 +0200
+/opt/scalp/project/bin/fix_ab_interface.sh                                                6815  2025-10-10 12:37:09.577588276 +0200
+/opt/scalp/project/bin/freeze_a_release.sh                                                1391  2025-10-10 09:54:51.448342049 +0200
+/opt/scalp/project/bin/freeze_b_release.sh                                                1432  2025-10-10 11:47:40.690646997 +0200
+/opt/scalp/project/bin/harden_o_db.sh                                                      990  2025-10-10 09:16:45.563809860 +0200
+/opt/scalp/project/bin/health_a_db.sh                                                      820  2025-10-10 10:02:24.932261159 +0200
+/opt/scalp/project/bin/health_a_strict.sh                                                 1331  2025-10-10 10:02:24.932261159 +0200
+/opt/scalp/project/bin/health_b_strict.sh                                                  806  2025-10-10 12:20:01.645717621 +0200
+/opt/scalp/project/bin/health_o_db.sh                                                      929  2025-10-10 09:16:45.575809905 +0200
+/opt/scalp/project/bin/health_o_strict.sh                                                 2515  2025-10-10 09:11:27.043290163 +0200
+/opt/scalp/project/bin/health_universe.sh                                                  453  2025-10-09 19:35:45.191683146 +0200
+/opt/scalp/project/bin/ingest_klines_to_a.sh                                              1045  2025-10-10 14:01:24.035087113 +0200
+/opt/scalp/project/bin/lock_b_code.sh                                                      535  2025-10-10 14:48:46.742168028 +0200
+/opt/scalp/project/bin/mark_a_final.sh                                                     688  2025-10-10 09:55:01.124331967 +0200
+/opt/scalp/project/bin/mark_b_final.sh                                                    1372  2025-10-10 12:20:01.665717608 +0200
+/opt/scalp/project/bin/mark_o_final.sh                                                    1470  2025-10-10 09:18:03.348090249 +0200
+/opt/scalp/project/bin/mark_t_final.sh                                                     366  2025-10-10 11:08:27.600802652 +0200
+/opt/scalp/project/bin/migrate_b_schema.sh                                                1305  2025-10-10 14:13:51.375892603 +0200
+/opt/scalp/project/bin/migrate_x_history.sh                                               1244  2025-10-10 15:16:47.804012661 +0200
+/opt/scalp/project/bin/migrate_x_schema.sh                                                3004  2025-10-10 15:03:15.997070865 +0200
+/opt/scalp/project/bin/plan_rule_sma.sh                                                   1042  2025-10-10 13:34:57.701550116 +0200
+/opt/scalp/project/bin/purge_non_current.sh                                                569  2025-10-10 09:16:45.571809891 +0200
+/opt/scalp/project/bin/recover_uoatbx.sh                                                  1023  2025-10-10 16:54:46.486066876 +0200
+/opt/scalp/project/bin/refresh_a_1m_3m.sh                                                  440  2025-10-10 13:58:26.330897676 +0200
+/opt/scalp/project/bin/run_B_loop.sh                                                       444  2025-10-10 14:43:09.709801787 +0200
+/opt/scalp/project/bin/run_B_verified.sh                                                   112  2025-10-10 14:33:12.221152552 +0200
+/opt/scalp/project/bin/run_X_loop.sh                                                       148  2025-10-10 14:55:46.354624015 +0200
+/opt/scalp/project/bin/run_b_daemon.sh                                                     143  2025-10-10 12:20:01.653717616 +0200
+/opt/scalp/project/bin/run_ohlcv_daemon.sh                                                1192  2025-10-10 09:16:45.559809846 +0200
+/opt/scalp/project/bin/run_universe_daemon.sh                                              499  2025-10-09 19:35:45.195683148 +0200
+/opt/scalp/project/bin/sync_top35_to_a.sh                                                  681  2025-10-10 09:04:30.326981537 +0200
+/opt/scalp/project/bin/tick_gate_B.sh                                                      602  2025-10-10 14:15:29.323998716 +0200
+/opt/scalp/project/bin/view_uoatbx.sh                                                     1922  2025-10-11 17:13:57.427891658 +0200
+/opt/scalp/project/bin/wire_a_into_b.sh                                                    646  2025-10-10 12:31:33.745552624 +0200
+/opt/scalp/project/bin/ws_ticks_auto_from_A.py                                            3345  2025-10-11 17:04:19.555637743 +0200
+/opt/scalp/project/bin/x_from_signals.sh                                                  3527  2025-10-10 15:07:37.222253442 +0200
+/opt/scalp/project/bin/x_paper_match.sh                                                   3578  2025-10-10 15:08:08.726375758 +0200
+
+========== TOP 10 BIGGEST FILES ==========
+/opt/scalp/project/bin/fix_ab_interface.sh                                                6815
+/opt/scalp/project/bin/analyse_B_sql.sh                                                   6557
+/opt/scalp/project/bin/build_universe.sh                                                  6373
+/opt/scalp/project/bin/ensure_ab_indicators_atomic.sh                                     4902
+/opt/scalp/project/bin/build_a_once.sh                                                    4783
+/opt/scalp/project/bin/check_health_uoatbx.sh                                             4284
+/opt/scalp/project/bin/ensure_ab_indicators.sh                                            4187
+/opt/scalp/project/bin/check_uoatbx_clean.sh                                              3820
+/opt/scalp/project/bin/x_paper_match.sh                                                   3578
+/opt/scalp/project/bin/x_from_signals.sh                                                  3527
+
+========== CONCAT CONTENT ==========
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/b_manifest_verify.sh
+Size: 684
+MTime: 2025-10-10 14:33:02.993142524 +0200
+----- CONTENT -----
+#!/usr/bin/env sh
+set -eu
+BIN="/opt/scalp/project/bin"
+MAN="/opt/scalp/project/etc/b.manifest"
+[ -r "$MAN" ] || { echo "absent: $MAN"; exit 2; }
+# filtrer les fichiers manquants et mismatches
+BAD=0
+while IFS= read -r line; do
+  sum="$(echo "$line" | awk '{print $1}')"
+  file="$(echo "$line" | awk '{print $2}')"
+  # compat chemin absolu/relatif
+  base="$(basename "$file")"
+  path="$BIN/$base"
+  if [ ! -f "$path" ]; then
+    echo "missing: $base"; BAD=1; continue
+  fi
+  cur="$(sha256sum "$path" | awk '{print $1}')"
+  [ "$cur" = "$sum" ] || { echo "mismatch: $base"; BAD=1; }
+done < "$MAN"
+[ $BAD -eq 0 ] && { echo "integrity: ok"; exit 0; } || { echo "integrity: FAIL"; exit 1; }
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/analyse_B_sql.sh
+Size: 6557
+MTime: 2025-10-10 14:15:05.343972736 +0200
+----- CONTENT -----
+#!/usr/bin/env sh
+set -eu
+: "${BDB:=/opt/scalp/project/data/b.db}"
+MIN_SCORE="${MIN_SCORE:-0.0}"
+PLAN_MAX_AGE="${PLAN_MAX_AGE:-1800}"
+COOLDOWN_SEC="${COOLDOWN_SEC:-300}"
+MAX_CONSEC="${MAX_CONSEC:-3}"
+REQUIRE_TREND="${REQUIRE_TREND:-1}"
+ATR_PCT_1M_MIN="${ATR_PCT_1M_MIN:-0.10}"
+ATR_SL="${ATR_SL:-1.2}"
+ATR_TP="${ATR_TP:-1.8}"
+PB_TOL_ATR_MULT="${PB_TOL_ATR_MULT:-0.15}"
+sqlite3 "$BDB" <<SQL
+PRAGMA busy_timeout=15000; PRAGMA journal_mode=WAL;
+CREATE TABLE IF NOT EXISTS signals_B_plan(
+ id INTEGER PRIMARY KEY AUTOINCREMENT,
+ symbol TEXT, ctx TEXT, score REAL, side TEXT,
+ entry REAL, sl REAL, tp REAL, qty REAL, margin REAL, notional REAL, created_ts INTEGER);
+CREATE TABLE IF NOT EXISTS signals_B(
+ id INTEGER PRIMARY KEY AUTOINCREMENT,
+ symbol TEXT, side TEXT, price REAL, reason TEXT, created_ts INTEGER);
+CREATE INDEX IF NOT EXISTS idx_sigB_ts ON signals_B(created_ts);
+CREATE INDEX IF NOT EXISTS idx_sigB_sym_ts ON signals_B(symbol,created_ts);
+CREATE TABLE IF NOT EXISTS b_state(symbol TEXT PRIMARY KEY, last_side TEXT, consec INTEGER, last_ts INTEGER);
+
+DROP TABLE IF EXISTS _params;
+CREATE TEMP TABLE _params AS
+SELECT $MIN_SCORE AS min_score,$PLAN_MAX_AGE AS plan_age,$COOLDOWN_SEC AS cooldown,
+       $MAX_CONSEC AS max_consec,$REQUIRE_TREND AS require_trend,$ATR_PCT_1M_MIN AS atr_min_pct,
+       $ATR_SL AS k_sl,$ATR_TP AS k_tp,$PB_TOL_ATR_MULT AS pb_tol;
+
+DROP TABLE IF EXISTS _m1;
+CREATE TEMP TABLE _m1 AS
+SELECT i.*, f.vwap20,f.bb_mid20,f.bb_up20,f.bb_dn20,f.macd,f.macd_signal9,f.macd_hist,f.obv
+FROM v_indic_1m i
+LEFT JOIN v_feat_1m f ON f.symbol=i.symbol AND f.ts=i.ts
+WHERE (i.symbol,i.ts) IN (SELECT symbol, MAX(ts) FROM v_indic_1m GROUP BY symbol);
+
+DROP TABLE IF EXISTS _trend5;
+CREATE TEMP TABLE _trend5 AS
+SELECT symbol, CASE WHEN sma9>sma21 THEN 'BUY' ELSE 'SELL' END AS fast_side FROM v_indic5m_fast;
+
+DROP TABLE IF EXISTS _ctx;
+CREATE TEMP TABLE _ctx AS
+SELECT symbol, ctx, pb, ph, ps, ts AS ctx_ts FROM v_contexts_A_latest;
+
+DROP TABLE IF EXISTS _plans;
+CREATE TEMP TABLE _plans AS
+SELECT p.* FROM signals_B_plan p, _params pr
+WHERE p.score >= pr.min_score AND p.created_ts >= strftime('%s','now')-pr.plan_age;
+
+DROP TABLE IF EXISTS _cand_plan_ok;
+CREATE TEMP TABLE _cand_plan_ok AS
+SELECT p.symbol,p.side,p.entry,p.sl,p.tp,p.ctx AS reason,p.created_ts,
+       m.ts AS bar_ts,m.atr_pct,m.atr14,m.close,m.sma21,
+       c.ctx AS a_ctx,c.pb,c.ps, t.fast_side,(SELECT require_trend FROM _params) AS require_trend
+FROM _plans p
+JOIN _m1 m ON m.symbol=p.symbol
+LEFT JOIN _ctx c ON c.symbol=p.symbol
+LEFT JOIN _trend5 t ON t.symbol=p.symbol
+WHERE m.atr_pct >= (SELECT atr_min_pct FROM _params)
+  AND (c.symbol IS NULL OR (p.side='BUY' AND c.pb>=0.60) OR (p.side='SELL' AND c.ps>=0.60))
+  AND ((SELECT require_trend FROM _params)=0 OR t.fast_side IS NULL OR t.fast_side=p.side);
+
+DROP TABLE IF EXISTS _rule_break;
+CREATE TEMP TABLE _rule_break AS
+SELECT m.symbol,
+       CASE WHEN c.ctx='bullish' AND m.close>m.hh_20_excl AND m.close>=COALESCE(m.vwap20,m.close) THEN 'BUY'
+            WHEN c.ctx='bearish' AND m.close<m.ll_20_excl AND m.close<=COALESCE(m.vwap20,m.close) THEN 'SELL' END AS side,
+       m.close AS entry,
+       CASE WHEN c.ctx='bullish' THEN m.close - ((SELECT k_sl FROM _params)*m.atr14)
+            WHEN c.ctx='bearish' THEN m.close + ((SELECT k_sl FROM _params)*m.atr14) END AS sl,
+       CASE WHEN c.ctx='bullish' THEN m.close + ((SELECT k_tp FROM _params)*m.atr14)
+            WHEN c.ctx='bearish' THEN m.close - ((SELECT k_tp FROM _params)*m.atr14) END AS tp,
+       'breakoutN+VWAP+BB' AS reason, m.ts AS bar_ts, m.atr_pct
+FROM _m1 m JOIN _ctx c ON c.symbol=m.symbol
+WHERE m.atr_pct >= (SELECT atr_min_pct FROM _params)
+  AND ( (c.ctx='bullish' AND m.close>m.hh_20_excl AND (m.bb_up20 IS NULL OR m.close>=m.bb_mid20))
+     OR (c.ctx='bearish' AND m.close<m.ll_20_excl AND (m.bb_dn20 IS NULL OR m.close<=m.bb_mid20)) );
+
+DROP TABLE IF EXISTS _rule_macd_obv;
+CREATE TEMP TABLE _rule_macd_obv AS
+WITH obv_step AS (
+  SELECT m.symbol,m.ts, m.obv - LAG(m.obv) OVER (PARTITION BY m.symbol ORDER BY m.ts) AS d_obv FROM _m1 m
+)
+SELECT m.symbol,
+       CASE WHEN m.macd IS NOT NULL AND m.macd_signal9 IS NOT NULL AND m.macd>m.macd_signal9 AND COALESCE(o.d_obv,0)>=0 THEN 'BUY'
+            WHEN m.macd IS NOT NULL AND m.macd_signal9 IS NOT NULL AND m.macd<m.macd_signal9 AND COALESCE(o.d_obv,0)<=0 THEN 'SELL' END AS side,
+       m.close AS entry,
+       m.close - ((SELECT k_sl FROM _params)*m.atr14) AS sl,
+       m.close + ((SELECT k_tp FROM _params)*m.atr14) AS tp,
+       'MACD≈SMA+OBV' AS reason, m.ts AS bar_ts, m.atr_pct
+FROM _m1 m LEFT JOIN obv_step o ON o.symbol=m.symbol AND o.ts=m.ts
+WHERE m.atr_pct >= (SELECT atr_min_pct FROM _params);
+
+DROP TABLE IF EXISTS _rules_ok;
+CREATE TEMP TABLE _rules_ok AS
+SELECT r.*
+FROM (SELECT * FROM _rule_break UNION ALL SELECT * FROM _rule_macd_obv) r
+JOIN _m1 m ON m.symbol=r.symbol AND m.ts=r.bar_ts
+LEFT JOIN _trend5 t ON t.symbol=r.symbol
+WHERE r.side IS NOT NULL
+  AND r.atr_pct >= (SELECT atr_min_pct FROM _params)
+  AND ((SELECT require_trend FROM _params)=0 OR t.fast_side IS NULL OR t.fast_side=r.side);
+
+DROP TABLE IF EXISTS _cand_all;
+CREATE TEMP TABLE _cand_all AS
+SELECT symbol,side,entry,sl,tp,reason,bar_ts FROM _cand_plan_ok
+UNION ALL
+SELECT symbol,side,entry,sl,tp,reason,bar_ts FROM _rules_ok;
+
+DROP TABLE IF EXISTS _eligible;
+CREATE TEMP TABLE _eligible AS
+SELECT c.symbol,c.side,c.entry,c.sl,c.tp,c.reason,c.bar_ts,
+       COALESCE(b.last_side,'') AS last_side, COALESCE(b.consec,0) AS consec, COALESCE(b.last_ts,0) AS last_ts
+FROM _cand_all c LEFT JOIN b_state b ON b.symbol=c.symbol;
+
+DROP TABLE IF EXISTS _filtered;
+CREATE TEMP TABLE _filtered AS
+SELECT e.* FROM _eligible e,_params pr
+WHERE (e.bar_ts - e.last_ts) >= pr.cooldown
+  AND (CASE WHEN e.side=e.last_side THEN e.consec < pr.max_consec ELSE 1 END)
+  AND NOT EXISTS (SELECT 1 FROM signals_B s WHERE s.symbol=e.symbol AND s.side=e.side AND s.created_ts >= e.bar_ts);
+
+BEGIN IMMEDIATE;
+INSERT INTO signals_B(symbol,side,price,reason,created_ts)
+SELECT symbol,side,entry,reason,strftime('%s','now') FROM _filtered;
+
+INSERT INTO b_state(symbol,last_side,consec,last_ts)
+SELECT f.symbol, f.side,
+       CASE WHEN f.side=COALESCE(b.last_side,'') THEN COALESCE(b.consec,0)+1 ELSE 1 END,
+       f.bar_ts
+FROM _filtered f LEFT JOIN b_state b ON b.symbol=f.symbol
+ON CONFLICT(symbol) DO UPDATE SET
+  last_side=excluded.last_side,
+  consec=CASE WHEN b_state.last_side=excluded.last_side THEN b_state.consec+1 ELSE 1 END,
+  last_ts=excluded.last_ts;
+COMMIT;
+
+SELECT 'emitted',COUNT(*) FROM _filtered;
+SQL
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/view_uoatbx.sh
+Size: 1922
+MTime: 2025-10-11 17:13:57.427891658 +0200
+----- CONTENT -----
+#!/bin/bash
+db_a="/opt/scalp/project/data/a.db"
+db_u="/opt/scalp/project/data/u.db"
+db_t="/opt/scalp/project/data/t.db"
+db_x="/opt/scalp/project/data/x.db"
+
+now=$(date +%s)
+fmt_ts() { date -d @"$1" +%H:%M:%S 2>/dev/null || date -r "$1" +%H:%M:%S; }
+tf_to_secs() {
+  case "$1" in
+    5m) echo 300 ;;
+    15m) echo 900 ;;
+    30m) echo 1800 ;;
+    *) echo 0 ;;
+  esac
+}
+echo "=== Vue UOATBX ==="
+
+# U
+ts_u=$(sqlite3 "$db_u" "SELECT MAX(ts) FROM top_scores;" 2>/dev/null || echo 0)
+cnt_u=$(sqlite3 "$db_u" "SELECT COUNT(*) FROM top_scores;" 2>/dev/null || echo 0)
+age_u=$((now - ts_u))
+echo "U : 📦 $cnt_u - 🕒 $(fmt_ts $ts_u) (âge ${age_u}s)"
+
+# O
+for tf in 5m 15m 30m; do
+  cnt_o=$(sqlite3 "$db_a" "SELECT COUNT(*) FROM ohlcv_$tf;" 2>/dev/null || echo 0)
+  ts_o=$(sqlite3 "$db_a" "SELECT MAX(ts) FROM ohlcv_$tf;" 2>/dev/null || echo 0)
+  age_o=$((now - ts_o))
+  echo "O $tf : 📦 $cnt_o - 🕒 $(fmt_ts $ts_o) (âge ${age_o}s)"
+done
+
+# A
+cnt_A=$(sqlite3 "$db_a" "SELECT COUNT(DISTINCT symbol) FROM contexts_A;" 2>/dev/null || echo 0)
+sum_ctx=$(sqlite3 "$db_a" "SELECT SUM(cnt) FROM (SELECT COUNT(*) as cnt FROM contexts_A GROUP BY ctx);" 2>/dev/null || echo 0)
+echo "A : symbols $cnt_A | total ctx $sum_ctx"
+sqlite3 "$db_a" "SELECT ctx, COUNT(*) FROM contexts_A GROUP BY ctx;" 2>/dev/null | while read ctx ct; do
+  echo "   ctx $ctx : $ct"
+done
+
+# T
+cnt_T=$(sqlite3 "$db_t" "SELECT COUNT(DISTINCT instId) FROM ticks;" 2>/dev/null || echo 0)
+echo "T : symbols $cnt_T"
+
+# B
+for tbl in signals_B_plan signals_B; do
+  cntb=$(sqlite3 "$db_a" "ATTACH '/opt/scalp/project/data/scalp.db' AS s; SELECT COUNT(DISTINCT symbol) FROM s.$tbl;" 2>/dev/null || echo 0)
+  echo "B-$tbl : symbols $cntb"
+done
+
+# X
+acct_cnt=$(sqlite3 "$db_x" "SELECT COUNT(*) FROM account_sim;" 2>/dev/null || echo 0)
+ts_acct=$(sqlite3 "$db_x" "SELECT MAX(ts) FROM account_sim;" 2>/dev/null || echo 0)
+echo "X-acct : $acct_cnt - 🕒 $(fmt_ts $ts_acct)"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/check_health_full.sh
+Size: 3187
+MTime: 2025-10-10 16:24:37.514013198 +0200
+----- CONTENT -----
+#!/usr/bin/env sh
+set -eu
+TDB=${TDB:-/opt/scalp/project/data/t.db}
+ADB=${ADB:-/opt/scalp/project/data/a.db}
+BDB=${BDB:-/opt/scalp/project/data/b.db}
+XDB=${XDB:-/opt/scalp/project/data/x.db}
+
+now=$(date +%s)
+
+sep(){ printf -- "------------------------------\n"; }
+hdr(){ printf "%s\n" "== $1 =="; }
+
+# T: ticks
+hdr "T (ticks)"
+sqlite3 "$TDB" -tabs "
+SELECT 'symbols' AS k, COUNT(DISTINCT instId) AS v FROM ticks;
+SELECT 'ticks_total', COUNT(*) FROM ticks;
+SELECT 'ticks_15m', COUNT(*) FROM ticks WHERE ts_ms>=($now-900)*1000;
+SELECT 'last_tick_ms', MAX(ts_ms) FROM ticks;
+"
+
+# A: OHLCV + context
+sep; hdr "A (ohlcv + context)"
+sqlite3 "$ADB" -tabs "
+SELECT 'ohlcv_1m_rows', COALESCE((SELECT COUNT(*) FROM ohlcv_1m),0);
+SELECT 'ohlcv_5m_rows', COALESCE((SELECT COUNT(*) FROM ohlcv_5m),0);
+SELECT 'ohlcv_1m_last_ts', COALESCE((SELECT MAX(ts) FROM ohlcv_1m),0);
+SELECT 'contexts_latest', COALESCE((SELECT COUNT(*) FROM v_contexts_A_latest),0);
+SELECT 'contexts_recent', COALESCE((SELECT COUNT(*) FROM v_contexts_A_latest WHERE ts>=($now-900)),0);
+"
+
+# B: indicateurs + signaux
+sep; hdr "B (indics + signaux)"
+sqlite3 "$BDB" -tabs "
+SELECT 'v_indic_1m_rows', COALESCE((SELECT COUNT(*) FROM v_indic_1m),0);
+SELECT 'v_indic_1m_last_ts', COALESCE((SELECT MAX(ts) FROM v_indic_1m),0);
+SELECT 'v_indic5m_fast_rows', COALESCE((SELECT COUNT(*) FROM v_indic5m_fast),0);
+SELECT 'signals_B_total', COALESCE((SELECT COUNT(*) FROM signals_B),0);
+SELECT 'signals_B_15m', COALESCE((SELECT COUNT(*) FROM signals_B WHERE created_ts>=($now-900)),0);
+SELECT 'plans_total', COALESCE((SELECT COUNT(*) FROM signals_B_plan),0);
+SELECT 'plans_15m', COALESCE((SELECT COUNT(*) FROM signals_B_plan WHERE created_ts>=($now-900)),0);
+"
+
+# X: exécution paper
+sep; hdr "X (paper)"
+sqlite3 "$XDB" -tabs "
+SELECT 'orders_NEW', COALESCE((SELECT COUNT(*) FROM x_orders WHERE status='NEW'),0);
+SELECT 'orders_FILLED', COALESCE((SELECT COUNT(*) FROM x_orders WHERE status='FILLED'),0);
+SELECT 'orders_CLOSED', COALESCE((SELECT COUNT(*) FROM x_orders WHERE status='CLOSED'),0);
+SELECT 'positions_open', COALESCE((SELECT COUNT(*) FROM x_positions),0);
+SELECT 'fills', COALESCE((SELECT COUNT(*) FROM x_fills),0);
+SELECT 'ledger', COALESCE((SELECT COUNT(*) FROM x_ledger),0);
+SELECT 'wallet_balance', COALESCE((SELECT balance FROM x_wallet WHERE id=1),0);
+"
+
+# Résumé simple avec OK/ALERT
+sep; hdr "Summary"
+last_tick_ms=$(sqlite3 "$TDB" "SELECT COALESCE(MAX(ts_ms),0) FROM ticks;")
+age_s=$(( (now*1000 - last_tick_ms)/1000 ))
+tick_ok=$([ $age_s -le 120 ] && echo OK || echo ALERT)
+printf "ticks_fresh: %s (age=%ss)\n" "$tick_ok" "$age_s"
+
+a1m_last=$(sqlite3 "$ADB" "SELECT COALESCE(MAX(ts),0) FROM ohlcv_1m;")
+age_a=$(( now - a1m_last ))
+a_ok=$([ $age_a -le 180 ] && echo OK || echo ALERT)
+printf "A ohlcv_1m: %s (age=%ss)\n" "$a_ok" "$age_a"
+
+b_sig_15=$(sqlite3 "$BDB" "SELECT COUNT(*) FROM signals_B WHERE created_ts>=($now-900);")
+printf "B signals last 15m: %s\n" "$b_sig_15"
+
+plans_15=$(sqlite3 "$BDB" "SELECT COUNT(*) FROM signals_B_plan WHERE created_ts>=($now-900);")
+printf "B plans last 15m: %s\n" "$plans_15"
+
+pos_open=$(sqlite3 "$XDB" "SELECT COUNT(*) FROM x_positions;")
+printf "X positions open: %s\n" "$pos_open"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/check_x_health.sh
+Size: 256
+MTime: 2025-10-10 14:55:38.126615076 +0200
+----- CONTENT -----
+#!/usr/bin/env sh
+set -eu
+: "${XDB:=/opt/scalp/project/data/x.db}"
+sqlite3 "$XDB" -tabs "
+SELECT 'orders',COUNT(*) FROM x_orders;
+SELECT 'positions',COUNT(*) FROM x_positions;
+SELECT 'fills',COUNT(*) FROM x_fills;
+SELECT 'ledger',COUNT(*) FROM x_ledger;
+"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/check_health_uoatbx.sh
+Size: 4284
+MTime: 2025-10-10 16:34:36.709010618 +0200
+----- CONTENT -----
+#!/usr/bin/env sh
+set -eu
+DATA="/opt/scalp/project/data"
+UDB="${UDB:-$DATA/u.db}"
+ODB="${ODB:-$DATA/o.db}"
+ADB="${ADB:-$DATA/a.db}"
+TDB="${TDB:-$DATA/t.db}"
+BDB="${BDB:-$DATA/b.db}"
+XDB="${XDB:-$DATA/x.db}"
+now=$(date +%s)
+
+sql(){ sqlite3 "$1" -tabs "$2"; }
+hdr(){ printf "== %s ==\n" "$1"; }
+sep(){ printf -- "------------------------------\n"; }
+
+# U: univers (runs + vue courante)
+hdr "U (univers)"
+sql "$UDB" "
+SELECT 'runs_total',COALESCE((SELECT COUNT(*) FROM universe_runs),0);
+SELECT 'published_last_run',COALESCE((SELECT run_id FROM universe_runs WHERE status='published' ORDER BY finished_at DESC LIMIT 1),0);
+SELECT 'published_count',COALESCE((SELECT count FROM universe_runs WHERE status='published' ORDER BY finished_at DESC LIMIT 1),0);
+SELECT 'available_now',COALESCE((SELECT COUNT(*) FROM v_universe_current),0);
+"
+
+# O: OHLCV bruts (5/15/30) dans o.db
+sep; hdr "O (ohlcv raw)"
+sql "$ODB" "
+SELECT 'ohlcv_5m_rows',COALESCE((SELECT COUNT(*) FROM ohlcv_5m),0);
+SELECT 'ohlcv_15m_rows',COALESCE((SELECT COUNT(*) FROM ohlcv_15m),0);
+SELECT 'ohlcv_30m_rows',COALESCE((SELECT COUNT(*) FROM ohlcv_30m),0);
+SELECT 'ohlcv_5m_last_ts',COALESCE((SELECT MAX(ts) FROM ohlcv_5m),0);
+SELECT 'ohlcv_15m_last_ts',COALESCE((SELECT MAX(ts) FROM ohlcv_15m),0);
+SELECT 'ohlcv_30m_last_ts',COALESCE((SELECT MAX(ts) FROM ohlcv_30m),0);
+"
+
+# A: agrégations + univers copié (u_syms) + context
+sep; hdr "A (1m + u_syms + context)"
+sql "$ADB" "
+SELECT 'u_syms_rows',COALESCE((SELECT COUNT(*) FROM u_syms),0);
+SELECT 'ohlcv_1m_rows',COALESCE((SELECT COUNT(*) FROM ohlcv_1m),0);
+SELECT 'ohlcv_1m_last_ts',COALESCE((SELECT MAX(ts) FROM ohlcv_1m),0);
+SELECT 'contexts_latest',COALESCE((SELECT COUNT(*) FROM v_contexts_A_latest),0);
+SELECT 'contexts_15m',COALESCE((SELECT COUNT(*) FROM v_contexts_A_latest WHERE ts>=($now-900)),0);
+"
+
+# T: ticks
+sep; hdr "T (ticks)"
+sql "$TDB" "
+SELECT 'symbols',COALESCE((SELECT COUNT(DISTINCT instId) FROM ticks),0);
+SELECT 'ticks_total',COALESCE((SELECT COUNT(*) FROM ticks),0);
+SELECT 'ticks_15m',COALESCE((SELECT COUNT(*) FROM ticks WHERE ts_ms>=($now-900)*1000),0);
+SELECT 'last_tick_ms',COALESCE((SELECT MAX(ts_ms) FROM ticks),0);
+"
+
+# B: indicateurs + signaux
+sep; hdr "B (indics + signaux)"
+sql "$BDB" "
+SELECT 'v_indic_1m_rows',COALESCE((SELECT COUNT(*) FROM v_indic_1m),0);
+SELECT 'v_indic_1m_last_ts',COALESCE((SELECT MAX(ts) FROM v_indic_1m),0);
+SELECT 'v_indic5m_fast_rows',COALESCE((SELECT COUNT(*) FROM v_indic5m_fast),0);
+SELECT 'signals_B_total',COALESCE((SELECT COUNT(*) FROM signals_B),0);
+SELECT 'signals_B_15m',COALESCE((SELECT COUNT(*) FROM signals_B WHERE created_ts>=($now-900)),0);
+SELECT 'plans_total',COALESCE((SELECT COUNT(*) FROM signals_B_plan),0);
+SELECT 'plans_15m',COALESCE((SELECT COUNT(*) FROM signals_B_plan WHERE created_ts>=($now-900)),0);
+"
+
+# X: exécution paper
+sep; hdr "X (paper)"
+sql "$XDB" "
+SELECT 'orders_NEW',COALESCE((SELECT COUNT(*) FROM x_orders WHERE status='NEW'),0);
+SELECT 'orders_FILLED',COALESCE((SELECT COUNT(*) FROM x_orders WHERE status='FILLED'),0);
+SELECT 'orders_CLOSED',COALESCE((SELECT COUNT(*) FROM x_orders WHERE status='CLOSED'),0);
+SELECT 'positions_open',COALESCE((SELECT COUNT(*) FROM x_positions),0);
+SELECT 'fills',COALESCE((SELECT COUNT(*) FROM x_fills),0);
+SELECT 'ledger',COALESCE((SELECT COUNT(*) FROM x_ledger),0);
+SELECT 'wallet_balance',COALESCE((SELECT balance FROM x_wallet WHERE id=1),0);
+"
+
+# Résumé
+sep; hdr "Summary"
+last_tick_ms=$(sqlite3 "$TDB" "SELECT COALESCE(MAX(ts_ms),0) FROM ticks;")
+age_tick=$(( (now*1000 - last_tick_ms)/1000 )); [ $age_tick -le 120 ] && tflag="OK" || tflag="ALERT"
+printf "T ticks_fresh: %s (age=%ss)\n" "$tflag" "$age_tick"
+
+o5_last=$(sqlite3 "$ODB" "SELECT COALESCE(MAX(ts),0) FROM ohlcv_5m;")
+age_o5=$(( now - o5_last )); [ $age_o5 -le 900 ] && oflag="OK" || oflag="ALERT"
+printf "O 5m: %s (age=%ss)\n" "$oflag" "$age_o5"
+
+a1_last=$(sqlite3 "$ADB" "SELECT COALESCE(MAX(ts),0) FROM ohlcv_1m;")
+age_a1=$(( now - a1_last )); [ $age_a1 -le 180 ] && aflag="OK" || aflag="ALERT"
+printf "A 1m: %s (age=%ss)\n" "$aflag" "$age_a1"
+
+b15=$(sqlite3 "$BDB" "SELECT COUNT(*) FROM signals_B WHERE created_ts>=($now-900);")
+printf "B signals_15m: %s\n" "$b15"
+
+xpos=$(sqlite3 "$XDB" "SELECT COUNT(*) FROM x_positions;")
+printf "X positions_open: %s\n" "$xpos"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/sync_top35_to_a.sh
+Size: 681
+MTime: 2025-10-10 09:04:30.326981537 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+UDB="${UDB:-/opt/scalp/project/data/u.db}"
+ADB="${ADB:-/opt/scalp/project/data/a.db}"
+
+attempts=0
+max=5
+while :; do
+  if sqlite3 "$ADB" <<SQL
+PRAGMA journal_mode=WAL;
+PRAGMA busy_timeout=8000;
+ATTACH DATABASE '$UDB' AS udb;
+BEGIN IMMEDIATE;
+CREATE TABLE IF NOT EXISTS u_syms(symbol TEXT PRIMARY KEY);
+DELETE FROM u_syms;
+INSERT OR IGNORE INTO u_syms(symbol)
+SELECT symbol FROM udb.v_universe_current;
+COMMIT;
+DETACH DATABASE udb;
+SQL
+  then
+    echo "sync u.db → a.db.u_syms done"
+    exit 0
+  fi
+  attempts=$((attempts+1))
+  if [ $attempts -ge $max ]; then
+    echo "sync failed after $attempts attempts" >&2
+    exit 1
+  fi
+  sleep 1
+done
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/migrate_b_schema.sh
+Size: 1305
+MTime: 2025-10-10 14:13:51.375892603 +0200
+----- CONTENT -----
+#!/usr/bin/env sh
+set -eu
+: "${BDB:=/opt/scalp/project/data/b.db}"
+has_col(){ [ "$(sqlite3 "$BDB" "SELECT COUNT(*) FROM pragma_table_info('$1') WHERE name='$2';")" -gt 0 ]; }
+sqlite3 "$BDB" "PRAGMA busy_timeout=15000; PRAGMA journal_mode=WAL;
+CREATE TABLE IF NOT EXISTS signals_B_plan(
+ id INTEGER PRIMARY KEY AUTOINCREMENT,
+ symbol TEXT, ctx TEXT, score REAL, side TEXT,
+ entry REAL, sl REAL, tp REAL,
+ qty REAL, margin REAL, notional REAL,
+ created_ts INTEGER
+);
+CREATE TABLE IF NOT EXISTS signals_B(
+ id INTEGER PRIMARY KEY AUTOINCREMENT,
+ symbol TEXT, side TEXT, price REAL, reason TEXT, created_ts INTEGER
+);
+CREATE INDEX IF NOT EXISTS idx_sigB_ts ON signals_B(created_ts);
+CREATE INDEX IF NOT EXISTS idx_sigB_sym_ts ON signals_B(symbol,created_ts);
+CREATE TABLE IF NOT EXISTS b_state(symbol TEXT PRIMARY KEY, last_side TEXT, consec INTEGER, last_ts INTEGER);
+"
+for def in "entry REAL" "sl REAL" "tp REAL" "qty REAL" "margin REAL" "notional REAL" "created_ts INTEGER"; do
+  n="${def%% *}"; has_col signals_B_plan "$n" || sqlite3 "$BDB" "ALTER TABLE signals_B_plan ADD COLUMN $def;"
+done
+for def in "symbol TEXT" "side TEXT" "price REAL" "reason TEXT" "created_ts INTEGER"; do
+  n="${def%% *}"; has_col signals_B "$n" || sqlite3 "$BDB" "ALTER TABLE signals_B ADD COLUMN $def;"
+done
+echo "migrate: ok"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/run_ohlcv_daemon.sh
+Size: 1192
+MTime: 2025-10-10 09:16:45.559809846 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="/opt/scalp/project"
+SCRIPTS="$ROOT/scripts"
+LOG="$ROOT/logs/ohlcv_daemon.log"
+STEP=300         # 5 min
+OFFSET=1         # hh:mm:01
+GRACE=4          # re-essai si la close n'est pas dispo
+RETRY=1
+
+mkdir -p "$ROOT/logs"
+
+align() {
+  now=$(date +%s)
+  next=$(( now - (now % STEP) + STEP + OFFSET ))
+  sleep $(( next - now ))
+}
+
+expected_ts() {
+  # timestamp de la bougie 5m qui vient de se clore
+  n=$(date +%s)
+  echo $(( n - (n % STEP) ))
+}
+
+have_expected() {
+  exp="$1"
+  sqlite3 -noheader "$ROOT/data/a.db" "
+SELECT MIN(ok) FROM (
+  SELECT CASE WHEN MAX(ts)=$exp THEN 1 ELSE 0 END ok FROM ohlcv_5m
+  UNION ALL
+  SELECT CASE WHEN MAX(ts)=$exp THEN 1 ELSE 0 END FROM ohlcv_15m
+  UNION ALL
+  SELECT CASE WHEN MAX(ts)=$exp THEN 1 ELSE 0 END FROM ohlcv_30m
+);" 2>/dev/null
+}
+
+run_cycle() {
+  "$SCRIPTS/fetch_ohlcv_once.sh"  >> "$LOG" 2>&1 || true
+  "$SCRIPTS/harden_o_db.sh"       >> "$LOG" 2>&1 || true
+  "$SCRIPTS/purge_non_current.sh" >> "$LOG" 2>&1 || true
+}
+
+while true; do
+  align
+  exp=$(expected_ts)
+  run_cycle
+  ok=$(have_expected "$exp" || echo 0)
+  if [ "$ok" != "1" ] && [ "$RETRY" -gt 0 ]; then
+    sleep "$GRACE"
+    run_cycle
+  fi
+done
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/build_a_once.sh
+Size: 4783
+MTime: 2025-10-10 10:02:24.808261099 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+ADB="/opt/scalp/project/data/a.db"
+
+sqlite3 "$ADB" <<'SQL'
+PRAGMA busy_timeout=8000;
+BEGIN IMMEDIATE;
+
+DROP TABLE IF EXISTS _src;
+CREATE TEMP TABLE _src AS
+SELECT symbol,'5m' tf,ts,o,h,l,c,v FROM ohlcv_5m
+UNION ALL SELECT symbol,'15m',ts,o,h,l,c,v FROM ohlcv_15m
+UNION ALL SELECT symbol,'30m',ts,o,h,l,c,v FROM ohlcv_30m;
+
+DROP TABLE IF EXISTS _base;
+CREATE TEMP TABLE _base AS
+SELECT symbol,tf,ts,o,h,l,c,v,
+       LAG(c) OVER (PARTITION BY symbol,tf ORDER BY ts) AS cp
+FROM _src;
+
+DROP TABLE IF EXISTS _rsi;
+CREATE TEMP TABLE _rsi AS
+WITH g AS (
+  SELECT symbol,tf,ts,
+         MAX(c-COALESCE(cp,c),0) AS g,
+         MAX(COALESCE(cp,c)-c,0) AS l
+  FROM _base
+)
+SELECT symbol,tf,ts,
+       100-100.0/(1+AVG(g) OVER (PARTITION BY symbol,tf ORDER BY ts ROWS 13 PRECEDING)
+                    /NULLIF(AVG(l) OVER (PARTITION BY symbol,tf ORDER BY ts ROWS 13 PRECEDING),0)) AS rsi
+FROM g;
+
+DROP TABLE IF EXISTS _ema;
+CREATE TEMP TABLE _ema AS
+SELECT symbol,tf,ts,
+       AVG(c) OVER (PARTITION BY symbol,tf ORDER BY ts ROWS 9 PRECEDING)  AS ema_f,
+       AVG(c) OVER (PARTITION BY symbol,tf ORDER BY ts ROWS 21 PRECEDING) AS ema_s
+FROM _base;
+
+DROP TABLE IF EXISTS _macd;
+CREATE TEMP TABLE _macd AS
+SELECT symbol,tf,ts,
+       (ema_f-ema_s) AS macd,
+       AVG(ema_f-ema_s) OVER (PARTITION BY symbol,tf ORDER BY ts ROWS 8 PRECEDING) AS macd_sig
+FROM _ema;
+
+DROP TABLE IF EXISTS _adx;
+CREATE TEMP TABLE _adx AS
+WITH x AS (
+  SELECT symbol,tf,ts,h,l,
+         LAG(h) OVER (PARTITION BY symbol,tf ORDER BY ts) AS hp,
+         LAG(l) OVER (PARTITION BY symbol,tf ORDER BY ts) AS lp
+  FROM _base
+),
+dm AS (
+  SELECT symbol,tf,ts,
+         MAX(h-COALESCE(hp,h),0) AS dmp,
+         MAX(COALESCE(lp,l)-l,0) AS dmm
+  FROM x
+)
+SELECT symbol,tf,ts,
+       100*ABS(AVG(dmp) OVER (PARTITION BY symbol,tf ORDER BY ts ROWS 13 PRECEDING)
+             -AVG(dmm) OVER (PARTITION BY symbol,tf ORDER BY ts ROWS 13 PRECEDING))
+       /(AVG(dmp) OVER (PARTITION BY symbol,tf ORDER BY ts ROWS 13 PRECEDING)
+        +AVG(dmm) OVER (PARTITION BY symbol,tf ORDER BY ts ROWS 13 PRECEDING)+0.001) AS adx
+FROM dm;
+
+DROP TABLE IF EXISTS _obv;
+CREATE TEMP TABLE _obv AS
+WITH x AS (
+  SELECT symbol,tf,ts,c,v,
+         LAG(c) OVER (PARTITION BY symbol,tf ORDER BY ts) AS cp
+  FROM _base
+),
+o AS (
+  SELECT symbol,tf,ts,
+         SUM(CASE WHEN cp IS NULL THEN 0
+                  WHEN c>cp THEN v
+                  WHEN c<cp THEN -v
+                  ELSE 0 END) OVER (PARTITION BY symbol,tf ORDER BY ts) AS obv
+  FROM x
+)
+SELECT symbol,tf,ts,obv,
+       obv-LAG(obv,20) OVER (PARTITION BY symbol,tf ORDER BY ts) AS obv_slope
+FROM o;
+
+DROP TABLE IF EXISTS _merge;
+CREATE TEMP TABLE _merge AS
+SELECT b.symbol,b.tf,b.ts,b.c,b.v,
+       e.ema_f,e.ema_s,m.macd,m.macd_sig,
+       r.rsi,a.adx,o.obv_slope
+FROM _base b
+LEFT JOIN _ema e USING(symbol,tf,ts)
+LEFT JOIN _macd m USING(symbol,tf,ts)
+LEFT JOIN _rsi r USING(symbol,tf,ts)
+LEFT JOIN _adx a USING(symbol,tf,ts)
+LEFT JOIN _obv o USING(symbol,tf,ts);
+
+DROP TABLE IF EXISTS _s_tf;
+CREATE TEMP TABLE _s_tf AS
+SELECT symbol,tf,ts,
+       ((ema_f-ema_s)/NULLIF(ABS(ema_f)+ABS(ema_s),0))*0.4 +
+       ((macd-macd_sig)/NULLIF(ABS(macd)+ABS(macd_sig),0))*0.3 +
+       ((rsi-50)/50.0)*0.2 +
+       ((adx-20)/20.0)*0.1 +
+       (obv_slope/NULLIF(ABS(obv_slope)+1,0))*0.1 AS s
+FROM _merge;
+
+DROP TABLE IF EXISTS _S;
+CREATE TEMP TABLE _S AS
+WITH w AS (SELECT 0.5 AS w30,0.3 AS w15,0.2 AS w5)
+SELECT s.symbol,
+       SUM(CASE 
+              WHEN tf='30m' THEN s.s*(SELECT w30 FROM w)
+              WHEN tf='15m' THEN s.s*(SELECT w15 FROM w)
+              WHEN tf='5m'  THEN s.s*(SELECT w5  FROM w)
+              ELSE 0 END) AS S
+FROM _s_tf s GROUP BY s.symbol;
+
+-- Normalisation des probas: somme = 1
+DROP TABLE IF EXISTS _probs;
+CREATE TEMP TABLE _probs AS
+WITH raw AS (
+  SELECT symbol,S,
+         CASE WHEN S>0 THEN S ELSE 0 END AS pb_raw,
+         CASE WHEN S<0 THEN -S ELSE 0 END AS ps_raw,
+         CASE WHEN ABS(S)<=1 THEN 1-ABS(S) ELSE 0 END AS ph_raw
+  FROM _S
+),
+z AS (
+  SELECT symbol,S,pb_raw,ph_raw,ps_raw,(pb_raw+ph_raw+ps_raw) AS z FROM raw
+)
+SELECT symbol,S,
+       CASE WHEN z=0 THEN 0.0 ELSE pb_raw/z END AS pb,
+       CASE WHEN z=0 THEN 1.0 ELSE ph_raw/z END AS ph,
+       CASE WHEN z=0 THEN 0.0 ELSE ps_raw/z END AS ps
+FROM z;
+
+DROP TABLE IF EXISTS _ctx;
+CREATE TEMP TABLE _ctx AS
+SELECT symbol,S,pb,ph,ps,
+       CASE WHEN S>0.25 THEN 'bullish'
+            WHEN S<-0.25 THEN 'bearish'
+            ELSE 'range' END AS ctx
+FROM _probs;
+
+INSERT OR REPLACE INTO a_context_state(symbol,ctx,pb,ph,ps,s,updated_at)
+SELECT symbol,ctx,pb,ph,ps,S,datetime('now') FROM _ctx;
+
+INSERT INTO a_signals(ts,symbol,s,pb,ph,ps,ctx)
+SELECT datetime('now'),symbol,S,pb,ph,ps,ctx FROM _ctx;
+
+COMMIT;
+SQL
+
+echo "A: build done (normalized probs)."
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/b_manifest_init.sh
+Size: 526
+MTime: 2025-10-10 14:32:55.129133983 +0200
+----- CONTENT -----
+#!/usr/bin/env sh
+set -eu
+BIN="/opt/scalp/project/bin"
+ETC="/opt/scalp/project/etc"
+mkdir -p "$ETC"
+LIST="env_ab.sh migrate_b_schema.sh build_ohlcv1m_from_ticks.sh ensure_ab_indicators_atomic.sh build_features_1m.sh analyse_B_sql.sh tick_gate_B.sh run_B_loop.sh check_b_health.sh b_lock.sh b_integrity.sh b_retry.sh"
+MAN="$ETC/b.manifest"
+: > "$MAN"
+for f in $LIST; do
+  [ -f "$BIN/$f" ] || { echo "skip $f" >&2; continue; }
+  sha256sum "$BIN/$f" >> "$MAN"
+done
+chown root:root "$MAN"; chmod 0444 "$MAN"
+echo "manifest: $MAN"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/x_paper_match.sh
+Size: 3578
+MTime: 2025-10-10 15:08:08.726375758 +0200
+----- CONTENT -----
+#!/usr/bin/env sh
+set -eu
+: "${TDB:=/opt/scalp/project/data/t.db}"
+: "${XDB:=/opt/scalp/project/data/x.db}"
+
+# FILL des NEW
+sqlite3 "$XDB" <<'SQL'
+PRAGMA busy_timeout=15000; PRAGMA journal_mode=WAL;
+ATTACH DATABASE '/opt/scalp/project/data/t.db' AS tdb;
+
+CREATE TEMP TABLE _new AS
+SELECT o.id,o.symbol,o.side,o.price,o.qty,o.sl,o.tp,o.created_ts
+FROM x_orders o LEFT JOIN x_positions p ON p.symbol=o.symbol
+WHERE o.status='NEW' AND p.symbol IS NULL;
+
+CREATE TEMP TABLE _nx AS
+SELECT n.id,n.symbol,
+       COALESCE(MIN(CASE WHEN t.ts_ms >= n.created_ts*1000 THEN t.ts_ms END),
+                MAX(t.ts_ms)) AS nx_ms
+FROM _new n JOIN tdb.ticks t ON t.instId=n.symbol
+GROUP BY n.id;
+
+
+CREATE TEMP TABLE _exec AS
+SELECT n.id,n.symbol,n.side,n.qty,
+       CASE WHEN n.side='BUY'
+            THEN n.price*(1 + (SELECT slippage_bps FROM x_params WHERE id=1)/10000.0)
+            ELSE n.price*(1 - (SELECT slippage_bps FROM x_params WHERE id=1)/10000.0) END AS fill_px,
+       x.nx_ms
+FROM _new n JOIN _nx x USING(id);
+
+INSERT INTO x_fills(order_id,symbol,side,price,qty,fill_ts,kind)
+SELECT id,symbol,side,fill_px,qty, nx_ms/1000,'OPEN' FROM _exec;
+
+INSERT OR REPLACE INTO x_positions(symbol,side,qty,entry,sl,tp,open_ts)
+SELECT o.symbol,o.side,e.qty,e.fill_px,o.sl,o.tp,e.nx_ms/1000
+FROM x_orders o JOIN _exec e ON e.id=o.id;
+
+UPDATE x_orders SET status='FILLED', updated_ts=(SELECT nx_ms/1000 FROM _exec WHERE _exec.id=x_orders.id)
+WHERE id IN (SELECT id FROM _exec);
+
+DETACH DATABASE tdb;
+SQL
+
+# SL/TP et PnL + wallet
+sqlite3 "$XDB" <<'SQL'
+PRAGMA busy_timeout=15000; PRAGMA journal_mode=WAL;
+ATTACH DATABASE '/opt/scalp/project/data/t.db' AS tdb;
+
+CREATE TEMP TABLE _lt AS
+SELECT t.instId AS symbol,
+       MAX(t.ts_ms) AS ts_ms,
+       (SELECT price FROM tdb.ticks t2 WHERE t2.instId=t.instId ORDER BY t2.ts_ms DESC LIMIT 1) AS px
+FROM tdb.ticks t
+WHERE t.instId IN (SELECT symbol FROM x_positions)
+GROUP BY t.instId;
+
+CREATE TEMP TABLE _hits AS
+SELECT p.symbol,p.side,p.qty,p.entry,p.sl,p.tp,l.px,l.ts_ms
+FROM x_positions p JOIN _lt l ON l.symbol=p.symbol
+WHERE (p.side='BUY'  AND ((p.sl IS NOT NULL AND l.px<=p.sl) OR (p.tp IS NOT NULL AND l.px>=p.tp)))
+   OR (p.side='SELL' AND ((p.sl IS NOT NULL AND l.px>=p.sl) OR (p.tp IS NOT NULL AND l.px<=p.tp)));
+
+CREATE TEMP TABLE _closed AS
+SELECT
+ (SELECT id FROM x_orders o WHERE o.symbol=h.symbol AND o.status='FILLED' ORDER BY o.id DESC LIMIT 1) AS order_id,
+ h.symbol, CASE WHEN h.side='BUY' THEN 'SELL' ELSE 'BUY' END AS side,
+ h.px AS price, h.qty AS qty, h.ts_ms/1000 AS fill_ts
+FROM _hits h;
+
+INSERT INTO x_fills(order_id,symbol,side,price,qty,fill_ts,kind)
+SELECT order_id,symbol,side,price,qty,fill_ts,'CLOSE' FROM _closed;
+
+INSERT INTO x_ledger(symbol,event,detail,pnl,ts)
+SELECT c.symbol,'CLOSE','SLTP',
+       CASE WHEN (SELECT side FROM x_positions WHERE symbol=c.symbol)='BUY'
+            THEN (c.price - (SELECT entry FROM x_positions WHERE symbol=c.symbol))*c.qty
+            ELSE ((SELECT entry FROM x_positions WHERE symbol=c.symbol) - c.price)*c.qty END,
+       c.fill_ts
+FROM _closed c;
+
+DELETE FROM x_positions WHERE symbol IN (SELECT symbol FROM _closed);
+UPDATE x_orders SET status='CLOSED', updated_ts=strftime('%s','now')
+WHERE symbol IN (SELECT symbol FROM _closed) AND status='FILLED';
+
+-- wallet: balance = start_balance + SUM(pnl), equity = balance
+UPDATE x_wallet
+SET balance = (SELECT start_balance FROM x_wallet WHERE id=1)
+              + COALESCE((SELECT SUM(pnl) FROM x_ledger),0),
+    equity = balance,
+    updated_ts = strftime('%s','now')
+WHERE id=1;
+
+DETACH DATABASE tdb;
+SQL
+
+echo "paper: ok"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/mark_a_final.sh
+Size: 688
+MTime: 2025-10-10 09:55:01.124331967 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="/opt/scalp/project"
+ADB="$ROOT/data/a.db"
+VER="${VER:?specify VER, ex: VER=analysisA-2025-10-10T12-00Z}"
+
+# Health strict avant marquage
+"$ROOT/bin/health_a_strict.sh" >/dev/null
+
+sqlite3 "$ADB" <<SQL
+PRAGMA busy_timeout=8000;
+DELETE FROM a_snapshots WHERE version='$VER';
+INSERT OR REPLACE INTO a_final_marks(version, symbols, bullish, bearish, range)
+SELECT '$VER',
+       COUNT(*),
+       SUM(ctx='bullish'),
+       SUM(ctx='bearish'),
+       SUM(ctx='range')
+FROM a_context_state;
+
+INSERT INTO a_snapshots(version, symbol, s, pb, ph, ps, ctx)
+SELECT '$VER', symbol, s, pb, ph, ps, ctx
+FROM a_context_state;
+SQL
+
+echo "A final marked: $VER"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/health_b_strict.sh
+Size: 806
+MTime: 2025-10-10 12:20:01.645717621 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+BDB="/opt/scalp/project/data/b.db"
+fail(){ echo "FAIL: $*" >&2; exit 1; }
+
+echo "== latest plans =="
+sqlite3 -tabs "$BDB" "
+WITH last_ts AS (SELECT MAX(ts_utc) t FROM b_plans)
+SELECT symbol, side, ROUND(score,2), ROUND(price,6), ROUND(sl,6), ROUND(tp,6),
+       ROUND(size_usd,2), ROUND(vol_win,3)
+FROM b_plans WHERE ts_utc=(SELECT t FROM last_ts)
+ORDER BY score DESC LIMIT 12;
+"
+
+bad=$(sqlite3 -noheader "$BDB" "
+WITH last_ts AS (SELECT MAX(ts_utc) t FROM b_plans),
+chk AS (SELECT side, price, sl, tp FROM b_plans WHERE ts_utc=(SELECT t FROM last_ts))
+SELECT COUNT(*) FROM chk
+WHERE (side='BUY'  AND NOT(sl<price AND tp>price))
+   OR (side='SELL' AND NOT(sl>price AND tp<price));
+")
+[ "$bad" = "0" ] || fail "SL/TP incohérents ($bad)"
+
+echo "OK: b.db health strict"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/build_ohlcv1m_from_ticks.sh
+Size: 1177
+MTime: 2025-10-10 14:14:21.383925110 +0200
+----- CONTENT -----
+#!/usr/bin/env sh
+set -eu
+: "${TDB:=/opt/scalp/project/data/t.db}"
+: "${ADB:=/opt/scalp/project/data/a.db}"
+sqlite3 "$ADB" "PRAGMA busy_timeout=15000;
+CREATE TABLE IF NOT EXISTS ohlcv_1m(symbol TEXT, ts INTEGER,
+ open REAL, high REAL, low REAL, close REAL, volume REAL,
+ PRIMARY KEY(symbol,ts));"
+sqlite3 "$ADB" <<'SQL'
+ATTACH DATABASE '/opt/scalp/project/data/t.db' AS tdb;
+WITH s AS (
+  SELECT instId AS symbol,
+         (CAST(ts_ms AS INTEGER)/1000) AS ts_s,
+         price, size
+  FROM tdb.ticks
+),
+m AS (
+  SELECT symbol,(ts_s/60)*60 AS ts, price, size,
+         ROW_NUMBER() OVER (PARTITION BY symbol,(ts_s/60)*60 ORDER BY ts_s ASC)  rn_o,
+         ROW_NUMBER() OVER (PARTITION BY symbol,(ts_s/60)*60 ORDER BY ts_s DESC) rn_c
+  FROM s
+),
+agg AS (
+  SELECT symbol, ts,
+         MAX(CASE WHEN rn_o=1 THEN price END) AS open,
+         MAX(CASE WHEN rn_c=1 THEN price END) AS close,
+         MIN(price) AS low, MAX(price) AS high, SUM(size) AS volume
+  FROM m GROUP BY symbol, ts
+)
+INSERT OR REPLACE INTO ohlcv_1m(symbol,ts,open,high,low,close,volume)
+SELECT symbol, ts, open, high, low, close, volume FROM agg;
+DETACH DATABASE tdb;
+SQL
+echo "ohlcv_1m built from t.db.ticks"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/check_b_health.sh
+Size: 615
+MTime: 2025-10-10 14:15:51.312022548 +0200
+----- CONTENT -----
+#!/usr/bin/env sh
+set -eu
+: "${ADB:=/opt/scalp/project/data/a.db}"
+: "${BDB:=/opt/scalp/project/data/b.db}"
+echo "== B health =="
+sqlite3 "$ADB" "SELECT 'ohlcv_1m', COUNT(*) FROM sqlite_master WHERE name='ohlcv_1m';"
+sqlite3 "$BDB" -tabs "SELECT 'v_indic_1m',COUNT(*) FROM sqlite_master WHERE name='v_indic_1m';
+SELECT 'v_indic5m_fast',COUNT(*) FROM sqlite_master WHERE name='v_indic5m_fast';
+SELECT 'feat rows',COUNT(*) FROM v_feat_1m;"
+sqlite3 "$BDB" -tabs "SELECT 'signals_B',COUNT(*) FROM sqlite_master WHERE name='signals_B';
+SELECT 'plan',COUNT(*) FROM signals_B_plan;
+SELECT 'exec',COUNT(*) FROM signals_B;"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/build_b_once.sh
+Size: 3461
+MTime: 2025-10-10 12:20:01.641717624 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="/opt/scalp/project"
+ADB="$ROOT/data/a.db"
+TDB="$ROOT/data/t.db"
+UDB="$ROOT/data/u.db"
+BDB="$ROOT/data/b.db"
+
+SQLQ=$(cat <<'SQL'
+PRAGMA busy_timeout=8000;
+ATTACH DATABASE '"$ADB"' AS adb;
+ATTACH DATABASE '"$TDB"' AS tdb;
+ATTACH DATABASE '"$UDB"' AS udb;
+
+-- Paramètres
+WITH P AS (
+  SELECT
+    CAST((SELECT value FROM b_params WHERE key='min_score_buy')   AS REAL) AS min_sb,
+    CAST((SELECT value FROM b_params WHERE key='max_score_sell')  AS REAL) AS max_ss,
+    CAST((SELECT value FROM b_params WHERE key='lookback_sec')    AS INTEGER) AS lb,
+    CAST((SELECT value FROM b_params WHERE key='min_sl_pct')      AS REAL) AS min_sl,
+    CAST((SELECT value FROM b_params WHERE key='rr')              AS REAL) AS rr,
+    CAST((SELECT value FROM b_params WHERE key='size_usd_base')   AS REAL) AS sbase,
+    CAST((SELECT value FROM b_params WHERE key='size_scale')      AS REAL) AS sscale
+)
+-- Univers en cours
+, U AS (
+  SELECT symbol FROM udb.v_universe_current
+)
+-- Score A normalisé 0..100 et flag BUY/SELL/NONE
+, A AS (
+  SELECT s.symbol,
+         50.0 + 50.0*MAX(MIN(s.s,1.0),-1.0) AS score,
+         CASE
+           WHEN s.s>=0.25 THEN 'BUY'
+           WHEN s.s<=-0.25 THEN 'SELL'
+           ELSE 'NONE'
+         END AS flag
+  FROM adb.a_context_state s
+  JOIN U USING(symbol)
+)
+-- Référence ticks sur fenêtre lookback
+, REF AS (
+  SELECT
+    symbol,
+    MAX(ts_ms) AS ts_last,
+    MAX(price) AS pmax,
+    MIN(price) AS pmin,
+    (SELECT price FROM tdb.ticks t2 WHERE t2.symbol=t.symbol ORDER BY ts_ms DESC LIMIT 1) AS plast
+  FROM tdb.ticks t
+  WHERE ts_ms >= (CAST(strftime('%s','now') AS INTEGER)*1000 - (SELECT lb*1000 FROM P))
+  GROUP BY symbol
+)
+-- Candidats BUY
+, CB AS (
+  SELECT A.symbol,'BUY' AS side, A.score, R.plast, R.pmax, R.pmin,
+         CASE WHEN R.plast>0 THEN (R.pmax-R.pmin)/R.plast*100 ELSE 0 END AS vol_pct
+  FROM A JOIN REF R USING(symbol), P
+  WHERE A.flag='BUY' AND A.score >= (SELECT min_sb FROM P)
+)
+-- Candidats SELL
+, CS AS (
+  SELECT A.symbol,'SELL' AS side, A.score, R.plast, R.pmax, R.pmin,
+         CASE WHEN R.plast>0 THEN (R.pmax-R.pmin)/R.plast*100 ELSE 0 END AS vol_pct
+  FROM A JOIN REF R USING(symbol), P
+  WHERE A.flag='SELL' AND A.score <= (SELECT max_ss FROM P)
+)
+, C AS (SELECT * FROM CB UNION ALL SELECT * FROM CS)
+-- Gestion du risque: SL% = max(vol*1.2, min_sl)
+, RISK AS (
+  SELECT C.*,
+         MAX(vol_pct*1.20, (SELECT min_sl FROM P)) AS sl_pct,
+         (SELECT rr FROM P) AS rr,
+         (SELECT sbase FROM P) AS sbase,
+         (SELECT sscale FROM P) AS sscale
+  FROM C
+)
+-- Plan: SL/TP/size
+, PLAN AS (
+  SELECT
+    symbol, side, score,
+    plast AS price,
+    CASE WHEN side='BUY'  THEN plast*(1.0 - sl_pct/100.0)
+         ELSE plast*(1.0 + sl_pct/100.0) END AS sl,
+    CASE WHEN side='BUY'  THEN plast*(1.0 + (sl_pct*rr)/100.0)
+         ELSE plast*(1.0 - (sl_pct*rr)/100.0) END AS tp,
+    MIN(MAX(sbase*(1.0 + sscale*((score-60.0)/40.0)), sbase*0.5), sbase*3.0) AS size_usd,
+    vol_pct
+  FROM RISK
+)
+INSERT OR REPLACE INTO b_plans(ts_utc,symbol,side,score,price,sl,tp,size_usd,vol_win,src)
+SELECT datetime('now'), symbol, side, score, price, sl, tp, size_usd, vol_pct, 'ticks' FROM PLAN;
+
+DETACH DATABASE adb; DETACH DATABASE tdb; DETACH DATABASE udb;
+SQL
+)
+
+# retries soft contre "database is locked"
+for i in 1 2 3 4 5; do
+  if sqlite3 "$BDB" "$SQLQ"; then
+    echo "B: build ok"; exit 0
+  fi
+  sleep 0.8
+done
+echo "B: build failed (locked)"; exit 1
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/freeze_a_release.sh
+Size: 1391
+MTime: 2025-10-10 09:54:51.448342049 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="/opt/scalp/project"
+BIN="$ROOT/bin"
+ADB="$ROOT/data/a.db"
+mkdir -p "$BIN"
+
+# Tables de versionnage si absentes
+sqlite3 "$ADB" <<SQL
+PRAGMA busy_timeout=8000;
+CREATE TABLE IF NOT EXISTS code_release(
+  version TEXT NOT NULL,
+  file TEXT NOT NULL,
+  sha256 TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY(version,file)
+);
+CREATE TABLE IF NOT EXISTS a_final_marks(
+  version TEXT PRIMARY KEY,
+  symbols INTEGER NOT NULL,
+  bullish INTEGER NOT NULL,
+  bearish INTEGER NOT NULL,
+  range   INTEGER NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE TABLE IF NOT EXISTS a_snapshots(
+  version TEXT NOT NULL,
+  symbol TEXT NOT NULL,
+  s REAL NOT NULL, pb REAL NOT NULL, ph REAL NOT NULL, ps REAL NOT NULL, ctx TEXT NOT NULL,
+  PRIMARY KEY(version,symbol)
+);
+SQL
+
+# Figer scripts
+install -m 0755 "$ROOT/scripts/build_a_once.sh"   "$BIN/build_a_once.sh"
+install -m 0755 "$ROOT/scripts/health_a_db.sh"    "$BIN/health_a_db.sh"
+install -m 0755 "$ROOT/scripts/health_a_strict.sh" "$BIN/health_a_strict.sh"
+
+VER="${VER:-analysisA-$(date -u +%F-T%H%MZ)}"
+for f in build_a_once.sh health_a_db.sh health_a_strict.sh; do
+  sha=$(sha256sum "$BIN/$f" | awk '{print $1}')
+  sqlite3 "$ADB" "INSERT OR REPLACE INTO code_release(version,file,sha256) VALUES('$VER','$f','$sha');"
+done
+echo "A release frozen: $VER"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/build_v_indic5m_fast.sh
+Size: 1622
+MTime: 2025-10-10 12:39:30.449613024 +0200
+----- CONTENT -----
+#!/usr/bin/env sh
+set -eu
+: "${ADB:=/opt/scalp/project/data/a.db}"
+: "${BDB:=/opt/scalp/project/data/scalp.db}"
+
+sqlB(){ sqlite3 "$BDB" "$@"; }
+
+# retry runner to bypass transient locks
+runB(){
+  tries=0; max=6
+  while :; do
+    if sqlite3 "$BDB" 1>/dev/null 2>/dev/null <<SQL
+$1
+SQL
+    then break; fi
+    tries=$((tries+1))
+    [ $tries -ge $max ] && { echo "fatal: database is locked"; exit 1; }
+    sleep 1
+  done
+}
+
+# pragmas
+sqlB "PRAGMA journal_mode=WAL; PRAGMA busy_timeout=12000; PRAGMA synchronous=NORMAL;"
+
+# drop sécurisé
+typ=$(sqlB "SELECT COALESCE(type,'') FROM sqlite_master WHERE name='v_indic5m_fast' LIMIT 1;")
+[ "$typ" = "table" ] && sqlB "DROP TABLE IF EXISTS v_indic5m_fast;"
+[ "$typ" = "view"  ] && sqlB "DROP VIEW  IF EXISTS v_indic5m_fast;"
+
+# table cible
+runB "CREATE TABLE IF NOT EXISTS v_indic5m_fast(
+  symbol TEXT PRIMARY KEY,
+  ts INTEGER,
+  sma9 REAL,
+  sma21 REAL
+);"
+
+# build à partir de A.ohlcv_5m (colonnes: symbol, ts, c)
+runB "
+ATTACH DATABASE '$ADB' AS adb;
+WITH base AS (
+  SELECT symbol, ts, c AS close
+  FROM adb.ohlcv_5m
+),
+ema AS (
+  SELECT b.symbol, b.ts,
+         AVG(b.close) OVER (PARTITION BY b.symbol ORDER BY b.ts ROWS BETWEEN 8 PRECEDING AND CURRENT ROW)  AS sma9,
+         AVG(b.close) OVER (PARTITION BY b.symbol ORDER BY b.ts ROWS BETWEEN 20 PRECEDING AND CURRENT ROW) AS sma21
+  FROM base b
+),
+last AS (
+  SELECT e.*, ROW_NUMBER() OVER (PARTITION BY symbol ORDER BY ts DESC) rn
+  FROM ema e
+)
+INSERT OR REPLACE INTO v_indic5m_fast(symbol,ts,sma9,sma21)
+SELECT symbol, ts, sma9, sma21 FROM last WHERE rn=1;
+DETACH DATABASE adb;
+"
+
+echo "== v_indic5m_fast built =="
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/check_o_final.sh
+Size: 696
+MTime: 2025-10-10 09:20:14.708528537 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="/opt/scalp/project"
+ADB="$ROOT/data/a.db"
+VER="${VER:?specify VER}"
+
+echo "== CODE HASHES =="
+sqlite3 -csv "$ADB" "SELECT file,sha256 FROM code_release ORDER BY file" 2>/dev/null | while IFS=, read -r f ref; do
+  [ -f "$ROOT/bin/$f" ] || { echo "$f missing"; continue; }
+  cur=$(sha256sum "$ROOT/bin/$f" | awk '{print $1}')
+  match=no; [ "$cur" = "$ref" ] && match=yes
+  echo "$f expected=$ref current=$cur match=$match"
+done
+
+echo "== FINAL MARKS =="
+sqlite3 -tabs "$ADB" "SELECT version, tf, max_ts, symbols, rows_per_symbol, created_at FROM o_final_marks WHERE version='$VER' ORDER BY tf;"
+
+echo "== HEALTH STRICT =="
+"$ROOT/bin/health_o_strict.sh"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/wire_a_into_b.sh
+Size: 646
+MTime: 2025-10-10 12:31:33.745552624 +0200
+----- CONTENT -----
+#!/usr/bin/env sh
+set -eu
+: "${ADB:=/opt/scalp/project/data/a.db}"
+: "${BDB:=/opt/scalp/project/data/scalp.db}"
+: "${UDB:=/opt/scalp/project/data/u.db}"
+
+echo "== Wire A→B =="
+# 1) Pousser l’univers A depuis u.db vers a.db (idempotent)  [oai_citation:4‡Vierge 117.txt](sediment://file_000000005ed06243b1452645a81ed21e)
+if [ -f /opt/scalp/project/scripts/sync_top35_to_a.sh ]; then
+  /opt/scalp/project/scripts/sync_top35_to_a.sh || true
+fi
+
+# 2) Rafraîchir les contextes/materialisations nécessaires côté B
+/opt/scalp/project/bin/fix_ab_interface.sh
+
+# 3) Sanity fast
+/opt/scalp/project/bin/check_ab_interface.sh
+echo "== Wire done =="
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/check_a_final.sh
+Size: 844
+MTime: 2025-10-10 09:55:08.608324494 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="/opt/scalp/project"
+ADB="$ROOT/data/a.db"
+VER="${VER:?specify VER}"
+
+echo "== CODE HASHES =="
+sqlite3 -csv "$ADB" "SELECT file,sha256 FROM code_release WHERE version LIKE 'analysisA-%' ORDER BY file" 2>/dev/null | while IFS=, read -r f ref; do
+  [ -f "$ROOT/bin/$f" ] || { echo "$f missing"; continue; }
+  cur=$(sha256sum "$ROOT/bin/$f" | awk '{print $1}')
+  echo "$f expected=$ref current=$cur match=$([ "$ref" = "$cur" ] && echo yes || echo NO)"
+done
+
+echo "== FINAL MARK =="
+sqlite3 -tabs "$ADB" "SELECT version, symbols, bullish, bearish, range, created_at FROM a_final_marks WHERE version='$VER';"
+
+echo "== SAMPLE SNAPSHOT =="
+sqlite3 -tabs "$ADB" "SELECT symbol, s, ctx FROM a_snapshots WHERE version='$VER' ORDER BY s DESC LIMIT 5;"
+
+echo "== HEALTH STRICT =="
+"$ROOT/bin/health_a_strict.sh"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/fix_ab_interface.sh
+Size: 6815
+MTime: 2025-10-10 12:37:09.577588276 +0200
+----- CONTENT -----
+#!/usr/bin/env sh
+set -eu
+: "${ADB:=/opt/scalp/project/data/a.db}"
+: "${BDB:=/opt/scalp/project/data/scalp.db}"
+
+sqlA(){ sqlite3 "$ADB" "$@"; }
+sqlB(){ sqlite3 "$BDB" "$@"; }
+
+echo "== Fix AB interface =="
+
+# PRAGMAs
+sqlB "PRAGMA journal_mode=WAL; PRAGMA busy_timeout=8000;"
+sqlA "PRAGMA busy_timeout=8000;"
+
+# Helpers
+obj_type(){ sqlB "SELECT COALESCE(type,'') FROM sqlite_master WHERE name='$1' LIMIT 1;"; }
+safe_drop(){
+  t="$(obj_type "$1")"
+  case "$t" in
+    table) sqlB "DROP TABLE IF EXISTS $1;" ;;
+    view)  sqlB "DROP VIEW  IF EXISTS $1;" ;;
+    *) : ;;
+  esac
+}
+has_table_A(){ [ "$(sqlA "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='$1';")" -gt 0 ]; }
+find_col(){
+  tbl="$1"; shift
+  for c in "$@"; do
+    if [ "$(sqlA "SELECT 1 FROM pragma_table_info('$tbl') WHERE name='$c' LIMIT 1;")" = "1" ]; then
+      echo "$c"; return 0
+    fi
+  done
+  echo ""
+}
+
+# 1) Tables B minimales
+sqlB "
+CREATE TABLE IF NOT EXISTS signals_B_plan(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  symbol TEXT, ctx TEXT, score REAL, side TEXT,
+  entry REAL, sl REAL, tp REAL, qty REAL, margin REAL, notional REAL, created_ts INTEGER
+);
+CREATE TABLE IF NOT EXISTS signals_B(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  symbol TEXT, side TEXT, price REAL, reason TEXT, created_ts INTEGER
+);
+CREATE INDEX IF NOT EXISTS idx_sigB_ts ON signals_B(created_ts);
+CREATE TABLE IF NOT EXISTS b_state(
+  symbol TEXT PRIMARY KEY, last_side TEXT, consec INTEGER, last_ts INTEGER
+);
+CREATE TABLE IF NOT EXISTS v_contexts_A_latest(
+  symbol TEXT PRIMARY KEY, ctx TEXT, pb REAL, ph REAL, ps REAL, ts INTEGER
+);
+"
+
+# 2) contexts_A_latest
+HAS_CTX="$(sqlA "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='contexts_A';")"
+sqlB "BEGIN IMMEDIATE; DELETE FROM v_contexts_A_latest; COMMIT;"
+if [ "$HAS_CTX" -gt 0 ]; then
+  sqlB "
+  ATTACH DATABASE '$ADB' AS adb;
+  BEGIN IMMEDIATE;
+  INSERT INTO v_contexts_A_latest(symbol,ctx,pb,ph,ps,ts)
+  SELECT c.symbol, c.ctx, c.pb, c.ph, c.ps, c.ts
+  FROM adb.contexts_A c
+  WHERE c.ts IN (SELECT MAX(ts) FROM adb.contexts_A c2 WHERE c2.symbol=c.symbol);
+  COMMIT; DETACH DATABASE adb;
+  "
+else
+  sqlB "
+  ATTACH DATABASE '$ADB' AS adb;
+  WITH lb AS (SELECT symbol, MAX(ts) ts FROM adb.ohlcv_1m GROUP BY symbol)
+  BEGIN IMMEDIATE;
+  INSERT INTO v_contexts_A_latest(symbol,ctx,pb,ph,ps,ts)
+  SELECT o.symbol,'fallback',o.c,o.h,o.l,o.ts
+  FROM adb.ohlcv_1m o JOIN lb ON lb.symbol=o.symbol AND lb.ts=o.ts;
+  COMMIT; DETACH DATABASE adb;
+  " 2>/dev/null || true
+fi
+
+# 3) Détection colonnes OHLCV 1m
+if ! has_table_A "ohlcv_1m"; then echo "Erreur: ADB.ohlcv_1m absente"; exit 1; fi
+S1=$(find_col ohlcv_1m symbol sym ticker)
+T1=$(find_col ohlcv_1m ts t timestamp time epoch)
+O1=$(find_col ohlcv_1m o open o_open)
+H1=$(find_col ohlcv_1m h high o_high)
+L1=$(find_col ohlcv_1m l low o_low)
+C1=$(find_col ohlcv_1m c close o_close)
+V1=$(find_col ohlcv_1m v volume vol)
+
+for v in S1 T1 O1 H1 L1 C1; do [ -n "$(eval echo \$$v)" ] || { echo "Erreur: colonne manquante pour $v dans ohlcv_1m"; exit 1; }; done
+[ -n "$V1" ] || V1="0.0"
+
+# 4) v_indic_1m matérialisée, drop sécurisé
+safe_drop v_indic_1m
+sqlB "
+CREATE TABLE v_indic_1m(
+  symbol TEXT, ts INTEGER,
+  open REAL, high REAL, low REAL, close REAL, volume REAL,
+  spread_frac REAL, vol_sma20 REAL,
+  sma9 REAL, sma21 REAL, sma50 REAL,
+  atr14 REAL, atr_pct REAL,
+  hh_20_excl REAL, ll_20_excl REAL
+);
+"
+sqlB "
+ATTACH DATABASE '$ADB' AS adb;
+WITH base AS (
+  SELECT $S1 AS symbol, $T1 AS ts, $O1 AS open, $H1 AS high, $L1 AS low, $C1 AS close,
+         COALESCE($V1,0.0) AS volume
+  FROM adb.ohlcv_1m
+),
+ema AS (
+  SELECT b.symbol, b.ts, b.open,b.high,b.low,b.close,b.volume,
+         AVG(b.close) OVER (PARTITION BY b.symbol ORDER BY b.ts ROWS BETWEEN 8 PRECEDING AND CURRENT ROW)  AS sma9,
+         AVG(b.close) OVER (PARTITION BY b.symbol ORDER BY b.ts ROWS BETWEEN 20 PRECEDING AND CURRENT ROW) AS sma21,
+         AVG(b.close) OVER (PARTITION BY b.symbol ORDER BY b.ts ROWS BETWEEN 49 PRECEDING AND CURRENT ROW) AS sma50
+  FROM base b
+),
+rng AS (
+  SELECT e.*,
+         MAX(high) OVER (PARTITION BY symbol ORDER BY ts ROWS BETWEEN 20 PRECEDING AND 1 PRECEDING) AS hh_20_excl,
+         MIN(low)  OVER (PARTITION BY symbol ORDER BY ts ROWS BETWEEN 20 PRECEDING AND 1 PRECEDING) AS ll_20_excl
+  FROM ema e
+),
+atr AS (
+  SELECT r.*,
+         AVG(high - low) OVER (PARTITION BY symbol ORDER BY ts ROWS BETWEEN 13 PRECEDING AND CURRENT ROW) AS atr14
+  FROM rng r
+)
+INSERT INTO v_indic_1m
+SELECT symbol, ts, open, high, low, close, volume,
+       0.0005 AS spread_frac,
+       0.0    AS vol_sma20,
+       sma9, sma21, sma50,
+       COALESCE(atr14,0.0) AS atr14,
+       CASE WHEN close>0 AND atr14>0 THEN atr14/close*100.0 ELSE 0.0 END AS atr_pct,
+       hh_20_excl, ll_20_excl
+FROM atr;
+DETACH DATABASE adb;
+"
+
+# 5) v_indic5m_fast matérialisée
+USE_5M=0
+if has_table_A "ohlcv_5m"; then
+  S5=$(find_col ohlcv_5m symbol sym ticker)
+  T5=$(find_col ohlcv_5m ts t timestamp time epoch)
+  C5=$(find_col ohlcv_5m c close o_close)
+  if [ -n "$S5" ] && [ -n "$T5" ] && [ -n "$C5" ]; then USE_5M=1; fi
+fi
+
+safe_drop v_indic5m_fast
+sqlB "CREATE TABLE v_indic5m_fast(symbol TEXT PRIMARY KEY, ts INTEGER, sma9 REAL, sma21 REAL);"
+
+if [ "$USE_5M" -eq 1 ]; then
+  sqlB "
+  ATTACH DATABASE '$ADB' AS adb;
+  WITH base AS (SELECT $S5 AS symbol, $T5 AS ts, $C5 AS close FROM adb.ohlcv_5m),
+  ema AS (
+    SELECT b.symbol, b.ts,
+           AVG(b.close) OVER (PARTITION BY b.symbol ORDER BY b.ts ROWS BETWEEN 8 PRECEDING AND CURRENT ROW)  AS sma9,
+           AVG(b.close) OVER (PARTITION BY b.symbol ORDER BY b.ts ROWS BETWEEN 20 PRECEDING AND CURRENT ROW) AS sma21
+    FROM base b
+  ),
+  last AS (SELECT e.*, ROW_NUMBER() OVER (PARTITION BY symbol ORDER BY ts DESC) rn FROM ema e)
+  INSERT INTO v_indic5m_fast(symbol,ts,sma9,sma21)
+  SELECT symbol, ts, sma9, sma21 FROM last WHERE rn=1;
+  DETACH DATABASE adb;
+  "
+else
+  sqlB "
+  ATTACH DATABASE '$ADB' AS adb;
+  WITH m1 AS (
+    SELECT $S1 AS symbol, (($T1/300)*300) AS ts5, $C1 AS close
+    FROM adb.ohlcv_1m
+  ),
+  lastbar AS (
+    SELECT symbol, ts5, MAX(rowid) AS rid
+    FROM (SELECT rowid, symbol, ts5 FROM m1) t
+    GROUP BY symbol, ts5
+  ),
+  base AS (
+    SELECT m.symbol, m.ts5 AS ts, m.close
+    FROM m1 m JOIN lastbar lb ON lb.rid = m.rowid
+  ),
+  ema AS (
+    SELECT b.symbol, b.ts,
+           AVG(b.close) OVER (PARTITION BY b.symbol ORDER BY b.ts ROWS BETWEEN 8 PRECEDING AND CURRENT ROW)  AS sma9,
+           AVG(b.close) OVER (PARTITION BY b.symbol ORDER BY b.ts ROWS BETWEEN 20 PRECEDING AND CURRENT ROW) AS sma21
+    FROM base b
+  ),
+  last AS (SELECT e.*, ROW_NUMBER() OVER (PARTITION BY symbol ORDER BY ts DESC) rn FROM ema e)
+  INSERT INTO v_indic5m_fast(symbol,ts,sma9,sma21)
+  SELECT symbol, ts, sma9, sma21 FROM last WHERE rn=1;
+  DETACH DATABASE adb;
+  "
+fi
+
+echo "== Fix done =="
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/run_B_loop.sh
+Size: 444
+MTime: 2025-10-10 14:43:09.709801787 +0200
+----- CONTENT -----
+#!/usr/bin/env sh
+set -eu
+. /opt/scalp/project/bin/env_ab.sh
+while :; do
+  if /opt/scalp/project/bin/b_lock.sh acquire; then
+    {
+      /opt/scalp/project/bin/build_ohlcv1m_from_ticks.sh
+      /opt/scalp/project/bin/ensure_ab_indicators_atomic.sh
+      BDB="$BDB" /opt/scalp/project/bin/build_features_1m.sh
+      BDB="$BDB" /opt/scalp/project/bin/tick_gate_B.sh
+    } || true
+    /opt/scalp/project/bin/b_lock.sh release
+  fi
+  sleep 60
+done
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/check_uoatbx.sh
+Size: 3364
+MTime: 2025-10-10 16:48:44.222800429 +0200
+----- CONTENT -----
+#!/usr/bin/env sh
+set -eu
+DATA="/opt/scalp/project/data"
+UDB="${UDB:-$DATA/u.db}"
+ODB="${ODB:-$DATA/o.db}"
+ADB="${ADB:-$DATA/a.db}"
+TDB="${TDB:-$DATA/t.db}"
+BDB="${BDB:-$DATA/b.db}"
+XDB="${XDB:-$DATA/x.db}"
+now=$(date +%s)
+
+sql(){ sqlite3 "$1" -tabs "$2"; }
+hdr(){ printf "== %s ==\n" "$1"; }
+sep(){ printf -- "------------------------------\n"; }
+
+# U
+hdr "U (univers)"
+sql "$UDB" "
+SELECT 'runs_total',COALESCE((SELECT COUNT(*) FROM universe_runs),0);
+SELECT 'published_last_run',COALESCE((SELECT run_id FROM universe_runs WHERE status='published' ORDER BY finished_at DESC LIMIT 1),0);
+SELECT 'available_now',COALESCE((SELECT COUNT(*) FROM v_universe_current),0);
+"
+
+# O
+sep; hdr "O (ohlcv raw)"
+sql "$ODB" "
+SELECT 'ohlcv_5m_rows',COALESCE((SELECT COUNT(*) FROM ohlcv_5m),0);
+SELECT 'ohlcv_15m_rows',COALESCE((SELECT COUNT(*) FROM ohlcv_15m),0);
+SELECT 'ohlcv_30m_rows',COALESCE((SELECT COUNT(*) FROM ohlcv_30m),0);
+SELECT 'ohlcv_5m_last_ts',COALESCE((SELECT MAX(ts) FROM ohlcv_5m),0);
+"
+
+# A
+sep; hdr "A (1m + u_syms + context)"
+sql "$ADB" "
+SELECT 'u_syms_rows',COALESCE((SELECT COUNT(*) FROM u_syms),0);
+SELECT 'ohlcv_1m_rows',COALESCE((SELECT COUNT(*) FROM ohlcv_1m),0);
+SELECT 'ohlcv_1m_last_ts',COALESCE((SELECT MAX(ts) FROM ohlcv_1m),0);
+SELECT 'contexts_latest',COALESCE((SELECT COUNT(*) FROM v_contexts_A_latest),0);
+"
+
+# T
+sep; hdr "T (ticks)"
+sql "$TDB" "
+SELECT 'symbols',COALESCE((SELECT COUNT(DISTINCT instId) FROM ticks),0);
+SELECT 'ticks_total',COALESCE((SELECT COUNT(*) FROM ticks),0);
+SELECT 'last_tick_ms',COALESCE((SELECT MAX(ts_ms) FROM ticks),0);
+"
+
+# B
+sep; hdr "B (indics + signaux)"
+sql "$BDB" "
+SELECT 'v_indic_1m_rows',COALESCE((SELECT COUNT(*) FROM v_indic_1m),0);
+SELECT 'v_indic_1m_last_ts',COALESCE((SELECT MAX(ts) FROM v_indic_1m),0);
+SELECT 'v_indic5m_fast_rows',COALESCE((SELECT COUNT(*) FROM v_indic5m_fast),0);
+SELECT 'signals_B_total',COALESCE((SELECT COUNT(*) FROM signals_B),0);
+"
+
+# X
+sep; hdr "X (paper)"
+sql "$XDB" "
+SELECT 'orders_NEW',COALESCE((SELECT COUNT(*) FROM x_orders WHERE status='NEW'),0);
+SELECT 'orders_FILLED',COALESCE((SELECT COUNT(*) FROM x_orders WHERE status='FILLED'),0);
+SELECT 'orders_CLOSED',COALESCE((SELECT COUNT(*) FROM x_orders WHERE status='CLOSED'),0);
+SELECT 'positions_open',COALESCE((SELECT COUNT(*) FROM x_positions),0);
+SELECT 'wallet_balance',COALESCE((SELECT balance FROM x_wallet WHERE id=1),0);
+"
+
+# Résumé OK/ALERT
+sep; hdr "Summary U→O→A→T→B→X"
+last_tick_ms=$(sqlite3 "$TDB" "SELECT COALESCE(MAX(ts_ms),0) FROM ticks;")
+a1_last=$(sqlite3 "$ADB" "SELECT COALESCE(MAX(ts),0) FROM ohlcv_1m;")
+o5_last=$(sqlite3 "$ODB" "SELECT COALESCE(MAX(ts),0) FROM ohlcv_5m;")
+age_tick=$(( (now*1000 - last_tick_ms)/1000 ))
+age_a1=$(( now - a1_last ))
+age_o5=$(( now - o5_last ))
+printf "U ok: %s\n" "$(sqlite3 "$UDB" "SELECT CASE WHEN (SELECT COUNT(*) FROM v_universe_current)>0 THEN 'OK' ELSE 'ALERT' END;")"
+printf "O 5m: %s (age=%ss)\n" "$([ $age_o5 -le 900 ] && echo OK || echo ALERT)" "$age_o5"
+printf "A 1m: %s (age=%ss)\n" "$([ $age_a1 -le 180 ] && echo OK || echo ALERT)" "$age_a1"
+printf "T:    %s (age=%ss)\n" "$([ $age_tick -le 120 ] && echo OK || echo ALERT)" "$age_tick"
+b_rows=$(sqlite3 "$BDB" "SELECT COUNT(*) FROM v_indic_1m;")
+printf "B v_indic_1m rows: %s\n" "$b_rows"
+x_pos=$(sqlite3 "$XDB" "SELECT COUNT(*) FROM x_positions;")
+printf "X positions: %s\n" "$x_pos"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/freeze_b_release.sh
+Size: 1432
+MTime: 2025-10-10 11:47:40.690646997 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="/opt/scalp/project"
+BIN="$ROOT/bin"
+BDB="$ROOT/data/b.db"
+mkdir -p "$BIN"
+
+sqlite3 "$BDB" <<SQL
+PRAGMA busy_timeout=8000;
+CREATE TABLE IF NOT EXISTS code_release(
+  version TEXT NOT NULL,
+  file TEXT NOT NULL,
+  sha256 TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY(version,file)
+);
+CREATE TABLE IF NOT EXISTS b_final_marks(
+  version TEXT PRIMARY KEY,
+  ts_utc TEXT NOT NULL,
+  n_pairs INTEGER NOT NULL,
+  n_buy INTEGER NOT NULL,
+  n_sell INTEGER NOT NULL,
+  avg_score REAL NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE TABLE IF NOT EXISTS b_snapshots(
+  version TEXT NOT NULL,
+  symbol TEXT NOT NULL,
+  side TEXT NOT NULL,
+  score REAL NOT NULL,
+  price REAL NOT NULL,
+  sl REAL NOT NULL,
+  tp REAL NOT NULL,
+  size_usd REAL NOT NULL,
+  ts_utc TEXT NOT NULL,
+  PRIMARY KEY(version,symbol)
+);
+SQL
+
+install -m 0755 "$ROOT/scripts/build_b_once.sh"     "$BIN/build_b_once.sh"
+install -m 0755 "$ROOT/scripts/health_b_strict.sh"  "$BIN/health_b_strict.sh"
+install -m 0755 "$ROOT/scripts/run_b_daemon.sh"     "$BIN/run_b_daemon.sh"
+
+VER="${VER:-analysisB-$(date -u +%F-T%H%MZ)}"
+for f in build_b_once.sh health_b_strict.sh run_b_daemon.sh; do
+  sha=$(sha256sum "$BIN/$f" | awk '{print $1}')
+  sqlite3 "$BDB" "INSERT OR REPLACE INTO code_release(version,file,sha256) VALUES('$VER','$f','$sha');"
+done
+echo "B release frozen: $VER"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/health_o_db.sh
+Size: 929
+MTime: 2025-10-10 09:16:45.575809905 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+ADB="${ADB:-/opt/scalp/project/data/a.db}"
+
+echo "== coverage per TF (symbols x rows) =="
+for t in ohlcv_5m ohlcv_15m ohlcv_30m; do
+  printf -- "-- %s\n" "$t"
+  sqlite3 -tabs "$ADB" "SELECT COUNT(DISTINCT symbol), SUM(cnt)
+    FROM (SELECT symbol, COUNT(*) cnt FROM $t GROUP BY symbol);"
+done
+
+echo "== gaps check (0 attendu) =="
+sqlite3 -tabs "$ADB" "
+WITH tf(name,step) AS (VALUES('ohlcv_5m',300),('ohlcv_15m',900),('ohlcv_30m',1800)),
+rows AS (
+  SELECT 'ohlcv_5m' name,300 step,symbol,COUNT(*) n,MIN(ts) t0,MAX(ts) t1 FROM ohlcv_5m GROUP BY symbol
+  UNION ALL SELECT 'ohlcv_15m',900,symbol,COUNT(*),MIN(ts),MAX(ts) FROM ohlcv_15m GROUP BY symbol
+  UNION ALL SELECT 'ohlcv_30m',1800,symbol,COUNT(*),MIN(ts),MAX(ts) FROM ohlcv_30m GROUP BY symbol
+),
+gaps AS (
+  SELECT name, symbol, MAX(0, ((t1-t0)/step + 1 - n)) AS missing FROM rows
+)
+SELECT name, SUM(missing) FROM gaps GROUP BY name;"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/run_B_verified.sh
+Size: 112
+MTime: 2025-10-10 14:33:12.221152552 +0200
+----- CONTENT -----
+#!/usr/bin/env sh
+set -eu
+/opt/scalp/project/bin/b_manifest_verify.sh
+exec /opt/scalp/project/bin/run_B_loop.sh
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/env_ab.sh
+Size: 102
+MTime: 2025-10-10 13:19:46.245526882 +0200
+----- CONTENT -----
+#!/usr/bin/env sh
+export ADB="/opt/scalp/project/data/a.db"
+export BDB="/opt/scalp/project/data/b.db"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/check_t_final.sh
+Size: 256
+MTime: 2025-10-10 11:08:33.524816606 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+/opt/scalp/project/scripts/health_ticks_strict.sh >/opt/scalp/project/marks/ticks.health 2>&1 || {
+  echo "FAIL: ticks health"
+  cat /opt/scalp/project/marks/ticks.health
+  exit 1
+}
+echo "OK: ticks final check passed"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/harden_o_db.sh
+Size: 990
+MTime: 2025-10-10 09:16:45.563809860 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+ADB="${ADB:-/opt/scalp/project/data/a.db}"
+
+# 1) Dédoublonner (garde la + récente par (symbol,ts))
+for T in 5m 15m 30m; do
+sqlite3 "$ADB" <<SQL
+PRAGMA busy_timeout=8000;
+DELETE FROM ohlcv_${T}
+WHERE rowid IN (
+  SELECT rowid FROM (
+    SELECT rowid,
+           ROW_NUMBER() OVER (PARTITION BY symbol, ts ORDER BY rowid DESC) AS rn
+    FROM ohlcv_${T}
+  ) WHERE rn > 1
+);
+SQL
+done
+
+# 2) Compacter à exactement 100 bougies / symbole
+for T in 5m 15m 30m; do
+sqlite3 "$ADB" <<SQL
+PRAGMA busy_timeout=8000;
+DELETE FROM ohlcv_${T}
+WHERE rowid IN (
+  SELECT rowid FROM (
+    SELECT rowid,
+           ROW_NUMBER() OVER (PARTITION BY symbol ORDER BY ts DESC) AS rn
+    FROM ohlcv_${T}
+  ) WHERE rn > 100
+);
+SQL
+done
+
+# 3) Contrainte d’unicité (après dédup, donc ça passe)
+for T in 5m 15m 30m; do
+sqlite3 "$ADB" "CREATE UNIQUE INDEX IF NOT EXISTS uq_ohlcv_${T} ON ohlcv_${T}(symbol, ts);"
+done
+
+echo "o.db durci: dedup + 100 fixes + unique(symbol,ts)."
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/build_features_1m.sh
+Size: 2687
+MTime: 2025-10-10 14:14:47.279953166 +0200
+----- CONTENT -----
+#!/usr/bin/env sh
+set -eu
+: "${BDB:=/opt/scalp/project/data/b.db}"
+sqlite3 "$BDB" <<'SQL'
+PRAGMA busy_timeout=15000; PRAGMA journal_mode=WAL;
+DROP TABLE IF EXISTS v_feat_1m;
+CREATE TABLE v_feat_1m(
+  symbol TEXT, ts INTEGER,
+  open REAL, high REAL, low REAL, close REAL, volume REAL,
+  tp REAL, vwap20 REAL,
+  bb_mid20 REAL, bb_up20 REAL, bb_dn20 REAL,
+  macd REAL, macd_signal9 REAL, macd_hist REAL,
+  obv REAL
+);
+WITH b AS (
+  SELECT symbol, ts, open, high, low, close, volume, (high+low+close)/3.0 AS tp
+  FROM v_indic_1m
+),
+w AS (
+  SELECT symbol, ts, open, high, low, close, volume, tp,
+    CASE WHEN SUM(volume) OVER (PARTITION BY symbol ORDER BY ts ROWS BETWEEN 19 PRECEDING AND CURRENT ROW) > 0
+         THEN SUM(tp*volume) OVER (PARTITION BY symbol ORDER BY ts ROWS BETWEEN 19 PRECEDING AND CURRENT ROW)
+              / SUM(volume)  OVER (PARTITION BY symbol ORDER BY ts ROWS BETWEEN 19 PRECEDING AND CURRENT ROW)
+         ELSE NULL END                                            AS vwap20,
+    AVG(close) OVER (PARTITION BY symbol ORDER BY ts ROWS BETWEEN 19 PRECEDING AND CURRENT ROW) AS sma20,
+    AVG(close*close) OVER (PARTITION BY symbol ORDER BY ts ROWS BETWEEN 19 PRECEDING AND CURRENT ROW) AS ex2_20,
+    AVG(close) OVER (PARTITION BY symbol ORDER BY ts ROWS BETWEEN 11 PRECEDING AND CURRENT ROW) AS sma12,
+    AVG(close) OVER (PARTITION BY symbol ORDER BY ts ROWS BETWEEN 25 PRECEDING AND CURRENT ROW) AS sma26,
+    LAG(close) OVER (PARTITION BY symbol ORDER BY ts) AS prev_close
+  FROM b
+),
+w2 AS (
+  SELECT symbol, ts, open, high, low, close, volume, tp, vwap20, sma20, ex2_20,
+         (sma12 - sma26) AS macd_raw,
+         CASE WHEN prev_close IS NULL THEN 0.0
+              WHEN close>prev_close THEN +volume
+              WHEN close<prev_close THEN -volume
+              ELSE 0.0 END AS obv_step
+  FROM w
+),
+w3 AS (
+  SELECT symbol, ts, open, high, low, close, volume, tp, vwap20,
+         sma20 AS bb_mid20,
+         CASE WHEN ex2_20 IS NOT NULL AND sma20 IS NOT NULL THEN sma20 + 2.0*sqrt(MAX(ex2_20 - sma20*sma20,0.0)) END AS bb_up20,
+         CASE WHEN ex2_20 IS NOT NULL AND sma20 IS NOT NULL THEN sma20 - 2.0*sqrt(MAX(ex2_20 - sma20*sma20,0.0)) END AS bb_dn20,
+         macd_raw AS macd,
+         AVG(macd_raw) OVER (PARTITION BY symbol ORDER BY ts ROWS BETWEEN 8 PRECEDING AND CURRENT ROW) AS macd_signal9,
+         SUM(obv_step) OVER (PARTITION BY symbol ORDER BY ts ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS obv
+  FROM w2
+)
+INSERT INTO v_feat_1m
+SELECT symbol, ts, open, high, low, close, volume, tp, vwap20,
+       bb_mid20, bb_up20, bb_dn20,
+       macd, macd_signal9, (macd-macd_signal9) AS macd_hist, obv
+FROM w3;
+SQL
+echo "features: ok"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/check_ab_interface.sh
+Size: 1407
+MTime: 2025-10-10 13:20:20.369488912 +0200
+----- CONTENT -----
+#!/usr/bin/env sh
+set -eu
+: "${ADB:=/opt/scalp/project/data/a.db}"
+: "${BDB:=/opt/scalp/project/data/b.db}"
+echo "wal"; echo "12000"
+echo "== AB interface check =="
+sqlite3 "$ADB" "SELECT 'A.u_syms', COUNT(*) FROM sqlite_master WHERE name='u_syms';
+SELECT 'A.ohlcv_1m', COUNT(*) FROM sqlite_master WHERE name='ohlcv_1m';"
+echo "-- A.u_syms sample --"; sqlite3 -tabs "$ADB" "SELECT symbol FROM u_syms LIMIT 4;" 2>/dev/null || true
+echo "-- A.ohlcv_1m recency --"; now=$(date +%s); cut=$(( now - 3600 )); sqlite3 "$ADB" "SELECT COUNT(*) FROM ohlcv_1m WHERE ts >= $cut;" 2>/dev/null || true
+echo "-- A.ohlcv_5m recency --"; sqlite3 "$ADB" "SELECT COUNT(*) FROM ohlcv_5m WHERE ts >= $((cut-7200));" 2>/dev/null || true
+echo "-- B core tables --"; sqlite3 -tabs "$BDB" "
+SELECT 'signals_B_plan', COUNT(*) FROM sqlite_master WHERE name='signals_B_plan';
+SELECT 'signals_B', COUNT(*) FROM sqlite_master WHERE name='signals_B';
+SELECT 'b_state', COUNT(*) FROM sqlite_master WHERE name='b_state';
+"
+echo "-- B expected indicator views --"; sqlite3 -tabs "$BDB" "
+SELECT 'v_indic_1m', COUNT(*) FROM sqlite_master WHERE name='v_indic_1m';
+SELECT 'v_indic5m_fast', COUNT(*) FROM sqlite_master WHERE name='v_indic5m_fast';
+"
+echo "-- B expects contexts_A_latest --"; sqlite3 -tabs "$BDB" "
+SELECT 'v_contexts_A_latest', COUNT(*) FROM sqlite_master WHERE name='v_contexts_A_latest';
+" 2>/dev/null || true
+echo "== Done."
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/migrate_x_history.sh
+Size: 1244
+MTime: 2025-10-10 15:16:47.804012661 +0200
+----- CONTENT -----
+#!/usr/bin/env sh
+set -eu
+: "${XDB:=/opt/scalp/project/data/x.db}"
+sqlite3 "$XDB" <<'SQL'
+PRAGMA journal_mode=WAL; PRAGMA busy_timeout=15000;
+
+-- table des trades matérialisés
+CREATE TABLE IF NOT EXISTS x_trades(
+  order_id INTEGER PRIMARY KEY,
+  symbol TEXT, side TEXT, reason TEXT, score REAL,
+  qty REAL,
+  entry_px REAL, exit_px REAL,
+  entry_ts INTEGER, exit_ts INTEGER,
+  sl REAL, tp REAL,
+  pnl REAL, ret_pct REAL, hold_secs INTEGER
+);
+
+-- stats
+CREATE TABLE IF NOT EXISTS x_stats_symbol(
+  symbol TEXT PRIMARY KEY,
+  n INTEGER, wins INTEGER, win_rate REAL,
+  pf REAL, exp_pnl REAL, avg_ret REAL, med_ret REAL,
+  n30 INTEGER, win_rate30 REAL, pf30 REAL, exp30 REAL
+);
+CREATE TABLE IF NOT EXISTS x_stats_reason(
+  reason TEXT PRIMARY KEY,
+  n INTEGER, wins INTEGER, win_rate REAL,
+  pf REAL, exp_pnl REAL, avg_ret REAL, med_ret REAL
+);
+CREATE TABLE IF NOT EXISTS x_stats_symbol_reason(
+  symbol TEXT, reason TEXT, PRIMARY KEY(symbol,reason),
+  n INTEGER, wins INTEGER, win_rate REAL, pf REAL, exp_pnl REAL
+);
+
+-- overrides de risque par symbole/raison
+CREATE TABLE IF NOT EXISTS x_overrides(
+  symbol TEXT, reason TEXT,
+  risk_pct REAL, leverage REAL,
+  updated_ts INTEGER,
+  PRIMARY KEY(symbol,reason)
+);
+SQL
+echo "history schema: ok"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/run_universe_daemon.sh
+Size: 499
+MTime: 2025-10-09 19:35:45.195683148 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+DB="${DB:-/opt/scalp/project/data/u.db}"
+INTERVAL_SEC="${INTERVAL_SEC:-7200}"
+RETRY_DELAY="${RETRY_DELAY:-600}"
+MAX_RETRY="${MAX_RETRY:-2}"
+
+while true; do
+  if DB="$DB" "$(dirname "$0")/build_universe.sh"; then
+    sleep "$INTERVAL_SEC"
+  else
+    i=0
+    while [ $i -lt $MAX_RETRY ]; do
+      sleep "$RETRY_DELAY"
+      if DB="$DB" "$(dirname "$0")/build_universe.sh"; then
+        break
+      fi
+      i=$((i+1))
+    done
+    sleep "$INTERVAL_SEC"
+  fi
+done
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/mark_t_final.sh
+Size: 366
+MTime: 2025-10-10 11:08:27.600802652 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+TDB="/opt/scalp/project/data/t.db"
+OUT="/opt/scalp/project/marks/ticks.final"
+mkdir -p /opt/scalp/project/marks
+
+VER="ticks-$(date -u +%F-T%H%MZ)"
+echo "== FINAL MARK ==" >"$OUT"
+echo "$VER $(sqlite3 -noheader "$TDB" "SELECT COUNT(DISTINCT symbol), COUNT(*) FROM ticks;") $(date -u '+%F %T')" >>"$OUT"
+echo "mark saved to $OUT"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/build_universe.sh
+Size: 6373
+MTime: 2025-10-09 19:35:45.183683140 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+DB="${DB:-/opt/scalp/project/data/u.db}"
+mkdir -p "$(dirname "$DB")"
+sqlite3 "$DB" <<'SQL'
+PRAGMA journal_mode=WAL;
+PRAGMA busy_timeout=8000;
+BEGIN IMMEDIATE;
+
+INSERT INTO universe_runs(started_at, status) VALUES(datetime('now'), 'running');
+CREATE TEMP TABLE _run(id INTEGER); INSERT INTO _run VALUES (last_insert_rowid());
+CREATE TEMP TABLE _status(ok INTEGER, reason TEXT); INSERT INTO _status VALUES (1,NULL);
+
+CREATE TEMP TABLE _p AS
+SELECT
+  CAST((SELECT value FROM params WHERE key='min_usdt_volume_24h') AS REAL) AS min_vol,
+  CAST((SELECT value FROM params WHERE key='min_price') AS REAL) AS min_price,
+  CAST((SELECT value FROM params WHERE key='max_spread_bps') AS REAL) AS max_spread_bps,
+  CAST((SELECT value FROM params WHERE key='min_count') AS INTEGER) AS min_count,
+  CAST((SELECT value FROM params WHERE key='target_count') AS INTEGER) AS target_count,
+  CAST((SELECT value FROM params WHERE key='max_churn') AS REAL) AS max_churn;
+
+-- Pool multi-sources
+CREATE TEMP TABLE _latest AS
+SELECT name, MAX(ts) AS ts
+FROM top_scores
+WHERE name IN ('TOP35','TOP30','TOP100_VOL','FIXED5')
+GROUP BY name;
+
+CREATE TEMP TABLE _pool0 AS
+SELECT s.symbol, s.score, s.name,
+       CASE s.name
+         WHEN 'TOP35' THEN 1
+         WHEN 'TOP30' THEN 2
+         WHEN 'TOP100_VOL' THEN 3
+         WHEN 'FIXED5' THEN 4
+         ELSE 9
+       END AS pri
+FROM top_scores s
+JOIN _latest l ON l.name=s.name AND l.ts=s.ts;
+
+CREATE TEMP TABLE _pool AS
+WITH ranked AS (
+  SELECT symbol, score, name, pri,
+         ROW_NUMBER() OVER (PARTITION BY symbol ORDER BY pri ASC, score DESC) AS r
+  FROM _pool0
+)
+SELECT symbol, score, name, pri
+FROM ranked
+WHERE r=1
+ORDER BY pri ASC, score DESC;
+
+UPDATE _status SET ok=0, reason=COALESCE(reason,'no_top_scores')
+WHERE (SELECT COUNT(*) FROM _pool)=0;
+
+-- Filtres pass1
+CREATE TEMP TABLE _eligible1 AS
+SELECT p.symbol, p.score
+FROM _pool p
+JOIN metrics_universe m USING(symbol)
+WHERE m.active=1
+  AND m.vol_usdt_24h >= (SELECT min_vol FROM _p)
+  AND m.price >= (SELECT min_price FROM _p)
+  AND m.spread_bps <= (SELECT max_spread_bps FROM _p)
+  AND p.symbol NOT IN (SELECT symbol FROM blacklist);
+
+-- Whitelist + core
+INSERT INTO _eligible1(symbol,score)
+SELECT w.symbol, COALESCE(p.score,0.0)
+FROM whitelist w
+LEFT JOIN _pool p USING(symbol)
+JOIN metrics_universe m ON m.symbol=w.symbol
+WHERE m.active=1
+  AND m.vol_usdt_24h >= (SELECT min_vol FROM _p)
+  AND m.price >= (SELECT min_price FROM _p)
+  AND m.spread_bps <= (SELECT max_spread_bps FROM _p);
+
+INSERT INTO _eligible1(symbol,score)
+SELECT c.symbol, COALESCE(p.score,0.0)
+FROM core_symbols c
+LEFT JOIN _pool p USING(symbol)
+JOIN metrics_universe m ON m.symbol=c.symbol
+WHERE m.active=1
+  AND m.vol_usdt_24h >= (SELECT min_vol FROM _p)
+  AND m.price >= (SELECT min_price FROM _p)
+  AND m.spread_bps <= (SELECT max_spread_bps FROM _p);
+
+-- Filtres pass2 relaxés si pass1 insuffisant
+CREATE TEMP TABLE _eligible2 AS
+SELECT p.symbol, p.score
+FROM _pool p
+JOIN metrics_universe m USING(symbol)
+WHERE m.active=1
+  AND m.vol_usdt_24h >= (SELECT 0.5*min_vol FROM _p)
+  AND m.price >= (SELECT min_price FROM _p)
+  AND m.spread_bps <= (SELECT 2.0*max_spread_bps FROM _p)
+  AND p.symbol NOT IN (SELECT symbol FROM blacklist);
+
+INSERT INTO _eligible2(symbol,score)
+SELECT w.symbol, COALESCE(p.score,0.0)
+FROM whitelist w
+LEFT JOIN _pool p USING(symbol)
+JOIN metrics_universe m ON m.symbol=w.symbol
+WHERE m.active=1
+  AND m.vol_usdt_24h >= (SELECT 0.5*min_vol FROM _p)
+  AND m.price >= (SELECT min_price FROM _p)
+  AND m.spread_bps <= (SELECT 2.0*max_spread_bps FROM _p);
+
+INSERT INTO _eligible2(symbol,score)
+SELECT c.symbol, COALESCE(p.score,0.0)
+FROM core_symbols c
+LEFT JOIN _pool p USING(symbol)
+JOIN metrics_universe m ON m.symbol=c.symbol
+WHERE m.active=1
+  AND m.vol_usdt_24h >= (SELECT 0.5*min_vol FROM _p)
+  AND m.price >= (SELECT min_price FROM _p)
+  AND m.spread_bps <= (SELECT 2.0*max_spread_bps FROM _p);
+
+-- Fusion + coupe
+CREATE TEMP TABLE _eligible_final AS
+SELECT symbol, MAX(score) AS score FROM (
+  SELECT * FROM _eligible1
+  UNION ALL
+  SELECT * FROM _eligible2
+  WHERE (SELECT COUNT(*) FROM _eligible1) < (SELECT min_count FROM _p)
+) GROUP BY symbol;
+
+CREATE TEMP TABLE _cand AS
+SELECT symbol, score
+FROM _eligible_final
+ORDER BY score DESC
+LIMIT (SELECT target_count FROM _p);
+
+-- Min requis
+UPDATE _status SET ok=0, reason=COALESCE(reason,'too_few_symbols')
+WHERE (SELECT COUNT(*) FROM _cand) < (SELECT min_count FROM _p);
+
+-- Churn
+CREATE TEMP TABLE _prev AS
+SELECT symbol
+FROM universe_snapshots
+WHERE run_id = (SELECT run_id FROM universe_runs WHERE status='published' ORDER BY finished_at DESC LIMIT 1);
+
+CREATE TEMP TABLE _churn AS
+WITH prev_c AS (SELECT COUNT(*) AS c FROM _prev),
+inter_c AS (SELECT COUNT(*) AS c FROM _cand c JOIN _prev p USING(symbol)),
+r AS (
+  SELECT (SELECT c FROM prev_c) AS prev_cnt,
+         (SELECT c FROM inter_c) AS inter_cnt,
+         (SELECT target_count FROM _p) AS tgt,
+         (SELECT max_churn FROM _p) AS max_churn
+)
+SELECT prev_cnt, inter_cnt, tgt,
+       CASE WHEN tgt>0 THEN 1.0 - (1.0*inter_cnt/tgt) ELSE 1.0 END AS churn,
+       max_churn
+FROM r;
+
+UPDATE _status SET ok=0, reason=COALESCE(reason,'high_churn')
+WHERE (SELECT prev_cnt FROM _churn) = (SELECT tgt FROM _churn)
+  AND (SELECT churn FROM _churn) > (SELECT max_churn FROM _churn);
+
+-- Publication
+INSERT INTO universe_snapshots(run_id, symbol)
+SELECT (SELECT id FROM _run), symbol
+FROM _cand
+WHERE (SELECT ok FROM _status)=1;
+
+UPDATE universe_runs
+SET status = CASE WHEN (SELECT ok FROM _status)=1 THEN 'published' ELSE 'failed' END,
+    finished_at = datetime('now'),
+    count = CASE WHEN (SELECT ok FROM _status)=1 THEN (SELECT COUNT(*) FROM _cand) END,
+    reason = (SELECT reason FROM _status),
+    symbol_list = CASE WHEN (SELECT ok FROM _status)=1
+      THEN (SELECT GROUP_CONCAT(symbol, ',') FROM (SELECT symbol FROM _cand ORDER BY score DESC)) END
+WHERE run_id=(SELECT id FROM _run);
+
+COMMIT;
+SQL
+
+status=$(sqlite3 "$DB" "SELECT status FROM universe_runs ORDER BY run_id DESC LIMIT 1")
+run_id=$(sqlite3 "$DB" "SELECT run_id FROM universe_runs ORDER BY run_id DESC LIMIT 1")
+reason=$(sqlite3 "$DB" "SELECT reason FROM universe_runs ORDER BY run_id DESC LIMIT 1")
+echo "run_id=$run_id status=$status reason=${reason:-none}"
+[ "$status" = "published" ] && sqlite3 "$DB" "SELECT COUNT(*) AS count FROM v_universe_current;"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/migrate_x_schema.sh
+Size: 3004
+MTime: 2025-10-10 15:03:15.997070865 +0200
+----- CONTENT -----
+#!/usr/bin/env sh
+set -eu
+: "${XDB:=/opt/scalp/project/data/x.db}"
+
+has_col(){ sqlite3 "$XDB" "SELECT COUNT(*) FROM pragma_table_info('$1') WHERE name='$2';"; }
+
+sqlite3 "$XDB" "PRAGMA journal_mode=WAL; PRAGMA busy_timeout=15000;
+
+CREATE TABLE IF NOT EXISTS x_params(
+ id INTEGER PRIMARY KEY CHECK(id=1),
+ risk_usd REAL, max_pos_per_symbol INTEGER, leverage REAL, slippage_bps REAL
+);
+INSERT OR IGNORE INTO x_params(id,risk_usd,max_pos_per_symbol,leverage,slippage_bps)
+VALUES(1,50.0,1,3.0,2.0);
+"
+
+# x_params colonnes manquantes
+[ "$(has_col x_params tp_mult)" = 0 ] && sqlite3 "$XDB" "ALTER TABLE x_params ADD COLUMN tp_mult REAL;"
+[ "$(has_col x_params sl_mult)" = 0 ] && sqlite3 "$XDB" "ALTER TABLE x_params ADD COLUMN sl_mult REAL;"
+[ "$(has_col x_params score_boost)" = 0 ] && sqlite3 "$XDB" "ALTER TABLE x_params ADD COLUMN score_boost REAL;"
+[ "$(has_col x_params risk_pct)" = 0 ] && sqlite3 "$XDB" "ALTER TABLE x_params ADD COLUMN risk_pct REAL;"
+[ "$(has_col x_params base_ccy)" = 0 ] && sqlite3 "$XDB" "ALTER TABLE x_params ADD COLUMN base_ccy TEXT;"
+
+sqlite3 "$XDB" "UPDATE x_params SET
+ tp_mult=COALESCE(tp_mult,1.8),
+ sl_mult=COALESCE(sl_mult,1.2),
+ score_boost=COALESCE(score_boost,0.5),
+ risk_pct=COALESCE(risk_pct,0.02),
+ base_ccy=COALESCE(base_ccy,'USDT')
+WHERE id=1;"
+
+# tables
+sqlite3 "$XDB" "CREATE TABLE IF NOT EXISTS x_state(id INTEGER PRIMARY KEY CHECK(id=1), last_signal_id INTEGER);
+INSERT OR IGNORE INTO x_state(id,last_signal_id) VALUES(1,0);
+CREATE TABLE IF NOT EXISTS x_orders(
+ id INTEGER PRIMARY KEY AUTOINCREMENT,
+ symbol TEXT, side TEXT, price REAL, qty REAL,
+ sl REAL, tp REAL, reason TEXT,
+ status TEXT, signal_id INTEGER, created_ts INTEGER, updated_ts INTEGER
+);
+CREATE INDEX IF NOT EXISTS idx_xo_sym_status ON x_orders(symbol,status);
+CREATE TABLE IF NOT EXISTS x_positions(
+ symbol TEXT PRIMARY KEY, side TEXT, qty REAL, entry REAL, sl REAL, tp REAL, open_ts INTEGER
+);
+CREATE TABLE IF NOT EXISTS x_fills(
+ id INTEGER PRIMARY KEY AUTOINCREMENT, order_id INTEGER, symbol TEXT,
+ side TEXT, price REAL, qty REAL, fill_ts INTEGER, kind TEXT
+);
+CREATE TABLE IF NOT EXISTS x_ledger(
+ id INTEGER PRIMARY KEY AUTOINCREMENT, symbol TEXT, event TEXT, detail TEXT, pnl REAL, ts INTEGER
+);"
+
+# x_orders colonnes manquantes
+[ "$(has_col x_orders score)" = 0 ]    && sqlite3 "$XDB" "ALTER TABLE x_orders ADD COLUMN score REAL;"
+[ "$(has_col x_orders leverage)" = 0 ] && sqlite3 "$XDB" "ALTER TABLE x_orders ADD COLUMN leverage REAL;"
+[ "$(has_col x_orders margin)" = 0 ]   && sqlite3 "$XDB" "ALTER TABLE x_orders ADD COLUMN margin REAL;"
+[ "$(has_col x_orders notional)" = 0 ] && sqlite3 "$XDB" "ALTER TABLE x_orders ADD COLUMN notional REAL;"
+
+# wallet paper
+sqlite3 "$XDB" "
+CREATE TABLE IF NOT EXISTS x_wallet(
+ id INTEGER PRIMARY KEY CHECK(id=1),
+ start_balance REAL, balance REAL, equity REAL, updated_ts INTEGER
+);
+INSERT OR IGNORE INTO x_wallet(id,start_balance,balance,equity,updated_ts)
+VALUES(1,1000.0,1000.0,1000.0,strftime('%s','now'));
+"
+echo "X schema+wallet: ok"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/ensure_ab_indicators.sh
+Size: 4187
+MTime: 2025-10-10 13:19:55.841515700 +0200
+----- CONTENT -----
+#!/usr/bin/env sh
+set -eu
+: "${ADB:=/opt/scalp/project/data/a.db}"
+: "${BDB:=/opt/scalp/project/data/b.db}"
+
+sqlB(){ sqlite3 "$BDB" "$@"; }
+
+# PRAGMAs
+sqlB "PRAGMA journal_mode=WAL; PRAGMA busy_timeout=12000; PRAGMA synchronous=NORMAL;"
+
+# drop safe
+drop_obj(){ t=$(sqlite3 "$BDB" "SELECT COALESCE(type,'') FROM sqlite_master WHERE name='$1'"); 
+  [ "$t" = "table" ] && sqlB "DROP TABLE IF EXISTS $1;"; 
+  [ "$t" = "view"  ] && sqlB "DROP VIEW  IF EXISTS $1;"; }
+
+# Tables B minimales
+sqlB "
+CREATE TABLE IF NOT EXISTS signals_B_plan(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  symbol TEXT, ctx TEXT, score REAL, side TEXT,
+  entry REAL, sl REAL, tp REAL, qty REAL, margin REAL, notional REAL, created_ts INTEGER
+);
+CREATE TABLE IF NOT EXISTS signals_B(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  symbol TEXT, side TEXT, price REAL, reason TEXT, created_ts INTEGER
+);
+CREATE INDEX IF NOT EXISTS idx_sigB_ts ON signals_B(created_ts);
+CREATE TABLE IF NOT EXISTS b_state(
+  symbol TEXT PRIMARY KEY, last_side TEXT, consec INTEGER, last_ts INTEGER
+);
+CREATE TABLE IF NOT EXISTS v_contexts_A_latest(
+  symbol TEXT PRIMARY KEY, ctx TEXT, pb REAL, ph REAL, ps REAL, ts INTEGER
+);
+"
+
+# v_contexts_A_latest depuis A
+sqlB "
+ATTACH DATABASE '$ADB' AS adb;
+BEGIN IMMEDIATE;
+DELETE FROM v_contexts_A_latest;
+INSERT INTO v_contexts_A_latest(symbol,ctx,pb,ph,ps,ts)
+SELECT c.symbol, COALESCE(c.ctx,'fallback'), COALESCE(c.pb, o.c), COALESCE(c.ph, o.h), COALESCE(c.ps, o.l), COALESCE(c.ts, o.ts)
+FROM (
+  SELECT symbol, MAX(ts) ts FROM adb.ohlcv_5m GROUP BY symbol
+) lb
+JOIN adb.ohlcv_5m o ON o.symbol=lb.symbol AND o.ts=lb.ts
+LEFT JOIN adb.contexts_A c ON c.symbol=o.symbol
+;
+COMMIT;
+DETACH DATABASE adb;
+"
+
+# v_indic5m_fast
+drop_obj v_indic5m_fast
+sqlB "CREATE TABLE v_indic5m_fast(symbol TEXT PRIMARY KEY, ts INTEGER, sma9 REAL, sma21 REAL);"
+sqlite3 "$BDB" <<SQL
+ATTACH DATABASE '$ADB' AS adb;
+WITH base AS (SELECT symbol, ts, c AS close FROM adb.ohlcv_5m),
+ema AS (
+  SELECT b.symbol, b.ts,
+         AVG(b.close) OVER (PARTITION BY b.symbol ORDER BY b.ts ROWS BETWEEN 8  PRECEDING AND CURRENT ROW)  AS sma9,
+         AVG(b.close) OVER (PARTITION BY b.symbol ORDER BY b.ts ROWS BETWEEN 20 PRECEDING AND CURRENT ROW) AS sma21
+  FROM base b
+),
+last AS (SELECT e.*, ROW_NUMBER() OVER (PARTITION BY symbol ORDER BY ts DESC) rn FROM ema e)
+INSERT OR REPLACE INTO v_indic5m_fast(symbol,ts,sma9,sma21)
+SELECT symbol, ts, sma9, sma21 FROM last WHERE rn=1;
+DETACH DATABASE adb;
+SQL
+
+# v_indic_1m (schéma attendu par B, alimenté par 5m)
+drop_obj v_indic_1m
+sqlB "CREATE TABLE v_indic_1m(
+  symbol TEXT, ts INTEGER,
+  open REAL, high REAL, low REAL, close REAL, volume REAL,
+  spread_frac REAL, vol_sma20 REAL,
+  sma9 REAL, sma21 REAL, sma50 REAL,
+  atr14 REAL, atr_pct REAL,
+  hh_20_excl REAL, ll_20_excl REAL
+);"
+sqlite3 "$BDB" <<SQL
+ATTACH DATABASE '$ADB' AS adb;
+WITH base AS (
+  SELECT symbol, ts, o AS open, h AS high, l AS low, c AS close, v AS volume
+  FROM adb.ohlcv_5m
+),
+ema AS (
+  SELECT b.*,
+         AVG(close) OVER (PARTITION BY symbol ORDER BY ts ROWS BETWEEN 8  PRECEDING AND CURRENT ROW)  AS sma9,
+         AVG(close) OVER (PARTITION BY symbol ORDER BY ts ROWS BETWEEN 20 PRECEDING AND CURRENT ROW) AS sma21,
+         AVG(close) OVER (PARTITION BY symbol ORDER BY ts ROWS BETWEEN 49 PRECEDING AND CURRENT ROW) AS sma50
+  FROM base b
+),
+rng AS (
+  SELECT e.*,
+         MAX(high) OVER (PARTITION BY symbol ORDER BY ts ROWS BETWEEN 20 PRECEDING AND 1 PRECEDING) AS hh_20_excl,
+         MIN(low)  OVER  (PARTITION BY symbol ORDER BY ts ROWS BETWEEN 20 PRECEDING AND 1 PRECEDING) AS ll_20_excl
+  FROM ema e
+),
+atr AS (
+  SELECT r.*,
+         AVG(high - low) OVER (PARTITION BY symbol ORDER BY ts ROWS BETWEEN 13 PRECEDING AND CURRENT ROW) AS atr14
+  FROM rng r
+)
+INSERT INTO v_indic_1m
+SELECT symbol, ts, open, high, low, close, volume,
+       0.0005, 0.0,
+       sma9, sma21, sma50,
+       COALESCE(atr14,0.0),
+       CASE WHEN close>0 AND atr14>0 THEN atr14/close*100.0 ELSE 0.0 END,
+       hh_20_excl, ll_20_excl
+FROM atr;
+DETACH DATABASE adb;
+SQL
+
+echo "v_indic5m_fast rows: $(sqlB 'SELECT COUNT(*) FROM v_indic5m_fast;')"
+echo "v_indic_1m rows:    $(sqlB 'SELECT COUNT(*) FROM v_indic_1m;')"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/refresh_a_1m_3m.sh
+Size: 440
+MTime: 2025-10-10 13:58:26.330897676 +0200
+----- CONTENT -----
+#!/usr/bin/env sh
+set -eu
+: "${ADB:=/opt/scalp/project/data/a.db}"
+
+SYMS="$(sqlite3 "$ADB" "SELECT symbol FROM u_syms;")"
+for s in $SYMS; do
+  F=$(/opt/scalp/project/bin/fetch_klines_binance.sh "$s" 1m 500)
+  /opt/scalp/project/bin/ingest_klines_to_a.sh "$s" 1m "$F" || true
+  F=$(/opt/scalp/project/bin/fetch_klines_binance.sh "$s" 3m 500)
+  /opt/scalp/project/bin/ingest_klines_to_a.sh "$s" 3m "$F" || true
+done
+echo "refresh 1m+3m done"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/build_x_trades.sh
+Size: 1493
+MTime: 2025-10-10 16:15:53.911365714 +0200
+----- CONTENT -----
+#!/usr/bin/env sh
+set -eu
+XDB="${XDB:-/opt/scalp/project/data/x.db}"
+
+sqlite3 "$XDB" <<'SQL'
+PRAGMA busy_timeout=15000;
+
+-- open/close par ordre
+DROP TABLE IF EXISTS _fo;
+CREATE TEMP TABLE _fo AS
+SELECT order_id, price AS entry_px, qty, fill_ts AS entry_ts
+FROM x_fills WHERE kind='OPEN';
+
+DROP TABLE IF EXISTS _fc;
+CREATE TEMP TABLE _fc AS
+SELECT order_id, price AS exit_px, fill_ts AS exit_ts
+FROM x_fills WHERE kind='CLOSE';
+
+DROP TABLE IF EXISTS _j;
+CREATE TEMP TABLE _j AS
+SELECT
+  o.id AS order_id, o.symbol, o.side, o.reason, o.score,
+  fo.qty, fo.entry_px, fc.exit_px, fo.entry_ts, fc.exit_ts, o.sl, o.tp
+FROM x_orders o
+JOIN _fo fo ON fo.order_id=o.id
+JOIN _fc fc ON fc.order_id=o.id;
+
+-- PnL, rendement, durée
+DROP TABLE IF EXISTS _p;
+CREATE TEMP TABLE _p AS
+SELECT
+  order_id,symbol,side,reason,score,qty,entry_px,exit_px,entry_ts,exit_ts,sl,tp,
+  CASE WHEN side='BUY'  THEN (exit_px-entry_px)*qty
+       WHEN side='SELL' THEN (entry_px-exit_px)*qty
+       ELSE 0 END AS pnl,
+  CASE WHEN entry_px>0 THEN
+       100.0 * (CASE WHEN side='BUY' THEN (exit_px-entry_px)/entry_px
+                     ELSE (entry_px-exit_px)/entry_px END)
+       ELSE 0 END AS ret_pct,
+  (exit_ts-entry_ts) AS hold_secs
+FROM _j;
+
+INSERT OR REPLACE INTO x_trades(order_id,symbol,side,reason,score,qty,entry_px,exit_px,entry_ts,exit_ts,sl,tp,pnl,ret_pct,hold_secs)
+SELECT order_id,symbol,side,reason,score,qty,entry_px,exit_px,entry_ts,exit_ts,sl,tp,pnl,ret_pct,hold_secs
+FROM _p;
+SQL
+
+echo "trades built"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/run_b_daemon.sh
+Size: 143
+MTime: 2025-10-10 12:20:01.653717616 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+INT="${INT:-10}"
+while true; do
+  /opt/scalp/project/scripts/build_b_once.sh || true
+  sleep "$INT"
+done
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/mark_b_final.sh
+Size: 1372
+MTime: 2025-10-10 12:20:01.665717608 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="/opt/scalp/project"
+BDB="$ROOT/data/b.db"
+VER="${VER:?specify VER, ex: VER=analysisB-2025-10-10T12-00Z}"
+
+sqlite3 "$BDB" <<SQL
+PRAGMA busy_timeout=8000;
+CREATE TABLE IF NOT EXISTS b_final_marks(
+  version TEXT PRIMARY KEY,
+  ts_utc TEXT NOT NULL,
+  n_pairs INTEGER NOT NULL,
+  n_buy INTEGER NOT NULL,
+  n_sell INTEGER NOT NULL,
+  avg_score REAL NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE TABLE IF NOT EXISTS b_snapshots(
+  version TEXT NOT NULL,
+  symbol TEXT NOT NULL,
+  side TEXT NOT NULL,
+  score REAL NOT NULL,
+  price REAL NOT NULL,
+  sl REAL NOT NULL,
+  tp REAL NOT NULL,
+  size_usd REAL NOT NULL,
+  ts_utc TEXT NOT NULL,
+  PRIMARY KEY(version,symbol)
+);
+
+WITH last AS (SELECT MAX(ts_utc) t FROM b_plans),
+rows AS (SELECT * FROM b_plans WHERE ts_utc=(SELECT t FROM last))
+INSERT OR REPLACE INTO b_final_marks(version, ts_utc, n_pairs, n_buy, n_sell, avg_score)
+SELECT '$VER',
+       (SELECT t FROM last),
+       COUNT(*),
+       SUM(side='BUY'),
+       SUM(side='SELL'),
+       COALESCE(AVG(score),0)
+FROM rows;
+
+DELETE FROM b_snapshots WHERE version='$VER';
+INSERT INTO b_snapshots(version,symbol,side,score,price,sl,tp,size_usd,ts_utc)
+SELECT '$VER',symbol,side,score,price,sl,tp,size_usd,ts_utc
+FROM b_plans WHERE ts_utc=(SELECT MAX(ts_utc) FROM b_plans);
+SQL
+
+echo "B final marked: $VER"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/fetch_ohlcv_once.sh
+Size: 599
+MTime: 2025-10-10 09:16:45.563809860 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+LOCK="/opt/scalp/project/run/fetch_ohlcv.lock"
+mkdir -p "$(dirname "$LOCK")"
+
+# Empêcher chevauchements
+exec 9>"$LOCK"
+flock -n 9 || { echo "another fetch running"; exit 0; }
+
+ADB="${ADB:-/opt/scalp/project/data/a.db}"
+PY="${PY:-python3}"
+FETCHER="${FETCHER:-/opt/scalp/project/scripts/fetch-ohlcv-final.py}"
+
+[ -x "$FETCHER" ] || { echo "fetcher not found: $FETCHER" >&2; exit 1; }
+
+# Sync des symboles depuis u.db
+./sync_top35_to_a.sh
+
+# Lancement fetcher existant (écrit ohlcv_5m/15m/30m dans a.db). Limité à 100.
+ADB="$ADB" LIMIT="100" "$PY" "$FETCHER"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/check_a_db.sh
+Size: 569
+MTime: 2025-10-11 14:10:20.760427892 +0200
+----- CONTENT -----
+#!/bin/bash
+db="/opt/scalp/project/data/a.db"
+
+echo "=== 📋 Tables dans a.db ==="
+sqlite3 "$db" ".tables"
+
+echo -e "\n=== 📄 Schéma contexts_A ==="
+sqlite3 "$db" ".schema contexts_A" 2>/dev/null || echo "contexts_A absente ❌"
+
+echo -e "\n=== 🔍 Aperçu contexts_A ==="
+sqlite3 "$db" "SELECT context, COUNT(*) FROM contexts_A GROUP BY context;" 2>/dev/null || echo "Erreur ou table absente"
+
+echo -e "\n=== 🔍 Symboles distincts dans contexts_A ==="
+sqlite3 "$db" "SELECT COUNT(DISTINCT symbol) FROM contexts_A;" 2>/dev/null || echo "Erreur ou table absente"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/recover_uoatbx.sh
+Size: 1023
+MTime: 2025-10-10 16:54:46.486066876 +0200
+----- CONTENT -----
+#!/usr/bin/env sh
+set -eu
+. /opt/scalp/project/bin/env_ab.sh 2>/dev/null || true
+
+# U → A: vérifier u_syms présent
+if [ "$(sqlite3 /opt/scalp/project/data/a.db "SELECT COUNT(*) FROM sqlite_master WHERE name='u_syms';")" -eq 0 ]; then
+  echo "ALERT U→A: u_syms absent dans a.db"
+fi
+
+# O: rien à construire ici
+
+# T → A(1m)
+if [ "$(sqlite3 /opt/scalp/project/data/t.db "SELECT COALESCE(MAX(ts_ms),0) FROM ticks;")" -gt 0 ]; then
+  /opt/scalp/project/bin/build_ohlcv1m_from_ticks.sh || true
+else
+  echo "ALERT T: pas de ticks. Fallback REST 1m/3m"
+/opt/scalp/project/bin/refresh_a_1m_3m.sh || true
+fi
+
+# A→B
+/opt/scalp/project/bin/ensure_ab_indicators_atomic.sh
+BDB=/opt/scalp/project/data/b.db /opt/scalp/project/bin/build_features_1m.sh
+BDB=/opt/scalp/project/data/b.db /opt/scalp/project/bin/analyse_B_sql.sh
+
+# X
+/opt/scalp/project/bin/x_from_signals_eff.sh 2>/dev/null || /opt/scalp/project/bin/x_from_signals.sh || true
+/opt/scalp/project/bin/x_paper_match.sh
+
+# Health
+/opt/scalp/project/bin/check_uoatbx.sh
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/fetch_klines_binance.sh
+Size: 454
+MTime: 2025-10-10 13:58:10.798881184 +0200
+----- CONTENT -----
+#!/usr/bin/env sh
+set -eu
+SYMBOL="${1:?ex: BTCUSDT}"; INTERVAL="${2:?ex: 1m}"; LIMIT="${3:-500}"
+OUT="${4:-/tmp/klines.csv}"
+# REST → JSON → lignes → CSV(ts,o,h,l,c,v). Sans jq.
+curl -s "https://api.binance.com/api/v3/klines?symbol=${SYMBOL}&interval=${INTERVAL}&limit=${LIMIT}" \
+| sed 's/^\[\[//; s/\]\]$//' | tr -d '"' | sed 's/\],\[/\n/g' \
+| awk -F, '{ if(NF>=6){ printf "%d,%s,%s,%s,%s,%s\n", $1/1000,$2,$3,$4,$5,$6 } }' > "$OUT"
+echo "$OUT"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/purge_non_current.sh
+Size: 569
+MTime: 2025-10-10 09:16:45.571809891 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+UDB="${UDB:-/opt/scalp/project/data/u.db}"
+ADB="${ADB:-/opt/scalp/project/data/a.db}"
+sqlite3 "$ADB" <<SQL
+PRAGMA busy_timeout=8000;
+ATTACH DATABASE '$UDB' AS udb;
+DELETE FROM ohlcv_5m  WHERE symbol NOT IN (SELECT symbol FROM udb.v_universe_current);
+DELETE FROM ohlcv_15m WHERE symbol NOT IN (SELECT symbol FROM udb.v_universe_current);
+DELETE FROM ohlcv_30m WHERE symbol NOT IN (SELECT symbol FROM udb.v_universe_current);
+DETACH DATABASE udb;
+PRAGMA wal_checkpoint(TRUNCATE);
+PRAGMA optimize;
+SQL
+echo "purge non-current: done"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/lock_b_code.sh
+Size: 535
+MTime: 2025-10-10 14:48:46.742168028 +0200
+----- CONTENT -----
+#!/usr/bin/env sh
+set -eu
+BIN="/opt/scalp/project/bin"
+LIST="env_ab.sh migrate_b_schema.sh build_ohlcv1m_from_ticks.sh ensure_ab_indicators_atomic.sh build_features_1m.sh analyse_B_sql.sh tick_gate_B.sh run_B_loop.sh check_b_health.sh b_manifest_init.sh b_manifest_verify.sh"
+ts="$(date +%Y%m%d-%H%M%S)"
+tar czf "/opt/scalp/project/b_code_${ts}.tgz" -C "$BIN" $LIST 2>/dev/null || true
+for f in $LIST; do [ -f "$BIN/$f" ] && { chown root:root "$BIN/$f"; chmod 0555 "$BIN/$f"; }; done
+echo "OK  - locked code (backup b_code_${ts}.tgz)"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/x_from_signals.sh
+Size: 3527
+MTime: 2025-10-10 15:07:37.222253442 +0200
+----- CONTENT -----
+#!/usr/bin/env sh
+set -eu
+: "${BDB:=/opt/scalp/project/data/b.db}"
+: "${XDB:=/opt/scalp/project/data/x.db}"
+: "${TDB:=/opt/scalp/project/data/t.db}"
+
+sqlite3 "$XDB" <<SQL
+PRAGMA busy_timeout=15000;
+ATTACH DATABASE '$BDB' AS bdb;
+ATTACH DATABASE '$TDB' AS tdb;
+
+-- params + balance
+CREATE TEMP TABLE _par AS
+SELECT COALESCE(risk_usd,50.0) AS risk_usd,
+       COALESCE(risk_pct,0.02) AS risk_pct,
+       COALESCE(leverage,3.0)  AS leverage,
+       COALESCE(tp_mult,1.8)   AS tp_mult,
+       COALESCE(sl_mult,1.2)   AS sl_mult,
+       COALESCE(score_boost,0.5) AS score_boost
+FROM x_params WHERE id=1;
+CREATE TEMP TABLE _bal AS SELECT balance FROM x_wallet WHERE id=1;
+
+-- symboles tradables (ticks <= 10 min)
+CREATE TEMP TABLE _tradable AS
+SELECT DISTINCT instId AS symbol
+FROM tdb.ticks
+WHERE ts_ms >= (strftime('%s','now')-3600)*1000;
+
+-- nouveaux signaux > last_id ET tradables
+CREATE TEMP TABLE _st AS SELECT COALESCE(last_signal_id,0) AS last_id FROM x_state WHERE id=1;
+CREATE TEMP TABLE _src AS
+SELECT s.id AS signal_id, s.symbol, s.side, s.price, s.reason, s.created_ts
+FROM bdb.signals_B s, _st
+WHERE s.id > _st.last_id
+  AND s.symbol IN (SELECT symbol FROM _tradable);
+
+-- plan récent (SL/TP/score)
+CREATE TEMP TABLE _plan AS
+SELECT p.*
+FROM bdb.signals_B_plan p
+JOIN (
+  SELECT symbol, side, MAX(created_ts) mx FROM bdb.signals_B_plan GROUP BY symbol, side
+) mx ON mx.symbol=p.symbol AND mx.side=p.side AND mx.mx=p.created_ts;
+
+-- dédup stricte via UNIQUE (ignore si existe déjà)
+CREATE TEMP TABLE _ins AS
+SELECT s.signal_id,s.symbol,s.side,s.price,s.reason,s.created_ts,
+       (SELECT sl FROM _plan WHERE symbol=s.symbol AND side=s.side ORDER BY created_ts DESC LIMIT 1) AS sl,
+       (SELECT tp FROM _plan WHERE symbol=s.symbol AND side=s.side ORDER BY created_ts DESC LIMIT 1) AS tp,
+       COALESCE((SELECT score FROM _plan WHERE symbol=s.symbol AND side=s.side ORDER BY created_ts DESC LIMIT 1),0.0) AS score,
+       (SELECT leverage FROM _par) AS leverage,
+       ROUND(
+         CASE WHEN (SELECT risk_pct FROM _par) > 0
+              THEN (SELECT balance FROM _bal)*(SELECT risk_pct FROM _par)/NULLIF(s.price,0)
+              ELSE (SELECT risk_usd FROM _par)/NULLIF(s.price,0) END
+       ,6) AS qty
+FROM _src s
+WHERE NOT EXISTS(
+  SELECT 1 FROM x_orders xo WHERE xo.symbol=s.symbol AND xo.side=s.side AND xo.created_ts=s.created_ts
+);
+
+-- compléter SL/TP si absents
+UPDATE _ins
+SET tp = COALESCE(tp,
+        price * (CASE WHEN side='BUY'
+                      THEN 1+((SELECT tp_mult FROM _par)+(SELECT score_boost FROM _par)*score)/100.0
+                      ELSE 1-((SELECT tp_mult FROM _par)+(SELECT score_boost FROM _par)*score)/100.0 END)),
+    sl = COALESCE(sl,
+        price * (CASE WHEN side='BUY'
+                      THEN 1-(SELECT sl_mult FROM _par)/100.0
+                      ELSE 1+(SELECT sl_mult FROM _par)/100.0 END));
+
+ALTER TABLE _ins ADD COLUMN notional REAL;
+ALTER TABLE _ins ADD COLUMN margin REAL;
+UPDATE _ins SET notional=price*qty, margin=(price*qty)/NULLIF(leverage,0);
+
+INSERT OR IGNORE INTO x_orders(symbol,side,price,qty,sl,tp,reason,score,leverage,margin,notional,status,signal_id,created_ts,updated_ts)
+SELECT symbol,side,price,qty,sl,tp,reason,score,leverage,margin,notional,'NEW',signal_id,created_ts,created_ts
+FROM _ins;
+
+-- avancer pointeur seulement si insert
+UPDATE x_state
+SET last_signal_id = COALESCE((SELECT MAX(signal_id) FROM _ins),(SELECT last_signal_id FROM x_state WHERE id=1))
+WHERE id=1;
+
+DETACH DATABASE bdb; DETACH DATABASE tdb;
+SQL
+echo "import: ok"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/build_indicators_from_5m.sh
+Size: 3125
+MTime: 2025-10-10 12:41:49.050302349 +0200
+----- CONTENT -----
+#!/usr/bin/env sh
+set -eu
+: "${ADB:=/opt/scalp/project/data/a.db}"       # contient ohlcv_5m (colonnes: symbol, ts, o,h,l,c,v)
+: "${BDB:=/opt/scalp/project/data/scalp.db}"
+
+sqlB(){ sqlite3 "$BDB" "$@"; }
+
+# pragmas + anti-lock
+sqlB "PRAGMA journal_mode=WAL; PRAGMA busy_timeout=12000; PRAGMA synchronous=NORMAL;"
+
+# drop safe
+drop_obj(){ t=$(sqlite3 "$BDB" "SELECT COALESCE(type,'') FROM sqlite_master WHERE name='$1'"); 
+  [ "$t" = "table" ] && sqlB "DROP TABLE IF EXISTS $1;"; 
+  [ "$t" = "view"  ] && sqlB "DROP VIEW  IF EXISTS $1;"; }
+
+# 1) v_indic5m_fast (déjà attendu par B)
+drop_obj v_indic5m_fast
+sqlB "CREATE TABLE v_indic5m_fast(symbol TEXT PRIMARY KEY, ts INTEGER, sma9 REAL, sma21 REAL);"
+sqlite3 "$BDB" <<SQL
+ATTACH DATABASE '$ADB' AS adb;
+WITH base AS (
+  SELECT symbol, ts, c AS close
+  FROM adb.ohlcv_5m
+),
+ema AS (
+  SELECT b.symbol, b.ts,
+         AVG(b.close) OVER (PARTITION BY b.symbol ORDER BY b.ts ROWS BETWEEN 8 PRECEDING AND CURRENT ROW)  AS sma9,
+         AVG(b.close) OVER (PARTITION BY b.symbol ORDER BY b.ts ROWS BETWEEN 20 PRECEDING AND CURRENT ROW) AS sma21
+  FROM base b
+),
+last AS (SELECT e.*, ROW_NUMBER() OVER (PARTITION BY symbol ORDER BY ts DESC) rn FROM ema e)
+INSERT OR REPLACE INTO v_indic5m_fast(symbol,ts,sma9,sma21)
+SELECT symbol, ts, sma9, sma21 FROM last WHERE rn=1;
+DETACH DATABASE adb;
+SQL
+
+# 2) v_indic_1m — on l’alimente depuis le 5m pour satisfaire B sans dépendre du 1m
+#    Les noms restent "1m" pour l’interface, mais la granularité est 5m.
+drop_obj v_indic_1m
+sqlB "CREATE TABLE v_indic_1m(
+  symbol TEXT, ts INTEGER,
+  open REAL, high REAL, low REAL, close REAL, volume REAL,
+  spread_frac REAL, vol_sma20 REAL,
+  sma9 REAL, sma21 REAL, sma50 REAL,
+  atr14 REAL, atr_pct REAL,
+  hh_20_excl REAL, ll_20_excl REAL
+);"
+sqlite3 "$BDB" <<SQL
+ATTACH DATABASE '$ADB' AS adb;
+WITH base AS (
+  SELECT symbol, ts, o AS open, h AS high, l AS low, c AS close, v AS volume
+  FROM adb.ohlcv_5m
+),
+ema AS (
+  SELECT b.*,
+         AVG(close) OVER (PARTITION BY symbol ORDER BY ts ROWS BETWEEN 8  PRECEDING AND CURRENT ROW) AS sma9,
+         AVG(close) OVER (PARTITION BY symbol ORDER BY ts ROWS BETWEEN 20 PRECEDING AND CURRENT ROW) AS sma21,
+         AVG(close) OVER (PARTITION BY symbol ORDER BY ts ROWS BETWEEN 49 PRECEDING AND CURRENT ROW) AS sma50
+  FROM base b
+),
+rng AS (
+  SELECT e.*,
+         MAX(high) OVER (PARTITION BY symbol ORDER BY ts ROWS BETWEEN 20 PRECEDING AND 1 PRECEDING) AS hh_20_excl,
+         MIN(low)  OVER (PARTITION BY symbol ORDER BY ts ROWS BETWEEN 20 PRECEDING AND 1 PRECEDING) AS ll_20_excl
+  FROM ema e
+),
+atr AS (
+  SELECT r.*,
+         AVG(high - low) OVER (PARTITION BY symbol ORDER BY ts ROWS BETWEEN 13 PRECEDING AND CURRENT ROW) AS atr14
+  FROM rng r
+)
+INSERT INTO v_indic_1m
+SELECT symbol, ts, open, high, low, close, volume,
+       0.0005 AS spread_frac,
+       0.0    AS vol_sma20,
+       sma9, sma21, sma50,
+       COALESCE(atr14,0.0) AS atr14,
+       CASE WHEN close>0 AND atr14>0 THEN atr14/close*100.0 ELSE 0.0 END AS atr_pct,
+       hh_20_excl, ll_20_excl
+FROM atr;
+DETACH DATABASE adb;
+SQL
+
+echo "== indicators from 5m built =="
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/ingest_klines_to_a.sh
+Size: 1045
+MTime: 2025-10-10 14:01:24.035087113 +0200
+----- CONTENT -----
+#!/usr/bin/env sh
+set -eu
+: "${ADB:=/opt/scalp/project/data/a.db}"
+SYMBOL="${1:?SYMBOL}"; INTERVAL="${2:?1m|3m}"; CSV="${3:?/tmp/klines.csv}"
+
+sqlite3 "$ADB" "
+PRAGMA busy_timeout=15000;
+CREATE TABLE IF NOT EXISTS ohlcv_1m(symbol TEXT, ts INTEGER, open REAL,high REAL,low REAL,close REAL,volume REAL, PRIMARY KEY(symbol,ts));
+CREATE TABLE IF NOT EXISTS ohlcv_3m(symbol TEXT, ts INTEGER, open REAL,high REAL,low REAL,close REAL,volume REAL, PRIMARY KEY(symbol,ts));
+"
+
+TMP="tmp_import_$(date +%s)"
+sqlite3 "$ADB" ".mode csv" "CREATE TEMP TABLE $TMP(ts,open,high,low,close,volume);" ".import '$CSV' $TMP"
+
+case "$INTERVAL" in
+  1m) sqlite3 "$ADB" "INSERT OR IGNORE INTO ohlcv_1m(symbol,ts,open,high,low,close,volume) SELECT '$SYMBOL',ts,open,high,low,close,volume FROM $TMP;" ;;
+  3m) sqlite3 "$ADB" "INSERT OR IGNORE INTO ohlcv_3m(symbol,ts,open,high,low,close,volume) SELECT '$SYMBOL',ts,open,high,low,close,volume FROM $TMP;" ;;
+  *) echo "interval inconnu"; exit 1 ;;
+esac
+
+sqlite3 "$ADB" "DROP TABLE $TMP;"
+echo "ingested: $SYMBOL $INTERVAL"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/ws_ticks_auto_from_A.py
+Size: 3345
+MTime: 2025-10-11 17:04:19.555637743 +0200
+----- CONTENT -----
+#!/usr/bin/env python3
+import asyncio
+import websockets
+import json
+import sqlite3
+import time
+
+# --- Configuration ---
+WS_URL = "wss://ws.bitget.com/v2/ws/public"
+DB_PATH = "/opt/scalp/project/data/t.db"
+A_DB = "/opt/scalp/project/data/a.db"
+
+# --- Lecture des symboles depuis contexts_A ---
+def load_symbols_from_A():
+    conn = sqlite3.connect(A_DB)
+    cur = conn.cursor()
+    try:
+        rows = cur.execute("SELECT DISTINCT symbol FROM contexts_A").fetchall()
+        symbols = [row[0] for row in rows]
+    except Exception as e:
+        print("⚠️ Erreur lecture A:", e)
+        symbols = []
+    finally:
+        conn.close()
+    return symbols
+
+# --- Préparation de la table ticks ---
+def init_ticks_table():
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS ticks (
+        instId TEXT NOT NULL,
+        lastPr REAL,
+        bidPr REAL,
+        askPr REAL,
+        bidSz REAL,
+        askSz REAL,
+        ts_ms INTEGER NOT NULL,
+        PRIMARY KEY(instId, ts_ms)
+    );
+    """)
+    conn.commit()
+    conn.close()
+
+# --- Enregistrement d’un tick ---
+def save_tick(tick):
+    instId = tick.get("instId")
+    try:
+        ts_ms = int(tick.get("ts"))
+        lastPr = float(tick.get("lastPr"))
+        bidPr = float(tick.get("bidPr"))
+        askPr = float(tick.get("askPr"))
+        bidSz = float(tick.get("bidSz"))
+        askSz = float(tick.get("askSz"))
+    except Exception as e:
+        print("⚠️ Erreur parsing tick:", e, tick)
+        return
+
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+        INSERT OR IGNORE INTO ticks
+        (instId, lastPr, bidPr, askPr, bidSz, askSz, ts_ms)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (instId, lastPr, bidPr, askPr, bidSz, askSz, ts_ms))
+        conn.commit()
+    except Exception as e:
+        print("⚠️ Erreur insertion tick:", e)
+    finally:
+        conn.close()
+
+# --- WebSocket loop ---
+async def run_ws(symbols):
+    async with websockets.connect(WS_URL, ping_interval=20, ping_timeout=10) as ws:
+        print("✅ WS connecté, abonnement à", len(symbols), "symboles")
+        args = [{"instType": "USDT-FUTURES", "channel": "ticker", "instId": sym} for sym in symbols]
+        await ws.send(json.dumps({"op": "subscribe", "args": args}))
+        print("📨 Souscriptions envoyées")
+
+        while True:
+            try:
+                msg = await ws.recv()
+                data = json.loads(msg)
+                if data.get("action") == "snapshot" and data.get("arg", {}).get("channel") == "ticker":
+                    tick = data["data"][0]
+                    save_tick(tick)
+                    print(f"💾 Tick : {tick.get('instId')} @ {tick.get('lastPr')} (ts {tick.get('ts')})")
+            except Exception as e:
+                print("⚠️ WS erreur:", e)
+                # attendre un peu avant de relancer la boucle
+                await asyncio.sleep(1)
+
+# --- Main ---
+if __name__ == "__main__":
+    init_ticks_table()
+    symbols = load_symbols_from_A()
+    if not symbols:
+        print("❌ Aucun symbole lu depuis contexts_A, quitter.")
+    else:
+        print("📋 Symboles A :", symbols)
+        try:
+            asyncio.run(run_ws(symbols))
+        except KeyboardInterrupt:
+            print("🔒 Fermeture manuelle")
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/check_b_final.sh
+Size: 559
+MTime: 2025-10-10 12:20:01.681717597 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="/opt/scalp/project"
+BDB="$ROOT/data/b.db"
+VER="${VER:?specify VER}"
+
+echo "== FINAL MARK =="
+sqlite3 -tabs "$BDB" "SELECT version,ts_utc,n_pairs,n_buy,n_sell,ROUND(avg_score,2),created_at FROM b_final_marks WHERE version='$VER';"
+
+echo "== SAMPLE SNAPSHOT =="
+sqlite3 -tabs "$BDB" "SELECT symbol,side,ROUND(score,2),ROUND(price,6),ROUND(sl,6),ROUND(tp,6),ROUND(size_usd,2) FROM b_snapshots WHERE version='$VER' ORDER BY score DESC LIMIT 8;"
+
+echo "== HEALTH STRICT =="
+/opt/scalp/project/scripts/health_b_strict.sh
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/health_o_strict.sh
+Size: 2515
+MTime: 2025-10-10 09:11:27.043290163 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+ADB="/opt/scalp/project/data/a.db"
+UDB="/opt/scalp/project/data/u.db"
+
+fail(){ echo "FAIL: $*" >&2; exit 1; }
+
+# 0) durcir pour éviter les courses
+/opt/scalp/project/scripts/harden_o_db.sh >/dev/null 2>&1 || true
+
+# 1) couverture = 35
+cov=$(sqlite3 -noheader "$ADB" "
+SELECT '5m|'||COUNT(DISTINCT symbol) FROM ohlcv_5m
+UNION ALL SELECT '15m|'||COUNT(DISTINCT symbol) FROM ohlcv_15m
+UNION ALL SELECT '30m|'||COUNT(DISTINCT symbol) FROM ohlcv_30m;")
+echo "$cov" | awk -F'|' '{printf "%s|sy=%s\n",$1,$2}'
+echo "$cov" | awk -F'|' '$2!=35 {bad=1} END{exit bad}' || fail "coverage sy!=35"
+
+# 2) gaps = 0
+gaps=$(sqlite3 -noheader -separator '|' "$ADB" "
+WITH tf(name,step) AS (VALUES('ohlcv_5m',300),('ohlcv_15m',900),('ohlcv_30m',1800)),
+rows AS (
+  SELECT 'ohlcv_5m' name,300 step,symbol,COUNT(*) n,MIN(ts) t0,MAX(ts) t1 FROM ohlcv_5m GROUP BY symbol
+  UNION ALL SELECT 'ohlcv_15m',900,symbol,COUNT(*),MIN(ts),MAX(ts) FROM ohlcv_15m GROUP BY symbol
+  UNION ALL SELECT 'ohlcv_30m',1800,symbol,COUNT(*),MIN(ts),MAX(ts) FROM ohlcv_30m GROUP BY symbol
+),
+g AS (SELECT name, MAX(0, ((t1-t0)/step + 1 - n)) AS miss FROM rows)
+SELECT name, SUM(miss) FROM g GROUP BY name;")
+echo "$gaps" | awk -F'|' '{printf "%s|gaps=%s\n",$1,$2}'
+echo "$gaps" | awk -F'|' '$2!=0 {bad=1} END{exit bad}' || fail "gaps!=0"
+
+# 3) exactement 100 par symbole
+for t in 5m 15m 30m; do
+  sqlite3 "$ADB" "SELECT COUNT(*) FROM (SELECT symbol FROM ohlcv_${t} GROUP BY symbol HAVING COUNT(*)!=100);" | grep -qx 0 \
+    || fail "rows!=100 $t"
+done
+
+# 4) ensemble = univers courant
+sqlite3 -noheader -separator '|' "$ADB" "
+ATTACH DATABASE '$UDB' AS udb;
+WITH cur AS (SELECT symbol FROM ohlcv_15m GROUP BY symbol),
+     uni AS (SELECT symbol FROM udb.v_universe_current)
+SELECT (SELECT COUNT(*) FROM (SELECT symbol FROM cur EXCEPT SELECT symbol FROM uni)),
+       (SELECT COUNT(*) FROM (SELECT symbol FROM uni EXCEPT SELECT symbol FROM cur));
+DETACH DATABASE udb;" | grep -qx "0|0" || fail "set mismatch vs universe"
+
+# 5) fraîcheur par palier: 5m libre, 15m=floor(5m,900), 30m=floor(5m,1800)
+mx=$(sqlite3 -noheader -separator '|' "$ADB" "
+SELECT (SELECT MAX(ts) FROM ohlcv_5m),
+       (SELECT MAX(ts) FROM ohlcv_15m),
+       (SELECT MAX(ts) FROM ohlcv_30m);")
+echo "max_ts 5m|15m|30m: $mx"
+awk -F'|' '{
+  t5=$1; t15=$2; t30=$3;
+  a15 = int(t5/900)*900;
+  a30 = int(t5/1800)*1800;
+  ok = (t5%300==0) && (t15==a15) && (t30==a30);
+  exit(ok?0:1)
+}' <<< "$mx" || fail "freshness/alignment"
+
+echo "OK: o.db health strict"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/b_selftest.sh
+Size: 1825
+MTime: 2025-10-10 14:47:53.946110660 +0200
+----- CONTENT -----
+#!/usr/bin/env sh
+set -eu
+BIN="/opt/scalp/project/bin"
+ADB="/opt/scalp/project/data/a.db"
+BDB="/opt/scalp/project/data/b.db"
+ok(){ printf "OK  - %s\n" "$1"; }
+ko(){ printf "FAIL- %s\n" "$1"; exit 1; }
+
+# 0) présence dossiers et scripts clés
+[ -d "$BIN" ] || ko "bin directory manquant"
+for f in env_ab.sh migrate_b_schema.sh build_ohlcv1m_from_ticks.sh \
+          ensure_ab_indicators_atomic.sh build_features_1m.sh analyse_B_sql.sh \
+          tick_gate_B.sh run_B_loop.sh check_b_health.sh \
+          b_manifest_init.sh b_manifest_verify.sh; do
+  [ -x "$BIN/$f" ] || ko "$f manquant ou non exécutable"
+done
+ok "scripts présents"
+
+# 1) intégrité manifeste
+if "$BIN/b_manifest_verify.sh" >/dev/null 2>&1; then ok "manifest integrity"; else ko "manifest integrity"; fi
+
+# 2) santé B (tables)
+v1=$(sqlite3 "$BDB" "SELECT COUNT(*) FROM sqlite_master WHERE name='v_indic_1m';")
+v5=$(sqlite3 "$BDB" "SELECT COUNT(*) FROM sqlite_master WHERE name='v_indic5m_fast';")
+ft=$(sqlite3 "$BDB" "SELECT COUNT(*) FROM sqlite_master WHERE name='v_feat_1m';")
+[ "$v1" = "1" ] && ok "v_indic_1m" || ko "v_indic_1m"
+[ "$v5" = "1" ] && ok "v_indic5m_fast" || ko "v_indic5m_fast"
+[ "$ft" = "1" ] && ok "v_feat_1m" || ko "v_feat_1m"
+
+# 3) volumes min
+rows_indic=$(sqlite3 "$BDB" "SELECT COUNT(*) FROM v_indic_1m;")
+rows_feat=$(sqlite3 "$BDB" "SELECT COUNT(*) FROM v_feat_1m;")
+[ "$rows_indic" -gt 0 ] && ok "v_indic_1m rows=$rows_indic" || ko "v_indic_1m vide"
+[ "$rows_feat"  -gt 0 ] && ok "v_feat_1m rows=$rows_feat" || ko "v_feat_1m vide"
+
+# 4) exécution analyse_B à blanc
+if BDB="$BDB" "$BIN/analyse_B_sql.sh" >/dev/null 2>&1; then ok "analyse_B_sql.sh run"; else ko "analyse_B_sql.sh run"; fi
+
+# 5) tick gate
+if BDB="$BDB" "$BIN/tick_gate_B.sh" >/dev/null 2>&1; then ok "tick_gate_B"; else ko "tick_gate_B"; fi
+
+echo "SELFTEST OK"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/ensure_ab_indicators_atomic.sh
+Size: 4902
+MTime: 2025-10-10 14:45:53.465979735 +0200
+----- CONTENT -----
+#!/usr/bin/env sh
+set -eu
+: "${ADB:=/opt/scalp/project/data/a.db}"
+: "${BDB:=/opt/scalp/project/data/b.db}"
+sqlA(){ sqlite3 "$ADB" "$@"; }
+sqlB(){ sqlite3 "$BDB" "$@"; }
+
+sqlB "PRAGMA journal_mode=WAL; PRAGMA busy_timeout=20000; PRAGMA synchronous=NORMAL;"
+
+# source auto
+HAS1="$(sqlA "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='ohlcv_1m';")"
+SRC="5m"; [ "$HAS1" -gt 0 ] && [ "$(sqlA "SELECT COUNT(*) FROM ohlcv_1m;")" -gt 0 ] && SRC="1m"
+T="ohlcv_5m"; [ "$SRC" = "1m" ] && T="ohlcv_1m"
+
+# map colonnes
+colA(){ tbl="$1"; shift; for c in "$@"; do
+  [ "$(sqlA "SELECT COUNT(*) FROM pragma_table_info('$tbl') WHERE name='$c';")" -gt 0 ] && { echo "$c"; return; }
+done; echo ""; }
+S=$(colA "$T" symbol sym) ; TS=$(colA "$T" ts timestamp epoch)
+O=$(colA "$T" open o)    ; H=$(colA "$T" high h)
+L=$(colA "$T" low l)     ; C=$(colA "$T" close c)
+V=$(colA "$T" volume v)
+for k in S TS O H L C; do eval "x=\$$k"; [ -n "$x" ] || { echo "col manquante $k dans $T"; exit 1; }; done
+[ -n "$V" ] || V="0.0"
+
+SUF="_new_$(date +%s)_$$"
+V1="v_indic_1m$SUF"
+V5="v_indic5m_fast$SUF"
+
+# build v_indic_1m temp
+sqlite3 "$BDB" <<SQL
+ATTACH DATABASE '$ADB' AS adb;
+CREATE TABLE $V1(
+  symbol TEXT, ts INTEGER,
+  open REAL, high REAL, low REAL, close REAL, volume REAL,
+  spread_frac REAL, vol_sma20 REAL,
+  sma9 REAL, sma21 REAL, sma50 REAL,
+  atr14 REAL, atr_pct REAL,
+  hh_20_excl REAL, ll_20_excl REAL
+);
+WITH base AS (
+  SELECT $S AS symbol, $TS AS ts, $O AS open, $H AS high, $L AS low, $C AS close, COALESCE($V,0.0) AS volume
+  FROM adb.$T
+),
+ema AS (
+  SELECT b.*,
+         AVG(close) OVER (PARTITION BY symbol ORDER BY ts ROWS BETWEEN 8  PRECEDING AND CURRENT ROW)  AS sma9,
+         AVG(close) OVER (PARTITION BY symbol ORDER BY ts ROWS BETWEEN 20 PRECEDING AND CURRENT ROW) AS sma21,
+         AVG(close) OVER (PARTITION BY symbol ORDER BY ts ROWS BETWEEN 49 PRECEDING AND CURRENT ROW) AS sma50
+  FROM base b
+),
+rng AS (
+  SELECT e.*,
+         MAX(high) OVER (PARTITION BY symbol ORDER BY ts ROWS BETWEEN 20 PRECEDING AND 1 PRECEDING) AS hh_20_excl,
+         MIN(low)  OVER (PARTITION BY symbol ORDER BY ts ROWS BETWEEN 20 PRECEDING AND 1 PRECEDING)  AS ll_20_excl
+  FROM ema e
+),
+atr AS (
+  SELECT r.*,
+         AVG(high - low) OVER (PARTITION BY symbol ORDER BY ts ROWS BETWEEN 13 PRECEDING AND CURRENT ROW) AS atr14
+  FROM rng r
+)
+INSERT INTO $V1
+SELECT symbol, ts, open, high, low, close, volume,
+       0.0005, 0.0,
+       sma9, sma21, sma50,
+       COALESCE(atr14,0.0),
+       CASE WHEN close>0 AND atr14>0 THEN atr14/close*100.0 ELSE 0.0 END,
+       hh_20_excl, ll_20_excl
+FROM atr;
+DETACH DATABASE adb;
+SQL
+
+# build v_indic5m_fast temp
+if [ "$(sqlA "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='ohlcv_5m';")" -gt 0 ]; then
+  S5=$(colA ohlcv_5m symbol sym); T5=$(colA ohlcv_5m ts timestamp epoch); C5=$(colA ohlcv_5m close c)
+  sqlite3 "$BDB" <<SQL
+  ATTACH DATABASE '$ADB' AS adb;
+  CREATE TABLE $V5(symbol TEXT PRIMARY KEY, ts INTEGER, sma9 REAL, sma21 REAL);
+  WITH base AS (SELECT $S5 AS symbol, $T5 AS ts, $C5 AS close FROM adb.ohlcv_5m),
+  ema AS (
+    SELECT b.symbol, b.ts,
+           AVG(b.close) OVER (PARTITION BY b.symbol ORDER BY b.ts ROWS BETWEEN 8 PRECEDING AND CURRENT ROW)  AS sma9,
+           AVG(b.close) OVER (PARTITION BY b.symbol ORDER BY b.ts ROWS BETWEEN 20 PRECEDING AND CURRENT ROW) AS sma21
+    FROM base b
+  ),
+  last AS (SELECT e.*, ROW_NUMBER() OVER (PARTITION BY symbol ORDER BY ts DESC) rn FROM ema e)
+  INSERT OR REPLACE INTO $V5(symbol,ts,sma9,sma21)
+  SELECT symbol, ts, sma9, sma21 FROM last WHERE rn=1;
+  DETACH DATABASE adb;
+SQL
+else
+  sqlite3 "$BDB" <<SQL
+  CREATE TABLE $V5(symbol TEXT PRIMARY KEY, ts INTEGER, sma9 REAL, sma21 REAL);
+  WITH last AS (SELECT symbol, MAX(ts) ts FROM $V1 GROUP BY symbol)
+  INSERT INTO $V5
+  SELECT i.symbol, i.ts, i.sma9, i.sma21
+  FROM $V1 i JOIN last l ON l.symbol=i.symbol AND l.ts=i.ts;
+SQL
+fi
+
+# vérifs avant swap
+ok_v1="$(sqlite3 "$BDB" "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='$V1';")"
+ok_v5="$(sqlite3 "$BDB" "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='$V5';")"
+rows_v1="$(sqlite3 "$BDB" "SELECT COUNT(*) FROM $V1;")"
+rows_v5="$(sqlite3 "$BDB" "SELECT COUNT(*) FROM $V5;")"
+[ "$ok_v1" -eq 1 ] && [ "$ok_v5" -eq 1 ] && [ "$rows_v1" -gt 0 ] && [ "$rows_v5" -gt 0 ] || { echo "build incomplete"; sqlB "DROP TABLE IF EXISTS $V1; DROP TABLE IF EXISTS $V5;"; exit 0; }
+
+# swap avec retries
+n=0; max=8
+while :; do
+  if sqlite3 "$BDB" <<SQL
+  PRAGMA busy_timeout=20000;
+  BEGIN IMMEDIATE;
+  DROP TABLE IF EXISTS v_indic5m_fast;
+  ALTER TABLE $V5 RENAME TO v_indic5m_fast;
+  DROP TABLE IF EXISTS v_indic_1m;
+  ALTER TABLE $V1 RENAME TO v_indic_1m;
+  COMMIT;
+SQL
+  then echo "indic: SRC=$SRC"; exit 0; fi
+  n=$((n+1)); [ $n -ge $max ] && { echo "swap failed: locked"; sqlB "DROP TABLE IF EXISTS $V1; DROP TABLE IF EXISTS $V5;"; exit 1; }
+  sleep $n
+done
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/check_uoatbx_clean.sh
+Size: 3820
+MTime: 2025-10-11 14:27:49.216880238 +0200
+----- CONTENT -----
+#!/bin/bash
+set -e
+
+now=$(date +%s)
+
+fmt_ts() {
+  local ts="$1"
+  date -d @"$ts" +%H:%M:%S 2>/dev/null || date -r "$ts" +%H:%M:%S
+}
+
+tf_to_secs() {
+  case "$1" in
+    5m) echo 300 ;;
+    15m) echo 900 ;;
+    30m) echo 1800 ;;
+    *) echo 0 ;;
+  esac
+}
+
+echo "=== Résumé UOATBX ==="
+
+# U
+ts=$(sqlite3 /opt/scalp/project/data/u.db "SELECT MAX(ts) FROM top_scores;")
+count=$(sqlite3 /opt/scalp/project/data/u.db "SELECT COUNT(*) FROM top_scores;")
+age=$((now - ts))
+ts_fmt=$(fmt_ts "$ts")
+u_flag=$([[ "$count" -ge 100 && "$age" -le 7200 ]] && echo "✅" || echo "❌")
+echo "U : 📦 : $count - 🕒 : $ts_fmt $u_flag"
+
+# O
+for tf in 5m 15m 30m; do
+  tf_secs=$(tf_to_secs "$tf")
+  max_age=$((tf_secs + 5))
+  count=$(sqlite3 /opt/scalp/project/data/a.db "SELECT COUNT(*) FROM ohlcv_$tf;" 2>/dev/null || echo "0")
+  ts=$(sqlite3 /opt/scalp/project/data/a.db "SELECT MAX(ts) FROM ohlcv_$tf;" 2>/dev/null || echo "0")
+  ts_fmt=$(fmt_ts "$ts")
+  age=$((now - ts))
+  flag=$([[ "$count" -ge 2800 && "$age" -le "$max_age" ]] && echo "✅" || echo "❌")
+  echo "O : $tf : $count - 🕒 : $ts_fmt $flag"
+done
+
+# A
+a_db=/opt/scalp/project/data/a.db
+a_ctx=$(sqlite3 "$a_db" "SELECT ctx, COUNT(*) FROM contexts_A GROUP BY ctx;" 2>/dev/null)
+a_ctx_total=$(echo "$a_ctx" | awk '{sum+=$2} END {print sum}')
+a_syms=$(sqlite3 "$a_db" "SELECT COUNT(DISTINCT symbol) FROM contexts_A;" 2>/dev/null || echo "0")
+o_syms=$(sqlite3 "$a_db" "SELECT COUNT(DISTINCT symbol) FROM ohlcv_5m;" 2>/dev/null || echo "0")
+a_flag=$([[ "$a_syms" -le "$o_syms" ]] && echo "✅" || echo "❌")
+ctx_text=$(echo "$a_ctx" | tr '\n' ' ' | sed 's/  */ /g')
+ctx_flag=$([[ "$a_ctx_total" -eq "$a_syms" ]] && echo "✅" || echo "❌")
+echo "A : symbols : $a_syms/$o_syms $a_flag"
+echo "A : $ctx_text $ctx_flag"
+
+# T
+t_syms=$(sqlite3 /opt/scalp/project/data/t.db "SELECT COUNT(DISTINCT symbol) FROM ticks;" 2>/dev/null || echo "0")
+t_flag=$([[ "$t_syms" -eq "$a_syms" ]] && echo "✅" || echo "❌")
+t_pct=$(( t_syms * 100 / a_syms ))
+echo "T : symbols : $t_syms/$a_syms $t_flag ($t_pct%)"
+
+# B
+for tbl in signals_B_plan signals_B; do
+  b_count=$(sqlite3 /opt/scalp/project/data/scalp.db "SELECT COUNT(DISTINCT symbol) FROM $tbl;" 2>/dev/null || echo "0")
+  b_ts=$(sqlite3 /opt/scalp/project/data/scalp.db "SELECT MAX(ts) FROM $tbl;" 2>/dev/null || echo "0")
+  b_ts_fmt=$(fmt_ts "$b_ts")
+  b_age=$((now - b_ts))
+  b_flag=$([[ "$b_count" -eq "$a_syms" && "$b_age" -le 7200 ]] && echo "✅" || echo "❌")
+  echo "B-$tbl : symbols : $b_count/$a_syms - 🕒 : $b_ts_fmt $b_flag"
+done
+
+# X
+x_db=/opt/scalp/project/data/x.db
+x_acc=$(sqlite3 "$x_db" "SELECT COUNT(*) FROM account_sim;" 2>/dev/null || echo "0")
+x_acc_ts=$(sqlite3 "$x_db" "SELECT MAX(ts) FROM account_sim;" 2>/dev/null || echo "0")
+x_acc_fmt=$(fmt_ts "$x_acc_ts")
+x_acc_age=$((now - x_acc_ts))
+x_acc_flag=$([[ "$x_acc" -ge 1 && "$x_acc_age" -le 86400 ]] && echo "✅" || echo "❌")
+echo "X-acct : 📦 : $x_acc - 🕒 : $x_acc_fmt $x_acc_flag"
+
+x_pos_ts=$(sqlite3 "$x_db" "SELECT MAX(ts) FROM positions_open;" 2>/dev/null || echo "0")
+x_trd_ts=$(sqlite3 "$x_db" "SELECT MAX(ts) FROM trades_closed;" 2>/dev/null || echo "0")
+x_pos_fmt=$(fmt_ts "$x_pos_ts")
+x_trd_fmt=$(fmt_ts "$x_trd_ts")
+x_pnl_open=$(sqlite3 "$x_db" "SELECT ROUND(SUM(pnl), 2) FROM positions_open;" 2>/dev/null || echo "0")
+x_pnl_closed=$(sqlite3 "$x_db" "SELECT ROUND(SUM(pnl), 2) FROM trades_closed;" 2>/dev/null || echo "0")
+
+x_ord=$(sqlite3 "$x_db" "SELECT COUNT(*) FROM orders_sim;" 2>/dev/null || echo "0")
+x_pos=$(sqlite3 "$x_db" "SELECT COUNT(*) FROM positions_open;" 2>/dev/null || echo "0")
+x_trd=$(sqlite3 "$x_db" "SELECT COUNT(*) FROM trades_closed;" 2>/dev/null || echo "0")
+
+echo "X-orders : $x_ord | open : $x_pos ($x_pos_fmt) | closed : $x_trd ($x_trd_fmt)"
+echo "X-PNL : flottant = $x_pnl_open | réalisé = $x_pnl_closed"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/health_universe.sh
+Size: 453
+MTime: 2025-10-09 19:35:45.191683146 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+DB="${DB:-/opt/scalp/project/data/u.db}"
+sqlite3 -tabs "$DB" "
+WITH last AS (
+  SELECT run_id, finished_at, count, reason
+  FROM universe_runs WHERE status='published'
+  ORDER BY finished_at DESC LIMIT 1
+)
+SELECT 'run_id', run_id FROM last
+UNION ALL SELECT 'finished_at', finished_at FROM last
+UNION ALL SELECT 'count', count FROM last
+UNION ALL SELECT 'available_now', (SELECT COUNT(*) FROM v_universe_current);
+"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/build_x_stats.sh
+Size: 2811
+MTime: 2025-10-10 16:18:18.804102884 +0200
+----- CONTENT -----
+#!/usr/bin/env sh
+set -eu
+XDB="${XDB:-/opt/scalp/project/data/x.db}"
+
+sqlite3 "$XDB" <<'SQL'
+.headers on
+.mode tabs
+PRAGMA busy_timeout=15000;
+
+-- tables temporaires
+DROP TABLE IF EXISTS _t_all;
+CREATE TEMP TABLE _t_all AS
+SELECT symbol, reason, pnl, ret_pct, exit_ts FROM x_trades;
+
+DROP TABLE IF EXISTS _t_30;
+CREATE TEMP TABLE _t_30 AS
+SELECT * FROM _t_all
+WHERE exit_ts >= strftime('%s','now') - 30*86400;
+
+-- par symbole
+DROP TABLE IF EXISTS _sym;
+CREATE TEMP TABLE _sym AS
+SELECT
+  symbol,
+  COUNT(*) AS n,
+  SUM(CASE WHEN pnl>0 THEN 1 ELSE 0 END) AS wins,
+  ROUND(SUM(CASE WHEN pnl>0 THEN pnl ELSE 0 END)*1.0
+        / NULLIF(ABS(SUM(CASE WHEN pnl<0 THEN pnl ELSE 0 END)),0),2) AS pf,
+  ROUND(AVG(pnl),2) AS exp_pnl,
+  ROUND(AVG(ret_pct),2) AS avg_ret
+FROM _t_all
+GROUP BY symbol;
+
+DROP TABLE IF EXISTS _sym30;
+CREATE TEMP TABLE _sym30 AS
+SELECT
+  symbol,
+  COUNT(*) AS n30,
+  ROUND(SUM(CASE WHEN pnl>0 THEN 1 ELSE 0 END)*1.0/COUNT(*),2) AS win_rate30,
+  ROUND(SUM(CASE WHEN pnl>0 THEN pnl ELSE 0 END)*1.0
+        / NULLIF(ABS(SUM(CASE WHEN pnl<0 THEN pnl ELSE 0 END)),0),2) AS pf30,
+  ROUND(AVG(pnl),2) AS exp30
+FROM _t_30
+GROUP BY symbol;
+
+INSERT OR REPLACE INTO x_stats_symbol(symbol,n,wins,win_rate,pf,exp_pnl,avg_ret,
+                                      n30,win_rate30,pf30,exp30)
+SELECT s.symbol,
+       s.n,
+       s.wins,
+       ROUND(s.wins*1.0/NULLIF(s.n,0),2),
+       s.pf,
+       s.exp_pnl,
+       s.avg_ret,
+       COALESCE(s30.n30,0),
+       COALESCE(s30.win_rate30,0),
+       COALESCE(s30.pf30,0),
+       COALESCE(s30.exp30,0)
+FROM _sym s
+LEFT JOIN _sym30 s30 USING(symbol);
+
+-- par raison
+DROP TABLE IF EXISTS _rsn;
+CREATE TEMP TABLE _rsn AS
+SELECT
+  reason,
+  COUNT(*) AS n,
+  SUM(CASE WHEN pnl>0 THEN 1 ELSE 0 END) AS wins,
+  ROUND(SUM(CASE WHEN pnl>0 THEN pnl ELSE 0 END)*1.0
+        / NULLIF(ABS(SUM(CASE WHEN pnl<0 THEN pnl ELSE 0 END)),0),2) AS pf,
+  ROUND(AVG(pnl),2) AS exp_pnl,
+  ROUND(AVG(ret_pct),2) AS avg_ret
+FROM _t_all
+GROUP BY reason;
+
+INSERT OR REPLACE INTO x_stats_reason(reason,n,wins,win_rate,pf,exp_pnl,avg_ret,med_ret)
+SELECT reason,
+       n,
+       wins,
+       ROUND(wins*1.0/NULLIF(n,0),2),
+       pf,
+       exp_pnl,
+       avg_ret,
+       NULL
+FROM _rsn;
+
+-- par symbole+raison
+DROP TABLE IF EXISTS _sr;
+CREATE TEMP TABLE _sr AS
+SELECT
+  symbol,
+  reason,
+  COUNT(*) AS n,
+  SUM(CASE WHEN pnl>0 THEN 1 ELSE 0 END) AS wins,
+  ROUND(SUM(CASE WHEN pnl>0 THEN pnl ELSE 0 END)*1.0
+        / NULLIF(ABS(SUM(CASE WHEN pnl<0 THEN pnl ELSE 0 END)),0),2) AS pf,
+  ROUND(AVG(pnl),2) AS exp_pnl
+FROM _t_all
+GROUP BY symbol,reason;
+
+INSERT OR REPLACE INTO x_stats_symbol_reason(symbol,reason,n,wins,win_rate,pf,exp_pnl)
+SELECT symbol,
+       reason,
+       n,
+       wins,
+       ROUND(wins*1.0/NULLIF(n,0),2),
+       pf,
+       exp_pnl
+FROM _sr;
+SQL
+
+echo "stats built"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/health_a_strict.sh
+Size: 1331
+MTime: 2025-10-10 10:02:24.932261159 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+ADB="/opt/scalp/project/data/a.db"
+UDB="/opt/scalp/project/data/u.db"
+
+retry(){ n=0; until sqlite3 -noheader "$ADB" "$1"; do n=$((n+1)); [ $n -ge 5 ] && return 1; sleep 1; done }
+
+# 1) 35 symboles et ensemble identique à l’univers
+q1=$"ATTACH DATABASE '$UDB' AS udb;
+WITH cur AS (SELECT symbol FROM a_context_state),
+     uni AS (SELECT symbol FROM udb.v_universe_current)
+SELECT (SELECT COUNT(*) FROM cur)||'|'||
+       (SELECT COUNT(*) FROM (SELECT symbol FROM cur EXCEPT SELECT symbol FROM uni))||'|'||
+       (SELECT COUNT(*) FROM (SELECT symbol FROM uni EXCEPT SELECT symbol FROM cur));
+DETACH DATABASE udb;"
+out=$(retry "$q1") || { echo "FAIL: locked"; exit 1; }
+echo "$out" | awk -F'|' '{if($1!=35||$2!=0||$3!=0){print "FAIL: set/count"; exit 1}else{print "OK set/count"}}'
+
+# 2) Probas cohérentes (somme≈1)
+q2=$"SELECT COUNT(*) FROM a_context_state WHERE pb<0 OR ph<0 OR ps<0 OR ABS(pb+ph+ps-1)>0.001;"
+bad=$(retry "$q2") || { echo "FAIL: locked"; exit 1; }
+[ "$bad" = "0" ] || { echo "FAIL: probs invalid"; exit 1; }
+
+# 3) Scores dans bornes larges
+q3=$"SELECT COUNT(*) FROM a_context_state WHERE s IS NULL OR s<-20 OR s>20;"
+bad=$(retry "$q3") || { echo "FAIL: locked"; exit 1; }
+[ "$bad" = "0" ] || { echo "FAIL: scores out-of-range"; exit 1; }
+
+echo "OK: a.db health strict"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/run_X_loop.sh
+Size: 148
+MTime: 2025-10-10 14:55:46.354624015 +0200
+----- CONTENT -----
+#!/usr/bin/env sh
+set -eu
+/opt/scalp/project/bin/x_from_signals.sh
+/opt/scalp/project/bin/x_paper_match.sh
+/opt/scalp/project/bin/check_x_health.sh
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/plan_rule_sma.sh
+Size: 1042
+MTime: 2025-10-10 13:34:57.701550116 +0200
+----- CONTENT -----
+#!/usr/bin/env sh
+set -eu
+BDB="/opt/scalp/project/data/b.db"
+
+# Sanity
+echo "BDB=$BDB"
+sqlite3 "$BDB" "PRAGMA busy_timeout=12000;"
+
+echo "schema v_indic_1m:"
+sqlite3 "$BDB" ".schema v_indic_1m" || { echo "v_indic_1m absente"; exit 1; }
+
+echo "sample v_indic_1m:"
+sqlite3 "$BDB" -tabs "SELECT symbol,ts,ROUND(sma9,6) sma9,ROUND(sma21,6) sma21,ROUND(close,6) close FROM v_indic_1m ORDER BY ts DESC LIMIT 5;"
+
+# Insert rule_sma
+sqlite3 "$BDB" <<'SQL'
+PRAGMA busy_timeout=12000;
+INSERT INTO signals_B_plan(symbol,ctx,score,side,entry,sl,tp,qty,margin,notional,created_ts)
+SELECT i.symbol,'rule_sma',ABS(i.sma9-i.sma21),
+       CASE WHEN i.sma9>i.sma21 THEN 'BUY' ELSE 'SELL' END,
+       i.close, i.close*0.98, i.close*1.02, 0,0,0, strftime('%s','now')
+FROM v_indic_1m i
+JOIN (SELECT symbol, MAX(ts) ts FROM v_indic_1m GROUP BY symbol) lb
+ON lb.symbol=i.symbol AND lb.ts=i.ts;
+SQL
+
+echo "counts:"
+sqlite3 "$BDB" "SELECT COUNT(*) AS signals_B_plan FROM signals_B_plan;"
+sqlite3 "$BDB" -tabs "SELECT * FROM signals_B_plan ORDER BY id DESC LIMIT 5;"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/check_b_signals.sh
+Size: 471
+MTime: 2025-10-11 14:23:48.028744063 +0200
+----- CONTENT -----
+#!/bin/bash
+set -e
+
+a_syms=$(sqlite3 /opt/scalp/project/data/a.db "SELECT DISTINCT symbol FROM contexts_A ORDER BY symbol;")
+echo "=== 🔍 Symboles (A) : $(echo "$a_syms" | wc -l)"
+
+for tbl in signals_B_plan signals_B; do
+  echo -e "\n=== 📦 $tbl ==="
+  b_syms=$(sqlite3 /opt/scalp/project/data/scalp.db "SELECT DISTINCT symbol FROM $tbl ORDER BY symbol;" 2>/dev/null || echo "")
+  echo "$b_syms"
+  b_count=$(echo "$b_syms" | wc -l)
+  echo "➤ Total : $b_count"
+done
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/mark_o_final.sh
+Size: 1470
+MTime: 2025-10-10 09:18:03.348090249 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="/opt/scalp/project"
+ADB="$ROOT/data/a.db"
+UDB="$ROOT/data/u.db"
+VER="${VER:?specify VER, ex: VER=ohlcv-2025-10-10T12-00Z}"
+
+# Vérif stricte avant marquage
+/opt/scalp/project/bin/health_o_strict.sh >/dev/null
+
+sqlite3 "$ADB" <<SQL
+PRAGMA busy_timeout=8000;
+CREATE TABLE IF NOT EXISTS o_final_marks(
+  version TEXT NOT NULL,
+  tf TEXT NOT NULL,
+  max_ts INTEGER NOT NULL,
+  symbols INTEGER NOT NULL,
+  rows_per_symbol INTEGER NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY(version, tf)
+);
+
+ATTACH DATABASE '$UDB' AS udb;
+
+INSERT OR REPLACE INTO o_final_marks(version, tf, max_ts, symbols, rows_per_symbol)
+SELECT '$VER','5m',
+       (SELECT MAX(ts) FROM ohlcv_5m),
+       (SELECT COUNT(DISTINCT symbol) FROM ohlcv_5m WHERE symbol IN (SELECT symbol FROM udb.v_universe_current)),
+       100;
+
+INSERT OR REPLACE INTO o_final_marks(version, tf, max_ts, symbols, rows_per_symbol)
+SELECT '$VER','15m',
+       (SELECT MAX(ts) FROM ohlcv_15m),
+       (SELECT COUNT(DISTINCT symbol) FROM ohlcv_15m WHERE symbol IN (SELECT symbol FROM udb.v_universe_current)),
+       100;
+
+INSERT OR REPLACE INTO o_final_marks(version, tf, max_ts, symbols, rows_per_symbol)
+SELECT '$VER','30m',
+       (SELECT MAX(ts) FROM ohlcv_30m),
+       (SELECT COUNT(DISTINCT symbol) FROM ohlcv_30m WHERE symbol IN (SELECT symbol FROM udb.v_universe_current)),
+       100;
+
+DETACH DATABASE udb;
+SQL
+
+echo "Final OHLCV marked: $VER"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/health_a_db.sh
+Size: 820
+MTime: 2025-10-10 10:02:24.932261159 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+ADB="/opt/scalp/project/data/a.db"
+
+echo "== coverage a_signals =="
+sqlite3 -tabs "$ADB" "
+SELECT COUNT(DISTINCT symbol), COUNT(*)/COUNT(DISTINCT symbol)
+FROM a_signals;
+"
+
+echo "== context repartition =="
+sqlite3 -tabs "$ADB" "
+SELECT ctx, COUNT(*) FROM a_context_state GROUP BY ctx;
+"
+
+echo "== extremes =="
+sqlite3 -tabs "$ADB" "
+SELECT MIN(s), MAX(s), AVG(s) FROM a_context_state;
+"
+
+echo "== sample top5 bullish/bearish =="
+sqlite3 -tabs "$ADB" "
+SELECT symbol,s,pb,ps,ctx
+FROM a_context_state
+ORDER BY s DESC LIMIT 5;
+"
+sqlite3 -tabs "$ADB" "
+SELECT symbol,s,pb,ps,ctx
+FROM a_context_state
+ORDER BY s ASC LIMIT 5;
+"
+
+echo "== consistency check =="
+sqlite3 "$ADB" "
+SELECT CASE
+  WHEN COUNT(*)=35 THEN 'OK: 35 symbols'
+  ELSE 'FAIL: count mismatch' END
+FROM a_context_state;
+"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/check_t_db.sh
+Size: 278
+MTime: 2025-10-11 14:17:48.024565565 +0200
+----- CONTENT -----
+#!/bin/bash
+db="/opt/scalp/project/data/t.db"
+
+echo "=== 📋 Tables dans t.db ==="
+sqlite3 "$db" ".tables"
+
+echo -e "\n=== 🔍 Symboles distincts dans ticks ==="
+sqlite3 "$db" "SELECT symbol FROM ticks GROUP BY symbol ORDER BY symbol;" 2>/dev/null || echo "ticks absente ❌"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/tick_gate_B.sh
+Size: 602
+MTime: 2025-10-10 14:15:29.323998716 +0200
+----- CONTENT -----
+#!/usr/bin/env sh
+set -eu
+: "${BDB:=/opt/scalp/project/data/b.db}"
+LASTF="/opt/scalp/project/data/.last_ts_5m"
+CUR_TS="$(sqlite3 "$BDB" "SELECT COALESCE(MAX(ts),0) FROM v_indic5m_fast;")"
+PREV_TS="0"; [ -f "$LASTF" ] && PREV_TS="$(cat "$LASTF" 2>/dev/null || echo 0)"
+NOW="$(date +%s)"; [ $((NOW-CUR_TS)) -gt 900 ] && { echo "skip: fast5 stale"; exit 0; }
+[ "$CUR_TS" -le "$PREV_TS" ] && { echo "skip: no new fast tick"; exit 0; }
+[ -x /opt/scalp/project/bin/analyse_B_sql.sh ] && BDB="$BDB" /opt/scalp/project/bin/analyse_B_sql.sh || true
+echo "$CUR_TS" > "$LASTF"
+echo "B déclenché sur ts=$CUR_TS"
+----- FILE END -----
+=== Export /opt/scalp/project/data/a.db → /opt/scalp/dump/scalp_db_20251011_172215.sql
+=== Export /opt/scalp/project/data/b.db → /opt/scalp/dump/scalp_db_20251011_172215.sql
+=== Export /opt/scalp/project/data/o.db → /opt/scalp/dump/scalp_db_20251011_172215.sql
+=== Export /opt/scalp/project/data/scalp.db → /opt/scalp/dump/scalp_db_20251011_172215.sql
+=== Export /opt/scalp/project/data/t.db → /opt/scalp/dump/scalp_db_20251011_172215.sql
+=== Export /opt/scalp/project/data/u.db → /opt/scalp/dump/scalp_db_20251011_172215.sql
+=== Export /opt/scalp/project/data/x.db → /opt/scalp/dump/scalp_db_20251011_172215.sql
+Export DB global créé: /opt/scalp/dump/scalp_db_20251011_172215.sql
