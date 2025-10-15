@@ -1,0 +1,1436 @@
+# Scalp Project Code Dump
+# Generated: 2025-10-15 15:35:26 UTC
+# Root: /opt/scalp
+# Caps: 512KB/file, max 4000 files
+# Exclusions: hidden, .git, __pycache__, venv/.venv, var, logs, data, reports, dump
+# Extensions: py, pyi, sh, bash, ini, cfg, conf, toml, yaml/yml, md, txt, sql, json, csv
+
+========== TREE (size, mtime) ==========
+/opt/scalp/PIPE_SYSTEMD_SETUP.sh                                                          5098  2025-10-15 11:40:08.539128295 +0200
+/opt/scalp/project/bin/check_t.sh                                                          338  2025-10-15 15:21:51.159000715 +0200
+/opt/scalp/project/bin/health_check.sh                                                    2978  2025-10-15 17:29:21.434130673 +0200
+/opt/scalp/project/bin/run_ob_b_x.sh                                                       167  2025-10-15 11:34:11.926464671 +0200
+/opt/scalp/project/bin/run_u_oa_a.sh                                                       168  2025-10-15 11:34:11.914464661 +0200
+/opt/scalp/project/bin/run_ws.sh                                                           114  2025-10-15 11:34:11.934464679 +0200
+/opt/scalp/project/bin/sync_all.sh                                                        1146  2025-10-15 17:32:25.638775353 +0200
+/opt/scalp/project/scripts/a_analyze.py                                                   2213  2025-10-15 11:34:11.890464639 +0200
+/opt/scalp/project/scripts/analyze_A.py                                                   3301  2025-10-15 14:34:29.318454625 +0200
+/opt/scalp/project/scripts/b_analyze.py                                                   2716  2025-10-15 11:51:18.034767926 +0200
+/opt/scalp/project/scripts/check_ob_coherence.py                                           798  2025-10-15 14:48:46.935838710 +0200
+/opt/scalp/project/scripts/fetch_tf_ohlcv_A.py                                            2561  2025-10-15 13:20:24.765563545 +0200
+/opt/scalp/project/scripts/fetch_tf_ohlcv_OB.py                                           2739  2025-10-15 14:45:05.087509691 +0200
+/opt/scalp/project/scripts/oa_fetch.py                                                    1121  2025-10-15 11:34:11.886464636 +0200
+/opt/scalp/project/scripts/ob_fetch.py                                                    1141  2025-10-15 11:34:11.898464647 +0200
+/opt/scalp/project/scripts/t_ws.py                                                        2753  2025-10-15 11:34:11.890464639 +0200
+/opt/scalp/project/scripts/u_select.py                                                    1685  2025-10-15 13:01:16.441523075 +0200
+/opt/scalp/project/scripts/ws_bitget_test.py                                               898  2025-10-15 16:36:22.196957753 +0200
+/opt/scalp/project/scripts/ws_test_single.sh                                               696  2025-10-15 15:11:26.480223134 +0200
+/opt/scalp/project/scripts/ws_ticks.py                                                    4723  2025-10-15 17:13:22.115777155 +0200
+/opt/scalp/project/scripts/ws_ticks_patch.py                                               758  2025-10-15 15:54:54.813172040 +0200
+/opt/scalp/project/scripts/x_paper.py                                                     3049  2025-10-15 11:51:18.038768111 +0200
+
+========== TOP 10 BIGGEST FILES ==========
+/opt/scalp/PIPE_SYSTEMD_SETUP.sh                                                          5098
+/opt/scalp/project/scripts/ws_ticks.py                                                    4723
+/opt/scalp/project/scripts/analyze_A.py                                                   3301
+/opt/scalp/project/scripts/x_paper.py                                                     3049
+/opt/scalp/project/bin/health_check.sh                                                    2978
+/opt/scalp/project/scripts/t_ws.py                                                        2753
+/opt/scalp/project/scripts/fetch_tf_ohlcv_OB.py                                           2739
+/opt/scalp/project/scripts/b_analyze.py                                                   2716
+/opt/scalp/project/scripts/fetch_tf_ohlcv_A.py                                            2561
+/opt/scalp/project/scripts/a_analyze.py                                                   2213
+
+========== CONCAT CONTENT ==========
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/a_analyze.py
+Size: 2213
+MTime: 2025-10-15 11:34:11.890464639 +0200
+----- CONTENT -----
+import time, sqlite3, math, json
+ADB="data/a.db"
+# pondérations TF
+W5, W15, W30 = 0.2, 0.3, 0.5
+TAU=1.5 # température softmax
+
+def ema(vals, n):
+    k=2/(n+1)
+    e=None
+    for v in vals:
+        e = v if e is None else (v*k + e*(1-k))
+    return e if e is not None else 0.0
+
+def load_close(conn, table, instId, n=50):
+    rows=list(conn.execute(f"SELECT c FROM {table} WHERE instId=? ORDER BY ts DESC LIMIT ?", (instId,n)))
+    return [r[0] for r in rows][::-1]
+
+def score_ctx(cs):
+    # signal scalaire par TF via pentes EMA
+    if len(cs)<20: return 0.0
+    s_fast = ema(cs[-10:], 5)
+    s_slow = ema(cs[-20:],10)
+    d = (s_fast - s_slow)/max(1e-9, s_slow)
+    return d
+
+def softmax3(x_buy, x_hold, x_sell, tau=TAU):
+    exps=[math.exp(x/tau) for x in (x_buy, x_hold, x_sell)]
+    s=sum(exps); 
+    return [e/s for e in exps]
+
+def decide(inst, c5, c15, c30):
+    s5  = score_ctx(c5)
+    s15 = score_ctx(c15)
+    s30 = score_ctx(c30)
+    x = W5*s5 + W15*s15 + W30*s30
+    # map vers 3 classes: buy (x), hold (-|x|), sell (-x)
+    p_buy, p_hold, p_sell = softmax3(x, -abs(x)*0.5, -x)
+    ctx = "buy" if p_buy>max(p_hold,p_sell) else ("sell" if p_sell>max(p_buy,p_hold) else ("hold" if max(p_buy,p_sell)<0.45 else "none"))
+    score_A = (p_buy - p_sell) # [-1..1] centré
+    return ctx, p_buy, p_hold, p_sell, score_A
+
+def run():
+    with sqlite3.connect(ADB) as c:
+        c.execute("PRAGMA busy_timeout=8000")
+        syms=[r[0] for r in c.execute("SELECT DISTINCT instId FROM ohlcv_5m")]
+        now=int(time.time())
+        for s in syms:
+            c5  = load_close(c,"ohlcv_5m", s, 50)
+            c15 = load_close(c,"ohlcv_15m",s, 50)
+            c30 = load_close(c,"ohlcv_30m",s, 50)
+            if not c5 or not c15 or not c30: continue
+            ctx,pb,ph,ps,scoreA = decide(s,c5,c15,c30)
+            det=json.dumps({"s5":c5[-1],"s15":c15[-1],"s30":c30[-1]})
+            ts = int(time.time()//300*300) # align 5m
+            c.execute("""INSERT OR REPLACE INTO contexts_A(instId,ts,ctx,p_buy,p_hold,p_sell,score_A,details,updated_ts)
+                         VALUES(?,?,?,?,?,?,?,?,?)""",(s,ts,ctx,pb,ph,ps,scoreA,det,now))
+        c.commit()
+
+if __name__=="__main__":
+    run(); print("A: ok")
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/fetch_tf_ohlcv_A.py
+Size: 2561
+MTime: 2025-10-15 13:20:24.765563545 +0200
+----- CONTENT -----
+#!/usr/bin/env python3
+import os, time, ccxt, sqlite3, threading
+
+ROOT = "/opt/scalp/project"
+UDB = f"{ROOT}/data/u.db"
+ADB = f"{ROOT}/data/a.db"
+LIMIT = int(os.getenv("OA_LIMIT", "150"))
+EX = ccxt.bitget()
+TF_SECONDS = {"5m": 300, "15m": 900, "30m": 1800}
+
+
+def wait_tf_boundary(tf_sec):
+    now = int(time.time())
+    wait = tf_sec - (now % tf_sec) + 1
+    if wait < tf_sec:
+        print(f"[{tf_sec}s] ⏳ attente {wait}s avant synchro...")
+        time.sleep(wait)
+
+
+def last_ts(conn, table, instId):
+    r = conn.execute(f"SELECT MAX(ts) FROM {table} WHERE instId=?", (instId,)).fetchone()
+    return r[0] or 0
+
+
+def save_rows(conn, table, instId, candles):
+    rows = [
+        (instId, int(c[0] // 1000), c[1], c[2], c[3], c[4], c[5])
+        for c in candles
+    ]
+    conn.executemany(
+        f"INSERT OR REPLACE INTO {table}(instId,ts,o,h,l,c,v) VALUES(?,?,?,?,?,?,?)",
+        rows,
+    )
+
+
+def purge_old(conn, table, instId, limit, tf):
+    tf_sec = TF_SECONDS[tf]
+    cutoff = int(time.time()) - limit * tf_sec
+    conn.execute(f"DELETE FROM {table} WHERE instId=? AND ts < ?", (instId, cutoff))
+
+
+def fetch_new(pair, tf, since):
+    try:
+        return EX.fetch_ohlcv(pair, tf, limit=LIMIT, since=since * 1000 if since else None)
+    except Exception as e:
+        print(f"{pair} {tf} err: {e}")
+        return []
+
+
+def worker(tf, table, syms):
+    tf_sec = TF_SECONDS[tf]
+    while True:
+        wait_tf_boundary(tf_sec)
+        with sqlite3.connect(ADB) as ca:
+            ca.execute("PRAGMA busy_timeout=8000")
+            for sym in syms:
+                pair = sym.replace("USDT", "/USDT")
+                since = last_ts(ca, table, sym)
+                candles = fetch_new(pair, tf, since)
+                if not candles:
+                    continue
+                save_rows(ca, table, sym, candles)
+                purge_old(ca, table, sym, LIMIT, tf)
+            ca.commit()
+        print(f"OA-{tf}: ok ({len(syms)} pairs)")
+        sleep_time = tf_sec - (int(time.time()) % tf_sec) + 1
+        time.sleep(sleep_time)
+
+
+def run():
+    with sqlite3.connect(UDB) as cu:
+        cu.execute("PRAGMA busy_timeout=8000")
+        syms = [r[0] for r in cu.execute("SELECT instId FROM u_syms ORDER BY rank")]
+
+    for tf, table in (("5m", "ohlcv_5m"), ("15m", "ohlcv_15m"), ("30m", "ohlcv_30m")):
+        threading.Thread(target=worker, args=(tf, table, syms), daemon=True).start()
+
+    print("OA: threads 5m/15m/30m lancés (maj incrémentale + purge + synchro)")
+    while True:
+        time.sleep(3600)
+
+
+if __name__ == "__main__":
+    run()
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/t_ws.py
+Size: 2753
+MTime: 2025-10-15 11:34:11.890464639 +0200
+----- CONTENT -----
+import asyncio, time, ujson as json, websockets, sqlite3, random
+TDB="data/t.db"
+URI="wss://ws.bitget.com/mix/v1/stream?compress=false"
+INST_TYPES=["USDT-FUTURES","UMCBL","umcbl"]  # fallback
+
+def now_ms(): return int(time.time()*1000)
+
+def load_targets():
+    # On écoute les coins présents dans v_contexts_A_latest
+    with sqlite3.connect("data/a.db") as ca:
+        ca.execute("PRAGMA busy_timeout=8000")
+        return [r[0] for r in ca.execute("SELECT instId FROM v_contexts_A_latest")]
+
+async def subscribe(ws, inst_type, syms):
+    args=[{"instType":inst_type,"channel":"ticker","instId":s} for s in syms]
+    await ws.send(json.dumps({"op":"subscribe","args":args}))
+
+async def run_once():
+    syms = load_targets()
+    if not syms: 
+        await asyncio.sleep(2); return
+    for inst in INST_TYPES:
+        try:
+            async with websockets.connect(URI, ping_interval=20, ping_timeout=20, close_timeout=5, max_size=2**20) as ws:
+                await subscribe(ws, inst, syms)
+                async for msg in ws:
+                    try:
+                        data = json.loads(msg)
+                    except: 
+                        continue
+                    # error channel => fallback
+                    if isinstance(data, dict) and data.get("event")=="error":
+                        raise RuntimeError(data)
+                    if isinstance(data, dict) and data.get("topic","").endswith("ticker"):
+                        # bitget format v1/v2 varie: on gère 1 ticker
+                        arg=data.get("arg",{})
+                        instId=arg.get("instId")
+                        for tick in data.get("data",[]):
+                            lastPr=float(tick.get("last","0") or tick.get("lastPr","0") or 0)
+                            bidPr=float(tick.get("bidPr","0") or 0)
+                            askPr=float(tick.get("askPr","0") or 0)
+                            bidSz=float(tick.get("bidSz","0") or 0)
+                            askSz=float(tick.get("askSz","0") or 0)
+                            ts_ms=int(tick.get("ts","0") or tick.get("ts_ms","0") or now_ms())
+                            with sqlite3.connect(TDB) as ct:
+                                ct.execute("PRAGMA busy_timeout=8000")
+                                ct.execute("""INSERT OR REPLACE INTO ticks(instId,lastPr,bidPr,askPr,bidSz,askSz,ts_ms)
+                                              VALUES(?,?,?,?,?,?,?)""",(instId,lastPr,bidPr,askPr,bidSz,askSz,ts_ms))
+                                ct.commit()
+                return
+        except Exception as e:
+            await asyncio.sleep(1.5)
+            continue
+
+async def main():
+    while True:
+        await run_once()
+
+if __name__=="__main__":
+    asyncio.run(main())
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/analyze_A.py
+Size: 3301
+MTime: 2025-10-15 14:34:29.318454625 +0200
+----- CONTENT -----
+#!/usr/bin/env python3
+import sqlite3, numpy as np, time, os
+
+ROOT = "/opt/scalp/project"
+ADB = f"{ROOT}/data/a.db"
+UDB = f"{ROOT}/data/u.db"
+
+# pondérations des TF pour cohérence
+WEIGHTS = {"5m": 0.2, "15m": 0.3, "30m": 0.5}
+TF_TABLES = {"5m": "ohlcv_5m", "15m": "ohlcv_15m", "30m": "ohlcv_30m"}
+
+def slope(series):
+    """pente relative par rapport au dernier close"""
+    if len(series) < 2:
+        return 0.0
+    x = np.arange(len(series))
+    y = np.array(series, dtype=float)
+    a, _ = np.polyfit(x, y, 1)
+    ref = y[-1] or 1
+    return float(a / ref)
+
+def context_from_slope(v):
+    """détermine un contexte brut (plus sensible)"""
+    if v > 0.0005:
+        return "buy"
+    if v < -0.0005:
+        return "sell"
+    return "hold"
+
+def analyze_context():
+    now = int(time.time())
+    with sqlite3.connect(UDB) as cu, sqlite3.connect(ADB) as ca:
+        cu.execute("PRAGMA busy_timeout=8000")
+        ca.execute("PRAGMA busy_timeout=8000")
+
+        # récupère liste des coins et score_U
+        syms = [r[0] for r in cu.execute("SELECT instId FROM u_syms ORDER BY rank")]
+        cols = [c[1] for c in cu.execute("PRAGMA table_info(u_syms);")]
+        col_scoreU = "score_U" if "score_U" in cols else "score"
+        scoresU = dict(cu.execute(f"SELECT instId, {col_scoreU} FROM u_syms"))
+
+        # table contexts_A
+        ca.execute("""
+        CREATE TABLE IF NOT EXISTS contexts_A (
+            instId TEXT PRIMARY KEY,
+            ctx_5m TEXT,
+            ctx_15m TEXT,
+            ctx_30m TEXT,
+            ctx_final TEXT,
+            score_A REAL,
+            score_U REAL,
+            updated_ts INTEGER
+        );
+        """)
+
+        for sym in syms:
+            ctxs, slopes = {}, {}
+            for tf, tbl in TF_TABLES.items():
+                closes = [r[0] for r in ca.execute(
+                    f"SELECT c FROM {tbl} WHERE instId=? ORDER BY ts DESC LIMIT 50", (sym,)
+                )]
+                closes = closes[::-1]
+                if not closes:
+                    continue
+                s = slope(closes)
+                slopes[tf] = s
+                ctxs[tf] = context_from_slope(s)
+
+            if not ctxs:
+                continue
+
+            votes = list(ctxs.values())
+            ctx_final = max(set(votes), key=votes.count)
+            agreement = sum(WEIGHTS[tf] for tf, c in ctxs.items() if c == ctx_final)
+            score_A = round(10 * agreement, 2)
+
+            ca.execute("""
+            INSERT INTO contexts_A(instId,ctx_5m,ctx_15m,ctx_30m,ctx_final,score_A,score_U,updated_ts)
+            VALUES(?,?,?,?,?,?,?,?)
+            ON CONFLICT(instId) DO UPDATE SET
+              ctx_5m=excluded.ctx_5m,
+              ctx_15m=excluded.ctx_15m,
+              ctx_30m=excluded.ctx_30m,
+              ctx_final=excluded.ctx_final,
+              score_A=excluded.score_A,
+              score_U=excluded.score_U,
+              updated_ts=excluded.updated_ts
+            """, (
+                sym,
+                ctxs.get("5m"),
+                ctxs.get("15m"),
+                ctxs.get("30m"),
+                ctx_final,
+                score_A,
+                scoresU.get(sym, 0.0),
+                now,
+            ))
+
+        ca.commit()
+    print(f"A: ok ({len(syms)} coins analysés)")
+
+if __name__ == "__main__":
+    analyze_context()
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/ws_ticks.py
+Size: 4723
+MTime: 2025-10-15 17:13:22.115777155 +0200
+----- CONTENT -----
+#!/usr/bin/env python3
+import asyncio, websockets, ujson as json, sqlite3, time, sys, os
+sys.stdout.reconfigure(line_buffering=True)
+
+ROOT = "/opt/scalp/project"
+UDB  = f"{ROOT}/data/u.db"
+TDB  = f"{ROOT}/data/t.db"
+BDB  = f"{ROOT}/data/b.db"
+URI  = "wss://ws.bitget.com/mix/v1/stream?compress=false"
+
+TTL_SEC        = 60          # durée de conservation des ticks
+FLUSH_INTERVAL = 5           # flush toutes les 5s
+GROUP_SIZE     = 10          # nb de paires par WS
+BATCH_MAX      = 500         # taille du buffer avant flush
+
+CREATE_SQL = """
+CREATE TABLE IF NOT EXISTS ticks (
+    instId TEXT PRIMARY KEY,
+    lastPr REAL,
+    bidPr  REAL,
+    askPr  REAL,
+    bidSz  REAL,
+    askSz  REAL,
+    ts_ms  INTEGER
+);
+"""
+
+def push_to_B():
+    """Copie atomique vers b.db"""
+    try:
+        with sqlite3.connect(TDB, timeout=5) as ct, sqlite3.connect(BDB, timeout=5) as cb:
+            cb.execute("""
+            CREATE TABLE IF NOT EXISTS ticks_live (
+                instId TEXT PRIMARY KEY,
+                lastPr REAL,
+                bidPr  REAL,
+                askPr  REAL,
+                bidSz  REAL,
+                askSz  REAL,
+                ts_ms  INTEGER
+            );
+            """)
+            cb.execute("DELETE FROM ticks_live;")
+            for row in ct.execute("SELECT * FROM ticks;"):
+                cb.execute("""
+                INSERT OR REPLACE INTO ticks_live
+                (instId,lastPr,bidPr,askPr,bidSz,askSz,ts_ms)
+                VALUES(?,?,?,?,?,?,?);
+                """, row)
+            cb.commit()
+        print(f"T: pushed to b.db @ {time.strftime('%H:%M:%S')}")
+    except Exception as e:
+        print(f"T: push->B error: {e}")
+
+def save_ticks(batch):
+    """Écrit les ticks en lot et purge les anciens"""
+    if not batch:
+        return
+    try:
+        with sqlite3.connect(TDB, timeout=5) as c:
+            c.execute("PRAGMA busy_timeout=5000")
+            c.execute(CREATE_SQL)
+            c.executemany("""
+            INSERT OR REPLACE INTO ticks(instId,lastPr,bidPr,askPr,bidSz,askSz,ts_ms)
+            VALUES(:instId,:lastPr,:bidPr,:askPr,:bidSz,:askSz,:ts_ms);
+            """, batch)
+            cutoff = int(time.time()*1000) - TTL_SEC*1000
+            c.execute("DELETE FROM ticks WHERE ts_ms < ?", (cutoff,))
+            c.commit()
+        push_to_B()
+    except Exception as e:
+        print(f"T: save error: {e}")
+
+async def get_symbols():
+    with sqlite3.connect(UDB) as c:
+        return [r[0] for r in c.execute("SELECT instId FROM u_syms ORDER BY rank;")]
+
+async def handle_socket(subs):
+    payload = {"op":"subscribe","args":subs}
+    buffer, last_flush = [], time.time()
+    async with websockets.connect(URI, ping_interval=20, ping_timeout=20) as ws:
+        await ws.send(json.dumps(payload))
+        print(f"T: connected ({len(subs)} pairs)")
+        async for msg in ws:
+            try:
+                data = json.loads(msg)
+            except:
+                continue
+            if isinstance(data, dict) and "event" in data:
+                if data["event"] == "error":
+                    print("T: evt error", data)
+                continue
+            if "arg" not in data or "data" not in data:
+                continue
+            try:
+                d = data["data"][0]
+                tick = dict(
+                    instId=data["arg"]["instId"],
+                    lastPr=float(d.get("last",0)),
+                    bidPr=float(d.get("bestBid",0)),
+                    askPr=float(d.get("bestAsk",0)),
+                    bidSz=float(d.get("bidSz",0)),
+                    askSz=float(d.get("bestAskSz",0)),
+                    ts_ms=int(d.get("ts",0)),
+                )
+                buffer.append(tick)
+            except Exception as e:
+                print("T: parse error:", e)
+            now = time.time()
+            if now - last_flush >= FLUSH_INTERVAL or len(buffer) >= BATCH_MAX:
+                print(f"T: flush {len(buffer)} ticks @ {time.strftime('%H:%M:%S')}")
+                save_ticks(buffer)
+                buffer.clear()
+                last_flush = now
+
+async def main():
+    with sqlite3.connect(TDB) as c:
+        c.execute(CREATE_SQL)
+    symbols = await get_symbols()
+    if not symbols:
+        print("T: no symbols found")
+        return
+    groups = [symbols[i:i+GROUP_SIZE] for i in range(0, len(symbols), GROUP_SIZE)]
+    while True:
+        try:
+            await asyncio.gather(*[
+                handle_socket([{"instType":"mc","channel":"ticker","instId":s} for s in g])
+                for g in groups
+            ])
+        except Exception as e:
+            print(f"T: reconnect all sockets ({e})")
+            await asyncio.sleep(5)
+
+if __name__ == "__main__":
+    asyncio.run(main())
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/b_analyze.py
+Size: 2716
+MTime: 2025-10-15 11:51:18.034767926 +0200
+----- CONTENT -----
+import time, sqlite3, json, math
+
+ADB="data/a.db"; ODB="data/ob.db"; TDB="data/t.db"; BDB="data/b.db"
+
+def ema(vals, n):
+    k=2/(n+1); e=None
+    for v in vals:
+        e=v if e is None else (v*k + e*(1-k))
+    return e if e is not None else 0.0
+
+def slope(vals, n=10):
+    if len(vals)<n+1: return 0.0
+    a=ema(vals[-n-1:-1], n//2 or 1)
+    b=ema(vals[-n:],   n//2 or 1)
+    return (b-a)/max(1e-9,a)
+
+def last_closes(conn, table, inst, n):
+    return [r[0] for r in conn.execute(f"SELECT c FROM {table} WHERE instId=? ORDER BY ts DESC LIMIT ?",(inst,n))][::-1]
+
+def last_tick(inst):
+    with sqlite3.connect(TDB) as c:
+        row=c.execute("SELECT lastPr,ts_ms FROM ticks_latest WHERE instId=?",(inst,)).fetchone()
+        return (row[0], row[1]) if row else (None, None)
+
+def ctx_latest(inst):
+    with sqlite3.connect(ADB) as c:
+        row=c.execute("SELECT score_A,ctx FROM v_contexts_A_latest WHERE instId=?",(inst,)).fetchone()
+        return (row[0], row[1]) if row else (0.0,"none")
+
+def emit_signal(inst, side, strength, reason, ctx_score, tf_agree):
+    ts_ms=int(time.time()*1000)
+    with sqlite3.connect(BDB) as cb:
+        cb.execute("PRAGMA busy_timeout=8000")
+        cb.execute("""INSERT OR REPLACE INTO signals_B(instId,ts_ms,side,strength,reason,ctx_score,tf_agree)
+                      VALUES(?,?,?,?,?,?,?)""",(inst,ts_ms,side,strength,json.dumps(reason),ctx_score,tf_agree))
+        cb.commit()
+
+def cycle():
+    with sqlite3.connect(ODB) as co:
+        co.execute("PRAGMA busy_timeout=8000")
+        insts=[r[0] for r in co.execute("SELECT DISTINCT instId FROM ohlcv_5m")]
+        for inst in insts:
+            c1  = last_closes(co,"ohlcv_1m",inst,120)
+            c5  = last_closes(co,"ohlcv_5m",inst,120)
+            c3r = [r[0] for r in co.execute("SELECT c FROM v_ohlcv_3m WHERE instId=? ORDER BY ts DESC LIMIT 120",(inst,))][::-1]
+            if not c1 or not c3r or not c5: continue
+            s1, s3, s5 = slope(c1,14), slope(c3r,14), slope(c5,14)
+            tf_agree = int((s1>0)+(s3>0)+(s5>0)) if abs(s1)+abs(s3)+abs(s5) else 0
+            side = "buy" if tf_agree>=2 else ("sell" if int((s1<0)+(s3<0)+(s5<0))>=2 else None)
+            if not side: continue
+            px, tms = last_tick(inst)
+            if px is None: continue
+            ctx_score, ctx = ctx_latest(inst)
+            strength = min(1.0, max(0.0, 0.5*abs(s1)+0.3*abs(s3)+0.2*abs(s5) + 0.4*abs(ctx_score)))
+            emit_signal(inst, side, strength, {"s1":s1,"s3":s3,"s5":s5,"ctx":ctx,"px":px}, ctx_score, tf_agree)
+
+if __name__=="__main__":
+    while True:
+        try:
+            cycle()
+            print("B: ok")
+        except Exception as e:
+            print("B err:", e)
+        time.sleep(5)
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/ws_bitget_test.py
+Size: 898
+MTime: 2025-10-15 16:36:22.196957753 +0200
+----- CONTENT -----
+#!/usr/bin/env python3
+import asyncio, websockets, ujson as json, time
+
+URI = "wss://ws.bitget.com/mix/v1/stream?compress=false"
+SYMBOL = "BTCUSDT"
+
+async def main():
+    payload = {
+        "op": "subscribe",
+        "args": [
+            {
+                "instType": "mc",      # <-- c’est ce champ qui est critique
+                "channel": "ticker",
+                "instId": SYMBOL
+            }
+        ]
+    }
+    print(f"Connecting to {URI} for {SYMBOL}...")
+    async with websockets.connect(URI, ping_interval=20, ping_timeout=20) as ws:
+        await ws.send(json.dumps(payload))
+        print("Subscription sent:\n", json.dumps(payload, indent=2))
+        for i in range(5):
+            msg = await ws.recv()
+            print(f"[{i+1}] {msg[:400]}")  # tronque si message trop long
+            time.sleep(0.1)
+    print("Done.")
+
+if __name__ == "__main__":
+    asyncio.run(main())
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/ws_ticks_patch.py
+Size: 758
+MTime: 2025-10-15 15:54:54.813172040 +0200
+----- CONTENT -----
+def save_ticks(batch):
+    import shutil, os, tempfile
+    if not batch:
+        return
+    with sqlite3.connect(TDB, timeout=5) as c:
+        c.execute("PRAGMA busy_timeout=5000")
+        c.execute(CREATE_SQL)
+        c.executemany("""
+        INSERT OR REPLACE INTO ticks(instId,lastPr,bidPr,askPr,bidSz,askSz,ts_ms)
+        VALUES(:instId,:lastPr,:bidPr,:askPr,:bidSz,:askSz,:ts_ms);
+        """, batch)
+        cutoff = int(time.time()*1000) - TTL_SEC*1000
+        c.execute("DELETE FROM ticks WHERE ts_ms < ?", (cutoff,))
+        c.commit()
+    # --- snapshot sécurisé ---
+    tmp_snap = SNAP + ".tmp"
+    try:
+        shutil.copy2(TDB, tmp_snap)
+        os.replace(tmp_snap, SNAP)
+    except Exception as e:
+        print(f"T: snapshot error ({e})")
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/check_ob_coherence.py
+Size: 798
+MTime: 2025-10-15 14:48:46.935838710 +0200
+----- CONTENT -----
+#!/usr/bin/env python3
+import sqlite3, pandas as pd
+
+ROOT = "/opt/scalp/project"
+OBDB = f"{ROOT}/data/ob.db"
+PAIR = "BTCUSDT"
+
+def fetch_df(conn, table, limit):
+    q = f"SELECT ts, o, h, l, c, v FROM {table} WHERE instId=? ORDER BY ts DESC LIMIT ?"
+    df = pd.read_sql_query(q, conn, params=(PAIR, limit))
+    df["ts"] = pd.to_datetime(df["ts"], unit="s")
+    return df.sort_values("ts")
+
+with sqlite3.connect(OBDB) as c:
+    df1 = fetch_df(c, "ohlcv_1m", 30)
+    df3 = fetch_df(c, "ohlcv_3m", 10)
+    df5 = fetch_df(c, "ohlcv_5m", 6)
+
+print("=== TF 1m (30 dernières) ===")
+print(df1.tail(30).to_string(index=False))
+print("\n=== TF 3m (10 dernières, agrégées) ===")
+print(df3.tail(10).to_string(index=False))
+print("\n=== TF 5m (6 dernières) ===")
+print(df5.tail(6).to_string(index=False))
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/fetch_tf_ohlcv_OB.py
+Size: 2739
+MTime: 2025-10-15 14:45:05.087509691 +0200
+----- CONTENT -----
+#!/usr/bin/env python3
+import os, time, ccxt, sqlite3
+
+ROOT = "/opt/scalp/project"
+UDB = f"{ROOT}/data/u.db"
+OBDB = f"{ROOT}/data/ob.db"
+LIMIT = int(os.getenv("OB_LIMIT", "150"))
+EX = ccxt.bitget()
+
+TF_LIST = ["1m", "5m"]  # le 3m sera agrégé
+TF_SECONDS = {"1m": 60, "5m": 300}
+
+
+def last_ts(conn, table, instId):
+    r = conn.execute(f"SELECT MAX(ts) FROM {table} WHERE instId=?", (instId,)).fetchone()
+    return r[0] or 0
+
+
+def save_rows(conn, table, instId, candles):
+    rows = [
+        (instId, int(c[0] // 1000), c[1], c[2], c[3], c[4], c[5]) for c in candles
+    ]
+    conn.executemany(
+        f"INSERT OR REPLACE INTO {table}(instId,ts,o,h,l,c,v) VALUES(?,?,?,?,?,?,?)",
+        rows,
+    )
+
+
+def purge_old(conn, table, instId, limit, tf):
+    tf_sec = TF_SECONDS[tf]
+    cutoff = int(time.time()) - limit * tf_sec
+    conn.execute(f"DELETE FROM {table} WHERE instId=? AND ts < ?", (instId, cutoff))
+
+
+def fetch_new(pair, tf, since):
+    try:
+        return EX.fetch_ohlcv(pair, tf, limit=LIMIT, since=since * 1000 if since else None)
+    except Exception as e:
+        print(f"{pair} {tf} err: {e}")
+        return []
+
+
+def aggregate_3m(conn):
+    """génère les bougies 3m à partir des 1m"""
+    conn.execute("""
+    CREATE TABLE IF NOT EXISTS ohlcv_3m (
+        instId TEXT,
+        ts INTEGER,
+        o REAL, h REAL, l REAL, c REAL, v REAL,
+        PRIMARY KEY(instId, ts)
+    );
+    """)
+    conn.execute("DELETE FROM ohlcv_3m;")
+    conn.execute("""
+    INSERT OR REPLACE INTO ohlcv_3m(instId, ts, o, h, l, c, v)
+    SELECT
+      instId,
+      (ts/180)*180 AS ts_group,
+      FIRST_VALUE(o) OVER w,
+      MAX(h)        OVER w,
+      MIN(l)        OVER w,
+      LAST_VALUE(c) OVER w,
+      SUM(v)        OVER w
+    FROM ohlcv_1m
+    WINDOW w AS (PARTITION BY instId,(ts/180)*180 ORDER BY ts
+                 ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING);
+    """)
+    conn.commit()
+
+
+def run():
+    with sqlite3.connect(UDB) as cu:
+        cu.execute("PRAGMA busy_timeout=8000")
+        syms = [r[0] for r in cu.execute("SELECT instId FROM u_syms ORDER BY rank")]
+
+    with sqlite3.connect(OBDB) as co:
+        co.execute("PRAGMA busy_timeout=8000")
+        for tf in TF_LIST:
+            for sym in syms:
+                pair = sym.replace("USDT", "/USDT")
+                since = last_ts(co, f"ohlcv_{tf}", sym)
+                candles = fetch_new(pair, tf, since)
+                if not candles:
+                    continue
+                save_rows(co, f"ohlcv_{tf}", sym, candles)
+                purge_old(co, f"ohlcv_{tf}", sym, LIMIT, tf)
+        aggregate_3m(co)
+        co.commit()
+    print("OB: ok (1m/3m/5m maj incrémentale + purge + agrégation 3m)")
+
+
+if __name__ == "__main__":
+    run()
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/u_select.py
+Size: 1685
+MTime: 2025-10-15 13:01:16.441523075 +0200
+----- CONTENT -----
+import time, sqlite3, ccxt, os
+
+UDB="data/u.db"
+TOP_N=int(os.getenv("U_TOPN","35"))
+EX=ccxt.bitget()
+
+def now_s(): return int(time.time())
+
+def pick_universe():
+    markets=EX.load_markets()
+    valid=[m for m in markets.values() if m.get('swap') and m.get('quote')=='USDT']
+    rows=[]
+    for m in valid:
+        info=m.get('info',{})
+        inst=m['id'].replace(':USDT','USDT') if ':USDT' in m['id'] else m['id']
+        vol=info.get('volumeUsd24h') or info.get('volume24h') or info.get('baseVolume') or m.get('volume') or 0
+        try: vol=float(vol)
+        except: vol=0.0
+        rows.append((inst,m['base'],'USDT',vol))
+    rows.sort(key=lambda r:r[3],reverse=True)
+    rows=rows[:TOP_N]
+    if not rows: 
+        print("U: aucun marché futur USDT trouvé"); return
+    maxv=max(r[3] for r in rows) or 1
+    scored=[(inst,base,quote,vol,10*vol/maxv) for inst,base,quote,vol in rows]
+    ts=now_s()
+    with sqlite3.connect(UDB) as c:
+        c.execute("PRAGMA busy_timeout=8000")
+        for i,(inst,base,quote,vol,score10) in enumerate(scored,start=1):
+            c.execute("""INSERT INTO u_syms(instId,base,quote,score,score_U,rank,reason,updated_ts)
+                         VALUES(?,?,?,?,?,?,?,?)
+                         ON CONFLICT(instId) DO UPDATE SET
+                           score=excluded.score,score_U=excluded.score_U,
+                           rank=excluded.rank,reason=excluded.reason,
+                           updated_ts=excluded.updated_ts""",
+                      (inst,base,quote,vol,score10,i,"volumeUsd24h→score10",ts))
+        c.commit()
+    print(f"U: ok ({len(rows)} futures, score_U 0–10)")
+
+if __name__=="__main__":
+    pick_universe()
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/oa_fetch.py
+Size: 1121
+MTime: 2025-10-15 11:34:11.886464636 +0200
+----- CONTENT -----
+import os, time, ccxt, sqlite3
+ADB="data/a.db"; UDB="data/u.db"
+LIMIT=int(os.getenv("OA_LIMIT","150"))
+EX=ccxt.bitget()
+
+def save_rows(conn, table, instId, candles):
+    # candles: [[ts_ms,o,h,l,c,v], ...] => store seconds
+    rows=[(instId, int(c[0]//1000), c[1],c[2],c[3],c[4],c[5]) for c in candles]
+    conn.executemany(f"""INSERT OR REPLACE INTO {table}(instId,ts,o,n,h,l,c,v)
+                         VALUES(?,?,?,?,?,?,?,?)""", rows)
+
+def run_tf(tf, table):
+    with sqlite3.connect(UDB) as cu, sqlite3.connect(ADB) as ca:
+        cu.execute("PRAGMA busy_timeout=8000")
+        ca.execute("PRAGMA busy_timeout=8000")
+        syms=[r[0] for r in cu.execute("SELECT instId FROM u_syms ORDER BY rank")]
+        for s in syms:
+            mkt = s.replace("USDT","/USDT")
+            try:
+                candles=EX.fetch_ohlcv(mkt, timeframe=tf, limit=LIMIT)
+                save_rows(ca, table, s, candles)
+            except Exception as e:
+                pass
+        ca.commit()
+
+if __name__=="__main__":
+    run_tf("5m","ohlcv_5m")
+    run_tf("15m","ohlcv_15m")
+    run_tf("30m","ohlcv_30m")
+    print("OA: ok")
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/ob_fetch.py
+Size: 1141
+MTime: 2025-10-15 11:34:11.898464647 +0200
+----- CONTENT -----
+import os, time, ccxt, sqlite3
+ODB="data/ob.db"; ADB="data/a.db"
+LIMIT_1=int(os.getenv("OB_LIMIT_1","300"))
+LIMIT_5=int(os.getenv("OB_LIMIT_5","200"))
+EX=ccxt.bitget()
+
+def save_rows(conn, table, instId, candles):
+    rows=[(instId, int(c[0]//1000), c[1],c[2],c[3],c[4],c[5]) for c in candles]
+    conn.executemany(f"""INSERT OR REPLACE INTO {table}(instId,ts,o,n,h,l,c,v)
+                         VALUES(?,?,?,?,?,?,?,?)""", rows)
+
+def run():
+    with sqlite3.connect(ADB) as ca, sqlite3.connect(ODB) as co:
+        ca.execute("PRAGMA busy_timeout=8000")
+        co.execute("PRAGMA busy_timeout=8000")
+        syms=[r[0] for r in ca.execute("SELECT instId FROM v_contexts_A_latest WHERE ctx!='none'")]
+        for s in syms:
+            m = s.replace("USDT","/USDT")
+            try:
+                c1 = EX.fetch_ohlcv(m, timeframe="1m", limit=LIMIT_1)
+                c5 = EX.fetch_ohlcv(m, timeframe="5m", limit=LIMIT_5)
+                save_rows(co,"ohlcv_1m",s,c1)
+                save_rows(co,"ohlcv_5m",s,c5)
+            except Exception:
+                pass
+        co.commit()
+
+if __name__=="__main__":
+    run(); print("OB: ok")
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/ws_test_single.sh
+Size: 696
+MTime: 2025-10-15 15:11:26.480223134 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+. /opt/scalp/.venv/bin/activate
+python3 - <<'PY'
+import asyncio, websockets, ujson as json
+
+URI="wss://ws.bitget.com/mix/v1/stream?compress=false"
+PAYLOAD={
+    "op":"subscribe",
+    "args":[{"instType":"USDT-FUTURES","channel":"ticker","instId":"BTCUSDT"}]
+}
+
+async def main():
+    async with websockets.connect(URI,ping_interval=20,ping_timeout=20) as ws:
+        await ws.send(ujson.dumps(PAYLOAD))
+        print("✅ connected, waiting 5 messages…")
+        n=0
+        async for msg in ws:
+            data=ujson.loads(msg)
+            if "data" in data:
+                print(data["data"][0])
+                n+=1
+                if n>=5: break
+asyncio.run(main())
+PY
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/x_paper.py
+Size: 3049
+MTime: 2025-10-15 11:51:18.038768111 +0200
+----- CONTENT -----
+import time, sqlite3, math
+
+BDB="data/b.db"; XDB="data/x.db"; TDB="data/t.db"
+
+def acct_get(k,default):
+    with sqlite3.connect(XDB) as c:
+        r=c.execute("SELECT v FROM acct WHERE k=?",(k,)).fetchone()
+        return float(r[0]) if r else default
+
+def acct_set(k,v):
+    with sqlite3.connect(XDB) as c:
+        c.execute("INSERT OR REPLACE INTO acct(k,v) VALUES(?,?)",(k,str(v)))
+        c.commit()
+
+def last_signal():
+    with sqlite3.connect(BDB) as c:
+        r=c.execute("SELECT instId,ts_ms,side,strength,ctx_score FROM signals_B ORDER BY ts_ms DESC LIMIT 20").fetchall()
+        return r or []
+
+def last_price(inst):
+    with sqlite3.connect(TDB) as c:
+        r=c.execute("SELECT lastPr FROM ticks_latest WHERE instId=?",(inst,)).fetchone()
+        return float(r[0]) if r else None
+
+def open_position(inst, side, px, budget_usdt):
+    qty = budget_usdt/max(1e-9, px)
+    ts=int(time.time()*1000)
+    with sqlite3.connect(XDB) as c:
+        c.execute("""INSERT INTO orders_sim(instId,side,px_open,qty,ts_open,sl,tp,plan_ref)
+                     VALUES(?,?,?,?,?,?,?,?)""",(inst,side,px,qty,ts,None,None,None))
+        oid=c.execute("SELECT last_insert_rowid()").fetchone()[0]
+        c.execute("""INSERT OR REPLACE INTO positions_open(order_id,instId,side,px_open,qty,tp,sl,ts_open)
+                     VALUES(?,?,?,?,?,?,?,?)""",(oid,inst,side,px,qty,None,None,ts))
+        used=acct_get("used_budget_usdt",0)
+        acct_set("used_budget_usdt", used+budget_usdt)
+        c.commit()
+
+def maybe_close():
+    with sqlite3.connect(XDB) as c:
+        pos=c.execute("SELECT order_id,instId,side,px_open,qty,ts_open FROM positions_open").fetchall()
+    for oid,inst,side,px_open,qty,ts_open in pos:
+        px = last_price(inst)
+        if px is None: continue
+        gain = (px - px_open) * (qty if side=="buy" else -qty)
+        pnl = gain
+        age = (int(time.time()*1000)-ts_open)/60000.0
+        if abs((px/px_open)-1)>=0.004 or age>=10:
+            with sqlite3.connect(XDB) as c:
+                c.execute("DELETE FROM positions_open WHERE order_id=?", (oid,))
+                c.execute("""INSERT INTO positions_closed(order_id,instId,side,px_open,px_close,qty,pnl_usdt,ts_open,ts_close,reason)
+                             VALUES(?,?,?,?,?,?,?,?,?,?)""",(oid,inst,side,px_open,px,qty,pnl,ts_open,int(time.time()*1000),"rule"))
+                used=acct_get("used_budget_usdt",0)
+                acct_set("used_budget_usdt", max(0.0, used-px_open*qty))
+                c.commit()
+
+def loop():
+    while True:
+        base=acct_get("base_budget_usdt",1000)
+        used=acct_get("used_budget_usdt",0)
+        free=max(0.0, base-used)
+        per_trade = max(5.0, base*0.02)
+        if free>=per_trade:
+            for inst,ts,side,strength,ctx_score in last_signal():
+                px=last_price(inst)
+                if px is None: continue
+                open_position(inst, side, px, per_trade)
+                break
+        maybe_close()
+        print("X: ok")
+        time.sleep(10)
+
+if __name__=="__main__":
+    loop()
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/run_ob_b_x.sh
+Size: 167
+MTime: 2025-10-15 11:34:11.926464671 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/.."
+. ../.venv/bin/activate
+python scripts/ob_fetch.py
+python scripts/b_analyze.py
+python scripts/x_paper.py
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/run_ws.sh
+Size: 114
+MTime: 2025-10-15 11:34:11.934464679 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/.."
+. ../.venv/bin/activate
+exec python scripts/t_ws.py
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/run_u_oa_a.sh
+Size: 168
+MTime: 2025-10-15 11:34:11.914464661 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/.."
+. ../.venv/bin/activate
+python scripts/u_select.py
+python scripts/oa_fetch.py
+python scripts/a_analyze.py
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/check_t.sh
+Size: 338
+MTime: 2025-10-15 15:21:51.159000715 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+DB="/opt/scalp/project/data/t_snapshot.db"
+sqlite3 "file:$DB?mode=ro" <<'SQL'
+SELECT
+  COUNT(*) AS total,
+  COUNT(DISTINCT instId) AS symbols,
+  ROUND((strftime('%s','now') - MAX(ts_ms)/1000)) AS delay_s,
+  CASE WHEN (strftime('%s','now') - MAX(ts_ms)/1000) < 10 THEN '✅' ELSE '⚠️' END AS status
+FROM ticks;
+SQL
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/sync_all.sh
+Size: 1146
+MTime: 2025-10-15 17:32:25.638775353 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="/opt/scalp/project"
+
+echo "=== CLEANING OLD DATA ==="
+sqlite3 "$ROOT/data/a.db"  "DELETE FROM ohlcv_5m; DELETE FROM ohlcv_15m; DELETE FROM ohlcv_30m;"
+sqlite3 "$ROOT/data/ob.db" "DELETE FROM ohlcv_1m; DELETE FROM ohlcv_3m; DELETE FROM ohlcv_5m;"
+sqlite3 "$ROOT/data/a.db"  "DELETE FROM contexts_A;"
+sqlite3 "$ROOT/data/t.db"  "DELETE FROM ticks;"
+
+echo "=== 1️⃣  Universe (U) ==="
+/opt/scalp/.venv/bin/python3 "$ROOT/scripts/fetch_universe.py"
+
+echo "=== 2️⃣  OA : OHLCV 5/15/30m ==="
+/opt/scalp/.venv/bin/python3 "$ROOT/scripts/fetch_tf_ohlcv_A.py"
+
+echo "=== 3️⃣  A : Contexts ==="
+/opt/scalp/.venv/bin/python3 "$ROOT/scripts/analyze_A.py"
+
+echo "=== 4️⃣  OB : OHLCV 1/3/5m (agg 3m) ==="
+/opt/scalp/.venv/bin/python3 "$ROOT/scripts/fetch_tf_ohlcv_OB.py"
+
+echo "=== 5️⃣  T : WebSocket ticks (synchro courte) ==="
+systemctl stop scalp-t.service >/dev/null 2>&1 || true
+/opt/scalp/.venv/bin/python3 "$ROOT/scripts/ws_ticks.py" &
+
+sleep 30
+pkill -f ws_ticks.py || true
+systemctl restart scalp-t.service || true
+
+echo "=== ✅  FULL SYNC COMPLETE ==="
+bash "$ROOT/bin/health_check.sh"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/health_check.sh
+Size: 2978
+MTime: 2025-10-15 17:29:21.434130673 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="/opt/scalp/project"
+NOW=$(date +%s)
+HDR=$(date "+%d/%m %H:%M:%S")
+
+fmt_age(){ s=${1:-0}; ((s<0))&&s=0; printf "%02d:%02d:%02d" $((s/3600)) $((s%3600/60)) $((s%60)); }
+ok_stale(){ age=$1 lim=$2; ((age<=lim))&&echo "✅"||echo "⚠️ stale"; }
+q2(){ sqlite3 "$1" "$2" 2>/dev/null || echo "0|0"; }
+
+printf "===== HEALTH %s =====\n" "$HDR"
+
+# --- U ---
+if sqlite3 "$ROOT/data/u.db" ".tables" | grep -qi u_syms; then
+  IFS='|' read -r ts rows <<<"$(q2 "$ROOT/data/u.db" "SELECT COALESCE(MAX(updated_ts),0),COUNT(*) FROM u_syms;")"
+  age=$((NOW-ts))
+  printf "%-7s| rows=%-7s| age=%s | %s\n" "U" "$rows" "$(fmt_age $age)" "$(ok_stale $age 7200)"
+else
+  printf "%-7s| ❌ no data\n" "U"
+fi
+
+# --- OA ---
+for tf in 5 15 30; do
+  tbl="ohlcv_${tf}m"
+  if sqlite3 "$ROOT/data/a.db" ".tables" | grep -qi "$tbl"; then
+    IFS='|' read -r ts rows <<<"$(q2 "$ROOT/data/a.db" "SELECT COALESCE(MAX(ts),0),COUNT(*) FROM $tbl;")"
+    age=$((NOW-ts)); lim=$((tf*120))
+    printf "%-7s| rows=%-7s| age=%s | %s\n" "OA-${tf}m" "$rows" "$(fmt_age $age)" "$(ok_stale $age $lim)"
+  else
+    printf "%-7s| ❌ no data\n" "OA-${tf}m"
+  fi
+done
+
+# --- A ---
+if sqlite3 "$ROOT/data/a.db" ".tables" | grep -qi contexts_A; then
+  IFS='|' read -r ts rows <<<"$(q2 "$ROOT/data/a.db" "SELECT COALESCE(MAX(updated_ts),0),COUNT(*) FROM contexts_A;")"
+  age=$((NOW-ts))
+  printf "%-7s| rows=%-7s| age=%s | %s\n" "A" "$rows" "$(fmt_age $age)" "$(ok_stale $age 600)"
+else
+  printf "%-7s| ❌ no data\n" "A"
+fi
+
+# --- OB ---
+if sqlite3 "$ROOT/data/ob.db" ".tables" | grep -qi ohlcv_5m; then
+  IFS='|' read -r ts rows <<<"$(q2 "$ROOT/data/ob.db" "SELECT COALESCE(MAX(ts),0),COUNT(*) FROM ohlcv_5m;")"
+  age=$((NOW-ts))
+  printf "%-7s| rows=%-7s| age=%s | %s\n" "OB" "$rows" "$(fmt_age $age)" "$(ok_stale $age 900)"
+else
+  printf "%-7s| ❌ no data\n" "OB"
+fi
+
+# --- T ---
+if sqlite3 "$ROOT/data/t.db" ".tables" | grep -qi ticks; then
+  IFS='|' read -r ts syms <<<"$(q2 "$ROOT/data/t.db" "SELECT COALESCE(MAX(ts_ms)/1000,0),COUNT(DISTINCT instId) FROM ticks;")"
+  age=$((NOW-ts))
+  printf "%-7s| syms=%-7s| age=%s | %s\n" "T" "$syms" "$(fmt_age $age)" "$(ok_stale $age 10)"
+else
+  printf "%-7s| ❌ no data\n" "T"
+fi
+
+# --- B ---
+if sqlite3 "$ROOT/data/b.db" ".tables" | grep -qi signals_B; then
+  IFS='|' read -r ts rows <<<"$(q2 "$ROOT/data/b.db" "SELECT COALESCE(MAX(updated_ts),0),COUNT(*) FROM signals_B;")"
+  age=$((NOW-ts))
+  printf "%-7s| rows=%-7s| age=%s | %s\n" "B" "$rows" "$(fmt_age $age)" "$(ok_stale $age 120)"
+else
+  printf "%-7s| ❌ no data\n" "B"
+fi
+
+# --- X ---
+if sqlite3 "$ROOT/data/x.db" ".tables" | grep -qi positions_open; then
+  IFS='|' read -r ts rows <<<"$(q2 "$ROOT/data/x.db" "SELECT COALESCE(MAX(updated_ts),0),COUNT(*) FROM positions_open;")"
+  age=$((NOW-ts))
+  printf "%-7s| rows=%-7s| age=%s | %s\n" "X" "$rows" "$(fmt_age $age)" "$(ok_stale $age 300)"
+else
+  printf "%-7s| ❌ no data\n" "X"
+fi
+
+echo "==================================="
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/PIPE_SYSTEMD_SETUP.sh
+Size: 5098
+MTime: 2025-10-15 11:40:08.539128295 +0200
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd /opt/scalp
+mkdir -p /etc/systemd/system
+
+# ========== ENV commun ==========
+ENV_FILE=/opt/scalp/project/.env
+cat >$ENV_FILE <<'ENV'
+PYTHONPATH=/opt/scalp/project
+ENV
+
+# ========== U toutes les 2h ==========
+cat >/etc/systemd/system/scalp-u.service <<'UNIT'
+[Unit]
+Description=Scalp U - Universe selection
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/scalp/project
+EnvironmentFile=/opt/scalp/project/.env
+ExecStart=/opt/scalp/.venv/bin/python scripts/u_select.py
+Nice=10
+IOSchedulingClass=idle
+CPUQuota=10%
+UNIT
+
+cat >/etc/systemd/system/scalp-u.timer <<'TIMER'
+[Unit]
+Description=Scalp U timer (every 2h)
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=2h
+Persistent=true
+[Install]
+WantedBy=timers.target
+TIMER
+
+# ========== OA toutes les 5min ==========
+cat >/etc/systemd/system/scalp-oa.service <<'UNIT'
+[Unit]
+Description=Scalp OA - Fetch OHLCV (5m/15m/30m)
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/scalp/project
+ExecStart=/opt/scalp/.venv/bin/python scripts/oa_fetch.py
+Nice=10
+CPUQuota=20%
+UNIT
+
+cat >/etc/systemd/system/scalp-oa.timer <<'TIMER'
+[Unit]
+Description=Scalp OA timer (every 5min)
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec=5min
+Persistent=true
+[Install]
+WantedBy=timers.target
+TIMER
+
+# ========== A déclenché après OA ==========
+cat >/etc/systemd/system/scalp-a.service <<'UNIT'
+[Unit]
+Description=Scalp A - Context analysis
+After=scalp-oa.service
+Requires=scalp-oa.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/scalp/project
+ExecStart=/opt/scalp/.venv/bin/python scripts/a_analyze.py
+Nice=10
+CPUQuota=20%
+UNIT
+
+# liaison automatique post OA
+cat >/etc/systemd/system/scalp-oa.path <<'PATH'
+[Unit]
+Description=Trigger A after OA completion
+[Path]
+PathChanged=/opt/scalp/project/data/a.db
+Unit=scalp-a.service
+[Install]
+WantedBy=multi-user.target
+PATH
+
+# ========== OB toutes les minutes ==========
+cat >/etc/systemd/system/scalp-ob.service <<'UNIT'
+[Unit]
+Description=Scalp OB - Fetch OHLCV (1m/5m)
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/scalp/project
+ExecStart=/opt/scalp/.venv/bin/python scripts/ob_fetch.py
+Nice=10
+CPUQuota=20%
+UNIT
+
+cat >/etc/systemd/system/scalp-ob.timer <<'TIMER'
+[Unit]
+Description=Scalp OB timer (every 1min)
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=1min
+Persistent=true
+[Install]
+WantedBy=timers.target
+TIMER
+
+# ========== T (WebSocket ticks) ==========
+cat >/etc/systemd/system/scalp-t.service <<'UNIT'
+[Unit]
+Description=Scalp T - Bitget WS ticks
+After=network-online.target
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=5
+WorkingDirectory=/opt/scalp/project
+ExecStart=/opt/scalp/.venv/bin/python scripts/t_ws.py
+Nice=5
+CPUQuota=25%
+UNIT
+
+# ========== B (analyse) ==========
+cat >/etc/systemd/system/scalp-b.service <<'UNIT'
+[Unit]
+Description=Scalp B - Tick-level analysis (continuous)
+After=scalp-t.service
+Requires=scalp-t.service
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=10
+WorkingDirectory=/opt/scalp/project
+ExecStart=/opt/scalp/.venv/bin/python -u scripts/b_analyze.py
+Nice=10
+CPUQuota=25%
+UNIT
+
+# ========== X (paper exec) ==========
+cat >/etc/systemd/system/scalp-x.service <<'UNIT'
+[Unit]
+Description=Scalp X - Paper execution & close loop
+After=scalp-b.service
+Requires=scalp-b.service
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=15
+WorkingDirectory=/opt/scalp/project
+ExecStart=/opt/scalp/.venv/bin/python -u scripts/x_paper.py
+Nice=15
+CPUQuota=25%
+UNIT
+
+# ========== Health Check ==========
+cat >/opt/scalp/project/bin/health_check.sh <<'HEALTH'
+#!/usr/bin/env bash
+set -euo pipefail
+cd /opt/scalp/project/data
+
+check_db() {
+  local db="$1" label="$2"
+  local ts=$(sqlite3 "$db" "SELECT MAX(ts) FROM (SELECT ts FROM sqlite_master m JOIN pragma_table_info(m.name) WHERE m.type='table' LIMIT 1);" 2>/dev/null || echo 0)
+  if [[ "$ts" =~ ^[0-9]+$ ]]; then
+    local age=$(( $(date +%s) - ts ))
+    if (( age < 600 )); then echo "$label: ✅ fresh ${age}s"; else echo "$label: ⚠️ ${age}s"; fi
+  else
+    echo "$label: ❌ no data"
+  fi
+}
+
+echo "===== HEALTH $(date '+%F %T') ====="
+check_db u.db "U"
+check_db a.db "A"
+check_db ob.db "OB"
+check_db t.db "T"
+check_db b.db "B"
+check_db x.db "X"
+echo "==================================="
+HEALTH
+chmod +x /opt/scalp/project/bin/health_check.sh
+
+cat >/etc/systemd/system/scalp-health.service <<'UNIT'
+[Unit]
+Description=Scalp Health check
+[Service]
+Type=oneshot
+ExecStart=/opt/scalp/project/bin/health_check.sh
+UNIT
+
+cat >/etc/systemd/system/scalp-health.timer <<'TIMER'
+[Unit]
+Description=Scalp Health check timer (every 3min)
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=3min
+Persistent=true
+[Install]
+WantedBy=timers.target
+TIMER
+
+# Enable everything
+systemctl daemon-reload
+systemctl enable scalp-u.timer scalp-oa.timer scalp-oa.path scalp-ob.timer \
+                 scalp-t.service scalp-b.service scalp-x.service scalp-health.timer
+systemctl start  scalp-u.timer scalp-oa.timer scalp-oa.path scalp-ob.timer \
+                 scalp-t.service scalp-b.service scalp-x.service scalp-health.timer
+
+echo "✅ Systemd services déployés et lancés"
+----- FILE END -----
+=== Export /opt/scalp/project/data/a.db → /opt/scalp/dump/scalp_db_20251015_173525.sql
+=== Export /opt/scalp/project/data/b.db → /opt/scalp/dump/scalp_db_20251015_173525.sql
+=== Export /opt/scalp/project/data/ob.db → /opt/scalp/dump/scalp_db_20251015_173525.sql
+=== Export /opt/scalp/project/data/t.db → /opt/scalp/dump/scalp_db_20251015_173525.sql
+=== Export /opt/scalp/project/data/u.db → /opt/scalp/dump/scalp_db_20251015_173525.sql
+=== Export /opt/scalp/project/data/x.db → /opt/scalp/dump/scalp_db_20251015_173525.sql
+Export DB global créé: /opt/scalp/dump/scalp_db_20251015_173525.sql
