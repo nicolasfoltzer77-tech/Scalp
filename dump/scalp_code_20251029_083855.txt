@@ -1,0 +1,2002 @@
+# Scalp Project Code Dump
+# Generated: 2025-10-29 07:38:55 UTC
+# Root: /opt/scalp
+# Caps: 512KB/file, max 4000 files
+
+========== TREE (size, mtime) ==========
+/opt/scalp/dp.sh                                                                          4650  2025-10-27 14:49:38.355844764 +0100
+/opt/scalp/project/bin/a_analyse.sh                                                        110  2025-10-28 20:36:25.965060683 +0100
+/opt/scalp/project/bin/b_dash.sh                                                            85  2025-10-28 20:36:25.965060683 +0100
+/opt/scalp/project/bin/b_signals.sh                                                         88  2025-10-28 20:36:25.965060683 +0100
+/opt/scalp/project/bin/oa_ohlcv.sh                                                          89  2025-10-28 20:36:25.965060683 +0100
+/opt/scalp/project/bin/oa_ohlcv_A.sh                                                        89  2025-10-28 20:36:25.965060683 +0100
+/opt/scalp/project/bin/ob_feat.sh                                                           86  2025-10-28 20:36:25.965060683 +0100
+/opt/scalp/project/bin/ob_ohlcv_B.sh                                                        89  2025-10-28 20:36:25.969060690 +0100
+/opt/scalp/project/bin/t_ticks.sh                                                           86  2025-10-28 20:36:25.969060690 +0100
+/opt/scalp/project/bin/u_universe.sh                                                        89  2025-10-28 20:36:25.969060690 +0100
+/opt/scalp/project/bin/x_close.sh                                                          102  2025-10-28 20:36:25.973060695 +0100
+/opt/scalp/project/bin/x_dash.sh                                                          1446  2025-10-28 20:36:25.973060695 +0100
+/opt/scalp/project/bin/x_follow.sh                                                         103  2025-10-28 20:36:25.973060695 +0100
+/opt/scalp/project/bin/x_open.sh                                                           101  2025-10-28 20:36:25.973060695 +0100
+/opt/scalp/project/bin/xclose.sh                                                            86  2025-10-28 20:36:25.973060695 +0100
+/opt/scalp/project/bin/xfollow.sh                                                           87  2025-10-28 20:36:25.973060695 +0100
+/opt/scalp/project/bin/xopen.sh                                                             85  2025-10-28 20:36:25.977060702 +0100
+/opt/scalp/project/config/scalp.conf                                                        18  2025-10-25 17:08:55.549075009 +0200
+/opt/scalp/project/scripts/A_analyse.py                                                   1601  2025-10-28 22:19:44.465383115 +0100
+/opt/scalp/project/scripts/A_config.py                                                     336  2025-10-28 22:19:44.465383115 +0100
+/opt/scalp/project/scripts/A_ctx.py                                                       2347  2025-10-28 22:19:44.465383115 +0100
+/opt/scalp/project/scripts/A_ctx_dash.py                                                  1524  2025-10-28 22:19:44.465383115 +0100
+/opt/scalp/project/scripts/B_dash.py                                                       472  2025-10-28 22:19:44.465383115 +0100
+/opt/scalp/project/scripts/B_signals.py                                                   1464  2025-10-28 22:19:44.465383115 +0100
+/opt/scalp/project/scripts/H_perf.py                                                      2240  2025-10-28 22:19:44.465383115 +0100
+/opt/scalp/project/scripts/H_score.py                                                      368  2025-10-28 22:19:44.465383115 +0100
+/opt/scalp/project/scripts/OA_ohlcv_A.py                                                  2482  2025-10-28 22:19:44.469383119 +0100
+/opt/scalp/project/scripts/OB_feat.py                                                     1734  2025-10-28 22:19:44.469383119 +0100
+/opt/scalp/project/scripts/OB_ohlcv_B.py                                                  1799  2025-10-28 22:19:44.469383119 +0100
+/opt/scalp/project/scripts/S_cleanup_signals.sh                                            267  2025-10-28 09:52:03.409264353 +0100
+/opt/scalp/project/scripts/S_cleanup_ticks.sh                                              147  2025-10-28 10:25:52.647287857 +0100
+/opt/scalp/project/scripts/T_ticks.py                                                     1505  2025-10-28 22:19:44.469383119 +0100
+/opt/scalp/project/scripts/U_universe.py                                                   572  2025-10-28 22:19:44.469383119 +0100
+/opt/scalp/project/scripts/X_close.py                                                     4062  2025-10-28 22:19:44.469383119 +0100
+/opt/scalp/project/scripts/X_config.py                                                     417  2025-10-28 22:19:44.469383119 +0100
+/opt/scalp/project/scripts/X_dash.py                                                      1761  2025-10-28 22:19:44.469383119 +0100
+/opt/scalp/project/scripts/X_follow.py                                                    1064  2025-10-29 05:12:04.156090980 +0100
+/opt/scalp/project/scripts/X_open.py                                                      1827  2025-10-29 05:11:30.972042700 +0100
+/opt/scalp/project/scripts/b_dash.py                                                      2112  2025-10-29 08:11:52.064666231 +0100
+/opt/scalp/project/scripts/b_signals.py                                                   1884  2025-10-29 06:05:11.892069178 +0100
+/opt/scalp/project/scripts/init_db.py                                                     1110  2025-10-28 22:19:44.469383119 +0100
+/opt/scalp/project/scripts/test_ws_bitget.py                                               871  2025-10-29 05:56:44.887457528 +0100
+/opt/scalp/project/scripts/ticks.py                                                       3263  2025-10-29 08:32:53.050121154 +0100
+/opt/scalp/project/scripts/x_dash.py                                                      1689  2025-10-28 22:19:44.469383119 +0100
+
+========== TOP 10 BIGGEST FILES ==========
+/opt/scalp/dp.sh                                                                          4650
+/opt/scalp/project/scripts/X_close.py                                                     4062
+/opt/scalp/project/scripts/ticks.py                                                       3263
+/opt/scalp/project/scripts/OA_ohlcv_A.py                                                  2482
+/opt/scalp/project/scripts/A_ctx.py                                                       2347
+/opt/scalp/project/scripts/H_perf.py                                                      2240
+/opt/scalp/project/scripts/b_dash.py                                                      2112
+/opt/scalp/project/scripts/b_signals.py                                                   1884
+/opt/scalp/project/scripts/X_open.py                                                      1827
+/opt/scalp/project/scripts/OB_ohlcv_B.py                                                  1799
+
+========== CONCAT CONTENT ==========
+
+----- FILE BEGIN -----
+Path: /opt/scalp/dp.sh
+Size: 4650
+MTime: 2025-10-27 14:49:38.355844764 +0100
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+
+# --------- Réglages ---------
+ROOT="/opt/scalp"
+DUMP_DIR="${ROOT}/dump"
+TS="$(date +'%Y%m%d_%H%M%S')"
+OUT="${DUMP_DIR}/scalp_code_${TS}.txt"
+SQL_OUT="${DUMP_DIR}/scalp_db_${TS}.sql"
+TMP_LIST="$(mktemp)"
+MAX_FILE_SIZE_KB="${MAX_FILE_SIZE_KB:-512}"
+MAX_FILES="${MAX_FILES:-4000}"
+DRY_RUN="${DRY_RUN:-0}"
+
+mkdir -p "$DUMP_DIR"
+trap 'rm -f "$TMP_LIST"' EXIT
+
+# --------- Git depuis /etc/scalp.env ---------
+[ -f /etc/scalp.env ] && . /etc/scalp.env
+
+: "${GIT_USERNAME:?manquant}"
+: "${GIT_TOKEN:?manquant}"
+
+GIT_BRANCH="${GIT_BRANCH:-main}"
+GIT_EMAIL_USE="${GIT_EMAIL:-${GIT_USERNAME}@users.noreply.github.com}"
+GIT_HOST="${GIT_HOST:-github.com}"
+GIT_OWNER="${GIT_OWNER:-$GIT_USERNAME}"
+GIT_REPO="${GIT_REPO:-Scalp}"
+GIT_REMOTE="${GIT_REMOTE:-}"
+
+if [ -n "$GIT_REMOTE" ]; then
+  REMOTE_URL="$GIT_REMOTE"
+else
+  REMOTE_URL="https://${GIT_HOST}/${GIT_OWNER}/${GIT_REPO}.git"
+fi
+
+echo "[dump_and_push] branch=${GIT_BRANCH} dry_run=${DRY_RUN} remote=${REMOTE_URL}"
+
+# --------- Collecte fichiers ---------
+find "$ROOT" -type f \
+  -not -path '*/.*' \
+  -not -path '*/.git/*' \
+  -not -path '*/__pycache__/*' \
+  -not -path '*/venv/*' -not -path '*/.venv/*' \
+  -not -path '*/var/*' \
+  -not -path '*/logs/*' \
+  -not -path '*/data/*' \
+  -not -path '*/reports/*' \
+  -not -path '*/dump/*' \
+  -size -"${MAX_FILE_SIZE_KB}"k \
+  \( -name '*.py' -o -name '*.pyi' -o -name '*.sh' -o -name '*.bash' \
+     -name '*.ini' -o -name '*.cfg' -o -name '*.conf' -o -name '*.toml' \
+     -name '*.yaml' -o -name '*.yml' -o -name '*.md' -o -name '*.txt' \
+     -name '*.sql' -o -name '*.json' -o -name '*.csv' \) \
+  -print0 > "$TMP_LIST"
+
+# Limite MAX_FILES
+TMP2="$(mktemp)"; trap 'rm -f "$TMP2"' EXIT
+awk -v max="$MAX_FILES" -v RS='\0' -v ORS='\0' 'NR<=max{print}' "$TMP_LIST" > "$TMP2"
+mv "$TMP2" "$TMP_LIST"
+
+# En-tête dump TXT
+{
+  echo "# Scalp Project Code Dump"
+  echo "# Generated: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+  echo "# Root: ${ROOT}"
+  echo "# Caps: ${MAX_FILE_SIZE_KB}KB/file, max ${MAX_FILES} files"
+  echo
+  echo "========== TREE (size, mtime) =========="
+} > "$OUT"
+
+# TREE
+tr '\0' '\n' < "$TMP_LIST" | sort | while IFS= read -r f; do
+  sz="$(stat -c %s "$f" 2>/dev/null || echo 0)"
+  mt="$(stat -c %y "$f" 2>/dev/null || echo unknown)"
+  printf "%-80s  %12s  %s\n" "$f" "$sz" "$mt" >> "$OUT"
+done
+
+# TOP 10
+{
+  echo
+  echo "========== TOP 10 BIGGEST FILES =========="
+} >> "$OUT"
+
+tr '\0' '\n' < "$TMP_LIST" | while IFS= read -r f; do
+  sz="$(stat -c %s "$f" 2>/dev/null || echo 0)"
+  printf "%012d\t%s\n" "$sz" "$f"
+done | sort -r | head -n 10 | awk -F'\t' '{printf "%-80s  %12d\n", $2, $1+0}' >> "$OUT"
+
+# Contenu concaténé
+{
+  echo
+  echo "========== CONCAT CONTENT =========="
+} >> "$OUT"
+
+tr '\0' '\n' < "$TMP_LIST" | while IFS= read -r f; do
+  sz="$(stat -c %s "$f" 2>/dev/null || echo 0)"
+  mt="$(stat -c %y "$f" 2>/dev/null || echo unknown)"
+  {
+    echo
+    echo "----- FILE BEGIN -----"
+    echo "Path: $f"
+    echo "Size: $sz"
+    echo "MTime: $mt"
+    echo "----- CONTENT -----"
+  } >> "$OUT"
+
+  if [ "$sz" -gt $((MAX_FILE_SIZE_KB*1024)) ]; then
+    head -c $((MAX_FILE_SIZE_KB*1024)) "$f" 2>/dev/null >> "$OUT" || true
+    echo -e "\n[TRUNCATED]" >> "$OUT"
+  else
+    cat "$f" 2>/dev/null >> "$OUT" || true
+  fi
+  echo "----- FILE END -----" >> "$OUT"
+done
+
+echo "Dump TXT prêt: $OUT"
+
+# --------- Export DB (SCHÉMA UNIQUEMENT) ---------
+SQL_OUT="${DUMP_DIR}/scalp_db_${TS}.sql"
+: > "$SQL_OUT"
+
+if command -v sqlite3 >/dev/null 2>&1; then
+  for DB_PATH in /opt/scalp/project/data/*.db; do
+    [ -s "$DB_PATH" ] || continue
+    echo "=== Export ${DB_PATH}" | tee -a "$OUT"
+    {
+      echo ""
+      echo "/* DB: ${DB_PATH} */"
+      echo "-- SCHEMA ONLY --"
+      sqlite3 "$DB_PATH" ".schema"
+      echo ""
+    } >> "$SQL_OUT"
+  done
+else
+  echo "sqlite3 introuvable, export DB ignoré" | tee -a "$OUT"
+fi
+
+# --------- Git: commit + push ---------
+cd "$ROOT"
+git rev-parse --is-inside-work-tree >/dev/null 2>&1 || git init -q .
+
+git config user.name "${GIT_USERNAME}"
+git config user.email "${GIT_EMAIL_USE}"
+git remote get-url origin >/dev/null 2>&1 || git remote add origin "${REMOTE_URL}"
+
+touch .gitignore
+for p in var/ logs/ data/ dump/; do grep -qxF "$p" .gitignore || echo "$p" >> .gitignore; done
+
+git add -f "$OUT"
+[ -s "$SQL_OUT" ] && git add -f "$SQL_OUT"
+git commit -m "dump: ${OUT##*/} (schema only)" || true
+
+if [ "$DRY_RUN" = "1" ]; then
+  echo "DRY_RUN=1 -> push désactivé"
+else
+  AUTH_URL="https://${GIT_USERNAME}:${GIT_TOKEN}@${GIT_HOST}/${GIT_OWNER}/${GIT_REPO}.git"
+  git push -f "$AUTH_URL" HEAD:${GIT_BRANCH}
+  echo "OK: push vers ${REMOTE_URL} sur ${GIT_BRANCH}"
+fi
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/B_dash.py
+Size: 472
+MTime: 2025-10-28 22:19:44.465383115 +0100
+----- CONTENT -----
+import sqlite3
+DB="/opt/scalp/project/data/signals.db"
+
+con=sqlite3.connect(DB)
+rows=con.execute("""
+SELECT ts_signal,instId,side,reason,ctx,score_A,score_B,price
+FROM signals
+ORDER BY ts_signal DESC LIMIT 12
+""").fetchall()
+con.close()
+
+print("\n===== LAST SIGNALS (B) =====")
+for r in rows:
+    ts,inst,side,reason,ctx,sA,sB,price = r
+    print(f"{inst:10} | {side:4} | {reason:12} | {ctx:7} | A={sA:.3f} | B={sB:.3f} | {price}")
+print("============================\n")
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/H_score.py
+Size: 368
+MTime: 2025-10-28 22:19:44.465383115 +0100
+----- CONTENT -----
+#!/usr/bin/env python3
+import sqlite3, time
+
+DB_H="/opt/scalp/project/data/x_history.db"
+
+def latest_H():
+    con=sqlite3.connect(DB_H)
+    row=con.execute("SELECT score_H FROM v_H_latest").fetchone()
+    con.close()
+    return float(row[0]) if row and row[0] else 0.0
+
+def run():
+    h=latest_H()
+    print(f"[H] score_H={h:.3f}")
+
+if __name__=="__main__":
+    run()
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/test_ws_bitget.py
+Size: 871
+MTime: 2025-10-29 05:56:44.887457528 +0100
+----- CONTENT -----
+#!/usr/bin/env python3
+import asyncio, json, websockets, time
+
+async def main():
+    url = "wss://ws.bitget.com/v2/ws/public"
+    payload = {
+        "op": "subscribe",
+        "args": [{
+            "instType": "USDT-FUTURES",
+            "channel": "ticker",
+            "instId": "BTCUSDT"
+        }]
+    }
+
+    print("Connecting to Bitget WS...")
+    async with websockets.connect(url, ping_interval=20) as ws:
+        await ws.send(json.dumps(payload))
+        print("Subscribed to BTCUSDT ticker (USDT-FUTURES)\n")
+
+        async for msg in ws:
+            data = json.loads(msg)
+            if "data" in data:
+                tick = data["data"][0]
+                price = tick.get("lastPr")
+                ts = tick.get("ts")
+                if price:
+                    print(f"[{time.strftime('%H:%M:%S')}] BTCUSDT -> {price} (ts={ts})")
+
+asyncio.run(main())
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/X_close.py
+Size: 4062
+MTime: 2025-10-28 22:19:44.469383119 +0100
+----- CONTENT -----
+#!/usr/bin/env python3
+import sqlite3, time, logging, sys
+
+DB_OPEN   = "/opt/scalp/project/data/x_open.db"
+DB_CLOSED = "/opt/scalp/project/data/x_closed.db"
+DB_T      = "/opt/scalp/project/data/t.db"
+
+LOG = "/opt/scalp/project/logs/x_close.log"
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s X_CLOSE %(levelname)s %(message)s",
+    handlers=[logging.FileHandler(LOG), logging.StreamHandler(sys.stdout)]
+)
+
+def connect(db):
+    con = sqlite3.connect(db, timeout=30, isolation_level=None)
+    con.row_factory = sqlite3.Row
+    con.execute("PRAGMA journal_mode=WAL;")
+    con.execute("PRAGMA busy_timeout=5000;")
+    return con
+
+def get_price(inst):
+    con = connect(DB_T)
+    r = con.execute("SELECT price FROM ticks WHERE instId=? ORDER BY ts DESC LIMIT 1",(inst,)).fetchone()
+    con.close()
+    return float(r[0]) if r else None
+
+def update_be(inst, price):
+    """ Passage BE : stop remonte au prix d'entrée si gain suffisant """
+    con = connect(DB_OPEN)
+    con.execute("""
+        UPDATE positions_open
+        SET sl = entry, BE = 1
+        WHERE instId=? AND BE=0 AND (
+            (side='buy'  AND price > entry + (entry*0.002)) OR
+            (side='sell' AND price < entry - (entry*0.002))
+        )
+    """,(inst,))
+    con.close()
+
+def update_trail(inst, price):
+    """ Stop suiveur simple basé sur le dernier prix """
+    con = connect(DB_OPEN)
+    r = con.execute("SELECT side, sl, entry FROM positions_open WHERE instId=?",(inst,)).fetchone()
+    if not r:
+        con.close()
+        return
+    side, sl, entry = r["side"], r["sl"], r["entry"]
+
+    # trail = sl monte en buy, descend en sell
+    step = abs(entry * 0.003)
+
+    if side == "buy"  and price > sl + step:
+        new_sl = price - step
+    elif side == "sell" and price < sl - step:
+        new_sl = price + step
+    else:
+        con.close()
+        return
+
+    con.execute("UPDATE positions_open SET sl=? WHERE instId=?",(new_sl, inst))
+    con.close()
+
+def close_position(inst, side, entry, qty, reason_entry, exit_price, reason_exit, ts_open):
+    pnl = (exit_price-entry)*qty if side=="buy" else (entry-exit_price)*qty
+    ts_close = int(time.time()*1000)
+
+    conC = connect(DB_CLOSED)
+    conC.execute("""
+        INSERT INTO positions_closed(instId, side, entry, exit, qty, pnl, ts_open, ts_close, reason_entry, reason_exit)
+        VALUES (?,?,?,?,?,?,?,?,?,?)
+    """,(inst,side,entry,exit_price,qty,pnl,ts_open,ts_close,reason_entry,reason_exit))
+    conC.close()
+
+    conD = connect(DB_OPEN)
+    conD.execute("DELETE FROM positions_open WHERE instId=?",(inst,))
+    conD.close()
+
+    logging.info(f"CLOSE {inst} {side} exit={exit_price:.5f} pnl={pnl:.5f} entry={reason_entry} exit={reason_exit}")
+
+def run():
+    logging.info("READY")
+    while True:
+        con = connect(DB_OPEN)
+        rows = con.execute("SELECT * FROM positions_open").fetchall()
+        con.close()
+
+        for r in rows:
+            inst, side, entry, sl, tp, qty, BE, PYR, ts_open, reason_entry = \
+                r["instId"], r["side"], r["entry"], r["sl"], r["tp"], r["qty"], r["BE"], r["PYR"], r["ts_open"], r["reason_entry"]
+
+            price = get_price(inst)
+            if not price:
+                continue
+
+            # MOVE BE + TRAIL
+            update_be(inst, price)
+            update_trail(inst, price)
+
+            # RELOAD SL AFTER TRAIL/BE update
+            conR = connect(DB_OPEN)
+            sl = conR.execute("SELECT sl FROM positions_open WHERE instId=?",(inst,)).fetchone()["sl"]
+            conR.close()
+
+            # FERMETURE
+            if side=="buy":
+                if price >= tp: close_position(inst,side,entry,qty,reason_entry,price,"TP",ts_open)
+                elif price <= sl: close_position(inst,side,entry,qty,reason_entry,price,"SL",ts_open)
+            else:
+                if price <= tp: close_position(inst,side,entry,qty,reason_entry,price,"TP",ts_open)
+                elif price >= sl: close_position(inst,side,entry,qty,reason_entry,price,"SL",ts_open)
+
+        time.sleep(2)
+
+if __name__ == "__main__":
+    run()
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/b_dash.py
+Size: 2112
+MTime: 2025-10-29 08:11:52.064666231 +0100
+----- CONTENT -----
+#!/usr/bin/env python3
+import sqlite3, time
+from datetime import datetime
+
+DB_A = "/opt/scalp/project/data/a.db"
+DB_B = "/opt/scalp/project/data/b.db"
+DB_T = "/opt/scalp/project/data/t.db"
+
+def get_ctx():
+    with sqlite3.connect(DB_A) as con:
+        cur = con.cursor()
+        cur.execute("SELECT instId, ctx FROM v_ctx_latest WHERE ctx IN ('bullish','bearish','range');")
+        return cur.fetchall()
+
+def get_last_tick(inst):
+    with sqlite3.connect(DB_T) as con:
+        cur = con.cursor()
+        cur.execute("SELECT lastPr, ts_ms FROM v_ticks_latest WHERE instId=? LIMIT 1;", (inst,))
+        r = cur.fetchone()
+    if not r:
+        return None, None, None, None
+    pr, ts_ms = r
+    ts_s = ts_ms / 1000
+    hms = datetime.fromtimestamp(ts_s).strftime("%H:%M:%S")
+    delta = round(time.time() - ts_s, 1)
+    return pr, ts_s, hms, delta
+
+def get_last_signal(inst):
+    with sqlite3.connect(DB_B) as con:
+        cur = con.cursor()
+        cur.execute("SELECT ts FROM signals WHERE instId=? ORDER BY ts DESC LIMIT 1;", (inst,))
+        r = cur.fetchone()
+    if not r:
+        return None, None, None
+    ts = float(r[0])
+    hms = datetime.fromtimestamp(ts).strftime("%H:%M:%S")
+    delta = round(time.time() - ts, 1)
+    return ts, hms, delta
+
+def dash():
+    print(f"===== DASH {datetime.now().strftime('%H:%M:%S')} =====")
+    for inst, ctx in get_ctx():
+        pr, ts_tick, hms_tick, delta_tick = get_last_tick(inst)
+        ts_sig, hms_sig, delta_sig = get_last_signal(inst)
+
+        delta = "-"
+        if ts_tick and ts_sig:
+            delta = round(ts_tick - ts_sig, 1)
+
+        flag = "⚠️" if delta_tick and delta_tick > 5 else "✅"
+        print(f"{inst:<10} | ctx={ctx:<8} | price={pr or '-':<10} | "
+              f"tick={hms_tick or '-':>8} | sig={hms_sig or '-':>8} | "
+              f"Δ={delta:<6} | {flag}")
+    print("=" * 90)
+
+if __name__ == "__main__":
+    while True:
+        try:
+            dash()
+            time.sleep(3)
+        except KeyboardInterrupt:
+            break
+        except Exception as e:
+            print("B_DASH ERROR:", e)
+            time.sleep(5)
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/OB_ohlcv_B.py
+Size: 1799
+MTime: 2025-10-28 22:19:44.469383119 +0100
+----- CONTENT -----
+#!/usr/bin/env python3
+import ccxt, sqlite3, time
+
+DBu = "/opt/scalp/project/data/u.db"
+DBo = "/opt/scalp/project/data/ob.db"
+ex = ccxt.bitget()
+
+def to_bitget_symbol(inst: str) -> str:
+    return inst if ":USDT" in inst else f"{inst}:USDT"
+
+def init_db():
+    con = sqlite3.connect(DBo, timeout=30, isolation_level=None)
+    con.execute("PRAGMA journal_mode=WAL;")
+    con.execute("""CREATE TABLE IF NOT EXISTS kline_1m(
+        instId TEXT, ts INTEGER, o REAL, h REAL, l REAL, c REAL, v REAL,
+        PRIMARY KEY(instId, ts)
+    )""")
+    con.execute("""CREATE TABLE IF NOT EXISTS kline_3m(
+        instId TEXT, ts INTEGER, o REAL, h REAL, l REAL, c REAL, v REAL,
+        PRIMARY KEY(instId, ts)
+    )""")
+    con.close()
+
+def get_universe():
+    con = sqlite3.connect(DBu, timeout=30, isolation_level=None)
+    rows = con.execute("SELECT instId FROM universe").fetchall()
+    con.close()
+    return [r[0] for r in rows]
+
+def upsert(tf, inst, ohlcv):
+    tbl = "kline_1m" if tf == "1m" else "kline_3m"
+    con = sqlite3.connect(DBo, timeout=30, isolation_level=None)
+    con.execute(f"INSERT OR REPLACE INTO {tbl}(instId,ts,o,h,l,c,v) VALUES(?,?,?,?,?,?,?)",
+                (inst, ohlcv[0], ohlcv[1], ohlcv[2], ohlcv[3], ohlcv[4], ohlcv[5]))
+    con.close()
+
+def fetch_tf(inst, tf):
+    sym = to_bitget_symbol(inst)
+    ohlc = ex.fetch_ohlcv(sym, tf, limit=150)
+    for o in ohlc:
+        upsert(tf, inst, o)
+    print(f"[OB] {inst} {tf} stored ({len(ohlc)} candles)")
+
+def main():
+    init_db()
+    while True:
+        try:
+            for inst in get_universe():
+                fetch_tf(inst, "1m")
+                fetch_tf(inst, "3m")
+            time.sleep(5)
+        except Exception as e:
+            print("[OB ERROR]", e)
+            time.sleep(2)
+
+if __name__ == "__main__":
+    main()
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/B_signals.py
+Size: 1464
+MTime: 2025-10-28 22:19:44.465383115 +0100
+----- CONTENT -----
+#!/usr/bin/env python3
+import sqlite3, time
+
+DB_A = "/opt/scalp/project/data/a.db"
+DB_SIG = "/opt/scalp/project/data/signals.db"
+
+def connect(db):
+    con = sqlite3.connect(db, timeout=30, isolation_level=None)
+    con.execute("PRAGMA journal_mode=WAL;")
+    con.execute("PRAGMA busy_timeout=3000;")
+    return con
+
+def run():
+    ts = int(time.time()*1000)
+
+    # On lit le contexte depuis A (v_ctx_latest)
+    conA = connect(DB_A)
+    ctx_rows = conA.execute("""
+        SELECT instId, ctx, score_U, score_A
+        FROM v_ctx_latest
+        WHERE ctx IN ('bullish','bearish');
+    """).fetchall()
+    conA.close()
+
+    if not ctx_rows:
+        return
+
+    out = []
+    for instId, ctx, score_U, score_A in ctx_rows:
+
+        # Type de signal : Pullback (PB) ou Breakout (BO)
+        if abs(score_A) < 0.40:
+            reason = "PB"
+        else:
+            reason = "BO"
+
+        # Direction
+        if ctx == "bullish":
+            side = "buy"
+            score_B = abs(score_A)
+        else:
+            side = "sell"
+            score_B = -abs(score_A)
+
+        out.append((instId, side, ctx, score_U, score_A, score_B, reason, ts))
+
+    # Insertion dans signals.db
+    conS = connect(DB_SIG)
+    conS.executemany("""
+        INSERT INTO signals(instId, side, ctx, score_U, score_A, score_B, reason, ts_signal)
+        VALUES (?,?,?,?,?,?,?,?)
+    """, out)
+    conS.close()
+
+if __name__ == "__main__":
+    while True:
+        run()
+        time.sleep(2)
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/ticks.py
+Size: 3263
+MTime: 2025-10-29 08:32:53.050121154 +0100
+----- CONTENT -----
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import asyncio
+import json
+import sqlite3
+import threading
+import time
+from queue import Queue
+import websockets
+
+DB_PATH = "/opt/scalp/project/data/t.db"
+DB_A_PATH = "/opt/scalp/project/data/a.db"
+WS_URL = "wss://ws.bitget.com/mix/v1/stream"
+FLUSH_INTERVAL = 0.5  # secondes
+QUEUE_MAX = 5000
+
+q = Queue(maxsize=QUEUE_MAX)
+lock = threading.Lock()
+stop_event = threading.Event()
+
+# --- Connexion SQLite optimisée ---
+def init_db():
+    conn = sqlite3.connect(DB_PATH, check_same_thread=False, timeout=10)
+    cur = conn.cursor()
+    cur.executescript("""
+        PRAGMA journal_mode=WAL;
+        PRAGMA synchronous=OFF;
+        CREATE TABLE IF NOT EXISTS ticks(
+            instId TEXT PRIMARY KEY,
+            price REAL,
+            ts_ms INTEGER
+        );
+        CREATE INDEX IF NOT EXISTS idx_ticks_ts ON ticks(ts_ms);
+    """)
+    conn.commit()
+    return conn
+
+# --- Récupération des symboles depuis le contexte A ---
+def get_symbols():
+    conn = sqlite3.connect(DB_A_PATH)
+    cur = conn.cursor()
+    cur.execute("SELECT instId FROM v_ctx_latest;")
+    symbols = [r[0].replace("/", "") for r in cur.fetchall()]
+    conn.close()
+    return symbols
+
+# --- Thread d'écriture SQLite ---
+def writer_thread():
+    conn = init_db()
+    cur = conn.cursor()
+    last_flush = 0
+    buffer = []
+    while not stop_event.is_set():
+        try:
+            tick = q.get(timeout=FLUSH_INTERVAL)
+            buffer.append(tick)
+        except:
+            pass
+
+        now = time.time()
+        if now - last_flush >= FLUSH_INTERVAL and buffer:
+            with lock:
+                cur.executemany(
+                    "INSERT INTO ticks (instId, price, ts_ms) VALUES (?, ?, ?) "
+                    "ON CONFLICT(instId) DO UPDATE SET price=excluded.price, ts_ms=excluded.ts_ms;",
+                    buffer,
+                )
+                conn.commit()
+                buffer.clear()
+                last_flush = now
+
+    conn.commit()
+    conn.close()
+
+# --- Fonction WS principale ---
+async def ws_consumer():
+    symbols = get_symbols()
+    args = [
+        {"instType": "USDT-FUTURES", "channel": "ticker", "instId": s}
+        for s in symbols
+    ]
+    sub_msg = json.dumps({"op": "subscribe", "args": args})
+    print(f"[ticks] Subscribing to {len(symbols)} symbols...")
+
+    async with websockets.connect(WS_URL, ping_interval=15, ping_timeout=10) as ws:
+        await ws.send(sub_msg)
+        print("[ticks] Connected & subscribed.")
+        async for msg in ws:
+            data = json.loads(msg)
+            if "data" not in data:
+                continue
+            for d in data["data"]:
+                try:
+                    instId = d["instId"]
+                    price = float(d["lastPr"])
+                    ts_ms = int(d["ts"])
+                    if not q.full():
+                        q.put((instId, price, ts_ms))
+                except Exception as e:
+                    pass
+
+# --- Main ---
+def main():
+    wt = threading.Thread(target=writer_thread, daemon=True)
+    wt.start()
+
+    try:
+        asyncio.run(ws_consumer())
+    except KeyboardInterrupt:
+        print("Stopping...")
+    finally:
+        stop_event.set()
+        wt.join()
+
+if __name__ == "__main__":
+    main()
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/X_open.py
+Size: 1827
+MTime: 2025-10-29 05:11:30.972042700 +0100
+----- CONTENT -----
+#!/usr/bin/env python3
+import sqlite3, time, logging
+
+logging.basicConfig(
+    filename="/opt/scalp/project/logs/x_open.log",
+    level=logging.INFO,
+    format="%(asctime)s X_OPEN %(levelname)s %(message)s"
+)
+
+DB_SIG = "/opt/scalp/project/data/signals.db"
+DB_O   = "/opt/scalp/project/data/x_open.db"
+
+def run():
+    conS = sqlite3.connect(DB_SIG)
+    conO = sqlite3.connect(DB_O)
+
+    sig = conS.execute("""
+        SELECT instId, side, reason, score_U, score_A, score_B, ctx, ts_signal
+        FROM signals ORDER BY ts_signal DESC LIMIT 1
+    """).fetchone()
+
+    if not sig:
+        logging.info("READY")
+        return
+
+    inst, side, reason, sU, sA, sB, ctx, ts = sig
+
+    # Check already open
+    exists = conO.execute("SELECT instId FROM positions_open WHERE instId=?", (inst,)).fetchone()
+    if exists:
+        logging.info(f"SKIP {inst} already open")
+        return
+
+    qty = 10.0
+    price = None
+
+    # Get last price from t.db
+    price = sqlite3.connect("/opt/scalp/project/data/t.db").execute(
+        "SELECT price FROM ticks WHERE instId=? ORDER BY ts DESC LIMIT 1", (inst,)
+    ).fetchone()
+    if price:
+        price = price[0]
+    else:
+        logging.warning(f"NO PRICE FOR {inst}, ABORT")
+        return
+
+    sl = 0.0
+    tp = 0.0
+    ts_entry = int(time.time())
+
+    conO.execute("""
+        INSERT INTO positions_open(instId, side, entry, sl, tp, qty,
+        score_U, score_A, score_B, ctx, reason_entry, ts_entry)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (inst, side, price, sl, tp, qty, sU, sA, sB, ctx, reason, ts_entry))
+
+    conO.commit()
+    logging.info(f"OPEN {inst} {side} qty={qty} reason={reason}")
+
+if __name__ == "__main__":
+    while True:
+        try:
+            run()
+        except Exception as e:
+            logging.error(f"ERR {e}")
+        time.sleep(2)
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/X_follow.py
+Size: 1064
+MTime: 2025-10-29 05:12:04.156090980 +0100
+----- CONTENT -----
+#!/usr/bin/env python3
+import sqlite3, time, logging
+
+logging.basicConfig(
+    filename="/opt/scalp/project/logs/x_follow.log",
+    level=logging.INFO,
+    format="%(asctime)s X_FOLLOW %(levelname)s %(message)s"
+)
+
+DB_O = "/opt/scalp/project/data/x_open.db"
+DB_T = "/opt/scalp/project/data/t.db"
+
+def run():
+    conO = sqlite3.connect(DB_O)
+    conT = sqlite3.connect(DB_T)
+
+    open_positions = conO.execute("""
+        SELECT instId, side, entry, sl, tp, qty, ts_entry, reason_entry
+        FROM positions_open
+    """).fetchall()
+
+    for inst, side, entry, sl, tp, qty, ts_entry, reason_entry in open_positions:
+        last = conT.execute(
+            "SELECT price FROM ticks WHERE instId=? ORDER BY ts DESC LIMIT 1", (inst,)
+        ).fetchone()
+        if not last:
+            continue
+        price = last[0]
+
+        # BE & TP/SL logic here later
+        pass
+
+    logging.info("READY")
+
+if __name__ == "__main__":
+    while True:
+        try:
+            run()
+        except Exception as e:
+            logging.error(f"ERR {e}")
+        time.sleep(2)
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/S_cleanup_signals.sh
+Size: 267
+MTime: 2025-10-28 09:52:03.409264353 +0100
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+sqlite3 /opt/scalp/project/data/signals.db "
+WITH ranked AS (
+  SELECT rowid,
+         ROW_NUMBER() OVER (PARTITION BY instId ORDER BY ts_signal DESC) AS rn
+  FROM signals_for_open
+)
+DELETE FROM signals_for_open WHERE rn > 10;
+"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/OA_ohlcv_A.py
+Size: 2482
+MTime: 2025-10-28 22:19:44.469383119 +0100
+----- CONTENT -----
+#!/usr/bin/env python3
+import sqlite3, time, ccxt
+
+DBU = "/opt/scalp/project/data/u.db"
+DBO = "/opt/scalp/project/data/oa.db"
+TF_LIST = ["5m","15m","30m"]
+INIT = 150
+MAX_ROWS = 300
+
+ex = ccxt.bitget()
+
+def to_bitget_symbol(inst: str) -> str:
+    return inst if ":" in inst else f"{inst}:USDT"
+
+def ensure_schema():
+    con = sqlite3.connect(DBO, timeout=5)
+    cur = con.cursor()
+    for tf in TF_LIST:
+        cur.execute(f"DROP TABLE IF EXISTS ohlcv_{tf}")
+        cur.execute(f"""
+        CREATE TABLE IF NOT EXISTS ohlcv_{tf}(
+          instId TEXT,
+          ts INTEGER,
+          open REAL, high REAL, low REAL, close REAL, volume REAL,
+          PRIMARY KEY(instId, ts)
+        )
+        """)
+    con.commit()
+    con.close()
+
+def load_universe():
+    con = sqlite3.connect(DBU, timeout=5)
+    rows = [r[0] for r in con.execute("SELECT instId FROM universe")]
+    con.close()
+    return rows
+
+def last_ts(con, tf, inst):
+    row = con.execute(f"SELECT MAX(ts) FROM ohlcv_{tf} WHERE instId=?", (inst,)).fetchone()
+    return row[0] if row and row[0] is not None else None
+
+def upsert_batch(tf, inst, batch):
+    if not batch:
+        return
+    con = sqlite3.connect(DBO, timeout=5)
+    cur = con.cursor()
+    cur.executemany(
+        f"INSERT OR REPLACE INTO ohlcv_{tf}(instId,ts,open,high,low,close,volume) VALUES (?,?,?,?,?,?,?)",
+        [(inst, o[0], o[1], o[2], o[3], o[4], o[5]) for o in batch]
+    )
+    cur.execute(f"""
+        DELETE FROM ohlcv_{tf}
+        WHERE instId=?
+          AND ts NOT IN (
+            SELECT ts FROM ohlcv_{tf}
+            WHERE instId=?
+            ORDER BY ts DESC
+            LIMIT {MAX_ROWS}
+          )
+    """, (inst, inst))
+    con.commit()
+    con.close()
+
+def sync_inst_tf(inst, tf):
+    inst_ccxt = to_bitget_symbol(inst)
+    con = sqlite3.connect(DBO, timeout=5)
+    ts_last = last_ts(con, tf, inst)
+    con.close()
+
+    if ts_last is None:
+        data = ex.fetch_ohlcv(inst_ccxt, tf, limit=INIT)
+        upsert_batch(tf, inst, data)
+        return
+
+    data = ex.fetch_ohlcv(inst_ccxt, tf, since=ts_last + 1, limit=150)
+    upsert_batch(tf, inst, data)
+
+def main():
+    ensure_schema()
+    insts = load_universe()
+    for inst in insts:
+        for tf in TF_LIST:
+            try:
+                sync_inst_tf(inst, tf)
+                time.sleep(0.25)
+            except Exception as e:
+                print(f"[OA][{inst}][{tf}] WARN: {e}")
+    print("[OA] ✅ Multi-TF sync to oa.db")
+
+if __name__ == "__main__":
+    main()
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/A_config.py
+Size: 336
+MTime: 2025-10-28 22:19:44.465383115 +0100
+----- CONTENT -----
+#!/usr/bin/env python3
+
+# DB paths
+DB_A  = "/opt/scalp/project/data/a.db"
+DB_OB = "/opt/scalp/project/data/ob.db"
+DB_OA = "/opt/scalp/project/data/oa.db"
+DB_U  = "/opt/scalp/project/data/u.db"
+
+# TF used
+TF_SHORT = "5m"
+TF_MED   = "15m"
+TF_LONG  = "30m"
+
+# Weights for score (softmax later)
+W_SHORT = 0.50
+W_MED   = 0.30
+W_LONG  = 0.20
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/T_ticks.py
+Size: 1505
+MTime: 2025-10-28 22:19:44.469383119 +0100
+----- CONTENT -----
+#!/usr/bin/env python3
+import asyncio, time, sqlite3
+import ccxt.pro as ccxtpro
+
+UDB = "/opt/scalp/project/data/u.db"
+TDB = "/opt/scalp/project/data/t.db"
+
+def to_bitget_symbol(inst: str) -> str:
+    return inst if ":USDT" in inst else f"{inst}:USDT"
+
+def ensure_schema():
+    con = sqlite3.connect(TDB, timeout=30, isolation_level=None)
+    con.execute("PRAGMA journal_mode=WAL;")
+    con.execute("CREATE TABLE IF NOT EXISTS ticks(instId TEXT, ts INTEGER, price REAL)")
+    con.close()
+
+async def run():
+    ensure_schema()
+    con = sqlite3.connect(UDB, timeout=30, isolation_level=None)
+    insts = [r[0] for r in con.execute("SELECT instId FROM universe").fetchall()]
+    con.close()
+    sym_map = {inst: to_bitget_symbol(inst) for inst in insts}
+
+    ex = ccxtpro.bitget()
+    try:
+        while True:
+            for inst, sym in sym_map.items():
+                try:
+                    t = await ex.watch_ticker(sym)
+                    ts = int(time.time()*1000)
+                    price = float(t.get("last") or t.get("close"))
+                    if price:
+                        conT = sqlite3.connect(TDB, timeout=30, isolation_level=None)
+                        conT.execute("INSERT INTO ticks(instId,ts,price) VALUES(?,?,?)", (inst, ts, price))
+                        conT.close()
+                except Exception:
+                    await asyncio.sleep(0.5)
+            await asyncio.sleep(0.1)
+    finally:
+        await ex.close()
+
+if __name__ == "__main__":
+    asyncio.run(run())
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/S_cleanup_ticks.sh
+Size: 147
+MTime: 2025-10-28 10:25:52.647287857 +0100
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+sqlite3 /opt/scalp/project/data/t.db "
+DELETE FROM ticks
+WHERE ts < strftime('%s','now','-1 hour') * 1000;
+"
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/A_analyse.py
+Size: 1601
+MTime: 2025-10-28 22:19:44.465383115 +0100
+----- CONTENT -----
+#!/usr/bin/env python3
+import sqlite3, math, time
+
+DB_A = "/opt/scalp/project/data/a.db"
+DB_U = "/opt/scalp/project/data/u.db"
+DB_OB = "/opt/scalp/project/data/ob.db"
+TF = "5m"
+
+def softmax(x):
+    e = [math.exp(i) for i in x]
+    s = sum(e)
+    return [v/s for v in e]
+
+def get_universe():
+    con = sqlite3.connect(DB_U)
+    rows = con.execute("SELECT instId FROM universe ORDER BY instId").fetchall()
+    con.close()
+    return [r[0] for r in rows]
+
+def load_ob(inst):
+    con = sqlite3.connect(DB_OB)
+    row = con.execute(f"SELECT rsi FROM ob_{TF} WHERE instId=? ORDER BY ts DESC LIMIT 1", (inst,)).fetchone()
+    con.close()
+    return row[0] if row else None
+
+def compute_ctx(rsi):
+    if rsi < 30: return "bullish"
+    if rsi > 70: return "bearish"
+    if 45 <= rsi <= 55: return "range"
+    return "none"
+
+def compute_score_A(ctx):
+    if ctx == "bullish": return 0.8
+    if ctx == "bearish": return -0.8
+    if ctx == "range": return 0.0
+    return 0.0
+
+def run():
+    insts = get_universe()
+    now = int(time.time()*1000)
+    out = []
+
+    for inst in insts:
+        rsi = load_ob(inst)
+        if rsi is None:
+            continue
+        ctx = compute_ctx(rsi)
+        score_A = compute_score_A(ctx)
+        p_buy, p_sell = softmax([score_A, -score_A])
+        out.append((inst, now, 0.0, score_A, p_buy, p_sell, ctx))
+
+    con = sqlite3.connect(DB_A)
+    con.execute("DELETE FROM ctx_a_latest")
+    con.executemany("INSERT INTO ctx_a_latest(instId,ts,score_U,score_A,p_buy,p_sell,ctx) VALUES (?,?,?,?,?,?,?)", out)
+    con.commit()
+    con.close()
+
+if __name__ == "__main__":
+    run()
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/H_perf.py
+Size: 2240
+MTime: 2025-10-28 22:19:44.465383115 +0100
+----- CONTENT -----
+#!/usr/bin/env python3
+import sqlite3, time, statistics, logging, sys
+from pathlib import Path
+
+LOG = "/opt/scalp/project/logs/H_perf.log"
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(message)s",
+    handlers=[logging.FileHandler(LOG), logging.StreamHandler(sys.stdout)]
+)
+
+DB_CLOSED = "/opt/scalp/project/data/x_closed.db"
+DB_H = "/opt/scalp/project/data/h.db"
+
+def connect_db(path):
+    con = sqlite3.connect(path, timeout=30, isolation_level=None)
+    con.execute("PRAGMA journal_mode=WAL;")
+    con.execute("PRAGMA synchronous=NORMAL;")
+    con.execute("PRAGMA busy_timeout=5000;")
+    return con
+
+def ensure_closed_schema():
+    con = connect_db(DB_CLOSED)
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS positions_closed(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            instId TEXT, side TEXT, entry REAL, exit REAL,
+            sl REAL, tp REAL, pnl REAL, reason TEXT,
+            ts_open INTEGER, ts_close INTEGER
+        )
+    """)
+    con.close()
+
+def migrate_h():
+    con = connect_db(DB_H)
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS score_H(
+            instId TEXT PRIMARY KEY,
+            avg_pnl REAL,
+            winrate REAL,
+            trades INTEGER,
+            last_update INTEGER
+        )
+    """)
+    con.close()
+
+def compute_score():
+    ensure_closed_schema()
+    con_c = connect_db(DB_CLOSED)
+    rows = con_c.execute("SELECT instId, pnl FROM positions_closed").fetchall()
+    con_c.close()
+    if not rows:
+        logging.info("Aucun trade clos, pas de calcul.")
+        return
+    data = {}
+    for inst,pnl in rows:
+        data.setdefault(inst,[]).append(pnl)
+    con_h = connect_db(DB_H)
+    for inst,vals in data.items():
+        avg = statistics.mean(vals)
+        winrate = sum(1 for v in vals if v>0)/len(vals)
+        con_h.execute("""
+            INSERT OR REPLACE INTO score_H(instId,avg_pnl,winrate,trades,last_update)
+            VALUES(?,?,?,?,?)
+        """,(inst,avg,winrate,len(vals),int(time.time()*1000)))
+    con_h.close()
+    logging.info(f"Scores H mis à jour pour {len(data)} instruments.")
+
+def main(argv):
+    migrate_h()
+    compute_score()
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/OB_feat.py
+Size: 1734
+MTime: 2025-10-28 22:19:44.469383119 +0100
+----- CONTENT -----
+#!/usr/bin/env python3
+import sqlite3, time
+
+DB_OB = "/opt/scalp/project/data/ob.db"
+DB_B  = "/opt/scalp/project/data/b.db"
+
+def ensure_schema():
+    con = sqlite3.connect(DB_B, timeout=30, isolation_level=None)
+    con.execute("PRAGMA journal_mode=WAL;")
+    con.execute("""CREATE TABLE IF NOT EXISTS feat_1m(
+        instId TEXT,
+        ts INTEGER,
+        atr REAL,
+        PRIMARY KEY(instId, ts)
+    )""")
+    con.execute("""CREATE TABLE IF NOT EXISTS feat_3m(
+        instId TEXT,
+        ts INTEGER,
+        atr REAL,
+        PRIMARY KEY(instId, ts)
+    )""")
+    con.close()
+
+def atr14(rows):
+    # rows = [(ts,o,h,l,c,v)] triés ASC
+    if len(rows) < 15:
+        return None
+    trs=[]
+    prev_close = rows[0][4]
+    for (_,o,h,l,c,v) in rows[1:]:
+        trs.append(max(h-l, abs(h-prev_close), abs(l-prev_close)))
+        prev_close=c
+    return sum(trs[-14:]) / 14.0
+
+def process(tf):
+    tbl_k = f"kline_{tf}"
+    tbl_f = f"feat_{tf}"
+    con_ob = sqlite3.connect(DB_OB)
+    con_b  = sqlite3.connect(DB_B)
+
+    insts = [r[0] for r in con_ob.execute(f"SELECT DISTINCT instId FROM {tbl_k}")]
+    for inst in insts:
+        rows = con_ob.execute(
+            f"SELECT ts,o,h,l,c,v FROM {tbl_k} WHERE instId=? ORDER BY ts ASC",
+            (inst,)
+        ).fetchall()
+        a = atr14(rows)
+        if a is None:
+            continue
+        ts = rows[-1][0]
+        con_b.execute(
+            f"INSERT OR REPLACE INTO {tbl_f}(instId,ts,atr) VALUES(?,?,?)",
+            (inst,ts,a)
+        )
+    con_b.commit()
+    con_ob.close()
+    con_b.close()
+
+def main():
+    ensure_schema()
+    while True:
+        process("1m")
+        process("3m")
+        time.sleep(20)  # toutes les 20s
+
+if __name__ == "__main__":
+    main()
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/x_dash.py
+Size: 1689
+MTime: 2025-10-28 22:19:44.469383119 +0100
+----- CONTENT -----
+#!/usr/bin/env python3
+import sqlite3, time
+from datetime import datetime
+
+DBP="/opt/scalp/project/data/x_open.db"
+DBF="/opt/scalp/project/data/x_follow.db"
+DBH="/opt/scalp/project/data/x_history.db"
+
+def h(ts):return datetime.fromtimestamp(ts/1000).strftime("%H:%M:%S")
+
+def get_H(inst):
+    con=sqlite3.connect(DBH)
+    r=con.execute("""
+    WITH last20 AS (
+        SELECT pnl FROM history WHERE instId=?
+        ORDER BY ts_close DESC LIMIT 20
+    ),
+    stats AS (
+        SELECT 
+            (SELECT COUNT(*) FROM last20 WHERE pnl>0)*1.0/(SELECT COUNT(*) FROM last20) AS winrate,
+            (SELECT SUM(pnl) FROM last20 WHERE pnl>0) AS sum_win,
+            (SELECT SUM(ABS(pnl)) FROM last20 WHERE pnl<0) AS sum_loss
+    )
+    SELECT 
+        CASE WHEN sum_loss IS NULL OR sum_loss=0 THEN 1.0 
+        ELSE (0.50*winrate + 0.50*MIN(1.0, (sum_win/sum_loss)/2.0))
+        END AS H
+    FROM stats
+    """,(inst,)).fetchone()
+    con.close()
+    return float(r[0]) if r and r[0] else 0.0
+
+print("===== X DASH =====")
+
+# OPEN
+con=sqlite3.connect(DBP)
+rows=con.execute("SELECT instId,side,entry,qty,lev,risk,score_G,ts_open FROM positions_open").fetchall()
+con.close()
+if not rows:
+    print("No open position")
+else:
+    for r in rows:
+        inst,side,e,qty,lev,risk,sg,ts=r
+        Hs=get_H(inst)
+        print(f"{inst} | {side} | entry={e} | lev={lev:.2f} | risk={risk:.3f} | G={sg:.3f} | H={Hs:.3f} | {h(ts)}")
+
+# FOLLOW
+con=sqlite3.connect(DBF)
+rows=con.execute("SELECT instId,current,upnl,stage,ts_update FROM follow").fetchall()
+con.close()
+for r in rows:
+    inst,cur,u,st,ts=r
+    print(f"FOLLOW -> {inst} | {cur} | upnl={u:.4f} | {st} | {h(ts)}")
+
+print("===================")
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/X_dash.py
+Size: 1761
+MTime: 2025-10-28 22:19:44.469383119 +0100
+----- CONTENT -----
+#!/usr/bin/env python3
+import sqlite3, time
+
+DB_O = "/opt/scalp/project/data/x_open.db"
+DB_H = "/opt/scalp/project/data/x_history.db"
+DB_T = "/opt/scalp/project/data/t.db"
+
+def h(ts): 
+    return time.strftime("%H:%M:%S", time.localtime(ts/1000))
+
+def price(inst):
+    con = sqlite3.connect(DB_T)
+    r = con.execute("SELECT price FROM ticks WHERE instId=? ORDER BY ts DESC LIMIT 1",(inst,)).fetchone()
+    con.close()
+    return float(r[0]) if r else None
+
+# ===== OPEN POSITIONS =====
+print("===== OPEN POSITIONS =====")
+con = sqlite3.connect(DB_O)
+rows = con.execute("SELECT instId,side,entry,sl,tp,qty,score_U,score_A,score_B,ts_open FROM positions_open").fetchall()
+con.close()
+
+if not rows:
+    print("No open positions")
+else:
+    for r in rows:
+        inst,side,e,sl,tp,qty,u,a,b,ts = r
+        p = price(inst)
+        pnl = (p-e)*qty if side=="buy" else (e-p)*qty
+        print(f"{inst} | {side} | entry={e:.6f} | sl={sl:.6f} | tp={tp:.6f} | pnl={pnl:.4f} | {h(ts)}")
+print("==========================\n")
+
+# ===== LAST CLOSED =====
+print("===== LAST CLOSED =====")
+con = sqlite3.connect(DB_H)
+hist = con.execute("""
+SELECT instId,side,entry,exit,qty,pnl,ts_close,reason
+FROM x_history ORDER BY ts_close DESC LIMIT 5
+""").fetchall()
+con.close()
+
+if not hist:
+    print("No closed positions")
+else:
+    for inst,side,e,x,qty,pnl,tsc,reason in hist:
+        print(f"{inst} | {side} | {e:.4f}->{x:.4f} | pnl={pnl:.4f} | {h(tsc)} | {reason}")
+print("==========================\n")
+
+print("===== ACCOUNT =====")
+BAL = 1000.0
+total_pnl = sum([h[5] for h in hist]) if hist else 0
+print(f"Balance paper  : {BAL:.2f} USDT")
+print(f"Equity paper   : {BAL+total_pnl:.2f} USDT")
+print(f"Closed PnL     : {total_pnl:.4f} USDT")
+print("==========================")
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/A_ctx.py
+Size: 2347
+MTime: 2025-10-28 22:19:44.465383115 +0100
+----- CONTENT -----
+#!/usr/bin/env python3
+import sqlite3, time, numpy as np
+
+DB_A  = "/opt/scalp/project/data/a.db"
+DB_OA = "/opt/scalp/project/data/oa.db"
+DB_U  = "/opt/scalp/project/data/u.db"
+
+def macd(vals):
+    def ema(v, p):
+        if len(v) < p: return None
+        a = 2/(p+1)
+        e = v[0]
+        for x in v[1:]:
+            e = a*x + (1-a)*e
+        return e
+    e12, e26 = ema(vals,12), ema(vals,26)
+    if e12 is None or e26 is None:
+        return 0
+    return e12 - e26
+
+def run():
+    con = sqlite3.connect(DB_A)
+    con.execute("ATTACH DATABASE ? AS oa",(DB_OA,))
+    con.execute("ATTACH DATABASE ? AS u",(DB_U,))
+    cur = con.cursor()
+
+    insts = [r[0] for r in cur.execute("SELECT instId FROM u.universe")]
+    ts_now = int(time.time()*1000)
+    rows_out = []
+
+    for inst in insts:
+        d5  = cur.execute("SELECT close FROM oa.ohlcv_5m  WHERE instId=? ORDER BY ts DESC LIMIT 150",(inst,)).fetchall()
+        d15 = cur.execute("SELECT close FROM oa.ohlcv_15m WHERE instId=? ORDER BY ts DESC LIMIT 150",(inst,)).fetchall()
+        d30 = cur.execute("SELECT close FROM oa.ohlcv_30m WHERE instId=? ORDER BY ts DESC LIMIT 150",(inst,)).fetchall()
+
+        if not d5 or not d15 or not d30:
+            continue
+
+        close5  = np.array([x[0] for x in d5][::-1])
+        close15 = np.array([x[0] for x in d15][::-1])
+        close30 = np.array([x[0] for x in d30][::-1])
+
+        macd5  = macd(close5.tolist())
+        macd15 = macd(close15.tolist())
+        macd30 = macd(close30.tolist())
+
+        # === U NEUTRE ===
+        score_U = 0.0
+
+        # A = force contextuelle via MACD multi-TF
+        score_A = np.nanmean([abs(macd5), abs(macd15), abs(macd30)])
+
+        if macd5 > 0 and macd15 > 0 and macd30 > 0:
+            ctx = "bullish"; p_buy, p_sell = 0.9, 0.1
+        elif macd5 < 0 and macd15 < 0 and macd30 < 0:
+            ctx = "bearish"; p_buy, p_sell = 0.1, 0.9
+        else:
+            ctx = "range"; p_buy, p_sell = 0.5, 0.5
+
+        rows_out.append((inst, ts_now, score_U, score_A, p_buy, p_sell, ctx))
+
+    cur.execute("DELETE FROM ctx_a_latest")
+    cur.executemany("""
+        INSERT INTO ctx_a_latest(instId,ts,score_U,score_A,p_buy,p_sell,ctx)
+        VALUES (?,?,?,?,?,?,?)
+    """, rows_out)
+    con.commit()
+    con.close()
+    print("[A] ✓ ctx_A updated (U neutral)")
+    
+if __name__ == "__main__":
+    run()
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/X_config.py
+Size: 417
+MTime: 2025-10-28 22:19:44.469383119 +0100
+----- CONTENT -----
+DB_SIG="/opt/scalp/project/data/signals.db"
+DB_T="/opt/scalp/project/data/t.db"
+DB_A="/opt/scalp/project/data/a.db"
+DB_XOPEN="/opt/scalp/project/data/x_open.db"
+DB_XCLOSED="/opt/scalp/project/data/x_closed.db"   # <-- ajouté
+DB_XFOLLOW="/opt/scalp/project/data/x_follow.db"
+DB_H="/opt/scalp/project/data/h.db"
+
+COOLDOWN_OPEN = 0        # tu pourras remonter plus tard (ex 45-120)
+ATR_SL_MULT = 2.0
+ATR_TP_MULT = 3.0
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/U_universe.py
+Size: 572
+MTime: 2025-10-28 22:19:44.469383119 +0100
+----- CONTENT -----
+import ccxt, sqlite3
+
+DBU = "/opt/scalp/project/data/u.db"
+TOP = 20
+
+exchange = ccxt.bitget()
+markets = exchange.load_markets()
+
+perps = []
+for s,info in markets.items():
+    if info.get('swap',False) and info['quote'] == 'USDT':
+        inst = s.replace(":USDT","")  # -> BTC/USDT:USDT → BTC/USDT
+        perps.append(inst)
+
+perps = perps[:TOP]
+
+con = sqlite3.connect(DBU, timeout=5)
+con.execute("DELETE FROM universe;")
+for inst in perps:
+    con.execute("INSERT OR IGNORE INTO universe(instId) VALUES (?)", (inst,))
+con.commit()
+con.close()
+
+print("[U] OK :", perps)
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/init_db.py
+Size: 1110
+MTime: 2025-10-28 22:19:44.469383119 +0100
+----- CONTENT -----
+import sqlite3
+
+DB_A = "/opt/scalp/project/data/a.db"
+
+def init_db():
+    con = sqlite3.connect(DB_A, timeout=5)
+    cur = con.cursor()
+
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS ohlcv_5m (
+        instId TEXT,
+        ts INTEGER,
+        open REAL,
+        high REAL,
+        low REAL,
+        close REAL,
+        vol REAL
+    );
+    """)
+
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS ohlcv_15m (
+        instId TEXT,
+        ts INTEGER,
+        open REAL,
+        high REAL,
+        low REAL,
+        close REAL,
+        vol REAL
+    );
+    """)
+
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS ohlcv_30m (
+        instId TEXT,
+        ts INTEGER,
+        open REAL,
+        high REAL,
+        low REAL,
+        close REAL,
+        vol REAL
+    );
+    """)
+
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS ctx_a (
+        instId TEXT,
+        ts INTEGER,
+        p_buy REAL,
+        p_hold REAL,
+        p_sell REAL,
+        score REAL,
+        ctx TEXT
+    );
+    """)
+
+    con.commit()
+    con.close()
+    print("[INIT_DB] OK – A DB ready")
+
+if __name__ == "__main__":
+    init_db()
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/A_ctx_dash.py
+Size: 1524
+MTime: 2025-10-28 22:19:44.465383115 +0100
+----- CONTENT -----
+#!/usr/bin/env python3
+import sqlite3, time
+
+DB_A = "/opt/scalp/project/data/a.db"
+
+def hms(ts):
+    if ts > 10_000_000_000: 
+        ts = ts/1000
+    return time.strftime("%H:%M:%S", time.localtime(ts))
+
+def run():
+    con = sqlite3.connect(DB_A)
+    rows = con.execute("""
+    SELECT instId, ctx, score_A, ts
+    FROM ctx_a_latest
+    ORDER BY ABS(score_A) DESC, instId
+    """).fetchall()
+    con.close()
+
+    # remove duplicates by instId (keep first occurrence only)
+    seen = set()
+    clean_rows = []
+    for r in rows:
+        if r[0] not in seen:
+            seen.add(r[0])
+            clean_rows.append(r)
+
+    # categories
+    bull  = [r for r in clean_rows if r[1]=="bullish"]
+    bear  = [r for r in clean_rows if r[1]=="bearish"]
+    rang  = [r for r in clean_rows if r[1]=="range"]
+    other = [r for r in clean_rows if r[1] not in ("bullish","bearish","range")]
+
+    total = len(clean_rows)
+    ts = clean_rows[0][3] if clean_rows else int(time.time())
+
+    print("===== CTX SUMMARY (A) =====")
+    print(f"bullish | {len(bull):<2} | {' '.join([r[0] for r in bull[:5]])} | {hms(ts)}")
+    print(f"bearish | {len(bear):<2} | {' '.join([r[0] for r in bear[:5]])} | {hms(ts)}")
+    print(f"range   | {len(rang):<2} | {' '.join([r[0] for r in rang[:5]])} | {hms(ts)}")
+    print(f"other   | {len(other):<2} | {' '.join([r[0] for r in other[:5]])} | {hms(ts)}")
+    print("---------------------------")
+    print(f"TOTAL   | {total}")
+    print("===========================")
+
+if __name__=="__main__":
+    run()
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/scripts/b_signals.py
+Size: 1884
+MTime: 2025-10-29 06:05:11.892069178 +0100
+----- CONTENT -----
+#!/usr/bin/env python3
+import sqlite3
+import time
+from datetime import datetime
+
+DB_A = "/opt/scalp/project/data/a.db"
+DB_B = "/opt/scalp/project/data/b.db"
+DB_T = "/opt/scalp/project/data/t.db"
+
+def get_ctx():
+    con = sqlite3.connect(DB_A)
+    cur = con.cursor()
+    cur.execute("SELECT instId, ctx FROM v_ctx_latest;")
+    rows = cur.fetchall()
+    con.close()
+    return rows
+
+def get_price(inst):
+    con = sqlite3.connect(DB_T)
+    cur = con.cursor()
+    cur.execute("SELECT lastPr, age_ms FROM v_ticks_latest WHERE instId=? LIMIT 1;", (inst,))
+    row = cur.fetchone()
+    con.close()
+    return row if row else (None, None)
+
+def save_signal(inst, side, reason):
+    con = sqlite3.connect(DB_B)
+    cur = con.cursor()
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS signals (
+            instId TEXT,
+            side TEXT,
+            entry_reason TEXT,
+            ts INTEGER
+        );
+    """)
+    cur.execute("INSERT INTO signals VALUES (?,?,?,?)", (inst, side, reason, int(time.time())))
+    con.commit()
+    con.close()
+
+def generate_signals():
+    ctx_list = get_ctx()
+    for inst, ctx in ctx_list:
+        price, age_ms = get_price(inst)
+        if price is None or (age_ms and age_ms > 10000):
+            continue
+
+        if ctx == "bullish":
+            side, reason = "buy", "CTX_BULL"
+        elif ctx == "bearish":
+            side, reason = "sell", "CTX_BEAR"
+        else:
+            continue
+
+        save_signal(inst, side, reason)
+        print(f"{datetime.now().strftime('%H:%M:%S')} | {inst:<10} | {side:<4} | ctx={ctx:<8} | price={price}")
+
+if __name__ == "__main__":
+    print("=== B_SIGNALS RUNNING ===")
+    while True:
+        try:
+            generate_signals()
+            time.sleep(2)
+        except KeyboardInterrupt:
+            break
+        except Exception as e:
+            print("B_SIGNALS ERROR:", e)
+            time.sleep(5)
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/config/scalp.conf
+Size: 18
+MTime: 2025-10-25 17:08:55.549075009 +0200
+----- CONTENT -----
+UNIVERSE_LIMIT=20
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/xopen.sh
+Size: 85
+MTime: 2025-10-28 20:36:25.977060702 +0100
+----- CONTENT -----
+#!/bin/bash
+cd /opt/scalp/project
+source venv/bin/activate
+python3 scripts/X_open.py
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/x_close.sh
+Size: 102
+MTime: 2025-10-28 20:36:25.973060695 +0100
+----- CONTENT -----
+#!/bin/bash
+source /opt/scalp/project/venv/bin/activate
+python3 /opt/scalp/project/scripts/X_close.py
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/a_analyse.sh
+Size: 110
+MTime: 2025-10-28 20:36:25.965060683 +0100
+----- CONTENT -----
+#!/usr/bin/env bash
+set -euo pipefail
+cd /opt/scalp/project
+source venv/bin/activate
+python3 scripts/A_ctx.py
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/u_universe.sh
+Size: 89
+MTime: 2025-10-28 20:36:25.969060690 +0100
+----- CONTENT -----
+#!/bin/bash
+cd /opt/scalp/project
+source venv/bin/activate
+python3 scripts/U_universe.py
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/oa_ohlcv_A.sh
+Size: 89
+MTime: 2025-10-28 20:36:25.965060683 +0100
+----- CONTENT -----
+#!/bin/bash
+cd /opt/scalp/project
+source venv/bin/activate
+python3 scripts/OA_ohlcv_A.py
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/x_dash.sh
+Size: 1446
+MTime: 2025-10-28 20:36:25.973060695 +0100
+----- CONTENT -----
+#!/usr/bin/env bash
+
+DB_OPEN="/opt/scalp/project/data/x_open.db"
+DB_CLOSED="/opt/scalp/project/data/x_closed.db"
+DB_T="/opt/scalp/project/data/t.db"
+
+clear
+echo "===== DASH DETAIL ====="
+echo
+echo "--- OPEN POSITIONS ---"
+
+sqlite3 -readonly "$DB_OPEN" <<'EOS'
+.headers off
+.mode list
+SELECT
+    o.instId || "  " ||
+    o.side   || "  entry=" || printf("%.6f", o.entry) ||
+    " sl="   || printf("%.6f", o.sl) ||
+    " tp="   || printf("%.6f", o.tp) ||
+    " qty="  || printf("%.4f", o.qty) ||
+    " BE="   || o.BE ||
+    " PYR="  || o.PYR ||
+    " entry_reason=" || o.reason_entry ||
+    " age="  || printf("%02d:%02d:%02d",
+        ( (strftime('%s','now')*1000 - o.ts_open)/1000 )/3600,
+        ( (strftime('%s','now')*1000 - o.ts_open)/1000 % 3600)/60,
+        ( (strftime('%s','now')*1000 - o.ts_open)/1000 % 60)
+    )
+FROM positions_open o;
+EOS
+
+echo
+echo "--- LAST CLOSED TRADES ---"
+
+sqlite3 -readonly "$DB_CLOSED" <<'EOS'
+.headers off
+.mode list
+SELECT
+    instId || " " || side ||
+    " entry=" || printf("%.6f", entry) ||
+    " exit="  || printf("%.6f", exit) ||
+    " pnl="   || printf("%.6f", pnl) ||
+    " entry_reason=" || reason_entry ||
+    " exit_reason="  || reason_exit ||
+    " age=" || printf("%02d:%02d:%02d",
+        ( (ts_close - ts_open)/1000 )/3600,
+        ( (ts_close - ts_open)/1000 % 3600)/60,
+        ( (ts_close - ts_open)/1000 % 60)
+    )
+FROM v_trades_history
+LIMIT 20;
+EOS
+
+echo
+echo "========================="
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/ob_feat.sh
+Size: 86
+MTime: 2025-10-28 20:36:25.965060683 +0100
+----- CONTENT -----
+#!/bin/bash
+cd /opt/scalp/project
+source venv/bin/activate
+python3 scripts/OB_feat.py
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/b_signals.sh
+Size: 88
+MTime: 2025-10-28 20:36:25.965060683 +0100
+----- CONTENT -----
+#!/bin/bash
+cd /opt/scalp/project
+source venv/bin/activate
+python3 scripts/B_signals.py
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/x_follow.sh
+Size: 103
+MTime: 2025-10-28 20:36:25.973060695 +0100
+----- CONTENT -----
+#!/bin/bash
+source /opt/scalp/project/venv/bin/activate
+python3 /opt/scalp/project/scripts/X_follow.py
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/oa_ohlcv.sh
+Size: 89
+MTime: 2025-10-28 20:36:25.965060683 +0100
+----- CONTENT -----
+#!/bin/bash
+cd /opt/scalp/project
+source venv/bin/activate
+python3 scripts/OA_ohlcv_A.py
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/b_dash.sh
+Size: 85
+MTime: 2025-10-28 20:36:25.965060683 +0100
+----- CONTENT -----
+#!/bin/bash
+cd /opt/scalp/project
+source venv/bin/activate
+python3 scripts/b_dash.py
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/ob_ohlcv_B.sh
+Size: 89
+MTime: 2025-10-28 20:36:25.969060690 +0100
+----- CONTENT -----
+#!/bin/bash
+cd /opt/scalp/project
+source venv/bin/activate
+python3 scripts/OB_ohlcv_B.py
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/x_open.sh
+Size: 101
+MTime: 2025-10-28 20:36:25.973060695 +0100
+----- CONTENT -----
+#!/bin/bash
+source /opt/scalp/project/venv/bin/activate
+python3 /opt/scalp/project/scripts/X_open.py
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/xclose.sh
+Size: 86
+MTime: 2025-10-28 20:36:25.973060695 +0100
+----- CONTENT -----
+#!/bin/bash
+cd /opt/scalp/project
+source venv/bin/activate
+python3 scripts/X_close.py
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/t_ticks.sh
+Size: 86
+MTime: 2025-10-28 20:36:25.969060690 +0100
+----- CONTENT -----
+#!/bin/bash
+cd /opt/scalp/project
+source venv/bin/activate
+python3 scripts/T_ticks.py
+----- FILE END -----
+
+----- FILE BEGIN -----
+Path: /opt/scalp/project/bin/xfollow.sh
+Size: 87
+MTime: 2025-10-28 20:36:25.973060695 +0100
+----- CONTENT -----
+#!/bin/bash
+cd /opt/scalp/project
+source venv/bin/activate
+python3 scripts/X_follow.py
+----- FILE END -----
+=== Export /opt/scalp/project/data/a.db
+=== Export /opt/scalp/project/data/b.db
+=== Export /opt/scalp/project/data/h.db
+=== Export /opt/scalp/project/data/oa.db
+=== Export /opt/scalp/project/data/ob.db
+=== Export /opt/scalp/project/data/signals.db
+=== Export /opt/scalp/project/data/t.db
+=== Export /opt/scalp/project/data/u.db
+=== Export /opt/scalp/project/data/x.db
+=== Export /opt/scalp/project/data/x_account.db
+=== Export /opt/scalp/project/data/x_closed.db
+=== Export /opt/scalp/project/data/x_follow.db
+=== Export /opt/scalp/project/data/x_history.db
+=== Export /opt/scalp/project/data/x_open.db
