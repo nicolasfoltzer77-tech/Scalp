@@ -20,3 +20,4 @@ grep -RIn --binary-files=without-match \
   --include="*.py" --include="*.sh" \
   -E "data/u\.db|/data/u\.db|DB_U|FROM[[:space:]]+universe;" \
   "${ROOT}" || true
+

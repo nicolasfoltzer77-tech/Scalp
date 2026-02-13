@@ -30,3 +30,4 @@ SELECT
   COUNT(*) AS rows
 FROM ticks;
 SQL
+

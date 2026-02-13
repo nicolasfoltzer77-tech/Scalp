@@ -1,82 +1,101 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-############################################
-# Load secrets
-############################################
-ENV_FILE="/etc/scalp.env"
-if [ ! -f "$ENV_FILE" ]; then
-  echo "[FATAL] Missing $ENV_FILE"
-  exit 1
-fi
+# ---------- CONFIG ----------
+ROOT="/opt/scalp"
+DUMP_DIR="${ROOT}/dump"
+mkdir -p "$DUMP_DIR"
+TS="$(date +'%Y%m%d_%H%M%S')"
+OUT="${DUMP_DIR}/scalp_full_${TS}.txt"
+MAX_FILE_SIZE_KB="${MAX_FILE_SIZE_KB:-1024}"
 
-# shellcheck disable=SC1090
-source "$ENV_FILE"
+# ---------- GIT ENV ----------
+[ -f /etc/scalp.env ] && . /etc/scalp.env
+: "${GIT_USERNAME:?}"
+: "${GIT_TOKEN:?}"
+GIT_BRANCH="${GIT_BRANCH:-main}"
+GIT_EMAIL_USE="${GIT_EMAIL:-${GIT_USERNAME}@users.noreply.github.com}"
+REMOTE_URL="https://${GIT_HOST:-github.com}/${GIT_OWNER:-$GIT_USERNAME}/${GIT_REPO:-Scalp}.git"
 
-: "${GIT_TOKEN:?missing}"
-: "${GIT_USERNAME:?missing}"
-: "${GIT_OWNER:?missing}"
-: "${GIT_REPO:?missing}"
-: "${GIT_BRANCH:=main}"
-: "${GIT_HOST:=github.com}"
+# ---------- HEADER ----------
+{
+  echo "# ===== SCALP PROJECT DUMP ====="
+  echo "# $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+  echo "# Root: $ROOT"
+  echo
+  echo "========== TREE =========="
+} > "$OUT"
 
-############################################
-# Paths (project directory = folder containing this script)
-# IMPORTANT: your git toplevel appears to be /opt/scalp (parent),
-# while the project lives under /opt/scalp/project.
-############################################
-PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
-GIT_ROOT="$(git -C "$PROJECT_DIR" rev-parse --show-toplevel)"
-
-DB_DIR="${PROJECT_DIR}/data"
-SCHEMA_DIR="${PROJECT_DIR}/schema"
-
-TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
-SCHEMA_FILE="${SCHEMA_DIR}/db_schema_${TIMESTAMP}.txt"
-
-mkdir -p "${SCHEMA_DIR}"
-
-############################################
-# Export SQLite schemas (READ-ONLY)
-############################################
-echo "[INFO] Exporting SQLite schemas to ${SCHEMA_FILE}"
+find "$ROOT" -type f \
+  -not -path '*/.git/*' -not -path '*/venv/*' \
+  -not -path '*/dump/*' -not -path '*/logs/*' \
+  -size -"${MAX_FILE_SIZE_KB}"k \
+  \( -name '*.py' -o -name '*.sh' -o -name '*.conf' -o -name '*.sql' -o -name '*.txt' \) |
+  sort | while IFS= read -r f; do
+    sz=$(stat -c%s "$f" 2>/dev/null || echo 0)
+    mt=$(stat -c%y "$f" 2>/dev/null || echo unknown)
+    printf "%-80s %12s %s\n" "$f" "$sz" "$mt" >> "$OUT"
+done
 
 {
-  echo "=== SQLITE SCHEMA EXPORT ==="
-  echo "Timestamp  : ${TIMESTAMP}"
-  echo "Git root   : ${GIT_ROOT}"
-  echo "Project dir: ${PROJECT_DIR}"
-  echo "DB dir     : ${DB_DIR}"
   echo
+  echo "========== FILE CONTENT =========="
+} >> "$OUT"
 
-  for db in "${DB_DIR}"/*.db; do
-    [ -e "$db" ] || continue
-    echo "----------------------------------------"
-    echo "DATABASE: $(basename "$db")"
-    echo "----------------------------------------"
-    sqlite3 -readonly "$db" ".schema"
+find "$ROOT" -type f \
+  -not -path '*/.git/*' -not -path '*/venv/*' \
+  -not -path '*/dump/*' -not -path '*/logs/*' \
+  -size -"${MAX_FILE_SIZE_KB}"k \
+  \( -name '*.py' -o -name '*.sh' -o -name '*.conf' -o -name '*.sql' -o -name '*.txt' \) |
+  sort | while IFS= read -r f; do
+    echo -e "\n----- FILE: $f -----" >> "$OUT"
+    cat "$f" 2>/dev/null >> "$OUT" || true
+done
+
+# ---------- DATABASE STRUCTURE (finale complète) ----------
+{
+  echo
+  echo "========== DATABASE STRUCTURE =========="
+} >> "$OUT"
+
+for DB_PATH in /opt/scalp/project/data/*.db; do
+  [ -s "$DB_PATH" ] || continue
+  echo -e "\n----- DATABASE: $DB_PATH -----" >> "$OUT"
+
+  {
+    echo "-- TABLES --"
+    sqlite3 -readonly "$DB_PATH" ".tables" 2>/dev/null || echo "(locked or unreadable)"
     echo
-  done
-} > "${SCHEMA_FILE}"
 
-############################################
-# Git commit & push (stage only project subtree + common files)
-############################################
-echo "[INFO] Git add / commit / push"
+    for T in $(sqlite3 -readonly "$DB_PATH" ".tables" 2>/dev/null); do
+      echo "[TABLE: $T]"
+      sqlite3 -readonly "$DB_PATH" "PRAGMA table_info($T);" 2>/dev/null || true
+      echo
+    done
 
-# Stage the project subtree (ignored paths stay ignored)
-git -C "${GIT_ROOT}" add "${PROJECT_DIR}"
-# Also stage dp.sh explicitly (in case only this file exists today)
-git -C "${GIT_ROOT}" add "${PROJECT_DIR}/dp.sh" || true
-# And .gitignore if present alongside dp.sh
-git -C "${GIT_ROOT}" add "${PROJECT_DIR}/.gitignore" || true
+    echo "-- VIEWS --"
+    sqlite3 -readonly "$DB_PATH" "SELECT name, sql FROM sqlite_master WHERE type='view' ORDER BY name;" 2>/dev/null || echo "(no views)"
+    echo
 
-git -C "${GIT_ROOT}" commit -m "schema: sqlite export ${TIMESTAMP}" || {
-  echo "[INFO] Nothing to commit"
-  exit 0
-}
+    echo "-- INDEXES --"
+    sqlite3 -readonly "$DB_PATH" "SELECT name, sql FROM sqlite_master WHERE type='index' ORDER BY name;" 2>/dev/null || echo "(no indexes)"
+    echo
 
-REMOTE_URL="https://${GIT_USERNAME}:${GIT_TOKEN}@${GIT_HOST}/${GIT_OWNER}/${GIT_REPO}.git"
-git -C "${GIT_ROOT}" push "${REMOTE_URL}" "${GIT_BRANCH}"
+    echo "-- TRIGGERS --"
+    sqlite3 -readonly "$DB_PATH" "SELECT name, sql FROM sqlite_master WHERE type='trigger' ORDER BY name;" 2>/dev/null || echo "(no triggers)"
+    echo
+  } >> "$OUT"
+done
 
-echo "[OK] Done"
+# ---------- GIT PUSH ----------
+cd "$ROOT"
+git rev-parse --is-inside-work-tree >/dev/null 2>&1 || git init -q .
+git config user.name "$GIT_USERNAME"
+git config user.email "$GIT_EMAIL_USE"
+git remote get-url origin >/dev/null 2>&1 || git remote add origin "$REMOTE_URL"
+
+git add -f "$OUT"
+git commit -m "dump ${TS}" || true
+AUTH_URL="https://${GIT_USERNAME}:${GIT_TOKEN}@${REMOTE_URL#https://}"
+git push -f "$AUTH_URL" HEAD:"$GIT_BRANCH"
+

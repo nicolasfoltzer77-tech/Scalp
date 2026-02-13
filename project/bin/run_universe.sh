@@ -8,3 +8,4 @@ export UNIVERSE_CONF="$CONF"
 
 $PY /opt/scalp/project/scripts/universe_collector.py
 $PY /opt/scalp/project/scripts/universe_runner.py
+

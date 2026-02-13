@@ -46,3 +46,4 @@ FROM g;
 SELECT '3m' AS tf, COUNT(*) AS rows, datetime(MAX(ts)/1000,'unixepoch','localtime') AS last_ts
 FROM ohlcv_3m;
 SQL
+

@@ -11,10 +11,16 @@ echo "===== OB $(date '+%Y-%m-%d %H:%M:%S') =====" >> "$LOG_OB"
 
 cd "$ROOT/scripts"
 
+# 1) OB COLLECT (1m / 3m / 5m + purge)
 $VENV OB_collect.py >> "$LOG_OB" 2>&1
 
 echo "===== END OB =====" >> "$LOG_OB"
 
+
+# 2) B FEAT BUILDER (juste après OB)
 echo "===== B_FEAT $(date '+%Y-%m-%d %H:%M:%S') =====" >> "$LOG_B"
+
 $VENV B_feat_builder.py >> "$LOG_B" 2>&1
+
 echo "===== END FEAT =====" >> "$LOG_B"
+

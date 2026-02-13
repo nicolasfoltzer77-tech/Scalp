@@ -16,3 +16,4 @@ while true; do
     echo "[ticks-loop] ticks.py exited with code $EXITCODE at $(date)" >> "$LOG"
     sleep 1
 done
+
