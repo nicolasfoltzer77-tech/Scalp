@@ -12,7 +12,7 @@ class FSM:
     def __init__(self):
         self.state = State.IDLE
 
-    def on_tick(self, data=None):
+    def on_tick(self, ctx=None):
         if self.state == State.IDLE:
             self.state = State.FOLLOW
         elif self.state == State.FOLLOW:
@@ -23,3 +23,4 @@ class FSM:
             self.state = State.CLOSE
         elif self.state == State.CLOSE:
             self.state = State.IDLE
+        return self.state

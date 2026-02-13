@@ -3,7 +3,7 @@ import sqlite3
 import time
 from pathlib import Path
 
-DB = "/opt/scalp/project/data/u.db"
+DB = "/opt/scalp/project/data/closer.db"
 Path("/opt/scalp/project/data").mkdir(parents=True, exist_ok=True)
 
 def main():
@@ -11,17 +11,16 @@ def main():
     cur = con.cursor()
 
     cur.execute("""
-    CREATE TABLE IF NOT EXISTS sources (
-        source TEXT PRIMARY KEY,
-        enabled INTEGER
+    CREATE TABLE IF NOT EXISTS trades_close (
+        instId TEXT,
+        side TEXT,
+        px REAL,
+        sz REAL,
+        ts_close INTEGER
     )
     """)
-
-    # Exemple minimal conforme au dump : maintien des sources
-    cur.execute("INSERT OR IGNORE INTO sources(source, enabled) VALUES ('SIM', 1)")
     con.commit()
 
-    # Collecte périodique (neutre)
     while True:
         time.sleep(10)
 

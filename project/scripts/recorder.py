@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import sqlite3
+import time
 from pathlib import Path
 
 DB = "/opt/scalp/project/data/recorder.db"
@@ -10,18 +11,18 @@ def main():
     cur = con.cursor()
 
     cur.execute("""
-    CREATE TABLE IF NOT EXISTS trades_agg (
+    CREATE TABLE IF NOT EXISTS trades_record (
         instId TEXT,
-        cnt INTEGER
+        side TEXT,
+        px REAL,
+        sz REAL,
+        ts_record INTEGER
     )
     """)
-
-    cur.execute("""
-    INSERT INTO trades_agg
-    SELECT instId, COUNT(*) FROM trades_record GROUP BY instId
-    """)
     con.commit()
-    con.close()
+
+    while True:
+        time.sleep(5)
 
 if __name__ == "__main__":
     main()

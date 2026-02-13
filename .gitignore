@@ -1,11 +1,18 @@
+# runtime
 data/
 project/data/
 project/logs/
 logs/
 venv/
+
+# sqlite
 *.db
 *.db-wal
 *.db-shm
+
+# python
 __pycache__/
 *.pyc
-.env
+
+# env
+*.env
