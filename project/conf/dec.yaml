@@ -1,0 +1,5 @@
+dec:
+  market_veto:
+    min_ticks_5s: 5
+    max_spread_bps: 15
+    max_staleness_ms: 2000

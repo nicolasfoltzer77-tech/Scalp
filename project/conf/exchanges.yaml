@@ -1,0 +1,11 @@
+exchanges:
+  ccxt:
+    enable: true
+    rate_limit: true
+    timeout_ms: 30000
+
+  bitget:
+    enable: false
+    api_key: ""
+    api_secret: ""
+    password: ""

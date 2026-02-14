@@ -1,0 +1,13 @@
+triggers:
+  volatility:
+    enable: true
+    window_sec: 60
+    threshold_pct: 0.5
+
+  spread:
+    enable: true
+    max_pct: 0.2
+
+  volume:
+    enable: true
+    min_usd: 10000

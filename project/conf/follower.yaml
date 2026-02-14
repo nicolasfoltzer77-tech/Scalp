@@ -1,0 +1,31 @@
+follower:
+  poll_interval_sec: 1
+  max_lag_sec: 5
+
+  # --- timeouts ---
+  max_trade_age_s: 3600
+  max_no_mfe_age_s: 300
+  min_mfe_keep_atr: 0.2
+
+  # --- partial (decide) ---
+  partial_mfe_atr: 0.8
+  partial_close_ratio: 0.5
+  min_partial_qty: 0.0
+
+  # --- partial (advanced) ---
+  partial_atr_trigger: 1.0
+  partial_qty_ratio: 0.5
+
+  # --- pyramide ---
+  max_pyramide_post_partial: 2
+  pyramide_atr_trigger: 1.5
+  pyramide_qty_ratio: 0.3
+  pyramide_cooldown_s: 60
+  min_mae_forbid_pyramide: 0.5
+
+  # --- arm levels ---
+  sl_be_atr_trigger: 0.8
+  sl_trail_atr_trigger: 1.2
+  sl_trail_offset_atr: 0.5
+  tp_dyn_atr_trigger: 2.0
+  tp_dyn_atr_mult: 2.5

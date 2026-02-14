@@ -1,0 +1,7 @@
+runtime:
+  log_level: INFO
+  timezone: UTC
+
+paths:
+  db_root: /opt/scalp/project/data
+  log_root: /opt/scalp/project/logs

@@ -1,0 +1,13 @@
+universe:
+  source: ccxt
+  refresh_interval_sec: 300
+
+symbols:
+  whitelist: []
+  blacklist: []
+
+filters:
+  quote_assets:
+    - USDT
+    - USD
+  min_volume_usd: 500000
