@@ -4,9 +4,14 @@
 """
 FOLLOWER — INGEST OPEN_DONE
 SOURCE UNIQUE : gest.db
+
 RÔLE :
 - créer la ligne follower à open_done
-- NE JAMAIS updater une ligne inexistante
+- si la ligne existe déjà : synchroniser status/step SANS toucher ts_follow
+
+FIX CANONIQUE (repo) :
+- ts_follow DOIT ÊTRE = ts_open (invariant MFE/MAE)
+- ne pas régénérer ts_follow avec now
 """
 
 def ingest_open_done(g, f, now):
@@ -36,14 +41,33 @@ def ingest_open_done(g, f, now):
     for r in rows:
         uid = r["uid"]
 
-        # 🔒 Verrou absolu : follower déjà créé ?
-        exists = f.execute("""
-            SELECT 1 FROM follower WHERE uid=?
+        # Existe déjà ?
+        fr = f.execute("""
+            SELECT uid, ts_follow
+            FROM follower
+            WHERE uid=?
         """, (uid,)).fetchone()
 
-        if exists:
+        if fr:
+            # Sync non destructif : ne pas toucher ts_follow (invariant MFE/MAE)
+            f.execute("""
+                UPDATE follower
+                SET status='follow',
+                    instId=?,
+                    side=?,
+                    step=?,
+                    last_action_ts=?
+                WHERE uid=?
+            """, (
+                r["instId"],
+                r["side"],
+                r["step"] or 0,
+                now,
+                uid
+            ))
             continue
 
+        # Création canonique : ts_follow = ts_open
         f.execute("""
             INSERT INTO follower (
                 uid,
@@ -65,10 +89,9 @@ def ingest_open_done(g, f, now):
             r["side"],
             r["step"] or 0,
             "follow",
-            now,
+            r["ts_open"],   # ✅ INVARIANT
             now,
             1.0,
             0,
             0
         ))
-

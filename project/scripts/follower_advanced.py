@@ -5,9 +5,9 @@
 FOLLOWER — ACTIONS AVANCÉES
 PARTIAL / PYRAMIDE
 
-NOTE:
-- Ce module peut être utilisé par certains démons historiques.
-- Les règles Option 3 (SAFE_BUILD) sont ajoutées de manière additive.
+Fixes:
+- SAFE gate now uses sl_be/sl_trail when present, otherwise falls back to mfe_atr >= sl_be_atr_trigger
+  to avoid deadlocks due to ordering of writes.
 """
 
 import logging
@@ -16,25 +16,34 @@ log = logging.getLogger("FOLLOWER_ADVANCED")
 
 def _opt3(CFG):
     o = CFG.get("option3_safe_build", {}) or {}
-    if not isinstance(o, dict):
-        return {}
-    return o
+    return o if isinstance(o, dict) else {}
 
 def _enabled(CFG):
     return bool(_opt3(CFG).get("enable", False))
 
-def _safe_armed(fr, CFG):
-    o = _opt3(CFG)
-    allow_be = bool(o.get("allow_after_be", True))
-    allow_tr = bool(o.get("allow_after_trail", True))
+def _safe_by_levels(fr, CFG):
+    sl_be = fr["sl_be"] if "sl_be" in fr.keys() else 0.0
+    sl_tr = fr["sl_trail"] if "sl_trail" in fr.keys() else 0.0
 
-    sl_be = fr["sl_be"] if "sl_be" in fr.keys() else 0
-    sl_tr = fr["sl_trail"] if "sl_trail" in fr.keys() else 0
+    try:
+        if sl_be is not None and float(sl_be) > 0.0:
+            return True
+    except Exception:
+        pass
 
-    be_armed = (sl_be is not None and float(sl_be) > 0.0)
-    tr_armed = (sl_tr is not None and float(sl_tr) > 0.0)
+    try:
+        if sl_tr is not None and float(sl_tr) > 0.0:
+            return True
+    except Exception:
+        pass
 
-    return (allow_be and be_armed) or (allow_tr and tr_armed)
+    mfe_atr = fr["mfe_atr"] if "mfe_atr" in fr.keys() else None
+    if mfe_atr is None:
+        return False
+    try:
+        return float(mfe_atr) >= float(CFG["sl_be_atr_trigger"])
+    except Exception:
+        return False
 
 def _add_ratio(CFG, nb_pyr):
     o = _opt3(CFG)
@@ -65,20 +74,17 @@ def advanced_actions(f, e, CFG, now):
             continue
 
         qty_open = float(pos["qty_open"])
-
         mfe_atr = fr["mfe_atr"]
         mae_atr = fr["mae_atr"]
 
         # ====================================================
-        # OPTION 3 — PYRAMIDE POST BE/TRAIL (PRIORITAIRE)
+        # OPTION 3 — PYRAMIDE PRIORITAIRE
         # ====================================================
         if _enabled(CFG):
             o = _opt3(CFG)
 
-            # gate safe armed
-            if _safe_armed(fr, CFG):
+            if _safe_by_levels(fr, CFG):
 
-                # block after partial (default)
                 allow_after_partial = bool(o.get("allow_after_partial", False))
                 if int(fr["nb_partial"] or 0) >= 1 and not allow_after_partial:
                     pass
@@ -103,7 +109,6 @@ def advanced_actions(f, e, CFG, now):
 
                                     ratio = _add_ratio(CFG, nb_pyr)
                                     if ratio > 0:
-                                        # Request pyramide
                                         f.execute("""
                                             UPDATE follower
                                             SET status='pyramide_req',
@@ -132,13 +137,12 @@ def advanced_actions(f, e, CFG, now):
                         if o.get("log_why", False):
                             log.info("[OPT3] PYRAMIDE_BLOCKED uid=%s why=max_adds_or_no_mfe nb_pyr=%s mfe_atr=%s", uid, fr["nb_pyramide"], mfe_atr)
             else:
-                if _opt3(CFG).get("log_why", False):
-                    log.info("[OPT3] PYRAMIDE_BLOCKED uid=%s why=not_safe_armed", uid)
+                if o.get("log_why", False):
+                    log.info("[OPT3] PYRAMIDE_BLOCKED uid=%s why=not_safe_armed mfe_atr=%s", uid, mfe_atr)
 
         # ====================================================
-        # TP PARTIAL (SAFE) — legacy
+        # PARTIAL — bloque jusqu'à dernière pyramide si OPT3
         # ====================================================
-        # Option 3: partial only after last add
         if _enabled(CFG) and bool(_opt3(CFG).get("partial_only_after_last_add", True)):
             max_adds = int(_opt3(CFG).get("max_adds_total", 2))
             if int(fr["nb_pyramide"] or 0) < max_adds:
@@ -147,10 +151,9 @@ def advanced_actions(f, e, CFG, now):
         if (
             fr["nb_partial"] == 0
             and mfe_atr is not None
-            and mfe_atr >= CFG["partial_atr_trigger"]
+            and float(mfe_atr) >= float(CFG["partial_atr_trigger"])
         ):
-            qty = qty_open * CFG["partial_qty_ratio"]
-
+            qty = qty_open * float(CFG["partial_qty_ratio"])
             f.execute("""
                 UPDATE follower
                 SET status='partial_req',

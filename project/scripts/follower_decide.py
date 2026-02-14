@@ -87,7 +87,6 @@ def _should_pyramide_opt3(fr_state, fr_full, CFG, now):
             pass
 
     # atr_extension trigger model:
-    # required = base + nb_pyr * add_atr_step, with base from CFG["pyramide_atr_trigger"]
     base = float(CFG.get("pyramide_atr_trigger", 0.0) or 0.0)
     add_step = float(o.get("add_atr_step", 0.0) or 0.0)
     required = base + nb_pyr * add_step
@@ -136,20 +135,21 @@ def decide_core(f, CFG, now):
 
         # ==========================================================
         # OPTION 3 — PYRAMIDE PRIORITAIRE (post BE / trail)
+        # IMPORTANT (INVARIANT REPO):
+        # - follower.step NE DOIT PAS bouger sur *_req
+        # - step bouge UNIQUEMENT sur *_done via follower_fsm_sync.py
         # ==========================================================
         if _is_enabled_opt3(CFG):
             ok, why, ratio_or_req = _should_pyramide_opt3(fr, fr_full, CFG, now)
             if ok:
                 ratio_add = float(ratio_or_req)
 
-                # Request pyramide (additive, uses existing columns)
                 f.execute("""
                     UPDATE follower
                     SET status='pyramide_req',
                         qty_to_add_ratio=?,
                         ratio_to_add=?,
                         req_step=req_step+1,
-                        step=step+1,
                         ts_decision=?,
                         last_decision_ts=?,
                         nb_pyramide=nb_pyramide+1,
@@ -182,29 +182,24 @@ def decide_core(f, CFG, now):
 
         # ==========================================================
         # PARTIAL — FILTRE TRADABILITÉ
+        # IMPORTANT (INVARIANT REPO):
+        # - follower.step NE DOIT PAS bouger sur *_req
         # ==========================================================
         if fr["mfe_atr"] >= CFG["partial_mfe_atr"] and fr["nb_partial"] == 0:
 
-            # Option 3: partial only after last add
             if not _should_partial_opt3(fr, fr_full, CFG):
                 if _opt3(CFG).get("log_why", False):
                     log.info("[OPT3] PARTIAL_BLOCKED uid=%s why=partial_only_after_last_add nb_pyr=%s", uid, fr["nb_pyramide"])
                 continue
 
             ratio_cfg = CFG["partial_close_ratio"]
-
-            # qty_open désormais matérialisé dans follower
             qty_open = float(fr["qty_open"] or 0.0)
-
             if qty_open <= 0:
                 continue
 
             min_qty = CFG.get("min_partial_qty", 0.0)
             ratio_min_exec = (min_qty / qty_open) if qty_open > 0 else 999.0
 
-            # ------------------------------------------------------
-            # PARTIAL IMPOSSIBLE
-            # ------------------------------------------------------
             if ratio_min_exec > ratio_cfg:
                 f.execute("""
                     UPDATE follower
@@ -217,16 +212,12 @@ def decide_core(f, CFG, now):
                 """, (now, now, now, uid))
                 continue
 
-            # ------------------------------------------------------
-            # PARTIAL VALIDE
-            # ------------------------------------------------------
             f.execute("""
                 UPDATE follower
                 SET status='partial_req',
                     qty_to_close_ratio=?,
                     ratio_to_close=?,
                     req_step=req_step+1,
-                    step=step+1,
                     ts_decision=?,
                     last_decision_ts=?,
                     nb_partial=1,
