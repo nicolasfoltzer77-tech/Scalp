@@ -5,27 +5,34 @@ follower:
   # --- timeouts ---
   max_trade_age_s: 3600
   max_no_mfe_age_s: 300
-  min_mfe_keep_atr: 0.2
+  min_mfe_keep_atr: 0.25
 
-  # --- partial (decide) ---
-  partial_mfe_atr: 0.8
-  partial_close_ratio: 0.5
+  # =========================================================
+  # PYRAMID FIRST (small size strategy)
+  # =========================================================
+
+  # --- pyramide (PRIORITAIRE) ---
+  pyramide_atr_trigger: 0.35
+  pyramide_qty_ratio: 0.4
+  max_pyramide_post_partial: 2
+  pyramide_cooldown_s: 45
+  min_mae_forbid_pyramide: 0.6
+
+  # --- partial (PLUS TARD) ---
+  partial_mfe_atr: 1.10
+  partial_close_ratio: 0.4
   min_partial_qty: 0.0
 
-  # --- partial (advanced) ---
-  partial_atr_trigger: 1.0
-  partial_qty_ratio: 0.5
+  # --- partial avancé (optionnel) ---
+  partial_atr_trigger: 1.40
+  partial_qty_ratio: 0.3
 
-  # --- pyramide ---
-  max_pyramide_post_partial: 2
-  pyramide_atr_trigger: 1.5
-  pyramide_qty_ratio: 0.3
-  pyramide_cooldown_s: 60
-  min_mae_forbid_pyramide: 0.5
+  # =========================================================
+  # ARM LEVELS (APRÈS STRUCTURATION)
+  # =========================================================
+  sl_be_atr_trigger: 0.55
+  sl_trail_atr_trigger: 1.20
+  sl_trail_offset_atr: 0.45
 
-  # --- arm levels ---
-  sl_be_atr_trigger: 0.8
-  sl_trail_atr_trigger: 1.2
-  sl_trail_offset_atr: 0.5
-  tp_dyn_atr_trigger: 2.0
-  tp_dyn_atr_mult: 2.5
+  tp_dyn_atr_trigger: 2.20
+  tp_dyn_atr_mult: 2.6
