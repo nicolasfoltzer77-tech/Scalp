@@ -48,9 +48,10 @@ follower:
   min_partial_qty: 0.0
 
   # ==========================================================
-  # TIMEOUTS / KEEP-ALIVE
+  # TIMEOUTS / KEEP-ALIVE  (REPO CANON)
   # ==========================================================
   min_mfe_keep_atr: 0.15
+  max_no_mfe_age_s: 300
 
   timeout_no_move_atr: 0.15
   timeout_no_move_s: 300

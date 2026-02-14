@@ -2,148 +2,129 @@
 # -*- coding: utf-8 -*-
 
 """
-FOLLOWER — ARMEMENT DES NIVEAUX
-SL_BE / SL_TRAIL / TP_DYN
+FOLLOWER — ARM LEVELS
 
-FIXES (non-breaking):
-1) sl_be/sl_trail peuvent être stockés avec DEFAULT 0.0 -> 0.0 = "NON ARMÉ".
-2) Certains environnements n'ont pas (ou pas à jour) la table gest suivie ici.
-   -> fallback: armer depuis la table follower directement (status='follow').
-
-Objectif: BE/TRAIL doivent s'armer dès que MFE_ATR dépasse les seuils, sans dépendance fragile.
+- Arm BE / TRAIL
+- MFE/MAE read-only from mfe_mae.db (Option B)
+- ATTACH performed ONCE per connection
+- No cross-DB writes
 """
 
-def _is_unarmed(x):
-    try:
-        return (x is None) or (float(x) <= 0.0)
-    except Exception:
-        return True
+import logging
+import time
 
-def _get_entry(row):
-    # best-effort across schemas
-    for k in ("entry", "entry_price", "entry_px"):
-        if k in row.keys() and row[k] is not None:
-            try:
-                v = float(row[k])
-                if v != 0.0:
-                    return v
-            except Exception:
-                pass
-    return None
+log = logging.getLogger("FOLLOWER_ARM")
 
-def _get_side(row):
-    for k in ("side",):
-        if k in row.keys() and row[k] is not None:
-            return str(row[k])
-    return None
+MFE_DB_PATH = "/opt/scalp/project/data/mfe_mae.db"
 
-def _get_atr_signal(row):
-    for k in ("atr_signal", "atr", "atr_ref"):
-        if k in row.keys() and row[k] is not None:
-            try:
-                v = float(row[k])
-                if v > 0:
-                    return v
-            except Exception:
-                pass
-    return None
 
-def _arm_one(f, uid, side, entry, mfe_atr, fr, CFG):
-    sl_be    = fr["sl_be"]    if "sl_be" in fr.keys()    else None
-    sl_trail = fr["sl_trail"] if "sl_trail" in fr.keys() else None
-    tp_dyn   = fr["tp_dyn"]   if "tp_dyn" in fr.keys()   else None
-
-    atr_sig = _get_atr_signal(fr)
-    if atr_sig is None:
-        atr_sig = 0.0
-
-    # --- SL BE ---
-    if _is_unarmed(sl_be) and mfe_atr >= float(CFG["sl_be_atr_trigger"]):
-        if entry is not None:
-            sl_be = float(entry)
-
-    # --- SL TRAIL ---
-    if _is_unarmed(sl_trail) and mfe_atr >= float(CFG["sl_trail_atr_trigger"]):
-        off = float(CFG["sl_trail_offset_atr"]) * float(atr_sig)
-        if entry is not None:
-            if side == "sell":
-                sl_trail = float(entry) - off
-            else:
-                sl_trail = float(entry) + off
-
-    # --- TP DYN ---
-    if (tp_dyn is None or (isinstance(tp_dyn, (int, float)) and float(tp_dyn) == 0.0)) and mfe_atr >= float(CFG["tp_dyn_atr_trigger"]):
-        mul = float(CFG["tp_dyn_atr_mult"]) * float(atr_sig)
-        if entry is not None:
-            if side == "sell":
-                tp_dyn = float(entry) - mul
-            else:
-                tp_dyn = float(entry) + mul
-
+def _ensure_mfe_attached(f):
+    """
+    Attach mfe_mae.db once per connection (idempotent).
+    """
+    rows = f.execute("PRAGMA database_list").fetchall()
+    for r in rows:
+        if r["name"] == "mfe":
+            return
     f.execute(
-        "UPDATE follower SET sl_be=?, sl_trail=?, tp_dyn=? WHERE uid=?",
-        (sl_be, sl_trail, tp_dyn, uid)
+        "ATTACH DATABASE ? AS mfe",
+        (MFE_DB_PATH,)
     )
+
+
+def _fetch_mfe_mae(f, uid):
+    """
+    Read-only SELECT from mfe_mae.v_follow_mfe
+    """
+    row = f.execute("""
+        SELECT mfe_atr, mae_atr
+        FROM mfe.v_follow_mfe
+        WHERE uid = ?
+    """, (uid,)).fetchone()
+
+    if not row:
+        return None, None
+
+    return row["mfe_atr"], row["mae_atr"]
+
 
 def arm_levels(f, g, CFG):
     """
-    f: sqlite conn follower.db (writer)
-    g: sqlite conn gest.db (read-only) - may be empty / not in sync
+    Arm BE / TRAIL for FOLLOW trades
     """
 
-    # ---------------------------------------------------------
-    # PRIMARY PATH: from gest (when available and in sync)
-    # ---------------------------------------------------------
-    did_any = False
-    try:
-        for r in g.execute("""
-            SELECT uid, side, entry
-            FROM gest
-            WHERE status='follow'
-        """):
-            uid = r["uid"]
-            fr = f.execute("SELECT * FROM follower WHERE uid=?", (uid,)).fetchone()
-            if not fr:
-                continue
+    # ✅ ATTACH ONCE HERE
+    _ensure_mfe_attached(f)
 
-            mfe_atr = fr["mfe_atr"] if "mfe_atr" in fr.keys() else None
-            if mfe_atr is None:
-                continue
+    rows = f.execute("""
+        SELECT uid,
+               avg_price_open,
+               sl_be,
+               sl_trail
+        FROM follower
+        WHERE status='follow'
+    """).fetchall()
 
-            entry = None
-            try:
-                entry = float(r["entry"]) if r["entry"] is not None else None
-            except Exception:
-                entry = None
+    if not rows:
+        return
 
-            side = str(r["side"]) if r["side"] is not None else _get_side(fr)
-            if side is None:
-                continue
+    now = int(time.time() * 1000)
 
-            _arm_one(f, uid, side, entry, float(mfe_atr), fr, CFG)
-            did_any = True
-    except Exception:
-        # swallow and fallback
-        did_any = False
+    for fr in rows:
+        uid = fr["uid"]
 
-    # ---------------------------------------------------------
-    # FALLBACK PATH: from follower itself (robust)
-    # ---------------------------------------------------------
-    if not did_any:
-        for fr in f.execute("""
-            SELECT *
-            FROM follower
-            WHERE status='follow'
-        """):
-            uid = fr["uid"]
+        mfe_atr, mae_atr = _fetch_mfe_mae(f, uid)
+        if mfe_atr is None:
+            continue
 
-            mfe_atr = fr["mfe_atr"] if "mfe_atr" in fr.keys() else None
-            if mfe_atr is None:
-                continue
+        # ==================================================
+        # BREAK EVEN — on executed price
+        # ==================================================
+        if (
+            fr["sl_be"] == 0.0
+            and mfe_atr >= CFG["sl_be_atr_trigger"]
+            and fr["avg_price_open"] > 0.0
+        ):
+            f.execute("""
+                UPDATE follower
+                SET sl_be = avg_price_open,
+                    last_action_ts = ?
+                WHERE uid = ?
+                  AND sl_be = 0.0
+            """, (
+                now,
+                uid
+            ))
 
-            entry = _get_entry(fr)
-            side  = _get_side(fr)
-            if side is None:
-                continue
+            log.info(
+                "[ARM] BE uid=%s mfe_atr=%.4f be=%.8f",
+                uid,
+                mfe_atr,
+                fr["avg_price_open"]
+            )
 
-            _arm_one(f, uid, side, entry, float(mfe_atr), fr, CFG)
+        # ==================================================
+        # TRAILING STOP
+        # ==================================================
+        if (
+            fr["sl_trail"] == 0.0
+            and mfe_atr >= CFG["sl_trail_atr_trigger"]
+            and fr["avg_price_open"] > 0.0
+        ):
+            f.execute("""
+                UPDATE follower
+                SET sl_trail = avg_price_open,
+                    last_action_ts = ?
+                WHERE uid = ?
+                  AND sl_trail = 0.0
+            """, (
+                now,
+                uid
+            ))
+
+            log.info(
+                "[ARM] TRAIL uid=%s mfe_atr=%.4f trail=%.8f",
+                uid,
+                mfe_atr,
+                fr["avg_price_open"]
+            )
