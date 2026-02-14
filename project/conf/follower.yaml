@@ -1,38 +1,84 @@
+# ============================================================
+# FOLLOWER CONFIG — CANONIQUE (AVEC CLÉ RACINE)
+# ============================================================
+
 follower:
+
+  # ==========================================================
+  # LOOP / SCHEDULING
+  # ==========================================================
   poll_interval_sec: 1
   max_lag_sec: 5
 
-  # --- timeouts ---
+  # ==========================================================
+  # TIMEOUTS / HYGIÈNE (OBLIGATOIRES)
+  # ==========================================================
   max_trade_age_s: 3600
   max_no_mfe_age_s: 300
   min_mfe_keep_atr: 0.25
 
-  # =========================================================
-  # PYRAMID FIRST (small size strategy)
-  # =========================================================
-
-  # --- pyramide (PRIORITAIRE) ---
+  # ==========================================================
+  # PYRAMIDE (BASE / LEGACY)
+  # ==========================================================
   pyramide_atr_trigger: 0.35
   pyramide_qty_ratio: 0.4
-  max_pyramide_post_partial: 2
   pyramide_cooldown_s: 45
   min_mae_forbid_pyramide: 0.6
 
-  # --- partial (PLUS TARD) ---
+  # ==========================================================
+  # PARTIAL (HARVEST)
+  # ==========================================================
   partial_mfe_atr: 1.10
-  partial_close_ratio: 0.4
+  partial_close_ratio: 0.40
   min_partial_qty: 0.0
 
-  # --- partial avancé (optionnel) ---
+  # Partial avancé (follower_advanced)
   partial_atr_trigger: 1.40
-  partial_qty_ratio: 0.3
+  partial_qty_ratio: 0.30
 
-  # =========================================================
-  # ARM LEVELS (APRÈS STRUCTURATION)
-  # =========================================================
-  sl_be_atr_trigger: 0.55
+  # ==========================================================
+  # ARM LEVELS — PROTECTION
+  # ==========================================================
+  sl_be_atr_trigger: 0.30
   sl_trail_atr_trigger: 1.20
   sl_trail_offset_atr: 0.45
 
   tp_dyn_atr_trigger: 2.20
   tp_dyn_atr_mult: 2.6
+
+  # ==========================================================
+  # OPTION 3 — SAFE BUILD (VALIDÉ)
+  # PYRAMIDE / PARTIAL APRÈS BE / TRAIL
+  # ==========================================================
+  option3_safe_build:
+    enable: true               # KILL-SWITCH GLOBAL
+
+    # --- AUTORISATIONS ---
+    allow_after_be: true
+    allow_after_trail: true
+    allow_after_partial: false
+
+    # --- DÉCLENCHEMENT PYRAMIDE ---
+    trigger_mode: atr_extension
+    add_atr_step: 0.45
+    cooldown_s: 45
+
+    # --- LIMITES ---
+    max_adds_total: 2
+    add_sizes:
+      - 0.40
+      - 0.25
+
+    # --- RISK POLICY ---
+    risk_never_above_initial: true
+    immediate_mae_reverts_add: true
+    immediate_mae_atr: 0.25
+
+    # --- PARTIAL POLICY ---
+    partial_only_after_last_add: true
+    partial_blocks_future_adds: true
+    priority_on_conflict: pyramide
+
+    # --- OBSERVABILITÉ ---
+    log_why: true
+
