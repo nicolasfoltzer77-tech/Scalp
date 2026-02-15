@@ -49,6 +49,12 @@
 - [ ] Ajouts clairement isolés
 - [ ] Code existant laissé intact
 
+## 4bis. Alignement schéma / code (OBLIGATOIRE)
+- [ ] Les DB utilisées sont explicitement listées
+- [ ] Les tables ciblées sont explicitement listées
+- [ ] **Toutes les colonnes utilisées existent dans `schema_ref.sql`**
+- [ ] Aucune colonne n’est inventée ou supposée
+- [ ] Source du schéma indiquée (`schema_ref.sql`)
 ---
 
 ## 5. Livraison
