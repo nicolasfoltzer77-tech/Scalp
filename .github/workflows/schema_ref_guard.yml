@@ -1,0 +1,28 @@
+name: Schema Reference Guard
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  schema-ref-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Ensure generator is executable
+        run: |
+          chmod +x project/scripts/gen_schema_ref.sh
+
+      - name: Generate schema reference
+        run: |
+          cd project
+          bash scripts/gen_schema_ref.sh
+
+      - name: Verify schema_ref.sql is up to date
+        run: |
+          cd project
+          git diff --exit-code schema_ref.sql
