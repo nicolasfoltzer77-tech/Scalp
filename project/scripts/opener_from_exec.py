@@ -26,74 +26,66 @@ def now_ms():
 
 
 def ingest_exec_done():
+    """
+    exec.db (read-only) -> opener.db (writer)
+
+    Schéma repo (schema/db_schema_20260213_130003.txt) :
+      exec(exec_id PK, uid, step, exec_type, side, qty, price_exec, fee, status, ts_exec, instId, lev, ...)
+      opener(uid, instId, side, qty, lev, ts_open, price_exec_open, status, exec_type, step, ... PK(uid,exec_type,step))
+
+    Objectif :
+      - trouver les opener open_stdby
+      - si l'exec open correspondant est done, passer opener -> open_done et copier price_exec_open + ts_open
+    """
     o = conn(DB_OPENER)
     e = conn(DB_EXEC)
 
     try:
+        # candidats côté opener
         rows = o.execute("""
-            SELECT *
+            SELECT uid, instId, side, qty, lev, step
             FROM opener
             WHERE status='open_stdby'
               AND exec_type='open'
         """).fetchall()
 
         for r in rows:
-            uid   = r["uid"]
-            inst  = r["instId"]
-            side  = r["side"]
-            qty   = float(r["qty"] or 0.0)
-            step  = int(r["step"] or 0)
+            uid  = r["uid"]
+            step = int(r["step"] or 0)
 
             exec_id = f"{uid}_open_{step}"
 
-            # déjà exécuté ?
-            if e.execute("SELECT 1 FROM exec WHERE exec_id=?", (exec_id,)).fetchone():
+            ex = e.execute("""
+                SELECT exec_id, uid, step, exec_type, status, price_exec, ts_exec
+                FROM exec
+                WHERE exec_id=?
+                  AND exec_type='open'
+                  AND status='done'
+            """, (exec_id,)).fetchone()
+
+            if not ex:
                 continue
 
-            # ⬇️ SCHEMA EXEC RÉEL COMPATIBLE (AUCUN BREAK)
-            e.execute("""
-                INSERT INTO exec (
-                    exec_id, uid, step, exec_type, side,
-                    qty, price_exec, fee,
-                    status, ts_exec,
-                    ts_ack, ts_done,
-                    instId, ratio,
-                    pnl, pnl_pct,
-                    slippage, latency,
-                    flags, comment,
-                    retry, err_code,
-                    reserved1, reserved2
-                )
-                VALUES (?,?,?,?,?,
-                        ?,?,?,
-                        'done',?,
-                        NULL,NULL,
-                        ?,1.0,
-                        0.0,0.0,
-                        0.0,0.0,
-                        0,'',
-                        0,0,
-                        0,0)
-            """, (
-                exec_id, uid, step, 'open', side,
-                qty, 0.0, 0.0,
-                now_ms(),
-                inst
-            ))
+            price_exec = float(ex["price_exec"] or 0.0)
+            ts_exec    = int(ex["ts_exec"] or now_ms())
 
             o.execute("""
                 UPDATE opener
                 SET status='open_done',
-                    price_exec_open=0.0
-                WHERE uid=? AND step=? AND exec_type='open'
-            """, (uid, step))
+                    price_exec_open=?,
+                    ts_open=?
+                WHERE uid=?
+                  AND exec_type='open'
+                  AND step=?
+                  AND status='open_stdby'
+            """, (price_exec, ts_exec, uid, step))
 
-            log.info("[EXEC_OPEN] uid=%s step=%d qty=%f", uid, step, qty)
+            log.info("[INGEST_EXEC_DONE] uid=%s step=%d price_exec=%f ts_exec=%d", uid, step, price_exec, ts_exec)
 
-        e.commit()
         o.commit()
 
     finally:
-        o.close()
-        e.close()
-
+        try:
+            o.close()
+        finally:
+            e.close()
