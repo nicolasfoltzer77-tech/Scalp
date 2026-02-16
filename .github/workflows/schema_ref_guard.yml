@@ -25,4 +25,4 @@ jobs:
       - name: Verify schema_ref.sql is up to date
         run: |
           cd project
-          git diff --exit-code schema_ref.sql
+          git diff --exit-code project/schema_ref.sql
