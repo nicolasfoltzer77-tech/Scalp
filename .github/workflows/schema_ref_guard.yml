@@ -19,10 +19,8 @@ jobs:
 
       - name: Generate schema reference
         run: |
-          cd project
-          bash scripts/gen_schema_ref.sh
+          bash project/scripts/gen_schema_ref.sh
 
       - name: Verify schema_ref.sql is up to date
         run: |
-          cd project
           git diff --exit-code project/schema_ref.sql
