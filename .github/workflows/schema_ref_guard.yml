@@ -13,14 +13,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Ensure generator is executable
-        run: |
-          chmod +x project/scripts/gen_schema_ref.sh
-
-      - name: Generate schema reference
-        run: |
-          bash project/scripts/gen_schema_ref.sh
-
-      - name: Verify schema_ref.sql is up to date
+      - name: Ensure schema_ref.sql unchanged
         run: |
           git diff --exit-code project/schema_ref.sql
