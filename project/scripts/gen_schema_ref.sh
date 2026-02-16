@@ -2,7 +2,9 @@
 set -euo pipefail
 
 # -------- CONFIG --------
-DATA_DIR="/opt/scalp/project/data"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+DATA_DIR="$PROJECT_DIR/data"
 OUT="${DATA_DIR}/schema_ref.sql"
 
 # -------- INIT --------

@@ -23,6 +23,6 @@ jobs:
           set -e
           for db in project/data/*.db; do
             echo "=== AUDIT $db ==="
-            python project/tools/sqlite_audit.py "$db"
+            python tools/sqlite_audit.py "$db"
             echo
           done
