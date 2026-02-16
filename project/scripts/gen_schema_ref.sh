@@ -1,20 +1,21 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# ----------------------------
+# --------------------------------------------------
 # Deterministic SQLite schema reference generator
 # Output: project/schema_ref.sql
-# ----------------------------
+# --------------------------------------------------
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 DATA_DIR="$PROJECT_DIR/data"
 OUT="$PROJECT_DIR/schema_ref.sql"
 
-echo "-- GENERATED FILE - DO NOT EDIT"
-echo "-- Source: SQLite live DBs"
-echo "-- Generated at: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-echo > "$OUT"
+# Header MUST be deterministic
+{
+  echo "-- GENERATED FILE - DO NOT EDIT"
+  echo "-- Source: SQLite live DBs"
+} > "$OUT"
 
 # List DBs deterministically
 mapfile -t DBS < <(ls -1 "$DATA_DIR"/*.db 2>/dev/null | sort)

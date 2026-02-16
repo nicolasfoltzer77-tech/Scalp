@@ -1,4 +1,5 @@
-
+-- GENERATED FILE - DO NOT EDIT
+-- Source: SQLite live DBs
 
 -- ===============================
 -- DATABASE: a.db
