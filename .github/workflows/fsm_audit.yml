@@ -1,0 +1,23 @@
+name: FSM Passive Audit
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  fsm-audit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run FSM audit (passive)
+        run: |
+          python project/tools/fsm_audit.py
