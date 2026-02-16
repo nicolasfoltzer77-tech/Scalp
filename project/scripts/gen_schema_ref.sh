@@ -5,7 +5,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 DATA_DIR="$PROJECT_DIR/data"
-OUT="${DATA_DIR}/schema_ref.sql"
+OUT="${PROJECT_DIR}/schema_ref.sql"
 
 # -------- INIT --------
 {
