@@ -1,76 +1,91 @@
-import logging
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""
+SCALP — OPENER FROM GEST (FIX qty NOT NULL)
+
+- lecture gest.db (read-only)
+- ingestion gest.open_req → opener.open_stdby
+- correction FSM-safe des champs NOT NULL
+- aligné schema/db_schema_20260213_130003.txt
+"""
+
 import sqlite3
 import time
+import logging
+from pathlib import Path
 
-LOG = logging.getLogger("OPENER")
+log = logging.getLogger("OPENER_FROM_GEST")
 
-DB_GEST = "data/gest.db"
-DB_TRIG = "data/triggers.db"
-DB_OPENER = "data/opener.db"
+ROOT = Path("/opt/scalp/project")
+
+DB_GEST   = ROOT / "data/gest.db"
+DB_OPENER = ROOT / "data/opener.db"
 
 
-def ingest_gest_open_req():
-    now = int(time.time() * 1000)
+def conn_gest():
+    c = sqlite3.connect(f"file:{DB_GEST}?mode=ro", uri=True)
+    c.row_factory = sqlite3.Row
+    return c
 
-    with sqlite3.connect(DB_GEST) as g, \
-         sqlite3.connect(DB_TRIG) as t, \
-         sqlite3.connect(DB_OPENER) as o:
 
-        g.row_factory = sqlite3.Row
-        t.row_factory = sqlite3.Row
-        o.row_factory = sqlite3.Row
+def conn_opener():
+    c = sqlite3.connect(str(DB_OPENER), timeout=10)
+    c.row_factory = sqlite3.Row
+    c.execute("PRAGMA journal_mode=WAL;")
+    c.execute("PRAGMA busy_timeout=10000;")
+    return c
 
-        gest_rows = g.execute("""
-            SELECT *
+
+def now_ms():
+    return int(time.time() * 1000)
+
+
+def ingest_from_gest():
+    g = conn_gest()
+    o = conn_opener()
+
+    try:
+        rows = g.execute("""
+            SELECT
+                uid,
+                instId,
+                side,
+                qty,
+                lev,
+                step,
+                ts_signal
             FROM gest
-            WHERE status = 'open_req'
-            ORDER BY ts_update ASC
+            WHERE status='open_req'
         """).fetchall()
 
-        for gr in gest_rows:
-            uid = gr["uid"]
+        inserted = 0
 
-            # --- vérifier que le trigger existe encore et est fired
-            tr = t.execute("""
-                SELECT uid
-                FROM triggers
-                WHERE uid = ?
-                  AND status = 'fired'
-            """, (uid,)).fetchone()
+        for r in rows:
+            uid = r["uid"]
+            step = r["step"] if r["step"] is not None else 0
 
-            if tr is None:
-                # 🔥 ORPHELIN → EXPIRED
-                LOG.info("[OPEN_EXPIRE] uid=%s no fired trigger", uid)
-                g.execute("""
-                    UPDATE gest
-                    SET status = 'expired',
-                        ts_update = ?
-                    WHERE uid = ?
-                """, (now, uid))
-                g.commit()
-                continue
+            # --------------------------------------------------
+            # NORMALISATION FSM (NOT NULL)
+            # --------------------------------------------------
+            qty = r["qty"]
+            if qty is None:
+                qty = 0.0
+                log.info(
+                    "[NORMALIZE] uid=%s qty NULL → 0.0 (open_stdby)",
+                    uid
+                )
 
-            # --- déjà présent dans opener ?
+            lev = r["lev"] if r["lev"] is not None else 1.0
+
             exists = o.execute("""
-                SELECT uid
+                SELECT 1
                 FROM opener
-                WHERE uid = ?
-            """, (uid,)).fetchone()
+                WHERE uid=? AND exec_type='open' AND step=?
+            """, (uid, step)).fetchone()
 
             if exists:
                 continue
-
-            # --- création opener open_stdby
-            LOG.info(
-                "[OPEN_STDBY] uid=%s inst=%s side=%s qty=%.10f lev=%d step=%d budget=%.2f",
-                uid,
-                gr["instId"],
-                gr["side"],
-                gr["qty"],
-                gr["lev"],
-                gr["step"],
-                gr["budget"],
-            )
 
             o.execute("""
                 INSERT INTO opener (
@@ -79,22 +94,46 @@ def ingest_gest_open_req():
                     side,
                     qty,
                     lev,
-                    step,
-                    budget,
+                    ts_open,
+                    price_exec_open,
                     status,
-                    ts_update
-                ) VALUES (?,?,?,?,?,?,?,?,?)
+                    exec_type,
+                    step
+                ) VALUES (?, ?, ?, ?, ?, ?, NULL, 'open_stdby', 'open', ?)
             """, (
                 uid,
-                gr["instId"],
-                gr["side"],
-                gr["qty"],
-                gr["lev"],
-                gr["step"],
-                gr["budget"],
-                "open_stdby",
-                now
+                r["instId"],
+                r["side"],
+                qty,
+                lev,
+                r["ts_signal"],
+                step
             ))
 
-            o.commit()
+            inserted += 1
+            log.info(
+                "[INGEST_OPEN_REQ] uid=%s instId=%s side=%s qty=%s lev=%s step=%s",
+                uid,
+                r["instId"],
+                r["side"],
+                qty,
+                lev,
+                step
+            )
 
+        if inserted > 0:
+            o.commit()
+            log.info("[INGEST_SUMMARY] inserted=%s", inserted)
+        else:
+            o.rollback()
+
+    except Exception:
+        log.exception("[ERR] opener_from_gest")
+        try:
+            o.rollback()
+        except Exception:
+            pass
+
+    finally:
+        g.close()
+        o.close()
