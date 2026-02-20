@@ -8,6 +8,14 @@ from pathlib import Path
 
 from exec_from_opener import ingest_from_opener
 
+LOG = "/opt/scalp/project/logs/exec.log"
+
+logging.basicConfig(
+    filename=LOG,
+    level=logging.INFO,
+    format="%(asctime)s EXEC %(levelname)s %(message)s"
+)
+
 log = logging.getLogger("EXEC")
 
 ROOT = Path("/opt/scalp/project")
@@ -30,9 +38,7 @@ def main():
     log.info("[START] exec")
 
     while True:
-        # --------------------------------------------------
-        # NOUVEAU : ingestion opener → exec
-        # --------------------------------------------------
+        # 1) ingest opener -> exec
         try:
             ingest_from_opener()
         except Exception:
@@ -48,37 +54,28 @@ def main():
             """).fetchall()
 
             for r in rows:
-                uid = r["uid"]
-                exec_type = r["exec_type"]
-                step = r["step"] or 0
+                step = r["step"]
 
-                # --------------------------------------------------
-                # exécution réelle (exchange / simulateur)
-                # --------------------------------------------------
-
-                # ==================================================
-                # EXISTANT — inchangé
-                # ==================================================
-                if exec_type == "pyramide":
-                    step = step + 1
-                # ==================================================
+                if r["exec_type"] == "pyramide":
+                    step += 1
 
                 e.execute("""
                     UPDATE exec
                     SET status='done',
                         step=?,
-                        ts_done=?
-                    WHERE id=?
+                        ts_exec=?,
+                        done_step=1
+                    WHERE exec_id=?
                 """, (
                     step,
                     now_ms(),
-                    r["id"]
+                    r["exec_id"]
                 ))
 
                 log.info(
                     "[EXEC_DONE] uid=%s type=%s step=%s",
-                    uid,
-                    exec_type,
+                    r["uid"],
+                    r["exec_type"],
                     step
                 )
 
@@ -90,7 +87,6 @@ def main():
                 e.rollback()
             except Exception:
                 pass
-
         finally:
             e.close()
 

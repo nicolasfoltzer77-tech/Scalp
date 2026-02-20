@@ -8,6 +8,9 @@ Règle :
 - exec produit step (déjà incrémenté)
 - exec.status = 'done'
 - opener ACK sur CE step exact
+
+API exposée :
+- ingest_exec_done()   ← appelée par /opt/scalp/project/scripts/opener.py
 """
 
 import sqlite3
@@ -27,7 +30,10 @@ def conn(db):
     return c
 
 
-def main():
+# -------------------------------------------------
+# API FSM — exec -> opener
+# -------------------------------------------------
+def ingest_exec_done():
     e = conn(DB_EXEC)
     o = conn(DB_OPENER)
 
@@ -62,7 +68,7 @@ def main():
         o.commit()
 
     except Exception:
-        log.exception("[ERR] opener_from_exec")
+        log.exception("[ERR] ingest_exec_done")
         try:
             o.rollback()
         except Exception:
@@ -70,6 +76,13 @@ def main():
     finally:
         e.close()
         o.close()
+
+
+# -------------------------------------------------
+# Standalone mode (diagnostic / batch)
+# -------------------------------------------------
+def main():
+    ingest_exec_done()
 
 
 if __name__ == "__main__":
