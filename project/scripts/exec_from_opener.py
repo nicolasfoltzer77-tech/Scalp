@@ -1,96 +1,82 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""
-SCALP — EXEC FROM OPENER
-
-Responsabilité :
-- lire opener.db (read-only)
-- ingérer les ordres prêts dans exec.db.exec
-- respecter strictement le modèle single-writer
-
-Aucun refactor.
-Strictement additif.
-"""
-
 import sqlite3
-import logging
-from pathlib import Path
 import time
+from pathlib import Path
+import logging
 
 log = logging.getLogger("EXEC_FROM_OPENER")
 
 ROOT = Path("/opt/scalp/project")
-
 DB_OPENER = ROOT / "data/opener.db"
 DB_EXEC   = ROOT / "data/exec.db"
 
 
-def conn_opener():
-    c = sqlite3.connect(f"file:{DB_OPENER}?mode=ro", uri=True)
+def conn(db):
+    c = sqlite3.connect(str(db), timeout=5)
     c.row_factory = sqlite3.Row
     return c
 
 
-def conn_exec():
-    c = sqlite3.connect(str(DB_EXEC), timeout=10)
-    c.row_factory = sqlite3.Row
-    c.execute("PRAGMA journal_mode=WAL;")
-    c.execute("PRAGMA busy_timeout=10000;")
-    return c
+def now_ms():
+    return int(time.time() * 1000)
 
 
 def ingest_from_opener():
-    """
-    Copie des ordres opener → exec
-    """
-
-    o = conn_opener()
-    e = conn_exec()
+    o = conn(DB_OPENER)
+    e = conn(DB_EXEC)
 
     try:
         rows = o.execute("""
-            SELECT
-                uid,
-                exec_type,
-                step
-            FROM opener_exec_ready
+            SELECT uid, instId, side, qty, lev, exec_type, step
+            FROM opener
+            WHERE status = 'open_stdby'
         """).fetchall()
 
         for r in rows:
-            uid = r["uid"]
-            exec_type = r["exec_type"]
-            step = r["step"] or 0
+            exec_id = f"{r['uid']}:{r['exec_type']}:{r['step']}"
 
-            exists = e.execute("""
-                SELECT 1
-                FROM exec
-                WHERE uid=?
-            """, (uid,)).fetchone()
+            exists = e.execute(
+                "SELECT 1 FROM exec WHERE exec_id=?",
+                (exec_id,)
+            ).fetchone()
 
             if exists:
+                log.debug(
+                    "[SKIP] already ingested uid=%s step=%s",
+                    r["uid"], r["step"]
+                )
                 continue
 
             e.execute("""
                 INSERT INTO exec (
-                    uid,
-                    exec_type,
-                    step,
-                    status,
-                    ts_create
-                ) VALUES (?, ?, ?, 'open', ?)
+                    exec_id, uid, step, exec_type, side,
+                    qty, price_exec, fee, status,
+                    ts_exec, instId, lev
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
-                uid,
-                exec_type,
-                step,
-                int(time.time() * 1000)
+                exec_id,
+                r["uid"],
+                int(r["step"]),
+                r["exec_type"],
+                r["side"],
+                r["qty"],
+                0.0,
+                0.0,
+                "open",
+                now_ms(),
+                r["instId"],
+                r["lev"],
             ))
 
             log.info(
-                "[INGEST] uid=%s type=%s step=%s",
-                uid,
-                exec_type,
-                step
+                "[INGEST] uid=%s inst=%s side=%s qty=%s step=%s",
+                r["uid"],
+                r["instId"],
+                r["side"],
+                r["qty"],
+                r["step"]
             )
 
         e.commit()
@@ -101,7 +87,6 @@ def ingest_from_opener():
             e.rollback()
         except Exception:
             pass
-
     finally:
         o.close()
         e.close()
