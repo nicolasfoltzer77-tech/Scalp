@@ -6,6 +6,8 @@ import sqlite3
 import logging
 from pathlib import Path
 
+from exec_from_opener import ingest_from_opener
+
 log = logging.getLogger("EXEC")
 
 ROOT = Path("/opt/scalp/project")
@@ -28,6 +30,14 @@ def main():
     log.info("[START] exec")
 
     while True:
+        # --------------------------------------------------
+        # NOUVEAU : ingestion opener → exec
+        # --------------------------------------------------
+        try:
+            ingest_from_opener()
+        except Exception:
+            log.exception("[ERR] ingest_from_opener")
+
         e = conn()
 
         try:
@@ -47,7 +57,7 @@ def main():
                 # --------------------------------------------------
 
                 # ==================================================
-                # UNIQUE MODIFICATION DEMANDÉE
+                # EXISTANT — inchangé
                 # ==================================================
                 if exec_type == "pyramide":
                     step = step + 1
