@@ -2,92 +2,67 @@
 # -*- coding: utf-8 -*-
 
 """
-FOLLOWER — FSM SYNC STRICT CANONIQUE
+FSM SYNC — FOLLOWER
 
-RÈGLES :
+RÈGLE CANON :
+- OPEN INITIAL :
+    gest.status = open_done
+    ⇒ follower créé (via ingest)
+    ⇒ follower passe DIRECTEMENT en follow
+    ⇒ AUCUNE vérification de step / req_step / done_step
 
-1) close_done  → purge follower
-2) *_req ACK   → *_stdby (même step)
-3) *_done      → retour follow + step = g_step
-   CONDITION STRICTE :
-       g_step == f_step + 1
-
-INVARIANTS :
-- follower.step ne bouge QUE sur *_done
-- aucune transition permissive
-- aucune régression de step possible
+- Les vérifications step / done_step
+  NE S’APPLIQUENT QUE POUR :
+    pyramide / partial / close
 """
 
+import logging
+
+log = logging.getLogger("FOLLOWER_FSM_SYNC")
+
+
 def sync_fsm_status(g, f, now):
+    """
+    g : connection gest.db (read)
+    f : connection follower.db (write)
+    now : timestamp ms
+    """
 
-    # --------------------------------------------------
-    # 1) PURGE CLOSE_DONE
-    # --------------------------------------------------
-    for r in g.execute("SELECT uid FROM gest WHERE status='close_done'"):
-        f.execute("DELETE FROM follower WHERE uid=?", (r["uid"],))
-
-
-    # --------------------------------------------------
-    # 2) SYNC FSM
-    # --------------------------------------------------
     rows = f.execute("""
-        SELECT uid, status, step
+        SELECT *
         FROM follower
     """).fetchall()
 
     for fr in rows:
+        uid = fr["uid"]
+        status = fr["status"]
+        step = fr["step"]
 
-        uid       = fr["uid"]
-        f_status  = fr["status"]
-        f_step    = fr["step"] or 0
-
-        gr = g.execute("""
-            SELECT status, step
-            FROM gest
-            WHERE uid=?
-        """, (uid,)).fetchone()
-
-        if not gr:
-            continue
-
-        g_status = gr["status"]
-        g_step   = gr["step"] or 0
-
-
-        # --------------------------------------------------
-        # 2.A) ACK *_req → *_stdby (même step)
-        # --------------------------------------------------
-        if (
-            f_status.endswith("_req")
-            and g_status == f_status
-            and g_step == f_step
-        ):
-            f.execute("""
-                UPDATE follower
-                SET status=?,
-                    ts_decision=?
-                WHERE uid=?
-            """, (f_status.replace("_req", "_stdby"), now, uid))
-            continue
-
-
-        # --------------------------------------------------
-        # 2.B) DONE → retour follow + incrément step
-        # CONDITION CANONIQUE :
-        # g_step == f_step + 1
-        # --------------------------------------------------
-        if (
-            g_status.endswith("_done")
-            and g_step == f_step + 1
-        ):
+        # ==================================================
+        # CAS OPEN INITIAL — PRIORITAIRE, SANS AUCUNE CONDITION
+        # ==================================================
+        if status == "open_stdby" and step == 0:
             f.execute("""
                 UPDATE follower
                 SET status='follow',
-                    step=?,
-                    done_step=?,
-                    ts_decision=?
+                    step=1,
+                    last_transition_ts=?
                 WHERE uid=?
-            """, (g_step, g_step, now, uid))
+            """, (now, uid))
+
+            log.info("[FSM] OPEN → FOLLOW uid=%s", uid)
             continue
 
+        # ==================================================
+        # CAS POST-OPEN (PYRAMIDE / PARTIAL / CLOSE)
+        # → ICI seulement on utilisera req_step / done_step
+        # ==================================================
+        req_step = fr["req_step"]
+        done_step = fr["done_step"]
+
+        if req_step != done_step:
+            continue
+
+        # Transitions gérées ailleurs (fsm_guard / fsm_status)
+        # Rien à faire ici pour l’instant
 
