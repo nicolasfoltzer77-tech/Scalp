@@ -5,12 +5,9 @@
 FSM ACK — exec -> opener
 
 Règle :
-- exec produit step (déjà incrémenté)
-- exec.status = 'done'
-- opener ACK sur CE step exact
-
-API exposée :
-- ingest_exec_done()   ← appelée par /opt/scalp/project/scripts/opener.py
+- exec termine le step N
+- exec.step est déjà passé à N+1
+- opener ACK sur le step N = exec.step - 1
 """
 
 import sqlite3
@@ -30,10 +27,7 @@ def conn(db):
     return c
 
 
-# -------------------------------------------------
-# API FSM — exec -> opener
-# -------------------------------------------------
-def ingest_exec_done():
+def _ack_open_done():
     e = conn(DB_EXEC)
     o = conn(DB_OPENER)
 
@@ -42,33 +36,32 @@ def ingest_exec_done():
             SELECT uid, exec_type, step
             FROM exec
             WHERE status='done'
+              AND exec_type='open'
         """).fetchall()
 
         for r in rows:
             uid       = r["uid"]
-            exec_type = r["exec_type"]
-            step      = int(r["step"])
+            step_done = int(r["step"]) - 1
 
-            if exec_type == "open":
-                res = o.execute("""
-                    UPDATE opener
-                    SET status='open_done'
-                    WHERE uid=?
-                      AND exec_type='open'
-                      AND step=?
-                      AND status='open_stdby'
-                """, (uid, step))
+            if step_done < 0:
+                continue
 
-                if res.rowcount:
-                    log.info(
-                        "[ACK] open_done uid=%s step=%s",
-                        uid, step
-                    )
+            res = o.execute("""
+                UPDATE opener
+                SET status='open_done'
+                WHERE uid=?
+                  AND exec_type='open'
+                  AND step=?
+                  AND status='open_stdby'
+            """, (uid, step_done))
+
+            if res.rowcount:
+                log.info("[ACK] open_done uid=%s step=%s", uid, step_done)
 
         o.commit()
 
     except Exception:
-        log.exception("[ERR] ingest_exec_done")
+        log.exception("[ERR] opener_from_exec")
         try:
             o.rollback()
         except Exception:
@@ -78,12 +71,19 @@ def ingest_exec_done():
         o.close()
 
 
-# -------------------------------------------------
-# Standalone mode (diagnostic / batch)
-# -------------------------------------------------
-def main():
-    ingest_exec_done()
+# ==================================================
+# API COMPAT — DO NOT REMOVE
+# ==================================================
+def ingest_exec_done():
+    """
+    API historique attendue par opener.py
+    NE PAS SUPPRIMER
+    """
+    _ack_open_done()
 
 
+# ==================================================
+# CLI
+# ==================================================
 if __name__ == "__main__":
-    main()
+    ingest_exec_done()

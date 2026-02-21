@@ -1,33 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""
-FOLLOWER — MAIN LOOP (REPO VERIFIED, NO GUESS)
-
-Pipeline réel :
-1) ingest_open_done        (gest → follower)
-2) sync_fsm_status         (FSM follower ↔ gest)
-3) sync_done_steps         (exec → follower.done_step)
-4) sync_mfemae             (mfe_mae → follower)
-5) manage_risk             (BE / TRAIL)
-6) decide_core             (pyramide / partial)
-7) check_timeouts
-8) purge_closed
-"""
-
 import time
 import logging
 import sqlite3
 import yaml
 from pathlib import Path
 
-# INGEST / FSM — API RÉELLE
 from follower_ingest import ingest_open_done
 from follower_fsm_sync import sync_fsm_status
 from follower_sync_steps import sync_done_steps
 from follower_purge_closed import purge_closed
 
-# METRICS / DECISIONS
 from follower_sync_mfemae import sync_mfemae
 from follower_risk import manage_risk
 from follower_decide import decide_core
@@ -50,9 +34,6 @@ logging.basicConfig(
 log = logging.getLogger("FOLLOWER")
 
 
-# ==========================================================
-# DB CONNECTIONS
-# ==========================================================
 def conn_follower():
     c = sqlite3.connect(str(DB_FOLLOWER), timeout=10)
     c.row_factory = sqlite3.Row
@@ -75,9 +56,6 @@ def conn_mfe_mae():
     return c
 
 
-# ==========================================================
-# CONFIG
-# ==========================================================
 def load_cfg():
     def load_yaml(p):
         with open(p, "r") as f:
@@ -90,9 +68,6 @@ def load_cfg():
     return cfg
 
 
-# ==========================================================
-# MAIN LOOP
-# ==========================================================
 def main():
     log.info("[START] follower")
     CFG = load_cfg()
@@ -166,12 +141,14 @@ def main():
             # 7) TIMEOUTS
             check_timeouts(CFG)
 
-            # 8) PURGE CLOSED
+            # 8) PURGE CLOSED  (FIXED SIGNATURE: purge_closed(g, f, now))
+            g = conn_gest()
             f = conn_follower()
             try:
-                purge_closed(f)
+                purge_closed(g, f, now)
                 f.commit()
             finally:
+                g.close()
                 f.close()
 
         except Exception:
