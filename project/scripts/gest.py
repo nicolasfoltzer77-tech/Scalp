@@ -73,7 +73,7 @@ def ingest_opener_done():
 
     try:
         rows = o.execute("""
-            SELECT uid, status
+            SELECT uid, status, step
             FROM opener
             WHERE status IN ('open_done','pyramide_done')
         """).fetchall()
@@ -86,18 +86,20 @@ def ingest_opener_done():
                 g.execute("""
                     UPDATE gest
                     SET status='open_done',
+                        step=COALESCE(?, step),
                         ts_status_update=strftime('%s','now')*1000
                     WHERE uid=?
                       AND status='open_req'
-                """, (uid,))
+                """, (r["step"], uid))
             elif st == "pyramide_done":
                 g.execute("""
                     UPDATE gest
                     SET status='pyramide_done',
+                        step=COALESCE(?, step),
                         ts_status_update=strftime('%s','now')*1000
                     WHERE uid=?
                       AND status='pyramide_req'
-                """, (uid,))
+                """, (r["step"], uid))
     finally:
         o.close()
         g.close()
@@ -151,7 +153,7 @@ def mirror_follower_follow():
 
     try:
         rows = f.execute("""
-            SELECT uid
+            SELECT uid, step
             FROM follower
             WHERE status='follow'
         """).fetchall()
@@ -161,10 +163,11 @@ def mirror_follower_follow():
             g.execute("""
                 UPDATE gest
                 SET status='follow',
+                    step=COALESCE(?, step),
                     ts_status_update=strftime('%s','now')*1000
                 WHERE uid=?
                   AND status LIKE '%_done'
-            """, (uid,))
+            """, (r["step"], uid))
     finally:
         f.close()
         g.close()

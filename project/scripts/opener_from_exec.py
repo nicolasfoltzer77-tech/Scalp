@@ -36,27 +36,37 @@ def _ack_open_done():
             SELECT uid, exec_type, step
             FROM exec
             WHERE status='done'
-              AND exec_type='open'
+              AND exec_type IN ('open','pyramide')
         """).fetchall()
 
         for r in rows:
             uid       = r["uid"]
-            step_done = int(r["step"]) - 1
+            exec_type = r["exec_type"]
+            step_new  = int(r["step"] or 0)
+            step_done = step_new - 1
 
             if step_done < 0:
                 continue
 
+            if exec_type == "open":
+                status_from = "open_stdby"
+                status_to = "open_done"
+            else:
+                status_from = "pyramide_stdby"
+                status_to = "pyramide_done"
+
             res = o.execute("""
                 UPDATE opener
-                SET status='open_done'
+                SET status=?,
+                    step=?
                 WHERE uid=?
-                  AND exec_type='open'
+                  AND exec_type=?
                   AND step=?
-                  AND status='open_stdby'
-            """, (uid, step_done))
+                  AND status=?
+            """, (status_to, step_new, uid, exec_type, step_done, status_from))
 
             if res.rowcount:
-                log.info("[ACK] open_done uid=%s step=%s", uid, step_done)
+                log.info("[ACK] %s uid=%s step=%s", status_to, uid, step_new)
 
         o.commit()
 

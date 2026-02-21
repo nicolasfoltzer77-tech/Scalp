@@ -28,7 +28,7 @@ def copy_opener():
     now = now_ms()
 
     for r in o.execute("""
-        SELECT uid, status, price_exec_open, ts_open
+        SELECT uid, status, step, price_exec_open, ts_open
         FROM opener
         WHERE status IN ('open_done','pyramide_done')
     """):
@@ -36,19 +36,21 @@ def copy_opener():
             g.execute("""
                 UPDATE gest
                 SET status='open_done',
+                    step=?,
                     entry=?,
                     ts_open=?,
                     ts_updated=?
                 WHERE uid=? AND status='open_req'
-            """, (r["price_exec_open"], r["ts_open"], now, r["uid"]))
+            """, (r["step"], r["price_exec_open"], r["ts_open"], now, r["uid"]))
 
         elif r["status"] == "pyramide_done":
             g.execute("""
                 UPDATE gest
                 SET status='pyramide_done',
+                    step=?,
                     ts_updated=?
                 WHERE uid=? AND status='pyramide_req'
-            """, (now, r["uid"]))
+            """, (r["step"], now, r["uid"]))
 
     g.commit()
     g.close()
