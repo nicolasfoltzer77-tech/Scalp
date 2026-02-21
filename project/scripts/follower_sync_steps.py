@@ -42,5 +42,38 @@ def sync_done_steps(*, f):
             WHERE uid=?
         """, (int(r["done_step"] or 0), r["uid"]))
 
+    # Materialize current exec position in follower for downstream risk/decision reads
+    pos_rows = e.execute("""
+        SELECT
+            uid,
+            qty_open,
+            avg_price_open,
+            last_exec_type,
+            last_step,
+            last_price_exec,
+            last_ts_exec
+        FROM v_exec_position
+    """).fetchall()
+
+    for p in pos_rows:
+        f.execute("""
+            UPDATE follower
+            SET qty_open=?,
+                avg_price_open=?,
+                last_exec_type=?,
+                last_step=?,
+                last_price_exec=?,
+                last_ts_exec=?
+            WHERE uid=?
+        """, (
+            float(p["qty_open"] or 0.0),
+            float(p["avg_price_open"] or 0.0),
+            p["last_exec_type"],
+            int(p["last_step"] or 0),
+            float(p["last_price_exec"] or 0.0),
+            int(p["last_ts_exec"] or 0),
+            p["uid"]
+        ))
+
     e.close()
 
