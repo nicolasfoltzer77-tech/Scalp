@@ -30,6 +30,48 @@ def _get_price_open(fr):
     return float(p)
 
 
+def _resolve_price_open(f, fr):
+    """
+    Resolve open price with additive fallbacks:
+    1) row.avg_price_open (legacy path)
+    2) v_follower_state.avg_price_open (materialized sync lag fallback)
+    3) row.last_price_exec (best-effort when avg is missing)
+    """
+    p = _get_price_open(fr)
+    if p is not None:
+        return p
+
+    try:
+        row = f.execute(
+            """
+            SELECT avg_price_open, last_price_exec
+            FROM v_follower_state
+            WHERE uid=?
+            """,
+            (fr["uid"],)
+        ).fetchone()
+    except Exception:
+        row = None
+
+    if row:
+        p2 = _row_get(row, "avg_price_open")
+        if p2 is not None:
+            return float(p2)
+
+        p3 = _row_get(row, "last_price_exec")
+        if p3 is not None:
+            log.warning("[RISK] avg_price_open missing, fallback last_price_exec uid=%s", fr["uid"])
+            return float(p3)
+
+    p4 = _row_get(fr, "last_price_exec")
+    if p4 is not None:
+        log.warning("[RISK] avg_price_open missing, row fallback last_price_exec uid=%s", fr["uid"])
+        return float(p4)
+
+    log.warning("[RISK] no price_open source uid=%s", fr["uid"])
+    return None
+
+
 # ==========================================================
 # BREAK EVEN
 # ==========================================================
@@ -44,7 +86,7 @@ def arm_break_even(f, fr, CFG, now):
     if mfe_atr < trigger:
         return
 
-    price_open = _get_price_open(fr)
+    price_open = _resolve_price_open(f, fr)
     if price_open is None:
         return
 
@@ -79,7 +121,7 @@ def arm_trailing(f, fr, CFG, now):
     if mfe_atr < trigger:
         return
 
-    price_open = _get_price_open(fr)
+    price_open = _resolve_price_open(f, fr)
     if price_open is None:
         return
 
