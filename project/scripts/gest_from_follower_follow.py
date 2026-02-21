@@ -37,7 +37,7 @@ def sync_follow_state():
         uid = r["uid"]
 
         fr = f.execute("""
-            SELECT status FROM follower WHERE uid=?
+            SELECT status, step FROM follower WHERE uid=?
         """, (uid,)).fetchone()
 
         if not fr:
@@ -47,9 +47,10 @@ def sync_follow_state():
             g.execute("""
                 UPDATE gest
                 SET status='follow',
+                    step=COALESCE(?, step),
                     ts_updated=?
                 WHERE uid=? AND status=?
-            """, (now, uid, r["status"]))
+            """, (fr["step"], now, uid, r["status"]))
 
             log.info("[GEST FOLLOW] %s %s -> follow", uid, r["status"])
 
