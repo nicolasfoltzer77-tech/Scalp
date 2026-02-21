@@ -124,7 +124,7 @@ def main():
                 """).fetchall()
 
                 for fr in rows:
-                    manage_risk(fr, CFG)
+                    manage_risk(f, fr, CFG, now)
 
                 f.commit()
             finally:

@@ -194,13 +194,10 @@ def ingest_follower_requests():
             st  = r["status"]
 
             if st == "pyramide_req":
-                # 🔥 CRITIQUE: incrémenter step pour que opener puisse insérer (uid, exec_type, step) sans collision
-                # open initial = step 0, pyramide #1 = step 1, etc.
                 g.execute("""
                     UPDATE gest
                     SET status='pyramide_req',
                         ratio_to_add=?,
-                        step=COALESCE(step,0)+1,
                         ts_status_update=strftime('%s','now')*1000
                     WHERE uid=?
                       AND status='follow'
