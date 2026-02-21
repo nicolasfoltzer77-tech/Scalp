@@ -30,6 +30,11 @@ def now_ms():
     return int(time.time() * 1000)
 
 
+def _table_columns(conn_, table):
+    rows = conn_.execute(f"PRAGMA table_info({table})").fetchall()
+    return {r["name"] for r in rows}
+
+
 def _f(x, d=0.0):
     try:
         if x is None:
@@ -60,8 +65,32 @@ def ingest_open_req():
     b = conn(DB_BUDGET)
 
     try:
-        rows = g.execute("""
-            SELECT uid, instId, side, price_signal, score_C, score_S, score_H, step
+        gest_cols = _table_columns(g, "gest")
+
+        # Compat schémas historiques/finals:
+        # - price_signal OR entry
+        # - score_C OR dec_score_C
+        # - score_S OR score_of
+        # - score_H OR score_force
+        price_expr = "price_signal" if "price_signal" in gest_cols else "entry"
+        score_c_expr = "score_C" if "score_C" in gest_cols else (
+            "dec_score_C" if "dec_score_C" in gest_cols else "0.0"
+        )
+        score_s_expr = "score_S" if "score_S" in gest_cols else (
+            "score_of" if "score_of" in gest_cols else "0.0"
+        )
+        score_h_expr = "score_H" if "score_H" in gest_cols else (
+            "score_force" if "score_force" in gest_cols else "0.0"
+        )
+        step_expr = "step" if "step" in gest_cols else "0"
+
+        rows = g.execute(f"""
+            SELECT uid, instId, side,
+                   {price_expr} AS price_signal,
+                   {score_c_expr} AS score_C,
+                   {score_s_expr} AS score_S,
+                   {score_h_expr} AS score_H,
+                   {step_expr} AS step
             FROM gest
             WHERE status='open_req'
         """).fetchall()
@@ -184,4 +213,3 @@ def ingest_open_req():
         o.close()
         k.close()
         b.close()
-
