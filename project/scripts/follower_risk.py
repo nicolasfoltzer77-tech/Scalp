@@ -33,7 +33,7 @@ def _get_price_open(fr):
 # ==========================================================
 # BREAK EVEN
 # ==========================================================
-def arm_break_even(fr, CFG):
+def arm_break_even(f, fr, CFG, now):
 
     sl_be = _row_get(fr, "sl_be")
     if sl_be not in (None, 0, 0.0):
@@ -54,14 +54,21 @@ def arm_break_even(fr, CFG):
 
     sl = price_open + copysign(offset * atr, 1 if side == "buy" else -1)
 
-    fr["sl_be"] = sl
+    f.execute("""
+        UPDATE follower
+        SET sl_be=?,
+            step=COALESCE(step,0)+1,
+            last_action_ts=?
+        WHERE uid=?
+          AND COALESCE(sl_be,0)=0
+    """, (sl, now, fr["uid"]))
     log.info("[BE_ARMED] uid=%s sl_be=%.6f", fr["uid"], sl)
 
 
 # ==========================================================
 # TRAILING STOP
 # ==========================================================
-def arm_trailing(fr, CFG):
+def arm_trailing(f, fr, CFG, now):
 
     sl_tr = _row_get(fr, "sl_trail")
     if sl_tr not in (None, 0, 0.0):
@@ -82,13 +89,20 @@ def arm_trailing(fr, CFG):
 
     sl = price_open + copysign(offset * atr, 1 if side == "buy" else -1)
 
-    fr["sl_trail"] = sl
+    f.execute("""
+        UPDATE follower
+        SET sl_trail=?,
+            step=COALESCE(step,0)+1,
+            last_action_ts=?
+        WHERE uid=?
+          AND COALESCE(sl_trail,0)=0
+    """, (sl, now, fr["uid"]))
     log.info("[TRAIL_ARMED] uid=%s sl_trail=%.6f", fr["uid"], sl)
 
 
 # ==========================================================
 # ENTRY
 # ==========================================================
-def manage_risk(fr, CFG):
-    arm_break_even(fr, CFG)
-    arm_trailing(fr, CFG)
+def manage_risk(f, fr, CFG, now):
+    arm_break_even(f, fr, CFG, now)
+    arm_trailing(f, fr, CFG, now)
