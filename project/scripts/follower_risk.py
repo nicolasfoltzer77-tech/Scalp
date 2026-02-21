@@ -2,9 +2,15 @@
 # -*- coding: utf-8 -*-
 
 import logging
+import sqlite3
 from math import copysign
+from pathlib import Path
 
 log = logging.getLogger("FOLLOWER_RISK")
+
+
+ROOT = Path("/opt/scalp/project")
+DB_EXEC = ROOT / "data/exec.db"
 
 
 # ==========================================================
@@ -30,41 +36,57 @@ def _get_price_open(fr):
     return float(p)
 
 
+def _get_exec_price_open(uid):
+    """
+    Canonical fallback source for avg open price: exec.v_exec_position.
+    """
+    try:
+        with sqlite3.connect(str(DB_EXEC), timeout=2) as e:
+            e.row_factory = sqlite3.Row
+            row = e.execute(
+                """
+                SELECT avg_price_open, last_price_exec
+                FROM v_exec_position
+                WHERE uid=?
+                """,
+                (uid,)
+            ).fetchone()
+    except Exception:
+        log.exception("[RISK] exec lookup failed uid=%s", uid)
+        return None
+
+    if not row:
+        return None
+
+    p = _row_get(row, "avg_price_open")
+    if p is not None and float(p) > 0.0:
+        return float(p)
+
+    last_px = _row_get(row, "last_price_exec")
+    if last_px is not None and float(last_px) > 0.0:
+        log.warning("[RISK] avg_price_open missing in exec, fallback last_price_exec uid=%s", uid)
+        return float(last_px)
+
+    return None
+
+
 def _resolve_price_open(f, fr):
     """
     Resolve open price with additive fallbacks:
-    1) row.avg_price_open (legacy path)
-    2) v_follower_state.avg_price_open (materialized sync lag fallback)
-    3) row.last_price_exec (best-effort when avg is missing)
+    1) row.avg_price_open (already materialized on follower row)
+    2) exec.v_exec_position.avg_price_open (canonical source)
+    3) row.last_price_exec (best-effort)
     """
     p = _get_price_open(fr)
-    if p is not None:
+    if p is not None and p > 0.0:
         return p
 
-    try:
-        row = f.execute(
-            """
-            SELECT avg_price_open, last_price_exec
-            FROM v_follower_state
-            WHERE uid=?
-            """,
-            (fr["uid"],)
-        ).fetchone()
-    except Exception:
-        row = None
-
-    if row:
-        p2 = _row_get(row, "avg_price_open")
-        if p2 is not None:
-            return float(p2)
-
-        p3 = _row_get(row, "last_price_exec")
-        if p3 is not None:
-            log.warning("[RISK] avg_price_open missing, fallback last_price_exec uid=%s", fr["uid"])
-            return float(p3)
+    p_exec = _get_exec_price_open(fr["uid"])
+    if p_exec is not None:
+        return p_exec
 
     p4 = _row_get(fr, "last_price_exec")
-    if p4 is not None:
+    if p4 is not None and float(p4) > 0.0:
         log.warning("[RISK] avg_price_open missing, row fallback last_price_exec uid=%s", fr["uid"])
         return float(p4)
 
