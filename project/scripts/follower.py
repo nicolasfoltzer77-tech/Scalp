@@ -61,10 +61,23 @@ def load_cfg():
         with open(p, "r") as f:
             return yaml.safe_load(f) or {}
 
+    def flatten_sections(blob):
+        if not isinstance(blob, dict):
+            return {}
+
+        out = dict(blob)
+
+        for section in ("runtime", "follower", "dec"):
+            section_data = blob.get(section)
+            if isinstance(section_data, dict):
+                out.update(section_data)
+
+        return out
+
     cfg = {}
-    cfg.update(load_yaml(CONF / "runtime.yaml"))
-    cfg.update(load_yaml(CONF / "follower.yaml"))
-    cfg.update(load_yaml(CONF / "dec.yaml"))
+    for conf_name in ("runtime.yaml", "follower.yaml", "dec.yaml"):
+        cfg.update(flatten_sections(load_yaml(CONF / conf_name)))
+
     return cfg
 
 
