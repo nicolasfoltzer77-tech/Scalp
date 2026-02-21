@@ -124,7 +124,6 @@ def main():
                 instId    = r["instId"]
                 side      = r["side"]
                 exec_type = r["exec_type"]
-                step      = int(r["step"])
                 qty       = float(r["qty"])
 
                 # -------------------------------
@@ -141,34 +140,27 @@ def main():
                 price_exec, fee = apply_spread_and_fee(last_price, side)
 
                 # -------------------------------
-                # STEP LOGIC
-                # -------------------------------
-                if exec_type == "pyramide":
-                    step += 1
-
-                # -------------------------------
-                # EXEC DONE
+                # EXEC DONE  (STEP +1 CANONIQUE)
                 # -------------------------------
                 e.execute("""
                     UPDATE exec
                     SET status='done',
                         price_exec=?,
                         fee=?,
-                        step=?,
+                        step = step + 1,
                         ts_exec=?,
                         done_step=1
                     WHERE exec_id=?
                 """, (
                     price_exec,
                     fee,
-                    step,
                     now_ms(),
                     exec_id
                 ))
 
                 log.info(
-                    "[EXEC_DONE] uid=%s inst=%s type=%s side=%s qty=%.6f px=%.8f fee=%.8f step=%s",
-                    uid, instId, exec_type, side, qty, price_exec, fee, step
+                    "[EXEC_DONE] uid=%s inst=%s type=%s side=%s qty=%.6f px=%.8f fee=%.8f",
+                    uid, instId, exec_type, side, qty, price_exec, fee
                 )
 
             e.commit()
