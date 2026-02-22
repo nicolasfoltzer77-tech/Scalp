@@ -31,7 +31,7 @@ def ingest_from_opener():
         rows = o.execute("""
             SELECT uid, instId, side, qty, lev, exec_type, step
             FROM opener
-            WHERE status = 'open_stdby'
+            WHERE status IN ('open_stdby', 'pyramide_stdby')
         """).fetchall()
 
         for r in rows:
@@ -71,9 +71,10 @@ def ingest_from_opener():
             ))
 
             log.info(
-                "[INGEST] uid=%s inst=%s side=%s qty=%s step=%s",
+                "[INGEST] uid=%s inst=%s type=%s side=%s qty=%s step=%s",
                 r["uid"],
                 r["instId"],
+                r["exec_type"],
                 r["side"],
                 r["qty"],
                 r["step"]
