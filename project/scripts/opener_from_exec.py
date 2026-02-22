@@ -55,6 +55,10 @@ def _ack_open_done():
                 status_from = "pyramide_stdby"
                 status_to = "pyramide_done"
 
+            # Compat FSM:
+            # - flux canonique: exec.step est déjà N+1, opener est en N
+            # - anciens flux: exec.step restait parfois à N
+            # On tente d'abord le mode canonique puis fallback legacy.
             res = o.execute("""
                 UPDATE opener
                 SET status=?,
@@ -64,6 +68,17 @@ def _ack_open_done():
                   AND step=?
                   AND status=?
             """, (status_to, step_new, uid, exec_type, step_done, status_from))
+
+            if (res.rowcount or 0) == 0:
+                res = o.execute("""
+                    UPDATE opener
+                    SET status=?,
+                        step=?
+                    WHERE uid=?
+                      AND exec_type=?
+                      AND step=?
+                      AND status=?
+                """, (status_to, step_new, uid, exec_type, step_new, status_from))
 
             if res.rowcount:
                 log.info("[ACK] %s uid=%s step=%s", status_to, uid, step_new)
