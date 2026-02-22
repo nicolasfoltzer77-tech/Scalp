@@ -54,7 +54,7 @@ def ingest_pyramide_req():
 
     try:
         rows = g.execute("""
-            SELECT uid, instId, side, ratio_to_add
+            SELECT uid, instId, side, ratio_to_add, ts_status_update
             FROM gest
             WHERE status='pyramide_req'
         """).fetchall()
@@ -67,6 +67,7 @@ def ingest_pyramide_req():
             instId = r["instId"]
             side   = r["side"]
             ratio  = _f(r["ratio_to_add"], 0.0)
+            req_ts = int(r["ts_status_update"] or 0)
 
             if not uid or not instId or side not in ("buy", "sell") or ratio <= 0:
                 continue
@@ -124,6 +125,22 @@ def ingest_pyramide_req():
                          uid, instId, _f(qty_raw, 0.0), price, min_usdt)
                 continue
 
+            # Idempotence hard-stop:
+            # ne pas redéclencher en boucle la même pyramide_req.
+            # On autorise une nouvelle pyramide uniquement si gest.ts_status_update
+            # a changé (nouvelle requête follower -> gest).
+            if req_ts > 0:
+                already_ingested = o.execute("""
+                    SELECT 1
+                    FROM opener
+                    WHERE uid=?
+                      AND exec_type='pyramide'
+                      AND ts_open >= ?
+                    LIMIT 1
+                """, (uid, req_ts)).fetchone()
+                if already_ingested:
+                    continue
+
             step = _next_pyramide_step(edb, uid)
 
             # anti-dup opener PK (uid, exec_type, step)
@@ -159,4 +176,3 @@ def ingest_pyramide_req():
 
 if __name__ == "__main__":
     ingest_pyramide_req()
-
