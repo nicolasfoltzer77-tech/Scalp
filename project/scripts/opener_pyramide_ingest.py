@@ -51,7 +51,7 @@ def ingest_pyramide():
         o.execute("""
             INSERT INTO opener
             (uid, instId, side, qty, lev, status, exec_type, step)
-            VALUES (?,?,?,?,1,'open_stdby','pyramide',?)
+            VALUES (?,?,?,?,1,'pyramide_stdby','pyramide',?)
         """, (
             uid,
             r["instId"],
@@ -65,4 +65,3 @@ def ingest_pyramide():
     o.commit()
     g.close()
     o.close()
-

@@ -149,7 +149,7 @@ def main():
                         fee=?,
                         step = step + 1,
                         ts_exec=?,
-                        done_step=1
+                        done_step=step + 1
                     WHERE exec_id=?
                 """, (
                     price_exec,

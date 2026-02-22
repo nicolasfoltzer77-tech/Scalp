@@ -36,16 +36,6 @@ def _f(x, d=0.0):
     except Exception:
         return d
 
-def _next_pyramide_step(edb, uid: str) -> int:
-    # step pyramide monotone par uid pour éviter collision + permettre plusieurs ajouts
-    r = edb.execute("""
-        SELECT COALESCE(MAX(step), -1) AS mx
-        FROM exec
-        WHERE uid=? AND exec_type='pyramide'
-    """, (uid,)).fetchone()
-    mx = int(r["mx"] if r and r["mx"] is not None else -1)
-    return mx + 1
-
 def ingest_pyramide_req():
     g   = _conn(DB_GEST)
     o   = _conn(DB_OPENER)
@@ -54,7 +44,7 @@ def ingest_pyramide_req():
 
     try:
         rows = g.execute("""
-            SELECT uid, instId, side, ratio_to_add, ts_status_update
+            SELECT uid, instId, side, ratio_to_add, ts_status_update, step
             FROM gest
             WHERE status='pyramide_req'
         """).fetchall()
@@ -68,6 +58,7 @@ def ingest_pyramide_req():
             side   = r["side"]
             ratio  = _f(r["ratio_to_add"], 0.0)
             req_ts = int(r["ts_status_update"] or 0)
+            req_step = int(r["step"] or 0)
 
             if not uid or not instId or side not in ("buy", "sell") or ratio <= 0:
                 continue
@@ -141,7 +132,7 @@ def ingest_pyramide_req():
                 if already_ingested:
                     continue
 
-            step = _next_pyramide_step(edb, uid)
+            step = req_step
 
             # anti-dup opener PK (uid, exec_type, step)
             if o.execute("""
