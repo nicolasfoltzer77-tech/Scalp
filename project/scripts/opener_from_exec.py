@@ -80,6 +80,47 @@ def _ack_open_done():
                       AND status=?
                 """, (status_to, step_new, uid, exec_type, step_new, status_from))
 
+            # Drift-safe fallback:
+            # anciens runs ont pu laisser des *_stdby avec step désaligné
+            # (ex: retry/restart au mauvais moment). Dans ce cas, on ACK la
+            # dernière ligne stdby <= step_new pour débloquer la chaîne FSM.
+            if (res.rowcount or 0) == 0:
+                # Si le done existe déjà au step cible, on purge seulement le stdby bloqué.
+                done_exists = o.execute("""
+                    SELECT 1
+                    FROM opener
+                    WHERE uid=?
+                      AND exec_type=?
+                      AND step=?
+                      AND status=?
+                    LIMIT 1
+                """, (uid, exec_type, step_new, status_to)).fetchone()
+
+                stale = o.execute("""
+                    SELECT rowid, step
+                    FROM opener
+                    WHERE uid=?
+                      AND exec_type=?
+                      AND status=?
+                      AND step<=?
+                    ORDER BY step DESC
+                    LIMIT 1
+                """, (uid, exec_type, status_from, step_new)).fetchone()
+
+                if stale:
+                    if done_exists:
+                        res = o.execute(
+                            "DELETE FROM opener WHERE rowid=?",
+                            (stale["rowid"],)
+                        )
+                    else:
+                        res = o.execute("""
+                            UPDATE opener
+                            SET status=?,
+                                step=?
+                            WHERE rowid=?
+                        """, (status_to, step_new, stale["rowid"]))
+
             if res.rowcount:
                 log.info("[ACK] %s uid=%s step=%s", status_to, uid, step_new)
 
