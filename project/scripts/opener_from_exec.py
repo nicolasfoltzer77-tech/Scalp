@@ -62,17 +62,7 @@ def _ack_open_done():
             # - flux canonique: exec.step est déjà N+1, opener est en N
             # - anciens flux: exec.step restait parfois à N
             # On tente d'abord le mode canonique puis fallback legacy.
-            res = o.execute("""
-                UPDATE opener
-                SET status=?,
-                    step=?
-                WHERE uid=?
-                  AND exec_type=?
-                  AND step=?
-                  AND status=?
-            """, (status_to, step_new, uid, exec_type, step_done, status_from))
-
-            if (res.rowcount or 0) == 0:
+            try:
                 res = o.execute("""
                     UPDATE opener
                     SET status=?,
@@ -81,48 +71,76 @@ def _ack_open_done():
                       AND exec_type=?
                       AND step=?
                       AND status=?
-                """, (status_to, step_new, uid, exec_type, step_new, status_from))
+                """, (status_to, step_new, uid, exec_type, step_done, status_from))
 
-            # Drift-safe fallback:
-            # anciens runs ont pu laisser des *_stdby avec step désaligné
-            # (ex: retry/restart au mauvais moment). Dans ce cas, on ACK la
-            # ligne stdby la plus proche de step_new pour débloquer la chaîne FSM.
-            if (res.rowcount or 0) == 0:
-                # Si le done existe déjà au step cible, on purge seulement le stdby bloqué.
-                done_exists = o.execute("""
-                    SELECT 1
-                    FROM opener
+                if (res.rowcount or 0) == 0:
+                    res = o.execute("""
+                        UPDATE opener
+                        SET status=?,
+                            step=?
+                        WHERE uid=?
+                          AND exec_type=?
+                          AND step=?
+                          AND status=?
+                    """, (status_to, step_new, uid, exec_type, step_new, status_from))
+
+                # Drift-safe fallback:
+                # anciens runs ont pu laisser des *_stdby avec step désaligné
+                # (ex: retry/restart au mauvais moment). Dans ce cas, on ACK la
+                # ligne stdby la plus proche de step_new pour débloquer la chaîne FSM.
+                if (res.rowcount or 0) == 0:
+                    # Si le done existe déjà au step cible, on purge seulement le stdby bloqué.
+                    done_exists = o.execute("""
+                        SELECT 1
+                        FROM opener
+                        WHERE uid=?
+                          AND exec_type=?
+                          AND step=?
+                          AND status=?
+                        LIMIT 1
+                    """, (uid, exec_type, step_new, status_to)).fetchone()
+
+                    stale = o.execute("""
+                        SELECT rowid, step
+                        FROM opener
+                        WHERE uid=?
+                          AND exec_type=?
+                          AND status=?
+                        ORDER BY ABS(COALESCE(step,0) - ?) ASC,
+                                 step DESC
+                        LIMIT 1
+                    """, (uid, exec_type, status_from, step_new)).fetchone()
+
+                    if stale:
+                        if done_exists:
+                            res = o.execute(
+                                "DELETE FROM opener WHERE rowid=?",
+                                (stale["rowid"],)
+                            )
+                        else:
+                            res = o.execute("""
+                                UPDATE opener
+                                SET status=?,
+                                    step=?
+                                WHERE rowid=?
+                            """, (status_to, step_new, stale["rowid"]))
+
+            except sqlite3.IntegrityError:
+                # Cas observé en prod : la ligne *_done existe déjà au step cible
+                # (retry/restart) et l'UPDATE de step provoque un conflit PK.
+                # On ne bloque pas la boucle: on supprime le stdby résiduel.
+                res = o.execute("""
+                    DELETE FROM opener
                     WHERE uid=?
                       AND exec_type=?
-                      AND step=?
                       AND status=?
-                    LIMIT 1
-                """, (uid, exec_type, step_new, status_to)).fetchone()
-
-                stale = o.execute("""
-                    SELECT rowid, step
-                    FROM opener
-                    WHERE uid=?
-                      AND exec_type=?
-                      AND status=?
-                    ORDER BY ABS(COALESCE(step,0) - ?) ASC,
-                             step DESC
-                    LIMIT 1
-                """, (uid, exec_type, status_from, step_new)).fetchone()
-
-                if stale:
-                    if done_exists:
-                        res = o.execute(
-                            "DELETE FROM opener WHERE rowid=?",
-                            (stale["rowid"],)
-                        )
-                    else:
-                        res = o.execute("""
-                            UPDATE opener
-                            SET status=?,
-                                step=?
-                            WHERE rowid=?
-                        """, (status_to, step_new, stale["rowid"]))
+                """, (uid, exec_type, status_from))
+                log.warning(
+                    "[DEDUP] conflict PK uid=%s type=%s step=%s -> stale stdby purged",
+                    uid,
+                    exec_type,
+                    step_new,
+                )
 
             if res.rowcount:
                 log.info("[ACK] %s uid=%s step=%s", status_to, uid, step_new)
