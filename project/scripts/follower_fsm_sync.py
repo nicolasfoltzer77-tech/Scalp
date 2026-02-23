@@ -38,6 +38,18 @@ def sync_fsm_status(g, f, now):
         status = fr["status"]
         step = fr["step"]
 
+        gr = g.execute("""
+            SELECT status, step, qty, qty_open
+            FROM gest
+            WHERE uid=?
+        """, (uid,)).fetchone()
+
+        if not gr:
+            continue
+
+        g_status = gr["status"]
+        g_step = int(gr["step"] or 0)
+
         # ==================================================
         # CAS OPEN INITIAL — PRIORITAIRE, SANS AUCUNE CONDITION
         # ==================================================
@@ -60,9 +72,28 @@ def sync_fsm_status(g, f, now):
         req_step = fr["req_step"]
         done_step = fr["done_step"]
 
+        # ACK pyramide_done : follower doit repasser en follow,
+        # recopier le step canonique et rafraîchir le snapshot de quantité.
+        if g_status == "pyramide_done":
+            qty_snapshot = float(
+                gr["qty_open"]
+                if gr["qty_open"] is not None
+                else (gr["qty"] if gr["qty"] is not None else 0.0)
+            )
+
+            f.execute("""
+                UPDATE follower
+                SET status='follow',
+                    step=?,
+                    qty_open_snapshot=?,
+                    reason='PYRAMIDE_DONE_ACK',
+                    last_action_ts=?
+                WHERE uid=?
+            """, (g_step, qty_snapshot, now, uid))
+            continue
+
         if req_step != done_step:
             continue
 
         # Transitions gérées ailleurs (fsm_guard / fsm_status)
         # Rien à faire ici pour l’instant
-
