@@ -84,6 +84,7 @@ def header():
         f"{'FLAG':<13} "
         f"{'INST':<12} {'SIDE':<5} "
         f"{'ENTRY':>10} {'NOW':>10} "
+        f"{'SL_HARD':>10} {'SL_BE':>10} {'SL_TRAIL':>10} {'TP':>10} "
         f"{'POS_QTY':>12} {'REQ_QTY':>12} "
         f"{'PNL':>8} {'%PNL':>7} "
         f"{'AGE':>6} "
@@ -92,7 +93,7 @@ def header():
         f"{'F_STATUS':<14} {'G_STATUS':<14} "
         f"{'STEP':>4}"
     )
-    print("=" * 172)
+    print("=" * 216)
 
 def fmt_price(x, digits=4):
     try:
@@ -117,7 +118,9 @@ def fmt_atr(x):
     except Exception:
         return "0"
 
-def row(flag, inst, side, entry, now, pos_qty, req_qty,
+def row(flag, inst, side, entry, now,
+        sl_hard, sl_be, sl_trail, tp_dyn,
+        pos_qty, req_qty,
         pnl, pnl_pct, age, atr, mfe_atr, mae_atr,
         f_status, g_status, step):
 
@@ -125,6 +128,7 @@ def row(flag, inst, side, entry, now, pos_qty, req_qty,
         f"{flag:<13} "
         f"{inst:<12} {side:<5} "
         f"{entry:>10} {now:>10} "
+        f"{sl_hard:>10} {sl_be:>10} {sl_trail:>10} {tp_dyn:>10} "
         f"{pos_qty:>12} {req_qty:>12} "
         f"{pnl:>8.2f} {pnl_pct:>7.2f}% "
         f"{age:>6.0f}s "
@@ -192,6 +196,10 @@ def main():
 
             pos_qty = float(e["qty_open"]) if e and e["qty_open"] else 0.0
             req_qty = float(f.get("qty_to_close") or 0.0)
+            sl_hard = float(f.get("sl_hard") or 0.0)
+            sl_be = float(f.get("sl_be") or 0.0)
+            sl_trail = float(f.get("sl_trail") or 0.0)
+            tp_dyn = float(f.get("tp_dyn") or 0.0)
 
             pnl = pnl_pct = 0.0
             if pos_qty > 0 and entry_val > 0:
@@ -218,15 +226,18 @@ def main():
             prio = 0 if flag == "OK" else 1
 
             enriched.append((prio, -age, flag, inst, side,
-                             entry_val, now_val, pos_qty, req_qty,
+                             entry_val, now_val,
+                             sl_hard, sl_be, sl_trail, tp_dyn,
+                             pos_qty, req_qty,
                              pnl, pnl_pct, age, atr, mfe_atr, mae_atr,
                              f_status, g_status, step))
 
         enriched.sort()
 
-        for _, _, flag, inst, side, entry, now, pos, req, pnl, pct, age, atr, mfe, mae, fs, gs, step in enriched:
+        for _, _, flag, inst, side, entry, now, sl_hard, sl_be, sl_trail, tp_dyn, pos, req, pnl, pct, age, atr, mfe, mae, fs, gs, step in enriched:
             row(flag, inst, side,
                 fmt_price(entry), fmt_price(now),
+                fmt_price(sl_hard), fmt_price(sl_be), fmt_price(sl_trail), fmt_price(tp_dyn),
                 fmt_qty(pos), fmt_qty(req),
                 pnl, pct, age,
                 fmt_atr(atr), mfe, mae,
@@ -236,4 +247,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
