@@ -39,6 +39,9 @@ def conn_follower():
     c.row_factory = sqlite3.Row
     c.execute("PRAGMA journal_mode=WAL;")
     c.execute("PRAGMA busy_timeout=10000;")
+    cols = {r[1] for r in c.execute("PRAGMA table_info(follower)").fetchall()}
+    if "sl_hard" not in cols:
+        c.execute("ALTER TABLE follower ADD COLUMN sl_hard REAL DEFAULT 0")
     return c
 
 
