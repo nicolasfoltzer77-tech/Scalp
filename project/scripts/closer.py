@@ -90,6 +90,7 @@ def _insert_closer_row(c, row_values):
 def ingest_from_gest():
     g = conn(DB_GEST)
     c = conn(DB_CLOSER)
+    e = conn(DB_EXEC)
 
     try:
         gest_cols = _table_columns(g, "gest")
@@ -108,6 +109,11 @@ def ingest_from_gest():
             WHERE status IN ('close_req','partial_req')
         """).fetchall()
 
+        exec_pos = {
+            r["uid"]: float(r["qty_open"] or 0.0)
+            for r in e.execute("SELECT uid, qty_open FROM v_exec_position")
+        }
+
         closer_cols = _table_columns(c, "closer")
         ts_col = "ts_exec" if "ts_exec" in closer_cols else "ts_create"
         ratio_col = "ratio_to_close" if "ratio_to_close" in closer_cols else ("ratio" if "ratio" in closer_cols else None)
@@ -118,8 +124,15 @@ def ingest_from_gest():
             stat = r["status"]
             ratio_to_close = float(r["ratio_to_close"] or 0.0)
             qty_open = float(r["qty_open"] or 0.0) if "qty_open" in gest_cols else 0.0
+            qty_open_exec = float(exec_pos.get(uid, 0.0))
+            qty_open_ref = qty_open_exec if qty_open_exec > 0 else qty_open
             qty_to_close = float(r["qty_to_close"] or 0.0) if "qty_to_close" in gest_cols else 0.0
-            qty = qty_to_close if qty_to_close > 0 else (qty_open * ratio_to_close)
+            if qty_to_close > 0:
+                qty = qty_to_close
+            elif stat == "close_req" and ratio_to_close <= 0:
+                qty = qty_open_ref
+            else:
+                qty = qty_open_ref * ratio_to_close
 
             if stat == "close_req":
                 exec_type = "close"
@@ -138,8 +151,8 @@ def ingest_from_gest():
                 continue
 
             if qty <= 0:
-                log.info("[SKIP] uid=%s type=%s step=%s qty<=0 ratio=%.6f qty_open=%.6f qty_to_close=%.6f",
-                         uid, exec_type, step, ratio_to_close, qty_open, qty_to_close)
+                log.info("[SKIP] uid=%s type=%s step=%s qty<=0 ratio=%.6f qty_open=%.6f qty_open_exec=%.6f qty_to_close=%.6f",
+                         uid, exec_type, step, ratio_to_close, qty_open, qty_open_exec, qty_to_close)
                 continue
 
             row_values = {
@@ -171,6 +184,7 @@ def ingest_from_gest():
     finally:
         g.close()
         c.close()
+        e.close()
 
 
 # ==========================================================
