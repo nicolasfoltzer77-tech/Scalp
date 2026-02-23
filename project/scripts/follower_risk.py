@@ -94,6 +94,44 @@ def _resolve_price_open(f, fr):
     return None
 
 
+def _price_from_row(fr):
+    p = _row_get(fr, "last_price_exec")
+    if p is None:
+        return None
+    p = float(p)
+    return p if p > 0.0 else None
+
+
+def _set_level_once(f, uid, col, value, now):
+    f.execute(f"""
+        UPDATE follower
+        SET {col}=?,
+            last_action_ts=?
+        WHERE uid=?
+          AND COALESCE({col},0)=0
+    """, (value, now, uid))
+
+
+def _is_near_level(price, level, price_open, ratio):
+    if ratio <= 0:
+        return False
+    base_dist = abs(float(price_open) - float(level))
+    if base_dist <= 0:
+        return False
+    return abs(float(price) - float(level)) <= (base_dist * ratio)
+
+
+def _recalc_level_50(f, uid, col, old_level, price, now):
+    new_level = (float(old_level) + float(price)) * 0.5
+    f.execute(f"""
+        UPDATE follower
+        SET {col}=?,
+            last_action_ts=?
+        WHERE uid=?
+    """, (new_level, now, uid))
+    log.info("[LEVEL_50] uid=%s level=%s old=%.6f new=%.6f px=%.6f", uid, col, old_level, new_level, price)
+
+
 # ==========================================================
 # BREAK EVEN
 # ==========================================================
@@ -118,14 +156,7 @@ def arm_break_even(f, fr, CFG, now):
 
     sl = price_open + copysign(offset * atr, 1 if side == "buy" else -1)
 
-    f.execute("""
-        UPDATE follower
-        SET sl_be=?,
-            step=COALESCE(step,0)+1,
-            last_action_ts=?
-        WHERE uid=?
-          AND COALESCE(sl_be,0)=0
-    """, (sl, now, fr["uid"]))
+    _set_level_once(f, fr["uid"], "sl_be", sl, now)
     log.info("[BE_ARMED] uid=%s sl_be=%.6f", fr["uid"], sl)
 
 
@@ -153,20 +184,74 @@ def arm_trailing(f, fr, CFG, now):
 
     sl = price_open + copysign(offset * atr, 1 if side == "buy" else -1)
 
-    f.execute("""
-        UPDATE follower
-        SET sl_trail=?,
-            step=COALESCE(step,0)+1,
-            last_action_ts=?
-        WHERE uid=?
-          AND COALESCE(sl_trail,0)=0
-    """, (sl, now, fr["uid"]))
+    _set_level_once(f, fr["uid"], "sl_trail", sl, now)
     log.info("[TRAIL_ARMED] uid=%s sl_trail=%.6f", fr["uid"], sl)
+
+
+def arm_hard_sl(f, fr, CFG, now):
+    sl_hard = _row_get(fr, "sl_hard")
+    if sl_hard not in (None, 0, 0.0):
+        return
+
+    price_open = _resolve_price_open(f, fr)
+    if price_open is None:
+        return
+
+    side = fr["side"]
+    atr = float(_row_get(fr, "atr", 0.0) or 0.0)
+    offset = float(CFG.get("sl_hard_offset_atr", 1.0) or 1.0)
+    sl = price_open + copysign(offset * atr, -1 if side == "buy" else 1)
+    _set_level_once(f, fr["uid"], "sl_hard", sl, now)
+    log.info("[HARD_SL_ARMED] uid=%s sl_hard=%.6f", fr["uid"], sl)
+
+
+def arm_take_profit(f, fr, CFG, now):
+    tp = _row_get(fr, "tp_dyn")
+    if tp not in (None, 0, 0.0):
+        return
+
+    mfe_atr = float(_row_get(fr, "mfe_atr", 0.0) or 0.0)
+    trigger = float(CFG.get("tp_dyn_atr_trigger", CFG.get("partial_mfe_atr", 1.0)) or 1.0)
+    if mfe_atr < trigger:
+        return
+
+    price_open = _resolve_price_open(f, fr)
+    if price_open is None:
+        return
+
+    side = fr["side"]
+    atr = float(_row_get(fr, "atr", 0.0) or 0.0)
+    offset = float(CFG.get("tp_dyn_offset_atr", CFG.get("partial_mfe_atr", 1.0)) or 1.0)
+    tp = price_open + copysign(offset * atr, 1 if side == "buy" else -1)
+    _set_level_once(f, fr["uid"], "tp_dyn", tp, now)
+    log.info("[TP_ARMED] uid=%s tp_dyn=%.6f", fr["uid"], tp)
+
+
+def rebalance_levels_50(f, fr, CFG, now):
+    price = _price_from_row(fr)
+    if price is None:
+        return
+
+    price_open = _resolve_price_open(f, fr)
+    if price_open is None:
+        return
+
+    near_ratio = float(CFG.get("risk_near_ratio", 0.25) or 0.25)
+
+    for col in ("sl_hard", "sl_be", "sl_trail", "tp_dyn"):
+        level = _row_get(fr, col)
+        if level in (None, 0, 0.0):
+            continue
+        if _is_near_level(price, float(level), price_open, near_ratio):
+            _recalc_level_50(f, fr["uid"], col, float(level), price, now)
 
 
 # ==========================================================
 # ENTRY
 # ==========================================================
 def manage_risk(f, fr, CFG, now):
+    arm_hard_sl(f, fr, CFG, now)
     arm_break_even(f, fr, CFG, now)
     arm_trailing(f, fr, CFG, now)
+    arm_take_profit(f, fr, CFG, now)
+    rebalance_levels_50(f, fr, CFG, now)
