@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import math
+
 def clamp(v, lo, hi):
     return max(lo, min(hi, v))
 
@@ -50,8 +52,9 @@ def apply_contract_constraints(qty, price, contract):
     if qty < qty_floor:
         qty = qty_floor
 
-    # --- ARRONDI STEP ---
-    qty = (qty // step_size) * step_size
+    # --- ARRONDI STEP (au-dessus pour garantir le min notional) ---
+    if step_size > 0:
+        qty = math.ceil(qty / step_size) * step_size
 
     # --- MIN QTY ---
     if qty < min_qty:

@@ -72,13 +72,19 @@ def sync_fsm_status(g, f, now):
         req_step = fr["req_step"]
         done_step = fr["done_step"]
 
-        # ACK pyramide_done : follower doit repasser en follow,
+        # ACK done (pyramide / partial) : follower doit repasser en follow,
         # recopier le step canonique et rafraîchir le snapshot de quantité.
-        if g_status == "pyramide_done":
+        if g_status in ("pyramide_done", "partial_done"):
             qty_snapshot = float(
                 gr["qty_open"]
                 if gr["qty_open"] is not None
                 else (gr["qty"] if gr["qty"] is not None else 0.0)
+            )
+
+            ack_reason = (
+                "PYRAMIDE_DONE_ACK"
+                if g_status == "pyramide_done"
+                else "PARTIAL_DONE_ACK"
             )
 
             f.execute("""
@@ -86,10 +92,10 @@ def sync_fsm_status(g, f, now):
                 SET status='follow',
                     step=?,
                     qty_open_snapshot=?,
-                    reason='PYRAMIDE_DONE_ACK',
+                    reason=?,
                     last_action_ts=?
                 WHERE uid=?
-            """, (g_step, qty_snapshot, now, uid))
+            """, (g_step, qty_snapshot, ack_reason, now, uid))
             continue
 
         if req_step != done_step:
