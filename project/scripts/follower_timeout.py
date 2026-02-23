@@ -62,6 +62,18 @@ def check_timeouts(CFG):
             mfe_atr = float(fr.get("mfe_atr") or 0.0)
             age_s = (now - int(fr.get("ts_open") or now)) / 1000.0
 
+            # --- HARD MAX AGE ---
+            max_trade_age_s = CFG.get("max_trade_age_s", 0)
+            if max_trade_age_s and age_s > max_trade_age_s:
+                f.execute("""
+                    UPDATE follower
+                    SET status='close_req',
+                        reason='TIMEOUT_MAX_AGE'
+                    WHERE uid=?
+                """, (uid,))
+                log.info("[TIMEOUT] close_req uid=%s reason=MAX_AGE", uid)
+                continue
+
             # --- NO MFE ---
             if mfe_atr < CFG.get("min_mfe_keep_atr", 0.0):
                 if age_s > CFG.get("max_no_mfe_age_s", 0):
