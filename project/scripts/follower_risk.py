@@ -94,6 +94,26 @@ def _resolve_price_open(f, fr):
     return None
 
 
+def _resolve_hard_sl_anchor_price(f, fr):
+    """
+    Hard SL anchor should stay consistent with the user-facing entry logic.
+
+    Priority:
+    1) row.entry (gest/follower reference shown in live monitoring)
+    2) avg open resolution fallback (_resolve_price_open)
+    """
+    entry = _row_get(fr, "entry")
+    if entry is not None:
+        try:
+            entry = float(entry)
+            if entry > 0.0:
+                return entry
+        except Exception:
+            pass
+
+    return _resolve_price_open(f, fr)
+
+
 def _price_from_row(fr):
     p = _row_get(fr, "last_price_exec")
     if p is None:
@@ -193,14 +213,14 @@ def arm_hard_sl(f, fr, CFG, now):
     if sl_hard not in (None, 0, 0.0):
         return
 
-    price_open = _resolve_price_open(f, fr)
-    if price_open is None:
+    anchor_price = _resolve_hard_sl_anchor_price(f, fr)
+    if anchor_price is None:
         return
 
     side = fr["side"]
     atr = float(_row_get(fr, "atr", 0.0) or 0.0)
     offset = float(CFG.get("sl_hard_offset_atr", 1.0) or 1.0)
-    sl = price_open + copysign(offset * atr, -1 if side == "buy" else 1)
+    sl = anchor_price + copysign(offset * atr, -1 if side == "buy" else 1)
     _set_level_once(f, fr["uid"], "sl_hard", sl, now)
     log.info("[HARD_SL_ARMED] uid=%s sl_hard=%.6f", fr["uid"], sl)
 
@@ -218,8 +238,8 @@ def enforce_hard_sl_side(f, fr, CFG, now):
     if sl_hard in (None, 0, 0.0):
         return
 
-    price_open = _resolve_price_open(f, fr)
-    if price_open is None:
+    anchor_price = _resolve_hard_sl_anchor_price(f, fr)
+    if anchor_price is None:
         return
 
     side = fr["side"]
@@ -227,10 +247,10 @@ def enforce_hard_sl_side(f, fr, CFG, now):
     offset = float(CFG.get("sl_hard_offset_atr", 1.0) or 1.0)
 
     # Canonical side-aware hard SL (same formula as arm_hard_sl)
-    canonical_sl = price_open + copysign(offset * atr, -1 if side == "buy" else 1)
+    canonical_sl = anchor_price + copysign(offset * atr, -1 if side == "buy" else 1)
 
-    wrong_side = ((side == "buy" and float(sl_hard) >= float(price_open))
-                  or (side == "sell" and float(sl_hard) <= float(price_open)))
+    wrong_side = ((side == "buy" and float(sl_hard) >= float(anchor_price))
+                  or (side == "sell" and float(sl_hard) <= float(anchor_price)))
 
     if wrong_side:
         f.execute("""
@@ -240,8 +260,8 @@ def enforce_hard_sl_side(f, fr, CFG, now):
             WHERE uid=?
         """, (canonical_sl, now, fr["uid"]))
         log.warning(
-            "[HARD_SL_FIX] uid=%s side=%s sl_hard=%.6f open=%.6f -> %.6f",
-            fr["uid"], side, float(sl_hard), float(price_open), float(canonical_sl)
+            "[HARD_SL_FIX] uid=%s side=%s sl_hard=%.6f anchor=%.6f -> %.6f",
+            fr["uid"], side, float(sl_hard), float(anchor_price), float(canonical_sl)
         )
 
 
