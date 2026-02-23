@@ -33,7 +33,7 @@ def _ack_open_done():
 
     try:
         rows = e.execute("""
-            SELECT uid, exec_type, step
+            SELECT uid, exec_type, step, done_step
             FROM exec
             WHERE status='done'
               AND exec_type IN ('open','pyramide')
@@ -42,7 +42,10 @@ def _ack_open_done():
         for r in rows:
             uid       = r["uid"]
             exec_type = r["exec_type"]
-            step_new  = int(r["step"] or 0)
+            # step cible ACK côté opener :
+            # - flux canonique : exec.step = N+1 et done_step = N+1
+            # - flux legacy    : done_step peut être NULL / décalé
+            step_new = int(r["done_step"] or r["step"] or 0)
             step_done = step_new - 1
 
             if step_done < 0:
@@ -83,7 +86,7 @@ def _ack_open_done():
             # Drift-safe fallback:
             # anciens runs ont pu laisser des *_stdby avec step désaligné
             # (ex: retry/restart au mauvais moment). Dans ce cas, on ACK la
-            # dernière ligne stdby <= step_new pour débloquer la chaîne FSM.
+            # ligne stdby la plus proche de step_new pour débloquer la chaîne FSM.
             if (res.rowcount or 0) == 0:
                 # Si le done existe déjà au step cible, on purge seulement le stdby bloqué.
                 done_exists = o.execute("""
@@ -102,8 +105,8 @@ def _ack_open_done():
                     WHERE uid=?
                       AND exec_type=?
                       AND status=?
-                      AND step<=?
-                    ORDER BY step DESC
+                    ORDER BY ABS(COALESCE(step,0) - ?) ASC,
+                             step DESC
                     LIMIT 1
                 """, (uid, exec_type, status_from, step_new)).fetchone()
 
