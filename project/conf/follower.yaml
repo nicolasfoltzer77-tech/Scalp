@@ -32,7 +32,7 @@ follower:
   # ==========================================================
   option3_safe_build:
     enable: true
-    max_adds_total: 2
+    max_adds_total: 5
     add_atr_step: 0.45
     allow_after_be: true
     allow_after_trail: true
