@@ -205,6 +205,46 @@ def arm_hard_sl(f, fr, CFG, now):
     log.info("[HARD_SL_ARMED] uid=%s sl_hard=%.6f", fr["uid"], sl)
 
 
+def enforce_hard_sl_side(f, fr, CFG, now):
+    """
+    Hard SL invariant:
+      - buy  => hard SL must stay BELOW entry/open price
+      - sell => hard SL must stay ABOVE entry/open price
+
+    If legacy/rebalanced data breaks this invariant, reset hard SL to its
+    canonical ATR-based level.
+    """
+    sl_hard = _row_get(fr, "sl_hard")
+    if sl_hard in (None, 0, 0.0):
+        return
+
+    price_open = _resolve_price_open(f, fr)
+    if price_open is None:
+        return
+
+    side = fr["side"]
+    atr = float(_row_get(fr, "atr", 0.0) or 0.0)
+    offset = float(CFG.get("sl_hard_offset_atr", 1.0) or 1.0)
+
+    # Canonical side-aware hard SL (same formula as arm_hard_sl)
+    canonical_sl = price_open + copysign(offset * atr, -1 if side == "buy" else 1)
+
+    wrong_side = ((side == "buy" and float(sl_hard) >= float(price_open))
+                  or (side == "sell" and float(sl_hard) <= float(price_open)))
+
+    if wrong_side:
+        f.execute("""
+            UPDATE follower
+            SET sl_hard=?,
+                last_action_ts=?
+            WHERE uid=?
+        """, (canonical_sl, now, fr["uid"]))
+        log.warning(
+            "[HARD_SL_FIX] uid=%s side=%s sl_hard=%.6f open=%.6f -> %.6f",
+            fr["uid"], side, float(sl_hard), float(price_open), float(canonical_sl)
+        )
+
+
 def arm_take_profit(f, fr, CFG, now):
     tp = _row_get(fr, "tp_dyn")
     if tp not in (None, 0, 0.0):
@@ -238,7 +278,9 @@ def rebalance_levels_50(f, fr, CFG, now):
 
     near_ratio = float(CFG.get("risk_near_ratio", 0.25) or 0.25)
 
-    for col in ("sl_hard", "sl_be", "sl_trail", "tp_dyn"):
+    # IMPORTANT: hard SL is immutable after arming (only one-time at open).
+    # Rebalance applies only to dynamic levels.
+    for col in ("sl_be", "sl_trail", "tp_dyn"):
         level = _row_get(fr, col)
         if level in (None, 0, 0.0):
             continue
@@ -251,6 +293,7 @@ def rebalance_levels_50(f, fr, CFG, now):
 # ==========================================================
 def manage_risk(f, fr, CFG, now):
     arm_hard_sl(f, fr, CFG, now)
+    enforce_hard_sl_side(f, fr, CFG, now)
     arm_break_even(f, fr, CFG, now)
     arm_trailing(f, fr, CFG, now)
     arm_take_profit(f, fr, CFG, now)
