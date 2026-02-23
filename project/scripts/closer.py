@@ -215,11 +215,20 @@ def ack_exec_done():
             else:
                 status_from, status_to = "close_stdby", "close_done"
 
-            res = c.execute("""
-                UPDATE closer
-                SET status=?, step=?, ts_exec=?
-                WHERE uid=? AND exec_type=? AND step=? AND status=?
-            """, (status_to, step_new, now_ms(), uid, exec_type, step_done, status_from))
+            try:
+                res = c.execute("""
+                    UPDATE closer
+                    SET status=?, step=?, ts_exec=?
+                    WHERE uid=? AND exec_type=? AND step=? AND status=?
+                """, (status_to, step_new, now_ms(), uid, exec_type, step_done, status_from))
+            except sqlite3.IntegrityError:
+                # If the destination step already exists (next standby already ingested),
+                # mark the previous step done without renumbering it.
+                res = c.execute("""
+                    UPDATE closer
+                    SET status=?, ts_exec=?
+                    WHERE uid=? AND exec_type=? AND step=? AND status=?
+                """, (status_to, now_ms(), uid, exec_type, step_done, status_from))
 
             if (res.rowcount or 0) == 0:
                 c.execute("""
