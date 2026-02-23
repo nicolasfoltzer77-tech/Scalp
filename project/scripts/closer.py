@@ -47,6 +47,43 @@ def _table_columns(c, table_name):
     return {r["name"] for r in c.execute(f"PRAGMA table_info({table_name})")}
 
 
+def _insert_closer_row(c, row_values):
+    """Insert a row in closer with best-effort compatibility across schema variants."""
+    cols = list(row_values.keys())
+    vals = [row_values[k] for k in cols]
+    placeholders = ", ".join(["?"] * len(cols))
+
+    try:
+        c.execute(
+            f"INSERT INTO closer ({', '.join(cols)}) VALUES ({placeholders})",
+            vals,
+        )
+    except sqlite3.OperationalError as err:
+        # Some prod DBs still expose `ratio` instead of `ratio_to_close`.
+        # If schema drift is detected, refresh columns and retry once.
+        if "no column named" not in str(err):
+            raise
+
+        closer_cols = _table_columns(c, "closer")
+        repaired = dict(row_values)
+
+        if "ratio_to_close" in repaired and "ratio_to_close" not in closer_cols:
+            ratio_val = repaired.pop("ratio_to_close")
+            if "ratio" in closer_cols:
+                repaired["ratio"] = ratio_val
+
+        if "ts_exec" in repaired and "ts_exec" not in closer_cols and "ts_create" in closer_cols:
+            repaired["ts_create"] = repaired.pop("ts_exec")
+
+        cols = list(repaired.keys())
+        vals = [repaired[k] for k in cols]
+        placeholders = ", ".join(["?"] * len(cols))
+        c.execute(
+            f"INSERT INTO closer ({', '.join(cols)}) VALUES ({placeholders})",
+            vals,
+        )
+
+
 # ==========================================================
 # INGESTION gest -> closer
 # ==========================================================
@@ -105,17 +142,21 @@ def ingest_from_gest():
                          uid, exec_type, step, ratio_to_close, qty_open, qty_to_close)
                 continue
 
-            cols = ["uid", "instId", "side", "exec_type", "step", "qty", "status", ts_col, "reason"]
-            vals = [uid, r["instId"], r["side"], exec_type, step, qty, stdby_status, now_ms(), r["reason"]]
+            row_values = {
+                "uid": uid,
+                "instId": r["instId"],
+                "side": r["side"],
+                "exec_type": exec_type,
+                "step": step,
+                "qty": qty,
+                "status": stdby_status,
+                ts_col: now_ms(),
+                "reason": r["reason"],
+            }
             if ratio_col:
-                cols.append(ratio_col)
-                vals.append(ratio_to_close)
+                row_values[ratio_col] = ratio_to_close
 
-            placeholders = ", ".join(["?"] * len(cols))
-            c.execute(
-                f"INSERT INTO closer ({', '.join(cols)}) VALUES ({placeholders})",
-                vals,
-            )
+            _insert_closer_row(c, row_values)
 
             log.info("[INGEST] %s uid=%s type=%s step=%s", stdby_status, uid, exec_type, step)
 
