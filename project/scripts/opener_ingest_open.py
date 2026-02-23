@@ -92,7 +92,7 @@ def ingest_open_req():
                    {score_h_expr} AS score_H,
                    {step_expr} AS step
             FROM gest
-            WHERE status='open_req'
+            WHERE status='open_stdby'
         """).fetchall()
 
         if not rows:
@@ -125,7 +125,7 @@ def ingest_open_req():
                     UPDATE gest
                     SET skipped_reason='no_contract',
                         ts_status_update=?
-                    WHERE uid=? AND status='open_req'
+                    WHERE uid=? AND status='open_stdby'
                 """, (now_ms(), uid))
                 log.info("[OPEN_SKIP] uid=%s inst=%s reason=no_contract", uid, instId)
                 continue
@@ -164,7 +164,7 @@ def ingest_open_req():
                     UPDATE gest
                     SET skipped_reason='min_trade_filter',
                         ts_status_update=?
-                    WHERE uid=? AND status='open_req'
+                    WHERE uid=? AND status='open_stdby'
                 """, (now_ms(), uid))
                 log.info("[OPEN_SKIP] uid=%s inst=%s qty_ticket=%.10f price=%.10f",
                          uid, instId, _f(qty_ticket, 0.0), price)
@@ -199,7 +199,7 @@ def ingest_open_req():
                     entry=?,
                     ts_open=?,
                     ts_status_update=?
-                WHERE uid=? AND status='open_req'
+                WHERE uid=? AND status='open_stdby'
             """, (qty_norm, float(lev), price, ts_open, ts_open, uid))
 
             log.info("[OPEN_STDBY] uid=%s inst=%s side=%s qty=%.10f lev=%s step=%d budget=%.2f",

@@ -2,10 +2,8 @@
 # -*- coding: utf-8 -*-
 
 """
-EXEC ← CLOSER
-
-Le closer fournit directement la quantité à exécuter.
-AUCUN ratio n’est lu ici (invariant canon).
+EXEC <- CLOSER
+Ingestion des ordres de fermeture depuis closer *_stdby.
 """
 
 import time
@@ -35,48 +33,55 @@ def ingest_from_closer():
 
     try:
         rows = c.execute("""
-            SELECT uid, exec_type, step, qty
+            SELECT uid, instId, side, exec_type, step, qty, reason
             FROM closer
-            WHERE status='close_req'
+            WHERE status IN ('partial_stdby','close_stdby')
         """).fetchall()
 
         for r in rows:
-            uid       = r["uid"]
-            exec_type = r["exec_type"]   # close / partial
-            step      = int(r["step"])
-            qty       = float(r["qty"])
+            uid = r["uid"]
+            exec_type = r["exec_type"]
+            step = int(r["step"] or 0)
+            qty = float(r["qty"] or 0.0)
+            exec_id = f"{uid}:{exec_type}:{step}"
+
+            if qty <= 0:
+                continue
+
+            exists = e.execute("SELECT 1 FROM exec WHERE exec_id=?", (exec_id,)).fetchone()
+            if exists:
+                continue
 
             e.execute("""
-                INSERT OR IGNORE INTO exec (
+                INSERT INTO exec (
                     exec_id, uid, step,
                     exec_type, side,
-                    qty, status, ts_exec
-                )
-                SELECT
-                    hex(randomblob(16)), uid, step,
-                    exec_type, side,
-                    ?, exec_type || '_stdby', ?
-                FROM exec
-                WHERE uid=?
-                LIMIT 1
-            """, (qty, now, uid))
+                    qty, price_exec, fee,
+                    status, ts_exec, reason, instId, lev
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                exec_id,
+                uid,
+                step,
+                exec_type,
+                r["side"],
+                qty,
+                0.0,
+                0.0,
+                "open",
+                now,
+                r["reason"],
+                r["instId"],
+                1.0,
+            ))
 
-            c.execute("""
-                UPDATE closer
-                SET status='close_sent',
-                    ts_sent=?
-                WHERE uid=? AND step=?
-            """, (now, uid, step))
-
-            log.info("[INGEST] close uid=%s step=%s qty=%.6f", uid, step, qty)
+            log.info("[INGEST] uid=%s type=%s step=%s qty=%.6f", uid, exec_type, step, qty)
 
         e.commit()
-        c.commit()
 
     except Exception:
         log.exception("[ERR] exec_from_closer")
         e.rollback()
-        c.rollback()
 
     finally:
         c.close()

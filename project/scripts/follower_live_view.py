@@ -139,7 +139,7 @@ def row(flag, inst, side, entry, now, pos_qty, req_qty,
 # ============================================================
 
 def compute_flag(f_status, g_status, pos_qty, req_qty):
-    if g_status in ("open_req", "open_done") and pos_qty <= 0:
+    if g_status in ("open_stdby", "open_done") and pos_qty <= 0:
         return "OPEN_PENDING"
 
     if f_status == "follow" and g_status == "NO_GEST" and pos_qty <= 0:

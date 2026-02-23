@@ -3,7 +3,7 @@
 
 """
 GEST — PURGE FINALE
-Recorder = source de vérité
+Purge UID uniquement quand recorder.status='Recorded' (tolère 'recorded').
 """
 
 import sqlite3
@@ -17,6 +17,7 @@ DB_RECORDER = ROOT / "data/recorder.db"
 
 log = logging.getLogger("GEST")
 
+
 def conn(db):
     c = sqlite3.connect(str(db), timeout=10)
     c.row_factory = sqlite3.Row
@@ -24,15 +25,23 @@ def conn(db):
     c.execute("PRAGMA busy_timeout=10000;")
     return c
 
+
 def purge_recorded():
     g = conn(DB_GEST)
     r = conn(DB_RECORDER)
 
-    for x in r.execute("SELECT DISTINCT uid FROM recorder"):
-        if g.execute("DELETE FROM gest WHERE uid=?", (x["uid"],)).rowcount:
-            log.info("[PURGE] %s", x["uid"])
+    try:
+        rows = r.execute("""
+            SELECT DISTINCT uid
+            FROM recorder
+            WHERE lower(coalesce(status, ''))='recorded'
+        """).fetchall()
 
-    g.commit()
-    g.close()
-    r.close()
+        for x in rows:
+            if g.execute("DELETE FROM gest WHERE uid=?", (x["uid"],)).rowcount:
+                log.info("[PURGE] %s", x["uid"])
 
+        g.commit()
+    finally:
+        g.close()
+        r.close()

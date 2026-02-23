@@ -69,7 +69,7 @@ def instid_active(instId):
         return g.execute("""
             SELECT 1 FROM gest
             WHERE instId=?
-              AND status NOT IN ('close_done','expired')
+              AND status <> 'recorded'
             LIMIT 1
         """, (instId,)).fetchone() is not None
 
@@ -79,19 +79,19 @@ def trigger_active(instId):
         return t.execute("""
             SELECT 1 FROM triggers
             WHERE instId=?
-              AND status='fired'
+              AND status='fire'
             LIMIT 1
         """, (instId,)).fetchone() is not None
 
 
 def purge_expired_triggers(t, now):
     rows = t.execute("""
-        SELECT uid, ts FROM triggers WHERE status='fired'
+        SELECT uid, ts FROM triggers WHERE status='fire'
     """).fetchall()
 
     for r in rows:
         if now - int(r["ts"]) > ARM_TTL_MS:
-            t.execute("UPDATE triggers SET status='expired' WHERE uid=?", (r["uid"],))
+            t.execute("UPDATE triggers SET status='trig_cancel' WHERE uid=?", (r["uid"],))
             log.info("[TTL_EXPIRE] %s", r["uid"])
 
 
@@ -160,7 +160,7 @@ def write_triggers():
                 f"DEC:{mode}",
                 score_of, score_mo, score_br, score_force,
                 price, atr,
-                now, "fired",
+                now, "fire",
                 now, "fire",
                 f"DEC:{mode}",
                 ctx,
