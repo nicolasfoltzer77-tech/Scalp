@@ -71,7 +71,7 @@ def ingest():
             entry_reason,
             score_of
         FROM triggers
-        WHERE status='fired'
+        WHERE status='fire'
     """).fetchall()
 
     if not rows:
@@ -114,7 +114,7 @@ def ingest():
             float(t["atr"]),         -- 🔑 SNAPSHOT ATR
             t["entry_reason"],
             t["score_of"],
-            "open_req"
+            "open_stdby"
         ))
 
         log.info(

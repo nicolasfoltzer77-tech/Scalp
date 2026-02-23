@@ -36,7 +36,7 @@ def ingest_triggers():
         rows = t.execute("""
             SELECT uid, instId, side, price, ts, ts_fire, atr
             FROM triggers
-            WHERE status='fired'
+            WHERE status='fire'
         """).fetchall()
 
         for r in rows:
@@ -48,7 +48,7 @@ def ingest_triggers():
                 INSERT INTO gest
                 (uid, instId, side, entry, price_signal,
                  atr_signal, ts_signal, ts_open, status)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'open_req')
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'open_stdby')
             """, (
                 uid,
                 r["instId"],
@@ -89,7 +89,7 @@ def ingest_opener_done():
                         step=COALESCE(?, step),
                         ts_status_update=strftime('%s','now')*1000
                     WHERE uid=?
-                      AND status='open_req'
+                      AND status='open_stdby'
                 """, (r["step"], uid))
             elif st == "pyramide_done":
                 g.execute("""
@@ -166,7 +166,7 @@ def mirror_follower_follow():
                     step=COALESCE(?, step),
                     ts_status_update=strftime('%s','now')*1000
                 WHERE uid=?
-                  AND status LIKE '%_done'
+                  AND status IN ('open_done','pyramide_done','partial_done')
             """, (r["step"], uid))
     finally:
         f.close()

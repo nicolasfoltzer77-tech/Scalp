@@ -28,7 +28,7 @@ def ingest():
     rows = t.execute("""
         SELECT uid, instId, side, price, score_C
         FROM triggers
-        WHERE status='fired'
+        WHERE status='fire'
     """).fetchall()
 
     for r in rows:
@@ -37,7 +37,7 @@ def ingest():
 
         g.execute("""
             INSERT INTO gest (uid, instId, side, entry, price_signal, score_C, status)
-            VALUES (?, ?, ?, ?, ?, ?, 'open_req')
+            VALUES (?, ?, ?, ?, ?, ?, 'open_stdby')
         """, (
             r["uid"],
             r["instId"],

@@ -67,7 +67,7 @@ def collect_counts():
         ),
         "fired": scalar(
             DB_TRIG,
-            "SELECT COUNT(*) FROM triggers WHERE status='fired'"
+            "SELECT COUNT(*) FROM triggers WHERE status='fire'"
         ),
     }
 

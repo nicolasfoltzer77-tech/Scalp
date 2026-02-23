@@ -23,7 +23,7 @@ def ingest_gest_open_req():
         gest_rows = g.execute("""
             SELECT *
             FROM gest
-            WHERE status = 'open_req'
+            WHERE status = 'open_stdby'
             ORDER BY ts_update ASC
         """).fetchall()
 
@@ -35,7 +35,7 @@ def ingest_gest_open_req():
                 SELECT uid
                 FROM triggers
                 WHERE uid = ?
-                  AND status = 'fired'
+                  AND status = 'fire'
             """, (uid,)).fetchone()
 
             if tr is None:

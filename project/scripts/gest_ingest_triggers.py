@@ -55,7 +55,7 @@ def ingest_triggers():
     rows = list(t.execute("""
         SELECT *
         FROM triggers
-        WHERE status='fired'
+        WHERE status='fire'
     """))
 
     if rows:
@@ -118,7 +118,7 @@ def ingest_triggers():
             rget(r,"dec_score_C"),
             rget(r,"ctx"),
 
-            "open_req",
+            "open_stdby",
             0,
             now,
             now

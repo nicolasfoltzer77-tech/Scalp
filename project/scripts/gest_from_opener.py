@@ -40,7 +40,7 @@ def copy_opener():
                     entry=?,
                     ts_open=?,
                     ts_updated=?
-                WHERE uid=? AND status='open_req'
+                WHERE uid=? AND status='open_stdby'
             """, (r["step"], r["price_exec_open"], r["ts_open"], now, r["uid"]))
 
         elif r["status"] == "pyramide_done":
