@@ -96,22 +96,27 @@ def _resolve_price_open(f, fr):
 
 def _resolve_hard_sl_anchor_price(f, fr):
     """
-    Hard SL anchor should stay consistent with the user-facing entry logic.
+    Hard SL must be anchored on the real executed average entry price.
 
     Priority:
-    1) row.entry (gest/follower reference shown in live monitoring)
-    2) avg open resolution fallback (_resolve_price_open)
+    1) exec/follower avg open price resolution (_resolve_price_open)
+    2) row.entry as last-resort fallback only
     """
+    p_exec = _resolve_price_open(f, fr)
+    if p_exec is not None and p_exec > 0.0:
+        return p_exec
+
     entry = _row_get(fr, "entry")
     if entry is not None:
         try:
             entry = float(entry)
             if entry > 0.0:
+                log.warning("[RISK] hard_sl fallback to row.entry uid=%s", fr["uid"])
                 return entry
         except Exception:
             pass
 
-    return _resolve_price_open(f, fr)
+    return None
 
 
 def _price_from_row(fr):
@@ -120,6 +125,21 @@ def _price_from_row(fr):
         return None
     p = float(p)
     return p if p > 0.0 else None
+
+
+def _norm_side(raw_side):
+    """
+    Normalize side labels coming from multiple upstream producers.
+    Accepted aliases:
+      - buy side:  buy / long / b
+      - sell side: sell / short / s
+    """
+    s = (str(raw_side or "").strip().lower())
+    if s in ("buy", "long", "b"):
+        return "buy"
+    if s in ("sell", "short", "s"):
+        return "sell"
+    return s
 
 
 def _set_level_once(f, uid, col, value, now):
@@ -170,7 +190,7 @@ def arm_break_even(f, fr, CFG, now):
     if price_open is None:
         return
 
-    side = fr["side"]
+    side = _norm_side(_row_get(fr, "side"))
     atr = float(_row_get(fr, "atr", 0.0) or 0.0)
     offset = float(CFG.get("sl_be_offset_atr", 0.0) or 0.0)
 
@@ -198,7 +218,7 @@ def arm_trailing(f, fr, CFG, now):
     if price_open is None:
         return
 
-    side = fr["side"]
+    side = _norm_side(_row_get(fr, "side"))
     atr = float(_row_get(fr, "atr", 0.0) or 0.0)
     offset = float(CFG.get("sl_trail_offset_atr", 0.0) or 0.0)
 
@@ -217,7 +237,7 @@ def arm_hard_sl(f, fr, CFG, now):
     if anchor_price is None:
         return
 
-    side = fr["side"]
+    side = _norm_side(_row_get(fr, "side"))
     atr = float(_row_get(fr, "atr", 0.0) or 0.0)
     offset = float(CFG.get("sl_hard_offset_atr", 1.0) or 1.0)
     sl = anchor_price + copysign(offset * atr, -1 if side == "buy" else 1)
@@ -242,7 +262,7 @@ def enforce_hard_sl_side(f, fr, CFG, now):
     if anchor_price is None:
         return
 
-    side = fr["side"]
+    side = _norm_side(_row_get(fr, "side"))
     atr = float(_row_get(fr, "atr", 0.0) or 0.0)
     offset = float(CFG.get("sl_hard_offset_atr", 1.0) or 1.0)
 
@@ -279,7 +299,7 @@ def arm_take_profit(f, fr, CFG, now):
     if price_open is None:
         return
 
-    side = fr["side"]
+    side = _norm_side(_row_get(fr, "side"))
     atr = float(_row_get(fr, "atr", 0.0) or 0.0)
     offset = float(CFG.get("tp_dyn_offset_atr", CFG.get("partial_mfe_atr", 1.0)) or 1.0)
     tp = price_open + copysign(offset * atr, 1 if side == "buy" else -1)
