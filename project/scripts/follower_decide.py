@@ -2,9 +2,42 @@
 # -*- coding: utf-8 -*-
 
 import logging
+import sqlite3
+from pathlib import Path
 from follower_decide_guard import is_valid_position
 
 log = logging.getLogger("FOLLOWER_DECIDE")
+
+ROOT = Path("/opt/scalp/project")
+DB_TICKS = ROOT / "data/ticks.db"
+
+
+def _get_market_price(inst_id):
+    """
+    Prefer latest market tick over last execution price.
+    last_price_exec only changes on fills and is not suitable for SL/TP triggers.
+    """
+    if not inst_id:
+        return None
+    try:
+        with sqlite3.connect(str(DB_TICKS), timeout=1) as t:
+            t.row_factory = sqlite3.Row
+            row = t.execute(
+                "SELECT lastPr FROM ticks WHERE instId=?",
+                (inst_id,),
+            ).fetchone()
+    except Exception:
+        log.debug("[DECIDE] ticks lookup failed instId=%s", inst_id, exc_info=True)
+        return None
+
+    if not row:
+        return None
+
+    try:
+        px = float(row["lastPr"])
+    except Exception:
+        return None
+    return px if px > 0 else None
 
 
 def _stop_hit(side, price_now, level):
@@ -171,12 +204,14 @@ def decide_core(f, CFG, now):
             continue
 
         side = str(fr_full["side"] or "").strip().lower()
-        price_now = fr_full["last_price_exec"]
-        if price_now is not None:
-            try:
-                price_now = float(price_now)
-            except Exception:
-                price_now = None
+        price_now = _get_market_price(fr_full["instId"])
+        if price_now is None:
+            price_now = fr_full["last_price_exec"]
+            if price_now is not None:
+                try:
+                    price_now = float(price_now)
+                except Exception:
+                    price_now = None
 
         if price_now is not None and price_now > 0.0:
             close_reason = None
