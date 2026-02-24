@@ -10,6 +10,7 @@ log = logging.getLogger("FOLLOWER_DECIDE")
 
 ROOT = Path("/opt/scalp/project")
 DB_TICKS = ROOT / "data/ticks.db"
+DB_T = ROOT / "data/t.db"
 
 
 def _get_market_price(inst_id):
@@ -19,25 +20,27 @@ def _get_market_price(inst_id):
     """
     if not inst_id:
         return None
-    try:
-        with sqlite3.connect(str(DB_TICKS), timeout=1) as t:
-            t.row_factory = sqlite3.Row
-            row = t.execute(
-                "SELECT lastPr FROM ticks WHERE instId=?",
-                (inst_id,),
-            ).fetchone()
-    except Exception:
-        log.debug("[DECIDE] ticks lookup failed instId=%s", inst_id, exc_info=True)
-        return None
+    candidates = [inst_id, str(inst_id).replace("/", "")]
+    for db_path in (DB_TICKS, DB_T):
+        try:
+            with sqlite3.connect(str(db_path), timeout=1) as t:
+                t.row_factory = sqlite3.Row
+                for candidate in candidates:
+                    row = t.execute(
+                        "SELECT lastPr FROM ticks WHERE instId=?",
+                        (candidate,),
+                    ).fetchone()
+                    if row:
+                        try:
+                            px = float(row["lastPr"])
+                        except Exception:
+                            px = None
+                        if px is not None and px > 0:
+                            return px
+        except Exception:
+            log.debug("[DECIDE] ticks lookup failed db=%s instId=%s", db_path, inst_id, exc_info=True)
 
-    if not row:
-        return None
-
-    try:
-        px = float(row["lastPr"])
-    except Exception:
-        return None
-    return px if px > 0 else None
+    return None
 
 
 def _stop_hit(side, price_now, level):
