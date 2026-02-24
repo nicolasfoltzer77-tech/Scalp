@@ -159,6 +159,11 @@ def _resolve_atr(fr):
         return 0.0
 
 
+def _resolve_positive_atr(fr):
+    atr = _resolve_atr(fr)
+    return atr if atr > 0.0 else None
+
+
 def _set_level_once(f, uid, col, value, now):
     f.execute(f"""
         UPDATE follower
@@ -207,10 +212,8 @@ def arm_break_even(f, fr, CFG, now):
     if price_open is None:
         return
 
-    side = _norm_side(_row_get(fr, "side"))
-    atr = _resolve_atr(fr)
-    sign = _side_sign(side)
-    sl = price_open - (sign * atr)
+    # Break-even must lock at real average entry price.
+    sl = price_open
 
     _set_level_once(f, fr["uid"], "sl_be", sl, now)
     log.info("[BE_ARMED] uid=%s sl_be=%.6f", fr["uid"], sl)
@@ -235,9 +238,16 @@ def arm_trailing(f, fr, CFG, now):
         return
 
     side = _norm_side(_row_get(fr, "side"))
-    atr = _resolve_atr(fr)
+    atr = _resolve_positive_atr(fr)
+    if atr is None:
+        log.warning("[RISK] skip trail arm (atr<=0) uid=%s", fr["uid"])
+        return
+
+    # Trail is anchored from current market price (if available), otherwise open.
+    # buy  -> below market ; sell -> above market.
+    px = _price_from_row(fr) or price_open
     sign = _side_sign(side)
-    sl = price_open - (sign * atr)
+    sl = px - (sign * atr)
 
     _set_level_once(f, fr["uid"], "sl_trail", sl, now)
     log.info("[TRAIL_ARMED] uid=%s sl_trail=%.6f", fr["uid"], sl)
@@ -253,7 +263,10 @@ def arm_hard_sl(f, fr, CFG, now):
         return
 
     side = _norm_side(_row_get(fr, "side"))
-    atr = _resolve_atr(fr)
+    atr = _resolve_positive_atr(fr)
+    if atr is None:
+        log.warning("[RISK] skip hard sl arm (atr<=0) uid=%s", fr["uid"])
+        return
     sign = _side_sign(side)
     sl = anchor_price - (sign * atr)
     _set_level_once(f, fr["uid"], "sl_hard", sl, now)
@@ -315,7 +328,10 @@ def arm_take_profit(f, fr, CFG, now):
         return
 
     side = _norm_side(_row_get(fr, "side"))
-    atr = _resolve_atr(fr)
+    atr = _resolve_positive_atr(fr)
+    if atr is None:
+        log.warning("[RISK] skip tp arm (atr<=0) uid=%s", fr["uid"])
+        return
     sign = _side_sign(side)
     tp = price_open + (sign * atr)
     _set_level_once(f, fr["uid"], "tp_dyn", tp, now)
