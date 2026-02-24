@@ -3,7 +3,6 @@
 
 import logging
 import sqlite3
-from math import copysign
 from pathlib import Path
 
 log = logging.getLogger("FOLLOWER_RISK")
@@ -142,6 +141,10 @@ def _norm_side(raw_side):
     return s
 
 
+def _side_sign(side):
+    return 1.0 if side == "buy" else -1.0
+
+
 def _set_level_once(f, uid, col, value, now):
     f.execute(f"""
         UPDATE follower
@@ -192,9 +195,8 @@ def arm_break_even(f, fr, CFG, now):
 
     side = _norm_side(_row_get(fr, "side"))
     atr = float(_row_get(fr, "atr", 0.0) or 0.0)
-    offset = float(CFG.get("sl_be_offset_atr", 0.0) or 0.0)
-
-    sl = price_open + copysign(offset * atr, 1 if side == "buy" else -1)
+    sign = _side_sign(side)
+    sl = price_open - (sign * atr)
 
     _set_level_once(f, fr["uid"], "sl_be", sl, now)
     log.info("[BE_ARMED] uid=%s sl_be=%.6f", fr["uid"], sl)
@@ -220,9 +222,8 @@ def arm_trailing(f, fr, CFG, now):
 
     side = _norm_side(_row_get(fr, "side"))
     atr = float(_row_get(fr, "atr", 0.0) or 0.0)
-    offset = float(CFG.get("sl_trail_offset_atr", 0.0) or 0.0)
-
-    sl = price_open + copysign(offset * atr, 1 if side == "buy" else -1)
+    sign = _side_sign(side)
+    sl = price_open - (sign * atr)
 
     _set_level_once(f, fr["uid"], "sl_trail", sl, now)
     log.info("[TRAIL_ARMED] uid=%s sl_trail=%.6f", fr["uid"], sl)
@@ -239,8 +240,8 @@ def arm_hard_sl(f, fr, CFG, now):
 
     side = _norm_side(_row_get(fr, "side"))
     atr = float(_row_get(fr, "atr", 0.0) or 0.0)
-    offset = float(CFG.get("sl_hard_offset_atr", 1.0) or 1.0)
-    sl = anchor_price + copysign(offset * atr, -1 if side == "buy" else 1)
+    sign = _side_sign(side)
+    sl = anchor_price - (sign * atr)
     _set_level_once(f, fr["uid"], "sl_hard", sl, now)
     log.info("[HARD_SL_ARMED] uid=%s sl_hard=%.6f", fr["uid"], sl)
 
@@ -264,10 +265,10 @@ def enforce_hard_sl_side(f, fr, CFG, now):
 
     side = _norm_side(_row_get(fr, "side"))
     atr = float(_row_get(fr, "atr", 0.0) or 0.0)
-    offset = float(CFG.get("sl_hard_offset_atr", 1.0) or 1.0)
+    sign = _side_sign(side)
 
     # Canonical side-aware hard SL (same formula as arm_hard_sl)
-    canonical_sl = anchor_price + copysign(offset * atr, -1 if side == "buy" else 1)
+    canonical_sl = anchor_price - (sign * atr)
 
     wrong_side = ((side == "buy" and float(sl_hard) >= float(anchor_price))
                   or (side == "sell" and float(sl_hard) <= float(anchor_price)))
@@ -301,8 +302,8 @@ def arm_take_profit(f, fr, CFG, now):
 
     side = _norm_side(_row_get(fr, "side"))
     atr = float(_row_get(fr, "atr", 0.0) or 0.0)
-    offset = float(CFG.get("tp_dyn_offset_atr", CFG.get("partial_mfe_atr", 1.0)) or 1.0)
-    tp = price_open + copysign(offset * atr, 1 if side == "buy" else -1)
+    sign = _side_sign(side)
+    tp = price_open + (sign * atr)
     _set_level_once(f, fr["uid"], "tp_dyn", tp, now)
     log.info("[TP_ARMED] uid=%s tp_dyn=%.6f", fr["uid"], tp)
 
