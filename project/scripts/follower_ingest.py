@@ -29,6 +29,7 @@ def ingest_open_done(g, f, now):
             step,
             ts_open,
             entry,
+            atr_signal,
             qty,
             lev
         FROM gest
@@ -40,6 +41,16 @@ def ingest_open_done(g, f, now):
 
     for r in rows:
         uid = r["uid"]
+        side = str(r["side"] or "").strip().lower()
+        entry = float(r["entry"] or 0.0)
+        atr_signal = float(r["atr_signal"] or 0.0)
+
+        # Hard SL must be initialized directly at ingestion.
+        # buy  => entry - ATR ; sell => entry + ATR.
+        if side in ("sell", "short", "s"):
+            sl_hard = entry + atr_signal
+        else:
+            sl_hard = entry - atr_signal
 
         # Existe déjà ?
         fr = f.execute("""
@@ -56,12 +67,17 @@ def ingest_open_done(g, f, now):
                     instId=?,
                     side=?,
                     step=?,
+                    sl_hard=CASE
+                        WHEN COALESCE(sl_hard, 0)=0 THEN ?
+                        ELSE sl_hard
+                    END,
                     last_action_ts=?
                 WHERE uid=?
             """, (
                 r["instId"],
                 r["side"],
                 r["step"] or 0,
+                sl_hard,
                 now,
                 uid
             ))
@@ -79,9 +95,10 @@ def ingest_open_done(g, f, now):
                 last_action_ts,
                 qty_ratio,
                 nb_partial,
-                nb_pyramide
+                nb_pyramide,
+                sl_hard
             ) VALUES (
-                ?,?,?,?,?,?,?,?,?,?
+                ?,?,?,?,?,?,?,?,?,?,?
             )
         """, (
             uid,
@@ -93,5 +110,6 @@ def ingest_open_done(g, f, now):
             now,
             1.0,
             0,
-            0
+            0,
+            sl_hard
         ))
