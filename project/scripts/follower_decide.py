@@ -6,6 +6,43 @@ from follower_decide_guard import is_valid_position
 
 log = logging.getLogger("FOLLOWER_DECIDE")
 
+
+def _stop_hit(side, price_now, level):
+    if level is None:
+        return False
+    try:
+        level = float(level)
+    except Exception:
+        return False
+    if level <= 0.0:
+        return False
+
+    # Stop convention:
+    # - buy  : stop is below market, hit when now <= stop
+    # - sell : stop is above market, hit when now >= stop
+    if side == "buy":
+        return float(price_now) <= level
+    if side == "sell":
+        return float(price_now) >= level
+    return False
+
+
+def _take_profit_hit(side, price_now, level):
+    if level is None:
+        return False
+    try:
+        level = float(level)
+    except Exception:
+        return False
+    if level <= 0.0:
+        return False
+
+    if side == "buy":
+        return float(price_now) >= level
+    if side == "sell":
+        return float(price_now) <= level
+    return False
+
 def _opt3(CFG):
     o = CFG.get("option3_safe_build", {}) or {}
     if not isinstance(o, dict):
@@ -132,6 +169,39 @@ def decide_core(f, CFG, now):
         fr_full = f.execute("SELECT * FROM follower WHERE uid=?", (uid,)).fetchone()
         if not fr_full:
             continue
+
+        side = str(fr_full["side"] or "").strip().lower()
+        price_now = fr_full["last_price_exec"]
+        if price_now is not None:
+            try:
+                price_now = float(price_now)
+            except Exception:
+                price_now = None
+
+        if price_now is not None and price_now > 0.0:
+            close_reason = None
+            if _stop_hit(side, price_now, fr_full["sl_hard"]):
+                close_reason = "SL_HARD"
+            elif _stop_hit(side, price_now, fr_full["sl_be"]):
+                close_reason = "SL_BE"
+            elif _stop_hit(side, price_now, fr_full["sl_trail"]):
+                close_reason = "SL_TRAIL"
+            elif _take_profit_hit(side, price_now, fr_full["tp_dyn"]):
+                close_reason = "TP_DYN"
+
+            if close_reason:
+                f.execute("""
+                    UPDATE follower
+                    SET status='close_req',
+                        qty_to_close_ratio=1.0,
+                        ratio_to_close=1.0,
+                        req_step=req_step+1,
+                        ts_decision=?,
+                        last_decision_ts=?,
+                        reason=?
+                    WHERE uid=?
+                """, (now, now, close_reason, uid))
+                continue
 
         # ==========================================================
         # OPTION 3 — PYRAMIDE PRIORITAIRE (post BE / trail)
