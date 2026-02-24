@@ -57,7 +57,7 @@ def load_gest():
 def load_exec_pos():
     c = conn(DB_EXEC)
     rows = c.execute("""
-        SELECT uid, qty_open
+        SELECT uid, side, qty_open, avg_price_open
         FROM v_exec_position
     """).fetchall()
     c.close()
@@ -188,8 +188,17 @@ def main():
             e = execpos.get(uid)
 
             inst = g["instId"] if g else uid[:12]
-            side = g["side"] if g else "?"
-            entry_val = g["entry"] if g and g["entry"] else 0.0
+            side = (
+                (g.get("side") if g else None)
+                or (e.get("side") if e else None)
+                or ("buy" if "-buy-" in uid else "sell" if "-sell-" in uid else "?")
+            )
+            entry_val = (
+                float(e.get("avg_price_open") or 0.0)
+                if e else 0.0
+            )
+            if entry_val <= 0.0 and g and g.get("entry"):
+                entry_val = float(g["entry"])
 
             t = ticks.get(inst)
             now_val = t["lastPr"] if t else entry_val
