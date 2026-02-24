@@ -145,6 +145,20 @@ def _side_sign(side):
     return 1.0 if side == "buy" else -1.0
 
 
+def _resolve_atr(fr):
+    """
+    Follower rows expose `atr_signal` (repo schema), not `atr`.
+    Keep a backward-compatible fallback on `atr` if present in legacy views.
+    """
+    atr = _row_get(fr, "atr_signal")
+    if atr in (None, ""):
+        atr = _row_get(fr, "atr", 0.0)
+    try:
+        return float(atr or 0.0)
+    except Exception:
+        return 0.0
+
+
 def _set_level_once(f, uid, col, value, now):
     f.execute(f"""
         UPDATE follower
@@ -194,7 +208,7 @@ def arm_break_even(f, fr, CFG, now):
         return
 
     side = _norm_side(_row_get(fr, "side"))
-    atr = float(_row_get(fr, "atr", 0.0) or 0.0)
+    atr = _resolve_atr(fr)
     sign = _side_sign(side)
     sl = price_open - (sign * atr)
 
@@ -221,7 +235,7 @@ def arm_trailing(f, fr, CFG, now):
         return
 
     side = _norm_side(_row_get(fr, "side"))
-    atr = float(_row_get(fr, "atr", 0.0) or 0.0)
+    atr = _resolve_atr(fr)
     sign = _side_sign(side)
     sl = price_open - (sign * atr)
 
@@ -239,7 +253,7 @@ def arm_hard_sl(f, fr, CFG, now):
         return
 
     side = _norm_side(_row_get(fr, "side"))
-    atr = float(_row_get(fr, "atr", 0.0) or 0.0)
+    atr = _resolve_atr(fr)
     sign = _side_sign(side)
     sl = anchor_price - (sign * atr)
     _set_level_once(f, fr["uid"], "sl_hard", sl, now)
@@ -264,7 +278,7 @@ def enforce_hard_sl_side(f, fr, CFG, now):
         return
 
     side = _norm_side(_row_get(fr, "side"))
-    atr = float(_row_get(fr, "atr", 0.0) or 0.0)
+    atr = _resolve_atr(fr)
     sign = _side_sign(side)
 
     # Canonical side-aware hard SL (same formula as arm_hard_sl)
@@ -301,7 +315,7 @@ def arm_take_profit(f, fr, CFG, now):
         return
 
     side = _norm_side(_row_get(fr, "side"))
-    atr = float(_row_get(fr, "atr", 0.0) or 0.0)
+    atr = _resolve_atr(fr)
     sign = _side_sign(side)
     tp = price_open + (sign * atr)
     _set_level_once(f, fr["uid"], "tp_dyn", tp, now)
