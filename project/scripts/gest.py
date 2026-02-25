@@ -25,6 +25,11 @@ def conn(path):
     return c
 
 
+def table_columns(conn_, table):
+    rows = conn_.execute(f"PRAGMA table_info({table})").fetchall()
+    return {r["name"] for r in rows}
+
+
 # -------------------------------------------------
 # TRIGGERS → open_req (create trade)
 # -------------------------------------------------
@@ -33,32 +38,55 @@ def ingest_triggers():
     g = conn(DB_GEST)
 
     try:
+        trig_cols = table_columns(t, "triggers")
+        gest_cols = table_columns(g, "gest")
+
         rows = t.execute("""
-            SELECT uid, instId, side, price, ts, ts_fire, atr
+            SELECT *
             FROM triggers
             WHERE status='fire'
         """).fetchall()
+
+        now_ms = int(time.time() * 1000)
 
         for r in rows:
             uid = r["uid"]
             if g.execute("SELECT 1 FROM gest WHERE uid=?", (uid,)).fetchone():
                 continue
 
-            g.execute("""
-                INSERT INTO gest
-                (uid, instId, side, entry, price_signal,
-                 atr_signal, ts_signal, ts_open, status)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'open_stdby')
-            """, (
-                uid,
-                r["instId"],
-                r["side"],
-                r["price"],
-                r["price"],
-                r["atr"],
-                r["ts"],
-                r["ts_fire"]
-            ))
+            values = {
+                "uid": uid,
+                "instId": r["instId"],
+                "side": r["side"],
+                "entry": r["price"] if "price" in trig_cols else None,
+                "price_signal": r["price"] if "price" in trig_cols else None,
+                "atr_signal": r["atr"] if "atr" in trig_cols else None,
+                "ts_signal": r["ts"] if "ts" in trig_cols else None,
+                "ts_open": r["ts_fire"] if "ts_fire" in trig_cols else None,
+                # Scores/rationale propagated for opener sizing compatibility.
+                "score_C": r["score_C"] if "score_C" in trig_cols else None,
+                "dec_score_C": r["dec_score_C"] if "dec_score_C" in trig_cols else None,
+                "score_S": r["score_S"] if "score_S" in trig_cols else None,
+                "score_of": r["score_of"] if "score_of" in trig_cols else None,
+                "score_H": r["score_H"] if "score_H" in trig_cols else None,
+                "score_force": r["score_force"] if "score_force" in trig_cols else None,
+                "reason": r["fire_reason"] if "fire_reason" in trig_cols else None,
+                "entry_reason": r["entry_reason"] if "entry_reason" in trig_cols else None,
+                "type_signal": r["trigger_type"] if "trigger_type" in trig_cols else None,
+                "dec_mode": r["dec_mode"] if "dec_mode" in trig_cols else None,
+                "dec_ctx": r["ctx"] if "ctx" in trig_cols else None,
+                "status": "open_stdby",
+                "step": 0,
+                "ts_created": now_ms,
+                "ts_updated": now_ms,
+            }
+
+            insert_cols = [c for c in values if c in gest_cols]
+            placeholders = ", ".join(["?"] * len(insert_cols))
+            g.execute(
+                f"INSERT INTO gest ({', '.join(insert_cols)}) VALUES ({placeholders})",
+                tuple(values[c] for c in insert_cols),
+            )
     finally:
         t.close()
         g.close()
@@ -243,4 +271,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
