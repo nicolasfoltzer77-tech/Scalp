@@ -9,22 +9,22 @@ follower:
   # ==========================================================
   # BREAK EVEN (SAFE ARMING)
   # ==========================================================
-  sl_be_atr_trigger: 0.30
+  sl_be_atr_trigger: 0.40
   sl_be_offset_atr: 0.00
 
   # ==========================================================
   # TRAILING STOP
   # ==========================================================
-  sl_trail_atr_trigger: 1.20
+  sl_trail_atr_trigger: 1.30
   sl_trail_offset_atr: 0.50
   sl_trail_min_step_s: 15
 
   # ==========================================================
   # PYRAMIDING — BASE
   # ==========================================================
-  pyramide_atr_trigger: 0.35
-  pyramide_cooldown_s: 15
-  pyramide_qty_ratio: 0.25
+  pyramide_atr_trigger: 0.45
+  pyramide_cooldown_s: 20
+  pyramide_qty_ratio: 0.15
   min_mae_forbid_pyramide: 3.0
 
   # ==========================================================
@@ -33,17 +33,19 @@ follower:
   option3_safe_build:
     enable: true
     max_adds_total: 5
-    add_atr_step: 0.45
+    add_atr_step: 0.35
+    add_sizes: [0.10, 0.12, 0.15, 0.18, 0.20]
     allow_after_be: true
     allow_after_trail: true
     partial_only_after_last_add: true
-    cooldown_s: 15
+    cooldown_s: 20
     log_why: true
 
   # ==========================================================
   # PARTIAL TAKE PROFIT
   # ==========================================================
   partial_mfe_atr: 1.10
+  tp_dyn_atr_trigger: 1.45
   partial_close_ratio: 0.25
   min_partial_qty: 0.0
 
