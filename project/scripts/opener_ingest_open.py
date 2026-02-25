@@ -44,6 +44,15 @@ def _f(x, d=0.0):
         return d
 
 
+def _coalesce_expr(columns, *candidates, default="0.0"):
+    present = [c for c in candidates if c in columns]
+    if not present:
+        return default
+    if len(present) == 1:
+        return present[0]
+    return "COALESCE(" + ", ".join(present + [default]) + ")"
+
+
 def _get_budget_usdt(b):
     row = b.execute("SELECT balance_usdt FROM balance WHERE id=1").fetchone()
     if not row:
@@ -67,21 +76,18 @@ def ingest_open_req():
     try:
         gest_cols = _table_columns(g, "gest")
 
-        # Compat schémas historiques/finals:
-        # - price_signal OR entry
-        # - score_C OR dec_score_C
-        # - score_S OR score_of
-        # - score_H OR score_force
-        price_expr = "price_signal" if "price_signal" in gest_cols else "entry"
-        score_c_expr = "score_C" if "score_C" in gest_cols else (
-            "dec_score_C" if "dec_score_C" in gest_cols else "0.0"
-        )
-        score_s_expr = "score_S" if "score_S" in gest_cols else (
-            "score_of" if "score_of" in gest_cols else "0.0"
-        )
-        score_h_expr = "score_H" if "score_H" in gest_cols else (
-            "score_force" if "score_force" in gest_cols else "0.0"
-        )
+        # Compat schémas historiques/finals + fallback de valeur:
+        # - price_signal puis entry
+        # - score_C puis dec_score_C
+        # - score_S puis score_of
+        # - score_H puis score_force
+        # Important: sur schéma final, score_C/score_S/score_H peuvent exister
+        # mais rester NULL (ingest écrit dec_score_C/score_of/score_force).
+        # On force donc un COALESCE sur colonnes disponibles.
+        price_expr = _coalesce_expr(gest_cols, "price_signal", "entry")
+        score_c_expr = _coalesce_expr(gest_cols, "score_C", "dec_score_C")
+        score_s_expr = _coalesce_expr(gest_cols, "score_S", "score_of")
+        score_h_expr = _coalesce_expr(gest_cols, "score_H", "score_force")
         step_expr = "step" if "step" in gest_cols else "0"
 
         rows = g.execute(f"""
@@ -192,15 +198,18 @@ def ingest_open_req():
                 "open", step, ratio, _f(qty_ticket, 0.0), qty_norm, None
             ))
 
+            margin = (qty_norm * price / float(lev)) if float(lev) > 0 else 0.0
+
             g.execute("""
                 UPDATE gest
                 SET qty=?,
                     lev=?,
+                    margin=?,
                     entry=?,
                     ts_open=?,
                     ts_status_update=?
                 WHERE uid=? AND status='open_stdby'
-            """, (qty_norm, float(lev), price, ts_open, ts_open, uid))
+            """, (qty_norm, float(lev), margin, price, ts_open, ts_open, uid))
 
             log.info("[OPEN_STDBY] uid=%s inst=%s side=%s qty=%.10f lev=%s step=%d budget=%.2f",
                      uid, instId, side, qty_norm, lev, step, budget_usdt)
