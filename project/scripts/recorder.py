@@ -63,6 +63,20 @@ def rget(row, key, default=None):
 def table_columns(c, table_name):
     return [r["name"] for r in c.execute(f"PRAGMA table_info({table_name})")]
 
+def first_non_null(rows, col):
+    for r in rows:
+        v = rget(r, col)
+        if v is not None:
+            return v
+    return None
+
+def last_non_null(rows, col):
+    for r in reversed(rows):
+        v = rget(r, col)
+        if v is not None:
+            return v
+    return None
+
 # ============================================================
 # INIT recorder_steps (IDEMPOTENT)
 # ============================================================
@@ -113,15 +127,57 @@ def load_pnl(uid):
 # FETCH FINAL TRADES FROM GEST
 # ============================================================
 
-def fetch_close_done():
+def fetch_close_done_uids():
     c = conn(DB_GEST)
     rows = c.execute("""
-        SELECT *
+        SELECT DISTINCT uid
         FROM gest
         WHERE status='close_done'
     """).fetchall()
     c.close()
     return rows
+
+def load_gest_uid_rows(uid):
+    c = conn(DB_GEST)
+    rows = c.execute("""
+        SELECT *
+        FROM gest
+        WHERE uid=?
+        ORDER BY
+            COALESCE(step, 0) ASC,
+            COALESCE(ts_updated, ts_status_update, ts_signal, 0) ASC
+    """, (uid,)).fetchall()
+    c.close()
+    return rows
+
+def build_uid_snapshot(uid):
+    rows = load_gest_uid_rows(uid)
+    if not rows:
+        return None
+
+    cols = rows[0].keys()
+
+    # Colonnes « setup/admission » : priorité à la 1ère valeur non NULL
+    prefer_first = {
+        "instId", "instId_raw", "side",
+        "ts_signal", "price_signal", "atr_signal",
+        "reason", "entry_reason", "type_signal",
+        "score_C", "score_S", "score_H", "score_M",
+        "score_of", "score_mo", "score_br", "score_force",
+        "trigger_type", "dec_mode", "dec_ctx", "dec_score_C",
+        "entry", "qty", "lev", "margin",
+        "sl_init", "tp_init",
+        "ratio_to_open",
+    }
+
+    snap = {"uid": uid}
+    for col in cols:
+        if col in prefer_first:
+            snap[col] = first_non_null(rows, col)
+        else:
+            snap[col] = last_non_null(rows, col)
+
+    return snap
 
 # ============================================================
 # VALUE MAPPING (GEST -> RECORDER)
@@ -136,6 +192,16 @@ def build_value_for_column(col, g, pnl_realized, ts_rec):
         return rget(g, "close_steps", rget(g, "close_step"))
     if col == "price_exec_close":
         return rget(g, "price_exec_close", rget(g, "avg_exit_price"))
+    if col == "ts_open":
+        return rget(g, "ts_open", rget(g, "ts_first_open"))
+    if col == "ts_close":
+        return rget(g, "ts_close", rget(g, "ts_last_close"))
+    if col == "fee_total":
+        return rget(g, "fee_total", rget(g, "fee_exec_total"))
+    if col == "qty":
+        return rget(g, "qty", rget(g, "qty_open"))
+    if col == "entry":
+        return rget(g, "entry", rget(g, "avg_entry_price"))
     return rget(g, col)
 
 def normalize_required(col, v):
@@ -248,7 +314,11 @@ def main():
 
     while True:
         try:
-            for g in fetch_close_done():
+            for x in fetch_close_done_uids():
+                uid = rget(x, "uid")
+                g = build_uid_snapshot(uid)
+                if not g:
+                    continue
                 record_trade(g)
         except Exception:
             log.error("[ERR]\n%s", traceback.format_exc())
@@ -256,4 +326,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
