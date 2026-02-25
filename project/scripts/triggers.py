@@ -24,6 +24,26 @@ CFG = yaml.safe_load(open(CONF_YAML)).get("triggers", {})
 ENGINE_SLEEP = float(CFG.get("engine_sleep", 0.5))
 ARM_TTL_MS   = int(CFG.get("arm_ttl_ms", 120000))
 
+# Un coin est bloqué uniquement si un trade est réellement en cours.
+# Les états terminaux (ex: close_done) ne doivent pas empêcher un nouveau trigger.
+ACTIVE_GEST_STATUSES = (
+    "armed",
+    "fire",
+    "opened",
+    "open_stdby",
+    "open_done",
+    "follow",
+    "pyramide_req",
+    "pyramide_stdby",
+    "pyramide_done",
+    "partial_req",
+    "partial_stdby",
+    "partial_done",
+    "close_req",
+    "close_stdby",
+    "to_close",
+)
+
 logging.basicConfig(filename=str(LOG),
     level=logging.INFO,
     format="%(asctime)s TRIG %(levelname)s %(message)s")
@@ -66,12 +86,13 @@ def uid_exists_anywhere(uid):
 
 def instid_active(instId):
     with conn(DB_GEST) as g:
+        placeholders = ",".join("?" for _ in ACTIVE_GEST_STATUSES)
         return g.execute("""
             SELECT 1 FROM gest
             WHERE instId=?
-              AND status <> 'recorded'
+              AND status IN (""" + placeholders + """)
             LIMIT 1
-        """, (instId,)).fetchone() is not None
+        """, (instId, *ACTIVE_GEST_STATUSES)).fetchone() is not None
 
 
 def trigger_active(instId):
@@ -182,4 +203,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
