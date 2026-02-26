@@ -148,15 +148,35 @@ def _side_sign(side):
 def _resolve_atr(fr):
     """
     Follower rows expose `atr_signal` (repo schema), not `atr`.
-    Keep a backward-compatible fallback on `atr` if present in legacy views.
+    Keep additive fallbacks:
+      1) row.atr_signal
+      2) legacy row.atr
+      3) |price_open - sl_hard| if both are available (>0)
     """
     atr = _row_get(fr, "atr_signal")
     if atr in (None, ""):
         atr = _row_get(fr, "atr", 0.0)
     try:
-        return float(atr or 0.0)
+        v = float(atr or 0.0)
+        if v > 0.0:
+            return v
     except Exception:
-        return 0.0
+        pass
+
+    sl_hard = _row_get(fr, "sl_hard")
+    price_open = _row_get(fr, "avg_price_open")
+    if price_open in (None, "", 0, 0.0):
+        price_open = _row_get(fr, "entry")
+
+    try:
+        if sl_hard is not None and price_open is not None:
+            derived = abs(float(price_open) - float(sl_hard))
+            if derived > 0.0:
+                return derived
+    except Exception:
+        pass
+
+    return 0.0
 
 
 def _resolve_positive_atr(fr):
