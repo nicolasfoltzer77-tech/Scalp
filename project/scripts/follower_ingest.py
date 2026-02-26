@@ -67,6 +67,7 @@ def ingest_open_done(g, f, now):
                     instId=?,
                     side=?,
                     step=?,
+                    atr_signal=?,
                     sl_hard=CASE
                         WHEN COALESCE(sl_hard, 0)=0 THEN ?
                         ELSE sl_hard
@@ -77,6 +78,7 @@ def ingest_open_done(g, f, now):
                 r["instId"],
                 r["side"],
                 r["step"] or 0,
+                atr_signal,
                 sl_hard,
                 now,
                 uid
@@ -96,9 +98,10 @@ def ingest_open_done(g, f, now):
                 qty_ratio,
                 nb_partial,
                 nb_pyramide,
+                atr_signal,
                 sl_hard
             ) VALUES (
-                ?,?,?,?,?,?,?,?,?,?,?
+                ?,?,?,?,?,?,?,?,?,?,?,?
             )
         """, (
             uid,
@@ -111,5 +114,6 @@ def ingest_open_done(g, f, now):
             1.0,
             0,
             0,
+            atr_signal,
             sl_hard
         ))
