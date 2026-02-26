@@ -267,7 +267,8 @@ def arm_trailing(f, fr, CFG, now):
     # buy  -> below market ; sell -> above market.
     px = _price_from_row(fr) or price_open
     sign = _side_sign(side)
-    sl = px - (sign * atr)
+    offset_mult = float(CFG.get("sl_trail_offset_atr", 1.0) or 1.0)
+    sl = px - (sign * atr * offset_mult)
 
     _set_level_once(f, fr["uid"], "sl_trail", sl, now)
     log.info("[TRAIL_ARMED] uid=%s sl_trail=%.6f", fr["uid"], sl)
@@ -288,7 +289,8 @@ def arm_hard_sl(f, fr, CFG, now):
         log.warning("[RISK] skip hard sl arm (atr<=0) uid=%s", fr["uid"])
         return
     sign = _side_sign(side)
-    sl = anchor_price - (sign * atr)
+    hard_mult = float(CFG.get("sl_hard_atr_mult", 1.0) or 1.0)
+    sl = anchor_price - (sign * atr * hard_mult)
     _set_level_once(f, fr["uid"], "sl_hard", sl, now)
     log.info("[HARD_SL_ARMED] uid=%s sl_hard=%.6f", fr["uid"], sl)
 
@@ -315,7 +317,8 @@ def enforce_hard_sl_side(f, fr, CFG, now):
     sign = _side_sign(side)
 
     # Canonical side-aware hard SL (same formula as arm_hard_sl)
-    canonical_sl = anchor_price - (sign * atr)
+    hard_mult = float(CFG.get("sl_hard_atr_mult", 1.0) or 1.0)
+    canonical_sl = anchor_price - (sign * atr * hard_mult)
 
     wrong_side = ((side == "buy" and float(sl_hard) >= float(anchor_price))
                   or (side == "sell" and float(sl_hard) <= float(anchor_price)))
@@ -353,7 +356,8 @@ def arm_take_profit(f, fr, CFG, now):
         log.warning("[RISK] skip tp arm (atr<=0) uid=%s", fr["uid"])
         return
     sign = _side_sign(side)
-    tp = price_open + (sign * atr)
+    tp_mult = float(CFG.get("tp_dyn_atr_mult", 1.0) or 1.0)
+    tp = price_open + (sign * atr * tp_mult)
     _set_level_once(f, fr["uid"], "tp_dyn", tp, now)
     log.info("[TP_ARMED] uid=%s tp_dyn=%.6f", fr["uid"], tp)
 
