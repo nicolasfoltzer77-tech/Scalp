@@ -16,8 +16,15 @@ follower:
   # TRAILING STOP
   # ==========================================================
   sl_trail_atr_trigger: 1.30
-  sl_trail_offset_atr: 0.50
+  sl_trail_offset_atr: 1.00
   sl_trail_min_step_s: 15
+
+  # ==========================================================
+  # RISK — SIMPLE / INDEPENDANT DE LA PYRAMIDE
+  # ==========================================================
+  sl_hard_atr_mult: 1.00
+  tp_dyn_atr_mult: 1.00
+  risk_near_ratio: 0.00
 
   # ==========================================================
   # PYRAMIDING — BASE
@@ -25,21 +32,13 @@ follower:
   pyramide_atr_trigger: 0.45
   pyramide_cooldown_s: 20
   pyramide_qty_ratio: 0.15
+  pyramide_max_adds: 5
+  pyramide_mfe_base: 0.20
+  pyramide_mfe_step: 0.25
   min_mae_forbid_pyramide: 3.0
 
-  # ==========================================================
-  # OPTION 3 — SAFE BUILD
-  # ==========================================================
-  option3_safe_build:
-    enable: true
-    max_adds_total: 5
-    add_atr_step: 0.35
-    add_sizes: [0.10, 0.12, 0.15, 0.18, 0.20]
-    allow_after_be: true
-    allow_after_trail: true
-    partial_only_after_last_add: true
-    cooldown_s: 20
-    log_why: true
+  # step 2 = 0.45 ATR, step 3 = 0.70 ATR,
+  # step x = 0.20 + 0.25*(x-1) ATR (x>=2)
 
   # ==========================================================
   # PARTIAL TAKE PROFIT

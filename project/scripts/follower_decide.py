@@ -79,67 +79,26 @@ def _take_profit_hit(side, price_now, level):
         return float(price_now) <= level
     return False
 
-def _opt3(CFG):
-    o = CFG.get("option3_safe_build", {}) or {}
-    if not isinstance(o, dict):
-        return {}
-    return o
 
-def _is_enabled_opt3(CFG):
-    o = _opt3(CFG)
-    return bool(o.get("enable", False))
-
-def _is_safe_armed(fr_full, CFG):
+def _pyramide_required_mfe_atr(next_step, CFG):
     """
-    SAFE = BE and/or TRAIL armed (post-BE/trail pyramiding gate).
-    follower schema uses defaults 0, so treat >0 as armed.
+    next_step = 2 for first add, 3 for second add, ...
+    Rules:
+      step 2 => 0.45 ATR
+      step 3 => 0.70 ATR
+      step x => pyramide_mfe_base + pyramide_mfe_step * (x-1)
     """
-    o = _opt3(CFG)
-    allow_be = bool(o.get("allow_after_be", True))
-    allow_tr = bool(o.get("allow_after_trail", True))
+    if next_step <= 1:
+        return 0.0
+    if next_step == 2:
+        return float(CFG.get("pyramide_atr_trigger", 0.45) or 0.45)
 
-    sl_be = fr_full["sl_be"] if "sl_be" in fr_full.keys() else 0
-    sl_tr = fr_full["sl_trail"] if "sl_trail" in fr_full.keys() else 0
+    base = float(CFG.get("pyramide_mfe_base", 0.20) or 0.20)
+    step = float(CFG.get("pyramide_mfe_step", 0.25) or 0.25)
+    return base + step * (next_step - 1)
 
-    be_armed = (sl_be is not None and float(sl_be) > 0.0)
-    tr_armed = (sl_tr is not None and float(sl_tr) > 0.0)
 
-    return (allow_be and be_armed) or (allow_tr and tr_armed)
-
-def _get_add_ratio(CFG, nb_pyramide_done):
-    o = _opt3(CFG)
-    sizes = o.get("add_sizes", None)
-    if isinstance(sizes, list) and nb_pyramide_done >= 0 and nb_pyramide_done < len(sizes):
-        try:
-            return float(sizes[nb_pyramide_done])
-        except Exception:
-            pass
-    # fallback legacy ratio
-    return float(CFG.get("pyramide_qty_ratio", 0.0) or 0.0)
-
-def _should_pyramide_opt3(fr_state, fr_full, CFG, now):
-    o = _opt3(CFG)
-
-    # kill-switch
-    if not _is_enabled_opt3(CFG):
-        return (False, "opt3_disabled", None)
-
-    # must be safe-armed (BE or trail) to build
-    if not _is_safe_armed(fr_full, CFG):
-        return (False, "not_safe_armed", None)
-
-    # block adds after partial unless explicitly allowed
-    allow_after_partial = bool(o.get("allow_after_partial", False))
-    nb_partial = int(fr_state["nb_partial"] or 0)
-    if nb_partial >= 1 and not allow_after_partial:
-        return (False, "blocked_after_partial", None)
-
-    # max adds total
-    max_adds = int(o.get("max_adds_total", 2))
-    nb_pyr = int(fr_state["nb_pyramide"] or 0)
-    if nb_pyr >= max_adds:
-        return (False, "max_adds_reached", None)
-
+def _should_pyramide(fr_state, fr_full, CFG, now):
     mfe_atr = fr_state["mfe_atr"]
     if mfe_atr is None:
         return (False, "no_mfe_atr", None)
@@ -149,8 +108,12 @@ def _should_pyramide_opt3(fr_state, fr_full, CFG, now):
     if mae_atr is not None and float(mae_atr) >= min_mae_forbid:
         return (False, "mae_forbid", None)
 
-    # cooldown (ms)
-    cooldown_s = float(o.get("cooldown_s", CFG.get("pyramide_cooldown_s", 0.0)) or 0.0)
+    max_adds = int(CFG.get("pyramide_max_adds", 5) or 5)
+    nb_pyr = int(fr_state["nb_pyramide"] or 0)
+    if nb_pyr >= max_adds:
+        return (False, "max_adds_reached", None)
+
+    cooldown_s = float(CFG.get("pyramide_cooldown_s", 0.0) or 0.0)
     cd_ts = fr_full["cooldown_pyramide_ts"] if "cooldown_pyramide_ts" in fr_full.keys() else None
     if cd_ts is not None:
         try:
@@ -159,33 +122,16 @@ def _should_pyramide_opt3(fr_state, fr_full, CFG, now):
         except Exception:
             pass
 
-    # atr_extension trigger model:
-    base = float(CFG.get("pyramide_atr_trigger", 0.0) or 0.0)
-    add_step = float(o.get("add_atr_step", 0.0) or 0.0)
-    required = base + nb_pyr * add_step
-
+    next_step = nb_pyr + 2
+    required = _pyramide_required_mfe_atr(next_step, CFG)
     if float(mfe_atr) < required:
         return (False, "mfe_below_required", required)
 
-    ratio = _get_add_ratio(CFG, nb_pyr)
+    ratio = float(CFG.get("pyramide_qty_ratio", 0.0) or 0.0)
     if ratio <= 0:
         return (False, "add_ratio_zero", ratio)
 
     return (True, "ok", ratio)
-
-def _should_partial_opt3(fr_state, fr_full, CFG):
-    o = _opt3(CFG)
-    if not _is_enabled_opt3(CFG):
-        return True  # legacy behavior unchanged
-
-    # partial only after last add (validated)
-    if bool(o.get("partial_only_after_last_add", True)):
-        max_adds = int(o.get("max_adds_total", 2))
-        nb_pyr = int(fr_state["nb_pyramide"] or 0)
-        if nb_pyr < max_adds:
-            return False
-
-    return True
 
 def decide_core(f, CFG, now):
 
@@ -242,51 +188,42 @@ def decide_core(f, CFG, now):
                 continue
 
         # ==========================================================
-        # OPTION 3 — PYRAMIDE PRIORITAIRE (post BE / trail)
+        # PYRAMIDE — VERSION SIMPLE
         # IMPORTANT (INVARIANT REPO):
         # - follower.step NE DOIT PAS bouger sur *_req
         # - step bouge UNIQUEMENT sur *_done via follower_fsm_sync.py
         # ==========================================================
-        if _is_enabled_opt3(CFG):
-            ok, why, ratio_or_req = _should_pyramide_opt3(fr, fr_full, CFG, now)
-            if ok:
-                ratio_add = float(ratio_or_req)
+        ok, why, ratio_or_req = _should_pyramide(fr, fr_full, CFG, now)
+        if ok:
+            ratio_add = float(ratio_or_req)
 
-                f.execute("""
-                    UPDATE follower
-                    SET status='pyramide_req',
-                        qty_to_add_ratio=?,
-                        ratio_to_add=?,
-                        req_step=req_step+1,
-                        ts_decision=?,
-                        last_decision_ts=?,
-                        nb_pyramide=nb_pyramide+1,
-                        cooldown_pyramide_ts=?,
-                        last_pyramide_ts=?,
-                        last_pyramide_mfe_atr=?,
-                        reason='PYRAMIDE_SAFE_BUILD'
-                    WHERE uid=?
-                """, (
-                    ratio_add,
-                    ratio_add,
-                    now,
-                    now,
-                    now,
-                    now,
-                    float(fr["mfe_atr"] or 0.0),
-                    uid
-                ))
+            f.execute("""
+                UPDATE follower
+                SET status='pyramide_req',
+                    qty_to_add_ratio=?,
+                    ratio_to_add=?,
+                    req_step=req_step+1,
+                    ts_decision=?,
+                    last_decision_ts=?,
+                    nb_pyramide=nb_pyramide+1,
+                    cooldown_pyramide_ts=?,
+                    last_pyramide_ts=?,
+                    last_pyramide_mfe_atr=?,
+                    reason='PYRAMIDE_SIMPLE'
+                WHERE uid=?
+            """, (
+                ratio_add,
+                ratio_add,
+                now,
+                now,
+                now,
+                now,
+                float(fr["mfe_atr"] or 0.0),
+                uid
+            ))
 
-                if _opt3(CFG).get("log_why", False):
-                    log.info("[OPT3] PYRAMIDE uid=%s ratio=%.4f mfe_atr=%.4f nb_pyr->%d", uid, ratio_add, float(fr["mfe_atr"] or 0.0), int(fr["nb_pyramide"] or 0) + 1)
-
-                continue
-            else:
-                if _opt3(CFG).get("log_why", False):
-                    if ratio_or_req is None:
-                        log.info("[OPT3] PYRAMIDE_BLOCKED uid=%s why=%s mfe_atr=%s", uid, why, fr["mfe_atr"])
-                    else:
-                        log.info("[OPT3] PYRAMIDE_BLOCKED uid=%s why=%s required=%s mfe_atr=%s", uid, why, ratio_or_req, fr["mfe_atr"])
+            log.info("[PYRAMIDE] uid=%s ratio=%.4f mfe_atr=%.4f nb_pyr->%d", uid, ratio_add, float(fr["mfe_atr"] or 0.0), int(fr["nb_pyramide"] or 0) + 1)
+            continue
 
         # ==========================================================
         # PARTIAL — FILTRE TRADABILITÉ
@@ -294,11 +231,6 @@ def decide_core(f, CFG, now):
         # - follower.step NE DOIT PAS bouger sur *_req
         # ==========================================================
         if fr["mfe_atr"] >= CFG["partial_mfe_atr"] and fr["nb_partial"] == 0:
-
-            if not _should_partial_opt3(fr, fr_full, CFG):
-                if _opt3(CFG).get("log_why", False):
-                    log.info("[OPT3] PARTIAL_BLOCKED uid=%s why=partial_only_after_last_add nb_pyr=%s", uid, fr["nb_pyramide"])
-                continue
 
             ratio_cfg = CFG["partial_close_ratio"]
             qty_open = float(fr["qty_open"] or 0.0)
