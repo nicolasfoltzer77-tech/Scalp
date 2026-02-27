@@ -223,9 +223,14 @@ def ack_exec_done():
             else:
                 status_from = "close_stdby"
 
-            # Le statut DONE dépend du reliquat réel dans exec,
-            # pas seulement du type demandé initialement.
-            status_to = "close_done" if fully_closed else "partial_done"
+            # Cohérence FSM:
+            # - une requête close doit toujours terminer en close_done
+            # - une requête partial peut être close_done si le reliquat est nul
+            #   (ex: arrondi/overshoot ou liquidation totale sur partial)
+            if exec_type == "close":
+                status_to = "close_done"
+            else:
+                status_to = "close_done" if fully_closed else "partial_done"
 
             try:
                 res = c.execute("""
