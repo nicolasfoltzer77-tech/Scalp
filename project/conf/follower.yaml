@@ -15,14 +15,14 @@ follower:
   # ==========================================================
   # TRAILING STOP
   # ==========================================================
-  sl_trail_atr_trigger: 1.30
-  sl_trail_offset_atr: 1.00
+  sl_trail_atr_trigger: 0.4
+  sl_trail_offset_atr: 0.5
   sl_trail_min_step_s: 15
 
   # ==========================================================
   # RISK — SIMPLE / INDEPENDANT DE LA PYRAMIDE
   # ==========================================================
-  sl_hard_atr_mult: 1.00
+  sl_hard_atr_mult: 1.5
   tp_dyn_atr_mult: 1.00
   risk_near_ratio: 0.00
 
@@ -32,7 +32,7 @@ follower:
   pyramide_atr_trigger: 0.45
   pyramide_cooldown_s: 20
   pyramide_qty_ratio: 0.15
-  pyramide_max_adds: 5
+  pyramide_max_adds: 10
   pyramide_mfe_base: 0.20
   pyramide_mfe_step: 0.25
   min_mae_forbid_pyramide: 3.0
