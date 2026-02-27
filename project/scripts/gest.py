@@ -188,14 +188,19 @@ def mirror_follower_follow():
 
         for r in rows:
             uid = r["uid"]
-            g.execute("""
+            cur = g.execute("""
                 UPDATE gest
                 SET status='follow',
                     step=COALESCE(?, step),
                     ts_status_update=strftime('%s','now')*1000
                 WHERE uid=?
-                  AND status IN ('open_done','pyramide_done','partial_done')
+                  AND status IN ('open_done','pyramide_done','partial_done','partialdone')
             """, (r["step"], uid))
+
+            # Compat legacy: certains environnements ont déjà utilisé "partialdone"
+            # (sans underscore). Dans tous les cas, follower=follow est canonique.
+            if cur.rowcount:
+                print(f"[GEST FOLLOW] uid={uid} -> follow")
     finally:
         f.close()
         g.close()
