@@ -152,17 +152,6 @@ def ingest_closer_done():
             st  = r["status"]
 
             if st == "partial_done":
-                # Règle FSM stricte : une demande close_req ne doit JAMAIS
-                # redescendre en partial_done. Si closer renvoie partial_done
-                # (ex: fallback legacy), on force close_done côté gest.
-                g.execute("""
-                    UPDATE gest
-                    SET status='close_done',
-                        ts_status_update=strftime('%s','now')*1000
-                    WHERE uid=?
-                      AND status='close_req'
-                """, (uid,))
-
                 g.execute("""
                     UPDATE gest
                     SET status='partial_done',
