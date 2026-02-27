@@ -254,8 +254,9 @@ def ack_exec_done():
             if step_done < 0:
                 continue
 
-            rem = float(remaining_qty.get(uid, 0.0))
-            fully_closed = rem <= 1e-12
+            rem_raw = remaining_qty.get(uid)
+            rem = float(rem_raw) if rem_raw is not None else None
+            fully_closed = (rem is not None and rem <= 1e-12)
 
             if exec_type == "partial":
                 status_from = "partial_stdby"
@@ -269,6 +270,9 @@ def ack_exec_done():
             if exec_type == "close":
                 status_to = "close_done"
             else:
+                # IMPORTANT: ne pas déduire "close_done" sur partial
+                # si la position n'est pas retrouvée dans v_exec_position.
+                # Un snapshot manquant ne doit jamais fermer un trade.
                 status_to = "close_done" if fully_closed else "partial_done"
 
             try:
@@ -293,14 +297,23 @@ def ack_exec_done():
                     WHERE uid=? AND exec_type=? AND step=? AND status=?
                 """, (status_to, step_new, now_ms(), uid, exec_type, step_new, status_from))
 
-            log.info(
-                "[ACK] uid=%s req_type=%s step=%s remaining=%.10f -> %s",
-                uid,
-                exec_type,
-                step_new,
-                rem,
-                status_to,
-            )
+            if rem is None:
+                log.warning(
+                    "[ACK] uid=%s req_type=%s step=%s remaining=NA -> %s (no v_exec_position row)",
+                    uid,
+                    exec_type,
+                    step_new,
+                    status_to,
+                )
+            else:
+                log.info(
+                    "[ACK] uid=%s req_type=%s step=%s remaining=%.10f -> %s",
+                    uid,
+                    exec_type,
+                    step_new,
+                    rem,
+                    status_to,
+                )
 
         c.commit()
 
