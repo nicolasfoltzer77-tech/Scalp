@@ -113,15 +113,39 @@ def ensure_recorder_steps():
 # LOAD PNL (SOURCE DE VÉRITÉ)
 # ============================================================
 
-def load_pnl(uid):
+def load_trade_metrics(uid):
     c = conn(DB_EXEC)
-    r = c.execute("""
+    pnl_row = c.execute("""
         SELECT pnl_realized
         FROM v_exec_pnl_uid
         WHERE uid=?
     """, (uid,)).fetchone()
+
+    cost_row = c.execute("""
+        SELECT
+            SUM(CASE WHEN exec_type IN ('open','pyramide') THEN qty ELSE 0 END) AS qty_in,
+            SUM(CASE WHEN exec_type IN ('open','pyramide') THEN qty * price_exec ELSE 0 END) AS notional_in,
+            SUM(COALESCE(fee, 0.0)) AS fee_total
+        FROM exec
+        WHERE uid=?
+          AND status='done'
+    """, (uid,)).fetchone()
+
     c.close()
-    return float(r["pnl_realized"]) if r and r["pnl_realized"] is not None else 0.0
+
+    pnl_realized = float(pnl_row["pnl_realized"]) if pnl_row and pnl_row["pnl_realized"] is not None else 0.0
+    qty_in = float(cost_row["qty_in"]) if cost_row and cost_row["qty_in"] is not None else 0.0
+    notional_in = float(cost_row["notional_in"]) if cost_row and cost_row["notional_in"] is not None else 0.0
+    fee_total = float(cost_row["fee_total"]) if cost_row and cost_row["fee_total"] is not None else 0.0
+    pnl_pct = (pnl_realized / notional_in * 100.0) if notional_in > 0 else 0.0
+
+    return {
+        "pnl_realized": pnl_realized,
+        "pnl_pct": pnl_pct,
+        "fee_total": fee_total,
+        "qty_in": qty_in,
+        "notional_in": notional_in,
+    }
 
 # ============================================================
 # FETCH FINAL TRADES FROM GEST
@@ -183,9 +207,13 @@ def build_uid_snapshot(uid):
 # VALUE MAPPING (GEST -> RECORDER)
 # ============================================================
 
-def build_value_for_column(col, g, pnl_realized, ts_rec):
+def build_value_for_column(col, g, metrics, ts_rec):
     if col in ("pnl_realized", "pnl", "pnl_net"):
-        return pnl_realized
+        return metrics["pnl_realized"]
+    if col == "pnl_pct":
+        return metrics["pnl_pct"]
+    if col in ("fee", "fee_total"):
+        return metrics["fee_total"]
     if col == "ts_recorded":
         return ts_rec
     if col == "close_steps":
@@ -198,8 +226,6 @@ def build_value_for_column(col, g, pnl_realized, ts_rec):
         return rget(g, "ts_open", rget(g, "ts_first_open"))
     if col == "ts_close":
         return rget(g, "ts_close", rget(g, "ts_last_close"))
-    if col == "fee_total":
-        return rget(g, "fee_total", rget(g, "fee_exec_total"))
     if col == "qty":
         return rget(g, "qty", rget(g, "qty_open"))
     if col == "entry":
@@ -285,12 +311,12 @@ def record_trade(g):
     rec_cols = table_columns(c, "recorder")
     c.close()
 
-    pnl_realized = load_pnl(uid)
+    metrics = load_trade_metrics(uid)
     ts_rec = now_ms()
 
     values = []
     for col in rec_cols:
-        v = build_value_for_column(col, g, pnl_realized, ts_rec)
+        v = build_value_for_column(col, g, metrics, ts_rec)
         v = normalize_required(col, v)
         values.append(v)
 
@@ -304,7 +330,13 @@ def record_trade(g):
 
     record_steps(uid)
 
-    log.info("[RECORDED] %s pnl=%+.6f (steps copied)", uid, pnl_realized)
+    log.info(
+        "[RECORDED] %s pnl=%+.6f pct=%+.4f fee=%.6f (steps copied)",
+        uid,
+        metrics["pnl_realized"],
+        metrics["pnl_pct"],
+        metrics["fee_total"],
+    )
 
 # ============================================================
 # MAIN
