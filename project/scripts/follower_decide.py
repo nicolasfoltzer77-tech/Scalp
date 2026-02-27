@@ -85,18 +85,19 @@ def _pyramide_required_mfe_atr(next_step, CFG):
     """
     next_step = 2 for first add, 3 for second add, ...
     Rules:
-      step 2 => 0.45 ATR
-      step 3 => 0.70 ATR
-      step x => pyramide_mfe_base + pyramide_mfe_step * (x-1)
+      pyr #1 (step 2) => 0.45 ATR
+      pyr #2 (step 3) => 0.70 ATR
+      pyr #3 (step 4) => 0.95 ATR
+      then +0.25 ATR for each additional pyramide.
     """
     if next_step <= 1:
         return 0.0
-    if next_step == 2:
-        return float(CFG.get("pyramide_atr_trigger", 0.45) or 0.45)
 
-    base = float(CFG.get("pyramide_mfe_base", 0.20) or 0.20)
-    step = float(CFG.get("pyramide_mfe_step", 0.25) or 0.25)
-    return base + step * (next_step - 1)
+    first_trigger = float(CFG.get("pyramide_atr_trigger", 0.45) or 0.45)
+    atr_step = float(
+        CFG.get("pyramide_atr_step", CFG.get("pyramide_mfe_step", 0.25)) or 0.25
+    )
+    return first_trigger + atr_step * (next_step - 2)
 
 
 def _should_pyramide(fr_state, fr_full, CFG, now):
@@ -125,19 +126,6 @@ def _should_pyramide(fr_state, fr_full, CFG, now):
 
     next_step = nb_pyr + 2
     required = _pyramide_required_mfe_atr(next_step, CFG)
-
-    # Cumulative pyramiding guard:
-    # for add #2+ require an extra MFE progress since the last pyramide trigger.
-    # This prevents duplicate/re-entrant requests when the trade oscillates around
-    # the same MFE area and keeps the "pyramides cumulatives" behavior explicit.
-    if next_step >= 3:
-        last_pyr_mfe = fr_full["last_pyramide_mfe_atr"] if "last_pyramide_mfe_atr" in fr_full.keys() else None
-        if last_pyr_mfe is not None:
-            try:
-                min_progress = float(CFG.get("pyramide_mfe_step", 0.25) or 0.25)
-                required = max(required, float(last_pyr_mfe) + min_progress)
-            except Exception:
-                pass
 
     if float(mfe_atr) < required:
         return (False, "mfe_below_required", required)
