@@ -212,7 +212,8 @@ def ingest_follower_requests():
         rows = f.execute("""
             SELECT uid, status,
                    ratio_to_close,
-                   ratio_to_add
+                   ratio_to_add,
+                   reason
             FROM follower
             WHERE status IN ('pyramide_req','partial_req','close_req')
         """).fetchall()
@@ -226,30 +227,33 @@ def ingest_follower_requests():
                     UPDATE gest
                     SET status='pyramide_req',
                         ratio_to_add=?,
+                        reason=?,
                         ts_status_update=strftime('%s','now')*1000
                     WHERE uid=?
                       AND status='follow'
-                """, (r["ratio_to_add"], uid))
+                """, (r["ratio_to_add"], r["reason"], uid))
 
             elif st == "partial_req":
                 g.execute("""
                     UPDATE gest
                     SET status='partial_req',
                         ratio_to_close=?,
+                        reason=?,
                         ts_status_update=strftime('%s','now')*1000
                     WHERE uid=?
                       AND status='follow'
-                """, (r["ratio_to_close"], uid))
+                """, (r["ratio_to_close"], r["reason"], uid))
 
             elif st == "close_req":
                 g.execute("""
                     UPDATE gest
                     SET status='close_req',
                         ratio_to_close=1.0,
+                        reason=?,
                         ts_status_update=strftime('%s','now')*1000
                     WHERE uid=?
                       AND status='follow'
-                """, (uid,))
+                """, (r["reason"], uid))
     finally:
         f.close()
         g.close()
