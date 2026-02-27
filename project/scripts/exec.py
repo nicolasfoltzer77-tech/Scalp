@@ -81,13 +81,24 @@ def get_last_price(instId):
         t.close()
 
 
-def apply_spread_and_fee(price, side):
+def execution_side(position_side, exec_type):
+    """
+    Retourne le côté d'ordre réellement envoyé au marché.
+    - open/pyramide : même sens que la position
+    - partial/close : sens opposé (réduction/fermeture)
+    """
+    if exec_type in ("partial", "close"):
+        return "sell" if position_side == "buy" else "buy"
+    return position_side
+
+
+def apply_spread_and_fee(price, side, qty):
     if side == "buy":
         px = price * (1.0 + SPREAD_PCT)
     else:
         px = price * (1.0 - SPREAD_PCT)
 
-    fee = px * FEE_PCT
+    fee = abs(float(qty) * px) * FEE_PCT
     return px, fee
 
 # ==================================================
@@ -137,7 +148,8 @@ def main():
                     )
                     continue
 
-                price_exec, fee = apply_spread_and_fee(last_price, side)
+                mkt_side = execution_side(side, exec_type)
+                price_exec, fee = apply_spread_and_fee(last_price, mkt_side, qty)
 
                 # -------------------------------
                 # EXEC DONE  (STEP +1 CANONIQUE)
