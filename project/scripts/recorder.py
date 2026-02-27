@@ -115,11 +115,22 @@ def ensure_recorder_steps():
 
 def load_trade_metrics(uid):
     c = conn(DB_EXEC)
-    pnl_row = c.execute("""
-        SELECT pnl_realized
+
+    pnl_cols = table_columns(c, "v_exec_pnl_uid")
+    pnl_col = "pnl_realized"
+    for candidate in ("pnl_realized", "pnl_net", "pnl"):
+        if candidate in pnl_cols:
+            pnl_col = candidate
+            break
+
+    pnl_row = c.execute(
+        f"""
+        SELECT {pnl_col} AS pnl_realized
         FROM v_exec_pnl_uid
         WHERE uid=?
-    """, (uid,)).fetchone()
+    """,
+        (uid,),
+    ).fetchone()
 
     cost_row = c.execute("""
         SELECT
@@ -245,23 +256,31 @@ def record_steps(uid):
     e = conn(DB_EXEC)
     r = conn(DB_REC)
 
-    rows = e.execute("""
+    exec_cols = table_columns(e, "exec")
+
+    def sel(col, alias, fallback="NULL"):
+        if col in exec_cols:
+            return f"{col} AS {alias}"
+        return f"{fallback} AS {alias}"
+
+    rows = e.execute(f"""
         SELECT
             uid,
             step,
             exec_type,
             reason,
-            price_exec,
-            qty,
-            ts_exec,
-            sl_be,
-            sl_trail,
-            tp_dyn,
-            mfe_atr,
-            mae_atr,
-            golden
+            {sel('price_exec', 'price_exec')},
+            {sel('qty', 'qty')},
+            {sel('ts_exec', 'ts_exec')},
+            {sel('sl_be', 'sl_be')},
+            {sel('sl_trail', 'sl_trail')},
+            {sel('tp_dyn', 'tp_dyn')},
+            {sel('mfe_atr', 'mfe_atr')},
+            {sel('mae_atr', 'mae_atr')},
+            {sel('golden', 'golden', '0')}
         FROM exec
         WHERE uid=?
+          AND status='done'
         ORDER BY step
     """, (uid,)).fetchall()
 
