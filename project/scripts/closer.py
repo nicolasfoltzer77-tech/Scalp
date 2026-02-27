@@ -143,16 +143,55 @@ def ingest_from_gest():
             else:
                 continue
 
-            exists = c.execute(
-                "SELECT 1 FROM closer WHERE uid=? AND exec_type=? AND step=?",
+            existing = c.execute(
+                "SELECT status FROM closer WHERE uid=? AND exec_type=? AND step=?",
                 (uid, exec_type, step),
             ).fetchone()
-            if exists:
-                continue
 
             if qty <= 0:
-                log.info("[SKIP] uid=%s type=%s step=%s qty<=0 ratio=%.6f qty_open=%.6f qty_open_exec=%.6f qty_to_close=%.6f",
-                         uid, exec_type, step, ratio_to_close, qty_open, qty_open_exec, qty_to_close)
+                # Si gest demande un close mais qu'il ne reste rien à fermer,
+                # closer doit répondre directement close_done (et jamais partial_done).
+                if stat == "close_req":
+                    if existing and existing["status"] != "close_done":
+                        c.execute(
+                            """
+                            UPDATE closer
+                            SET status='close_done', ts_exec=?
+                            WHERE uid=? AND exec_type='close' AND step=?
+                            """,
+                            (now_ms(), uid, step),
+                        )
+                    elif not existing:
+                        row_values = {
+                            "uid": uid,
+                            "instId": r["instId"],
+                            "side": r["side"],
+                            "exec_type": "close",
+                            "step": step,
+                            "qty": 0.0,
+                            "status": "close_done",
+                            ts_col: now_ms(),
+                            "reason": r["reason"],
+                        }
+                        if ratio_col:
+                            row_values[ratio_col] = ratio_to_close
+                        _insert_closer_row(c, row_values)
+
+                    log.info(
+                        "[AUTO_CLOSE_DONE] uid=%s step=%s qty<=0 ratio=%.6f qty_open=%.6f qty_open_exec=%.6f qty_to_close=%.6f",
+                        uid,
+                        step,
+                        ratio_to_close,
+                        qty_open,
+                        qty_open_exec,
+                        qty_to_close,
+                    )
+                else:
+                    log.info("[SKIP] uid=%s type=%s step=%s qty<=0 ratio=%.6f qty_open=%.6f qty_open_exec=%.6f qty_to_close=%.6f",
+                             uid, exec_type, step, ratio_to_close, qty_open, qty_open_exec, qty_to_close)
+                continue
+
+            if existing:
                 continue
 
             row_values = {
