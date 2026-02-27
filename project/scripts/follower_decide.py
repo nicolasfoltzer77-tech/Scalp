@@ -5,6 +5,7 @@ import logging
 import sqlite3
 from pathlib import Path
 from follower_decide_guard import is_valid_position
+from follower_fsm_guard import fsm_ready
 
 log = logging.getLogger("FOLLOWER_DECIDE")
 
@@ -124,6 +125,20 @@ def _should_pyramide(fr_state, fr_full, CFG, now):
 
     next_step = nb_pyr + 2
     required = _pyramide_required_mfe_atr(next_step, CFG)
+
+    # Cumulative pyramiding guard:
+    # for add #2+ require an extra MFE progress since the last pyramide trigger.
+    # This prevents duplicate/re-entrant requests when the trade oscillates around
+    # the same MFE area and keeps the "pyramides cumulatives" behavior explicit.
+    if next_step >= 3:
+        last_pyr_mfe = fr_full["last_pyramide_mfe_atr"] if "last_pyramide_mfe_atr" in fr_full.keys() else None
+        if last_pyr_mfe is not None:
+            try:
+                min_progress = float(CFG.get("pyramide_mfe_step", 0.25) or 0.25)
+                required = max(required, float(last_pyr_mfe) + min_progress)
+            except Exception:
+                pass
+
     if float(mfe_atr) < required:
         return (False, "mfe_below_required", required)
 
@@ -144,6 +159,15 @@ def decide_core(f, CFG, now):
     for fr in rows:
 
         if not is_valid_position(fr):
+            continue
+
+        if not fsm_ready(fr):
+            log.debug(
+                "[DECIDE_SKIP] uid=%s why=fsm_not_ready req_step=%s done_step=%s",
+                fr["uid"],
+                fr["req_step"],
+                fr["done_step"],
+            )
             continue
 
         uid = fr["uid"]
