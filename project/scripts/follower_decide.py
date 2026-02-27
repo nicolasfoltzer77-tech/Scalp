@@ -205,7 +205,6 @@ def decide_core(f, CFG, now):
                     req_step=req_step+1,
                     ts_decision=?,
                     last_decision_ts=?,
-                    nb_pyramide=nb_pyramide+1,
                     cooldown_pyramide_ts=?,
                     last_pyramide_ts=?,
                     last_pyramide_mfe_atr=?,
@@ -222,7 +221,7 @@ def decide_core(f, CFG, now):
                 uid
             ))
 
-            log.info("[PYRAMIDE] uid=%s ratio=%.4f mfe_atr=%.4f nb_pyr->%d", uid, ratio_add, float(fr["mfe_atr"] or 0.0), int(fr["nb_pyramide"] or 0) + 1)
+            log.info("[PYRAMIDE] uid=%s ratio=%.4f mfe_atr=%.4f req_nb_pyr=%d", uid, ratio_add, float(fr["mfe_atr"] or 0.0), int(fr["nb_pyramide"] or 0) + 1)
             continue
 
         # ==========================================================
