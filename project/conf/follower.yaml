@@ -33,12 +33,11 @@ follower:
   pyramide_cooldown_s: 20
   pyramide_qty_ratio: 0.15
   pyramide_max_adds: 10
-  pyramide_mfe_base: 0.20
+  pyramide_atr_step: 0.25
   pyramide_mfe_step: 0.25
   min_mae_forbid_pyramide: 3.0
 
-  # step 2 = 0.45 ATR, step 3 = 0.70 ATR,
-  # step x = 0.20 + 0.25*(x-1) ATR (x>=2)
+  # pyr1=0.45 ATR, pyr2=0.70 ATR, pyr3=0.95 ATR, etc (+0.25 ATR)
 
   # ==========================================================
   # PARTIAL TAKE PROFIT
