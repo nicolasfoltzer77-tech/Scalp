@@ -157,7 +157,7 @@ def ingest_closer_done():
                     SET status='partial_done',
                         ts_status_update=strftime('%s','now')*1000
                     WHERE uid=?
-                      AND status='partial_req'
+                      AND status IN ('partial_req','close_req')
                 """, (uid,))
             elif st == "close_done":
                 g.execute("""

@@ -38,7 +38,7 @@ def copy_closer():
                 SET status='partial_done',
                     ts_close=?,
                     ts_updated=?
-                WHERE uid=? AND status='partial_req'
+                WHERE uid=? AND status IN ('partial_req','close_req')
             """, (r["ts_exec"], now, r["uid"]))
 
         elif r["status"] == "close_done":

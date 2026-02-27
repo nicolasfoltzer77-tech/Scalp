@@ -202,6 +202,11 @@ def ack_exec_done():
               AND exec_type IN ('partial','close')
         """).fetchall()
 
+        remaining_qty = {
+            r["uid"]: float(r["qty_open"] or 0.0)
+            for r in e.execute("SELECT uid, qty_open FROM v_exec_position")
+        }
+
         for r in rows:
             uid = r["uid"]
             exec_type = r["exec_type"]
@@ -210,10 +215,17 @@ def ack_exec_done():
             if step_done < 0:
                 continue
 
+            rem = float(remaining_qty.get(uid, 0.0))
+            fully_closed = rem <= 1e-12
+
             if exec_type == "partial":
-                status_from, status_to = "partial_stdby", "partial_done"
+                status_from = "partial_stdby"
             else:
-                status_from, status_to = "close_stdby", "close_done"
+                status_from = "close_stdby"
+
+            # Le statut DONE dépend du reliquat réel dans exec,
+            # pas seulement du type demandé initialement.
+            status_to = "close_done" if fully_closed else "partial_done"
 
             try:
                 res = c.execute("""
@@ -236,6 +248,15 @@ def ack_exec_done():
                     SET status=?, step=?, ts_exec=?
                     WHERE uid=? AND exec_type=? AND step=? AND status=?
                 """, (status_to, step_new, now_ms(), uid, exec_type, step_new, status_from))
+
+            log.info(
+                "[ACK] uid=%s req_type=%s step=%s remaining=%.10f -> %s",
+                uid,
+                exec_type,
+                step_new,
+                rem,
+                status_to,
+            )
 
         c.commit()
 
