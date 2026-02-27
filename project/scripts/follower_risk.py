@@ -145,6 +145,16 @@ def _side_sign(side):
     return 1.0 if side == "buy" else -1.0
 
 
+def _be_level(price_open, side, atr, CFG):
+    """
+    Break-even safety offset:
+      - buy  => slightly ABOVE average open
+      - sell => slightly BELOW average open
+    """
+    offset_mult = float(CFG.get("sl_be_offset_atr", 0.0) or 0.0)
+    return float(price_open) + (_side_sign(side) * float(atr) * offset_mult)
+
+
 def _resolve_atr(fr):
     """
     Follower rows expose `atr_signal` (repo schema), not `atr`.
@@ -232,11 +242,78 @@ def arm_break_even(f, fr, CFG, now):
     if price_open is None:
         return
 
-    # Break-even must lock at real average entry price.
-    sl = price_open
+    side = _norm_side(_row_get(fr, "side"))
+    atr = _resolve_positive_atr(fr)
+    if atr is None:
+        log.warning("[RISK] skip be arm (atr<=0) uid=%s", fr["uid"])
+        return
+
+    sl = _be_level(price_open, side, atr, CFG)
 
     _set_level_once(f, fr["uid"], "sl_be", sl, now)
     log.info("[BE_ARMED] uid=%s sl_be=%.6f", fr["uid"], sl)
+
+
+def recalc_levels_on_pyramide_fill(f, fr, CFG, now):
+    """
+    After a pyramide fill, average position price changes.
+    Re-anchor all armed SL levels to the full updated position.
+    """
+    if _row_get(fr, "last_exec_type") != "pyramide":
+        return
+
+    last_ts_exec = int(_row_get(fr, "last_ts_exec", 0) or 0)
+    if last_ts_exec <= 0:
+        return
+
+    # Re-apply only once per fill.
+    last_action_ts = int(_row_get(fr, "last_action_ts", 0) or 0)
+    if last_action_ts >= last_ts_exec:
+        return
+
+    price_open = _resolve_price_open(f, fr)
+    if price_open is None:
+        return
+
+    side = _norm_side(_row_get(fr, "side"))
+    sign = _side_sign(side)
+    atr = _resolve_positive_atr(fr)
+    if atr is None:
+        log.warning("[RISK] skip pyramide SL recalibration (atr<=0) uid=%s", fr["uid"])
+        return
+
+    hard_mult = float(CFG.get("sl_hard_atr_mult", 1.0) or 1.0)
+    hard_sl = price_open - (sign * atr * hard_mult)
+
+    sl_be = _row_get(fr, "sl_be")
+    sl_be_new = None
+    if sl_be not in (None, 0, 0.0):
+        sl_be_new = _be_level(price_open, side, atr, CFG)
+
+    sl_trail = _row_get(fr, "sl_trail")
+    sl_trail_new = None
+    if sl_trail not in (None, 0, 0.0):
+        tr_mult = float(CFG.get("sl_trail_offset_atr", 1.0) or 1.0)
+        sl_trail_new = price_open - (sign * atr * tr_mult)
+
+    f.execute(
+        """
+        UPDATE follower
+        SET sl_hard=?,
+            sl_be=CASE WHEN COALESCE(sl_be,0)<>0 THEN ? ELSE sl_be END,
+            sl_trail=CASE WHEN COALESCE(sl_trail,0)<>0 THEN ? ELSE sl_trail END,
+            last_action_ts=?
+        WHERE uid=?
+        """,
+        (hard_sl, sl_be_new, sl_trail_new, now, fr["uid"])
+    )
+    log.info(
+        "[PYRAMIDE_RECALC_SL] uid=%s hard=%.6f be=%s trail=%s",
+        fr["uid"],
+        hard_sl,
+        f"{sl_be_new:.6f}" if sl_be_new is not None else "-",
+        f"{sl_trail_new:.6f}" if sl_trail_new is not None else "-"
+    )
 
 
 # ==========================================================
@@ -387,6 +464,7 @@ def rebalance_levels_50(f, fr, CFG, now):
 # ENTRY
 # ==========================================================
 def manage_risk(f, fr, CFG, now):
+    recalc_levels_on_pyramide_fill(f, fr, CFG, now)
     arm_hard_sl(f, fr, CFG, now)
     enforce_hard_sl_side(f, fr, CFG, now)
     arm_break_even(f, fr, CFG, now)
