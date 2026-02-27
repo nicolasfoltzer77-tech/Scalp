@@ -141,32 +141,35 @@ def ingest_closer_done():
     g = conn(DB_GEST)
 
     try:
-        rows = c.execute("""
-            SELECT uid, status
+        close_done_uids = c.execute("""
+            SELECT uid
             FROM closer
-            WHERE status IN ('close_done','partial_done')
+            WHERE status='close_done'
         """).fetchall()
 
-        for r in rows:
-            uid = r["uid"]
-            st  = r["status"]
+        for r in close_done_uids:
+            g.execute("""
+                UPDATE gest
+                SET status='close_done',
+                    ts_status_update=strftime('%s','now')*1000
+                WHERE uid=?
+                  AND status='close_req'
+            """, (r["uid"],))
 
-            if st == "partial_done":
-                g.execute("""
-                    UPDATE gest
-                    SET status='partial_done',
-                        ts_status_update=strftime('%s','now')*1000
-                    WHERE uid=?
-                      AND status='partial_req'
-                """, (uid,))
-            elif st == "close_done":
-                g.execute("""
-                    UPDATE gest
-                    SET status='close_done',
-                        ts_status_update=strftime('%s','now')*1000
-                    WHERE uid=?
-                      AND status='close_req'
-                """, (uid,))
+        partial_done_uids = c.execute("""
+            SELECT uid
+            FROM closer
+            WHERE status='partial_done'
+        """).fetchall()
+
+        for r in partial_done_uids:
+            g.execute("""
+                UPDATE gest
+                SET status='partial_done',
+                    ts_status_update=strftime('%s','now')*1000
+                WHERE uid=?
+                  AND status='partial_req'
+            """, (r["uid"],))
     finally:
         c.close()
         g.close()
