@@ -33,15 +33,6 @@ def copy_closer():
         WHERE status IN ('partial_done','close_done')
     """):
         if r["status"] == "partial_done":
-            # Règle FSM stricte : close_req doit finir en close_done uniquement.
-            g.execute("""
-                UPDATE gest
-                SET status='close_done',
-                    ts_close=?,
-                    ts_updated=?
-                WHERE uid=? AND status='close_req'
-            """, (r["ts_exec"], now, r["uid"]))
-
             g.execute("""
                 UPDATE gest
                 SET status='partial_done',
