@@ -190,6 +190,8 @@ def build_value_for_column(col, g, pnl_realized, ts_rec):
         return ts_rec
     if col == "close_steps":
         return rget(g, "close_steps", rget(g, "close_step"))
+    if col == "step":
+        return rget(g, "step", rget(g, "close_step", rget(g, "close_steps")))
     if col == "price_exec_close":
         return rget(g, "price_exec_close", rget(g, "avg_exit_price"))
     if col == "ts_open":
