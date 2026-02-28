@@ -138,6 +138,10 @@ def _should_pyramide(fr_state, fr_full, CFG, now):
 
 def decide_core(f, CFG, now):
 
+    partial_mfe_atr = float(CFG.get("partial_mfe_atr", 1.10) or 1.10)
+    partial_close_ratio = float(CFG.get("partial_close_ratio", 0.25) or 0.25)
+    min_partial_qty = float(CFG.get("min_partial_qty", 0.0) or 0.0)
+
     rows = f.execute("""
         SELECT *
         FROM v_follower_state
@@ -241,14 +245,20 @@ def decide_core(f, CFG, now):
         # IMPORTANT (INVARIANT REPO):
         # - follower.step NE DOIT PAS bouger sur *_req
         # ==========================================================
-        if fr["mfe_atr"] >= CFG["partial_mfe_atr"] and fr["nb_partial"] == 0:
+        mfe_atr = fr["mfe_atr"]
+        try:
+            mfe_atr = float(mfe_atr) if mfe_atr is not None else None
+        except Exception:
+            mfe_atr = None
 
-            ratio_cfg = CFG["partial_close_ratio"]
+        if mfe_atr is not None and mfe_atr >= partial_mfe_atr and int(fr["nb_partial"] or 0) == 0:
+
+            ratio_cfg = partial_close_ratio
             qty_open = float(fr["qty_open"] or 0.0)
             if qty_open <= 0:
                 continue
 
-            min_qty = CFG.get("min_partial_qty", 0.0)
+            min_qty = min_partial_qty
             ratio_min_exec = (min_qty / qty_open) if qty_open > 0 else 999.0
 
             if ratio_min_exec > ratio_cfg:
