@@ -170,10 +170,15 @@ def decide_core(f, CFG, now):
     for fr in rows:
 
         if not is_valid_position(fr):
+            log.info(
+                "[DECIDE_SKIP] uid=%s why=invalid_position qty_open=%s",
+                fr["uid"],
+                fr["qty_open"],
+            )
             continue
 
         if not fsm_ready(fr):
-            log.debug(
+            log.info(
                 "[DECIDE_SKIP] uid=%s why=fsm_not_ready req_step=%s done_step=%s",
                 fr["uid"],
                 fr["req_step"],
@@ -185,6 +190,7 @@ def decide_core(f, CFG, now):
 
         fr_full = f.execute("SELECT * FROM follower WHERE uid=?", (uid,)).fetchone()
         if not fr_full:
+            log.info("[DECIDE_SKIP] uid=%s why=row_not_found", uid)
             continue
 
         side = str(fr_full["side"] or "").strip().lower()
@@ -220,6 +226,7 @@ def decide_core(f, CFG, now):
                         reason=?
                     WHERE uid=?
                 """, (now, now, close_reason, uid))
+                log.info("[CLOSE_REQ] uid=%s reason=%s price_now=%.8f", uid, close_reason, float(price_now))
                 continue
 
         # ==========================================================
@@ -258,6 +265,16 @@ def decide_core(f, CFG, now):
 
             log.info("[PYRAMIDE] uid=%s ratio=%.4f mfe_atr=%.4f req_nb_pyr=%d", uid, ratio_add, float(fr["mfe_atr"] or 0.0), int(fr["nb_pyramide"] or 0) + 1)
             continue
+        else:
+            log.info(
+                "[PYRAMIDE_BLOCKED] uid=%s why=%s mfe_atr=%s mae_atr=%s nb_pyr=%s extra=%s",
+                uid,
+                why,
+                fr["mfe_atr"],
+                fr["mae_atr"],
+                fr["nb_pyramide"],
+                ratio_or_req,
+            )
 
         # ==========================================================
         # PARTIAL — FILTRE TRADABILITÉ
@@ -270,7 +287,24 @@ def decide_core(f, CFG, now):
         except Exception:
             mfe_atr = None
 
-        if mfe_atr is not None and mfe_atr >= partial_mfe_atr and int(fr["nb_partial"] or 0) == 0:
+        if int(fr["nb_partial"] or 0) > 0:
+            log.info("[PARTIAL_BLOCKED] uid=%s why=already_done nb_partial=%s", uid, fr["nb_partial"])
+            continue
+
+        if mfe_atr is None:
+            log.info("[PARTIAL_BLOCKED] uid=%s why=no_mfe_atr", uid)
+            continue
+
+        if mfe_atr < partial_mfe_atr:
+            log.info(
+                "[PARTIAL_BLOCKED] uid=%s why=mfe_below_required mfe_atr=%.4f required=%.4f",
+                uid,
+                mfe_atr,
+                partial_mfe_atr,
+            )
+            continue
+
+        if mfe_atr >= partial_mfe_atr and int(fr["nb_partial"] or 0) == 0:
 
             ratio_cfg = partial_close_ratio
             qty_open = float(fr["qty_open"] or 0.0)
@@ -296,6 +330,13 @@ def decide_core(f, CFG, now):
                         reason='PARTIAL_SKIPPED_MIN_QTY'
                     WHERE uid=?
                 """, (now, now, now, uid))
+                log.info(
+                    "[PARTIAL_BLOCKED] uid=%s why=min_qty ratio_needed=%.6f ratio_cfg=%.6f qty_open=%.8f",
+                    uid,
+                    ratio_min_exec,
+                    ratio_cfg,
+                    qty_open,
+                )
                 continue
 
             f.execute("""
@@ -320,5 +361,12 @@ def decide_core(f, CFG, now):
                 float(fr["mfe_atr"] or 0.0),
                 uid
             ))
+
+            log.info(
+                "[PARTIAL] uid=%s ratio=%.4f mfe_atr=%.4f",
+                uid,
+                ratio_cfg,
+                float(fr["mfe_atr"] or 0.0),
+            )
 
             continue
