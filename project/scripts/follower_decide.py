@@ -135,9 +135,10 @@ def _should_pyramide(fr_state, fr_full, CFG, now):
     next_step = nb_pyr + 2
     required = _pyramide_required_mfe_atr(next_step, CFG)
 
-    # Cumulative pyramiding guard (restored):
+    # Optional cumulative pyramiding guard:
     # for add #2+ require extra MFE progress since last pyramide.
-    if next_step >= 3:
+    enforce_progress = bool(CFG.get("pyramide_require_progress_since_last", False))
+    if enforce_progress and next_step >= 3:
         last_pyr_mfe = fr_full["last_pyramide_mfe_atr"] if "last_pyramide_mfe_atr" in fr_full.keys() else None
         if last_pyr_mfe is not None:
             try:
