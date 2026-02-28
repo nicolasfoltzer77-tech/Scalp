@@ -67,6 +67,14 @@ def ingest_open_done(g, f, now):
                     instId=?,
                     side=?,
                     step=?,
+                    req_step=CASE
+                        WHEN COALESCE(req_step, 0) < COALESCE(?, 0) THEN COALESCE(?, 0)
+                        ELSE req_step
+                    END,
+                    done_step=CASE
+                        WHEN COALESCE(done_step, 0) < COALESCE(?, 0) THEN COALESCE(?, 0)
+                        ELSE done_step
+                    END,
                     atr_signal=?,
                     sl_hard=CASE
                         WHEN COALESCE(sl_hard, 0)=0 THEN ?
@@ -77,6 +85,10 @@ def ingest_open_done(g, f, now):
             """, (
                 r["instId"],
                 r["side"],
+                r["step"] or 0,
+                r["step"] or 0,
+                r["step"] or 0,
+                r["step"] or 0,
                 r["step"] or 0,
                 atr_signal,
                 sl_hard,
@@ -99,9 +111,11 @@ def ingest_open_done(g, f, now):
                 nb_partial,
                 nb_pyramide,
                 atr_signal,
-                sl_hard
+                sl_hard,
+                req_step,
+                done_step
             ) VALUES (
-                ?,?,?,?,?,?,?,?,?,?,?,?
+                ?,?,?,?,?,?,?,?,?,?,?,?,?,?
             )
         """, (
             uid,
@@ -115,5 +129,7 @@ def ingest_open_done(g, f, now):
             0,
             0,
             atr_signal,
-            sl_hard
+            sl_hard,
+            r["step"] or 0,
+            r["step"] or 0
         ))
