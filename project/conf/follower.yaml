@@ -35,6 +35,7 @@ follower:
   pyramide_max_adds: 10
   pyramide_atr_step: 0.25
   pyramide_mfe_step: 0.25
+  pyramide_require_progress_since_last: false
   min_mae_forbid_pyramide: 3.0
 
   # pyr1=0.45 ATR, pyr2=0.70 ATR, pyr3=0.95 ATR, etc (+0.25 ATR)
