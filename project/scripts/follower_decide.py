@@ -168,11 +168,42 @@ def decide_core(f, CFG, now):
     """).fetchall()
 
     for fr in rows:
+        uid = fr["uid"]
+
+        # Self-heal rare FSM drift on follower rows already back to 'follow'.
+        # Example: req_step incremented on *_req then the request got cancelled
+        # upstream; done_step never catches up and decisions remain blocked forever.
+        try:
+            req_step = int(fr["req_step"] or 0)
+            done_step = int(fr["done_step"] or 0)
+        except Exception:
+            req_step = 0
+            done_step = 0
+
+        if req_step > done_step and str(fr["status"] or "") == "follow":
+            f.execute(
+                """
+                UPDATE follower
+                SET req_step=?,
+                    ts_updated=?
+                WHERE uid=?
+                  AND status='follow'
+                """,
+                (done_step, now, uid),
+            )
+            fr = dict(fr)
+            fr["req_step"] = done_step
+            log.info(
+                "[FSM_HEAL] uid=%s req_step=%s -> %s (align on done_step)",
+                uid,
+                req_step,
+                done_step,
+            )
 
         if not is_valid_position(fr):
             log.info(
                 "[DECIDE_SKIP] uid=%s why=invalid_position qty_open=%s",
-                fr["uid"],
+                uid,
                 fr["qty_open"],
             )
             continue
@@ -180,13 +211,11 @@ def decide_core(f, CFG, now):
         if not fsm_ready(fr):
             log.info(
                 "[DECIDE_SKIP] uid=%s why=fsm_not_ready req_step=%s done_step=%s",
-                fr["uid"],
+                uid,
                 fr["req_step"],
                 fr["done_step"],
             )
             continue
-
-        uid = fr["uid"]
 
         fr_full = f.execute("SELECT * FROM follower WHERE uid=?", (uid,)).fetchone()
         if not fr_full:
