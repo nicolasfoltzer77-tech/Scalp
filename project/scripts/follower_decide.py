@@ -93,6 +93,14 @@ def _pyramide_required_mfe_atr(next_step, CFG):
     if next_step <= 1:
         return 0.0
 
+    # Backward compatible behavior:
+    # - legacy config used pyramide_mfe_base/pyramide_mfe_step
+    # - simplified config uses pyramide_atr_trigger/pyramide_atr_step
+    if "pyramide_mfe_base" in CFG and "pyramide_atr_step" not in CFG:
+        base = float(CFG.get("pyramide_mfe_base", 0.20) or 0.20)
+        step = float(CFG.get("pyramide_mfe_step", 0.25) or 0.25)
+        return base + step * (next_step - 1)
+
     first_trigger = float(CFG.get("pyramide_atr_trigger", 0.45) or 0.45)
     atr_step = float(
         CFG.get("pyramide_atr_step", CFG.get("pyramide_mfe_step", 0.25)) or 0.25
@@ -127,6 +135,17 @@ def _should_pyramide(fr_state, fr_full, CFG, now):
     next_step = nb_pyr + 2
     required = _pyramide_required_mfe_atr(next_step, CFG)
 
+    # Cumulative pyramiding guard (restored):
+    # for add #2+ require extra MFE progress since last pyramide.
+    if next_step >= 3:
+        last_pyr_mfe = fr_full["last_pyramide_mfe_atr"] if "last_pyramide_mfe_atr" in fr_full.keys() else None
+        if last_pyr_mfe is not None:
+            try:
+                min_progress = float(CFG.get("pyramide_mfe_step", CFG.get("pyramide_atr_step", 0.25)) or 0.25)
+                required = max(required, float(last_pyr_mfe) + min_progress)
+            except Exception:
+                pass
+
     if float(mfe_atr) < required:
         return (False, "mfe_below_required", required)
 
@@ -138,7 +157,7 @@ def _should_pyramide(fr_state, fr_full, CFG, now):
 
 def decide_core(f, CFG, now):
 
-    partial_mfe_atr = float(CFG.get("partial_mfe_atr", 1.10) or 1.10)
+    partial_mfe_atr = float(CFG.get("partial_mfe_atr", CFG.get("partial_atr_trigger", 1.10)) or 1.10)
     partial_close_ratio = float(CFG.get("partial_close_ratio", 0.25) or 0.25)
     min_partial_qty = float(CFG.get("min_partial_qty", 0.0) or 0.0)
 
@@ -256,7 +275,13 @@ def decide_core(f, CFG, now):
             ratio_cfg = partial_close_ratio
             qty_open = float(fr["qty_open"] or 0.0)
             if qty_open <= 0:
-                continue
+                qty_open = float(fr_full["qty_open_snapshot"] or 0.0)
+            if qty_open <= 0:
+                qty_open = float(fr_full["qty"] or 0.0) * float(fr["qty_ratio"] or 0.0)
+            if qty_open <= 0:
+                # Keep partial functional even when qty_open sync drifts.
+                # closer.py recomputes size from v_exec_position when available.
+                qty_open = 1.0
 
             min_qty = min_partial_qty
             ratio_min_exec = (min_qty / qty_open) if qty_open > 0 else 999.0
