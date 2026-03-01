@@ -45,7 +45,7 @@ def ingest_pyramide_req():
     try:
         rows = g.execute("""
             SELECT uid, instId, side, ratio_to_add, ts_status_update, step,
-                   qty_open, last_price_exec, avg_price_open, entry
+                   qty_open, avg_entry_price AS avg_price_open, entry
             FROM gest
             WHERE status='pyramide_req'
         """).fetchall()
@@ -101,8 +101,6 @@ def ingest_pyramide_req():
             if qty_pos <= 0:
                 qty_pos = _f(r["qty_open"], 0.0)
 
-            if price <= 0:
-                price = _f(r["last_price_exec"], 0.0)
             if price <= 0:
                 price = _f(r["avg_price_open"], 0.0)
             if price <= 0:
