@@ -155,13 +155,15 @@ def ingest_closer_done():
         """).fetchall()
 
         for r in close_done_uids:
-            g.execute("""
+            cur = g.execute("""
                 UPDATE gest
                 SET status='close_done',
                     ts_status_update=strftime('%s','now')*1000
                 WHERE uid=?
                   AND status='close_req'
             """, (r["uid"],))
+            if cur.rowcount:
+                log.info("[GEST ACK] uid=%s close_req -> close_done", r["uid"])
 
         partial_done_uids = c.execute("""
             SELECT uid
@@ -170,13 +172,15 @@ def ingest_closer_done():
         """).fetchall()
 
         for r in partial_done_uids:
-            g.execute("""
+            cur = g.execute("""
                 UPDATE gest
                 SET status='partial_done',
                     ts_status_update=strftime('%s','now')*1000
                 WHERE uid=?
                   AND status='partial_req'
             """, (r["uid"],))
+            if cur.rowcount:
+                log.info("[GEST ACK] uid=%s partial_req -> partial_done", r["uid"])
     finally:
         c.close()
         g.close()
@@ -210,7 +214,7 @@ def mirror_follower_follow():
             # Compat legacy: certains environnements ont déjà utilisé "partialdone"
             # (sans underscore). Dans tous les cas, follower=follow est canonique.
             if cur.rowcount:
-                print(f"[GEST FOLLOW] uid={uid} -> follow")
+                log.info("[GEST FOLLOW] uid=%s -> follow", uid)
     finally:
         f.close()
         g.close()
@@ -240,8 +244,9 @@ def ingest_follower_requests():
 
         # Follower peut envoyer une nouvelle requête juste après un ACK *_done,
         # avant que mirror_follower_follow() n'ait eu le temps de repasser
-        # gest.status à "follow". On accepte donc aussi les états *_done comme
-        # base valide pour promouvoir vers *_req.
+        # gest.status à "follow". On accepte les états *_done comme base valide
+        # uniquement quand req_step/done_step existent (FSM récente).
+        req_from_done_allowed = has_fsm_cols
         for r in rows:
             uid = r["uid"]
             st  = r["status"]
@@ -256,6 +261,10 @@ def ingest_follower_requests():
                     continue
 
             if st == "pyramide_req":
+                base_statuses = ["follow", "open_done", "partial_done", "partialdone"]
+                if req_from_done_allowed:
+                    base_statuses.append("pyramide_done")
+                placeholders = ",".join(["?"] * len(base_statuses))
                 cur = g.execute("""
                     UPDATE gest
                     SET status='pyramide_req',
@@ -263,8 +272,8 @@ def ingest_follower_requests():
                         reason=?,
                         ts_status_update=strftime('%s','now')*1000
                     WHERE uid=?
-                      AND status IN ('follow','open_done','pyramide_done','partial_done','partialdone')
-                """, (r["ratio_to_add"], r["reason"], uid))
+                      AND status IN (""" + placeholders + """)
+                """, (r["ratio_to_add"], r["reason"], uid, *base_statuses))
                 if cur.rowcount:
                     log.info("[GEST REQ] uid=%s -> pyramide_req", uid)
 
@@ -313,7 +322,7 @@ def main():
             mirror_follower_follow()
             ingest_follower_requests()
         except Exception as e:
-            print("[GEST ERROR]", e)
+            log.exception("[GEST ERROR] %s", e)
 
         time.sleep(LOOP_SLEEP)
 
