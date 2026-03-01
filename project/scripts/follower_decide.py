@@ -142,10 +142,8 @@ def _should_pyramide(fr_state, fr_full, CFG, now):
     if mfe_atr is None:
         return (False, "no_mfe_atr", None)
 
-    mae_atr = fr_state["mae_atr"]
-    min_mae_forbid = float(CFG.get("min_mae_forbid_pyramide", 1e9) or 1e9)
-    if mae_atr is not None and float(mae_atr) >= min_mae_forbid:
-        return (False, "mae_forbid", None)
+    # Design choice (requested): pyramide trigger must be driven by MFE ATR
+    # only, with no coupling to partial flow and no MAE-based veto.
 
     max_adds = int(CFG.get("pyramide_max_adds", 5) or 5)
     nb_pyr = int(fr_state["nb_pyramide"] or 0)
@@ -333,11 +331,10 @@ def decide_core(f, CFG, now):
             continue
         else:
             log.info(
-                "[PYRAMIDE_BLOCKED] uid=%s why=%s mfe_atr=%s mae_atr=%s nb_pyr=%s extra=%s",
+                "[PYRAMIDE_BLOCKED] uid=%s why=%s mfe_atr=%s nb_pyr=%s extra=%s",
                 uid,
                 why,
                 fr["mfe_atr"],
-                fr["mae_atr"],
                 fr["nb_pyramide"],
                 ratio_or_req,
             )
