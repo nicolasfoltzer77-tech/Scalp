@@ -215,7 +215,7 @@ def decide_core(f, CFG, now):
             req_step = 0
             done_step = 0
 
-        if req_step > done_step and str(fr["status"] or "") == "follow":
+        if req_step != done_step and str(fr["status"] or "") == "follow":
             f.execute(
                 """
                 UPDATE follower
@@ -229,7 +229,7 @@ def decide_core(f, CFG, now):
             fr = dict(fr)
             fr["req_step"] = done_step
             log.info(
-                "[FSM_HEAL] uid=%s req_step=%s -> %s (align on done_step)",
+                "[FSM_HEAL] uid=%s req_step=%s done_step=%s -> align req_step on done_step",
                 uid,
                 req_step,
                 done_step,
