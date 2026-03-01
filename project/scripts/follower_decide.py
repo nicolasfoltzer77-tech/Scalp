@@ -119,6 +119,15 @@ def _compute_next_pyramide_step(fr_state):
       open + no add yet      => next_step = 2 (first add)
       open + 1 pyramide      => next_step = 3 (second add)
       open + 1 pyramide + partial => next_step = 3 (still second add)
+    Returns the pyramide ladder step to evaluate next.
+
+    The pyramide ATR ladder must be based on the number of adds already done,
+    not on the global mixed action sequence (partial/close included).
+
+    Mapping:
+      nb_pyramide=0 -> next pyramide step=2 (pyr #1)
+      nb_pyramide=1 -> next pyramide step=3 (pyr #2)
+      nb_pyramide=2 -> next pyramide step=4 (pyr #3)
     """
     try:
         nb_pyr = int(fr_state["nb_pyramide"] or 0)
@@ -158,6 +167,9 @@ def _should_pyramide(fr_state, fr_full, CFG, now):
                 return (False, "cooldown", None)
         except Exception:
             pass
+
+    next_step = _compute_next_pyramide_step(fr_state)
+    required = _pyramide_required_mfe_atr(next_step, CFG)
 
     # Optional cumulative pyramiding guard:
     # for add #2+ require extra MFE progress since last pyramide.
