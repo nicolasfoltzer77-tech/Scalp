@@ -110,6 +110,15 @@ def _pyramide_required_mfe_atr(next_step, CFG):
 
 def _compute_next_pyramide_step(fr_state):
     """
+    Returns the next pyramide index as a logical step in the pyramide ladder.
+
+    Pyramide thresholds must depend on the number of existing adds, not on the
+    global mixed action sequence (partial/close can happen in-between).
+
+    Examples:
+      open + no add yet      => next_step = 2 (first add)
+      open + 1 pyramide      => next_step = 3 (second add)
+      open + 1 pyramide + partial => next_step = 3 (still second add)
     Returns the pyramide ladder step to evaluate next.
 
     The pyramide ATR ladder must be based on the number of adds already done,
@@ -143,11 +152,18 @@ def _should_pyramide(fr_state, fr_full, CFG, now):
     if nb_pyr >= max_adds:
         return (False, "max_adds_reached", None)
 
+    next_step = _compute_next_pyramide_step(fr_state)
+    required = _pyramide_required_mfe_atr(next_step, CFG)
+
     cooldown_s = float(CFG.get("pyramide_cooldown_s", 0.0) or 0.0)
     cd_ts = fr_full["cooldown_pyramide_ts"] if "cooldown_pyramide_ts" in fr_full.keys() else None
-    if cd_ts is not None:
+    if cd_ts is not None and cooldown_s > 0.0:
         try:
-            if now - int(cd_ts) < int(cooldown_s * 1000):
+            cooldown_ms = int(cooldown_s * 1000)
+            elapsed_ms = now - int(cd_ts)
+            # Keep the cooldown as a debounce for noisy flat moves, but do not
+            # block a valid next ladder trigger (0.45 / 0.70 / 0.95 / ...).
+            if elapsed_ms < cooldown_ms and float(mfe_atr) < required:
                 return (False, "cooldown", None)
         except Exception:
             pass
