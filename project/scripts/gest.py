@@ -226,6 +226,10 @@ def ingest_follower_requests():
             WHERE status IN ('pyramide_req','partial_req','close_req')
         """).fetchall()
 
+        # Follower peut envoyer une nouvelle requête juste après un ACK *_done,
+        # avant que mirror_follower_follow() n'ait eu le temps de repasser
+        # gest.status à "follow". On accepte donc aussi les états *_done comme
+        # base valide pour promouvoir vers *_req.
         for r in rows:
             uid = r["uid"]
             st  = r["status"]
@@ -238,7 +242,7 @@ def ingest_follower_requests():
                         reason=?,
                         ts_status_update=strftime('%s','now')*1000
                     WHERE uid=?
-                      AND status='follow'
+                      AND status IN ('follow','open_done','pyramide_done','partial_done','partialdone')
                 """, (r["ratio_to_add"], r["reason"], uid))
 
             elif st == "partial_req":
@@ -249,7 +253,7 @@ def ingest_follower_requests():
                         reason=?,
                         ts_status_update=strftime('%s','now')*1000
                     WHERE uid=?
-                      AND status='follow'
+                      AND status IN ('follow','open_done','pyramide_done','partial_done','partialdone')
                 """, (r["ratio_to_close"], r["reason"], uid))
 
             elif st == "close_req":
@@ -260,7 +264,7 @@ def ingest_follower_requests():
                         reason=?,
                         ts_status_update=strftime('%s','now')*1000
                     WHERE uid=?
-                      AND status='follow'
+                      AND status IN ('follow','open_done','pyramide_done','partial_done','partialdone')
                 """, (r["reason"], uid))
     finally:
         f.close()
