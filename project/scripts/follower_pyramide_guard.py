@@ -72,14 +72,19 @@ def guard_pyramide_fsm(*, g, f, now):
         g_step   = gr["step"]
 
         # --- PYRAMIDE ACCEPTÉE ---
-        if g_status == "pyramide_done" and g_step == step:
+        # IMPORTANT:
+        # gest.step peut diverger temporairement de follower.step selon
+        # l'ordre d'ingestion (opener/exec/mirror). Dès que gest confirme
+        # pyramide_done, on doit débloquer follower pour reprendre en follow.
+        if g_status == "pyramide_done":
             f.execute("""
                 UPDATE follower
                 SET status='follow',
                     nb_pyramide = nb_pyramide + 1,
+                    step=COALESCE(?, step),
                     last_action_ts=?
                 WHERE uid=? AND status='pyramide_req'
-            """, (now, uid))
+            """, (g_step, now, uid))
 
         # --- PYRAMIDE REFUSÉE / DÉSYNCHRO ---
         elif g_status not in ("pyramide_req", "pyramide_done"):
@@ -89,4 +94,3 @@ def guard_pyramide_fsm(*, g, f, now):
                     last_action_ts=?
                 WHERE uid=? AND status='pyramide_req'
             """, (now, uid))
-
