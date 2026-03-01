@@ -62,6 +62,27 @@ def ingest_pyramide_req():
             req_step = int(r["step"] or 0)
 
             if not uid or not instId or side not in ("buy", "sell") or ratio <= 0:
+                log.info(
+                    "[PYR_REJECT] uid=%s inst=%s reason=invalid_req side=%s ratio=%.6f step=%s",
+                    uid,
+                    instId,
+                    side,
+                    ratio,
+                    req_step,
+                )
+
+                # Ne pas laisser gest bloqué en pyramide_req si la requête est invalide.
+                g.execute(
+                    """
+                    UPDATE gest
+                    SET status='follow',
+                        reason='PYR_REJECT_INVALID_REQ',
+                        ts_status_update=strftime('%s','now')*1000
+                    WHERE uid=?
+                      AND status='pyramide_req'
+                    """,
+                    (uid,),
+                )
                 continue
 
             # position réelle + dernier prix exec (via v_exec_position)
@@ -178,6 +199,7 @@ def ingest_pyramide_req():
                      uid, instId, side, step, ratio, qty_pos, qty_norm, price)
 
         o.commit()
+        g.commit()
 
     finally:
         g.close()
