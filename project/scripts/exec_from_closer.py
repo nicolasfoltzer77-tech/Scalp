@@ -36,14 +36,28 @@ def ingest_from_closer():
             SELECT uid, instId, side, exec_type, step, qty, reason
             FROM closer
             WHERE status IN ('partial_stdby','close_stdby')
+            ORDER BY rowid ASC
         """).fetchall()
+
+        # Canonicalisation des steps par uid : closer peut produire plusieurs
+        # demandes avec le même step logique (ex: partial + close).
+        # exec doit conserver une progression stricte dans sa table.
+        next_step_by_uid = {}
 
         for r in rows:
             uid = r["uid"]
             exec_type = r["exec_type"]
-            step = int(r["step"] or 0)
+            src_step = int(r["step"] or 0)
             qty = float(r["qty"] or 0.0)
-            exec_id = f"{uid}:{exec_type}:{step}"
+            if uid not in next_step_by_uid:
+                cur = e.execute(
+                    "SELECT COALESCE(MAX(step), 0) AS max_step FROM exec WHERE uid=?",
+                    (uid,),
+                ).fetchone()
+                next_step_by_uid[uid] = int(cur["max_step"] or 0)
+
+            step = max(src_step, next_step_by_uid[uid])
+            exec_id = f"{uid}:{exec_type}:{src_step}"
 
             if qty <= 0:
                 continue
@@ -76,6 +90,7 @@ def ingest_from_closer():
             ))
 
             log.info("[INGEST] uid=%s type=%s step=%s qty=%.6f", uid, exec_type, step, qty)
+            next_step_by_uid[uid] = step + 1
 
         e.commit()
 
