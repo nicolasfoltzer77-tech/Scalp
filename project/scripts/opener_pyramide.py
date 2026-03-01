@@ -44,7 +44,8 @@ def ingest_pyramide_req():
 
     try:
         rows = g.execute("""
-            SELECT uid, instId, side, ratio_to_add, ts_status_update, step
+            SELECT uid, instId, side, ratio_to_add, ts_status_update, step,
+                   qty_open, last_price_exec, avg_price_open, entry
             FROM gest
             WHERE status='pyramide_req'
         """).fetchall()
@@ -74,7 +75,26 @@ def ingest_pyramide_req():
             qty_pos = _f(pos["qty_open"], 0.0) if pos else 0.0
             price   = _f(pos["last_price_exec"], 0.0) if pos else 0.0
 
+            # Fallback robuste: pendant des courses FSM, v_exec_position peut
+            # être momentanément vide alors que gest a déjà une quantité/prix.
+            if qty_pos <= 0:
+                qty_pos = _f(r["qty_open"], 0.0)
+
+            if price <= 0:
+                price = _f(r["last_price_exec"], 0.0)
+            if price <= 0:
+                price = _f(r["avg_price_open"], 0.0)
+            if price <= 0:
+                price = _f(r["entry"], 0.0)
+
             if qty_pos <= 0 or price <= 0:
+                log.info(
+                    "[PYR_SKIP] uid=%s inst=%s reason=no_qty_or_price qty_pos=%.10f price=%.10f",
+                    uid,
+                    instId,
+                    qty_pos,
+                    price,
+                )
                 continue
 
             # contrat
