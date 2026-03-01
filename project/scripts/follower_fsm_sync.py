@@ -87,15 +87,35 @@ def sync_fsm_status(g, f, now):
                 else "PARTIAL_DONE_ACK"
             )
 
-            f.execute("""
-                UPDATE follower
-                SET status='follow',
-                    step=?,
-                    qty_open_snapshot=?,
-                    reason=?,
-                    last_action_ts=?
-                WHERE uid=?
-            """, (g_step, qty_snapshot, ack_reason, now, uid))
+            if g_status == "pyramide_done":
+                f.execute("""
+                    UPDATE follower
+                    SET status='follow',
+                        step=?,
+                        req_step=CASE
+                            WHEN done_step IS NULL THEN req_step
+                            ELSE done_step
+                        END,
+                        qty_open_snapshot=?,
+                        nb_pyramide=COALESCE(nb_pyramide, 0) + 1,
+                        reason=?,
+                        last_action_ts=?
+                    WHERE uid=?
+                """, (g_step, qty_snapshot, ack_reason, now, uid))
+            else:
+                f.execute("""
+                    UPDATE follower
+                    SET status='follow',
+                        step=?,
+                        req_step=CASE
+                            WHEN done_step IS NULL THEN req_step
+                            ELSE done_step
+                        END,
+                        qty_open_snapshot=?,
+                        reason=?,
+                        last_action_ts=?
+                    WHERE uid=?
+                """, (g_step, qty_snapshot, ack_reason, now, uid))
             continue
 
         if req_step != done_step:
