@@ -149,8 +149,12 @@ def compute_flag(f_status, g_status, pos_qty, req_qty):
     if f_status == "follow" and g_status == "NO_GEST" and pos_qty <= 0:
         return "ZOMBIE_UID"
 
-    if f_status.endswith("_req") and g_status != f_status:
-        return "REQ_NACK"
+    if f_status.endswith("_req"):
+        expected_done = f_status.replace("_req", "_done")
+        # A request can legitimately race with a just-acknowledged gest row:
+        # treat both *_req and matching *_done as synchronized states.
+        if g_status not in (f_status, expected_done):
+            return "REQ_NACK"
 
     if f_status.endswith("_stdby"):
         expected = f_status.replace("_stdby", "_req")
