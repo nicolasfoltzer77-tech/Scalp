@@ -108,38 +108,24 @@ def _pyramide_required_mfe_atr(next_step, CFG):
     return first_trigger + atr_step * (next_step - 2)
 
 
-def _compute_next_action_step(fr_state, fr_full):
+def _compute_next_pyramide_step(fr_state):
     """
-    Returns the next logical action step for this trade.
+    Returns the pyramide ladder step to evaluate next.
 
-    Why this matters:
-    - A trade can do mixed actions (pyramide, partial, pyramide, ...)
-    - The MFE ladder for pyramiding must follow the global sequence of steps,
-      not only nb_pyramide.
+    The pyramide ATR ladder must be based on the number of adds already done,
+    not on the global mixed action sequence (partial/close included).
 
-    Example expected behavior:
-      open(step=1) -> pyramide(step=2) -> partial(step=3)
-      next pyramide should be evaluated as step=4
-      => required MFE = 0.95 ATR (0.45 + 2*0.25)
+    Mapping:
+      nb_pyramide=0 -> next pyramide step=2 (pyr #1)
+      nb_pyramide=1 -> next pyramide step=3 (pyr #2)
+      nb_pyramide=2 -> next pyramide step=4 (pyr #3)
     """
     try:
-        req_step = int(fr_state["req_step"] or 0)
+        nb_pyr = int(fr_state["nb_pyramide"] or 0)
     except Exception:
-        req_step = 0
+        nb_pyr = 0
 
-    try:
-        done_step = int(fr_state["done_step"] or 0)
-    except Exception:
-        done_step = 0
-
-    # Fallback to persisted step only when req/done are unavailable.
-    try:
-        persisted_step = int(fr_full["step"] or 0)
-    except Exception:
-        persisted_step = 0
-
-    current_step = max(req_step, done_step, persisted_step)
-    return max(1, current_step + 1)
+    return max(2, nb_pyr + 2)
 
 
 def _should_pyramide(fr_state, fr_full, CFG, now):
@@ -166,7 +152,7 @@ def _should_pyramide(fr_state, fr_full, CFG, now):
         except Exception:
             pass
 
-    next_step = _compute_next_action_step(fr_state, fr_full)
+    next_step = _compute_next_pyramide_step(fr_state)
     required = _pyramide_required_mfe_atr(next_step, CFG)
 
     # Optional cumulative pyramiding guard:
