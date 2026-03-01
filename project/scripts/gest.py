@@ -3,6 +3,7 @@
 
 import sqlite3
 import time
+import logging
 from pathlib import Path
 
 ROOT = Path("/opt/scalp/project")
@@ -14,6 +15,8 @@ DB_OPENER   = ROOT / "data/opener.db"
 DB_CLOSER   = ROOT / "data/closer.db"
 
 LOOP_SLEEP = 0.2
+
+log = logging.getLogger("GEST")
 
 
 def conn(path):
@@ -111,7 +114,7 @@ def ingest_opener_done():
             st  = r["status"]
 
             if st == "open_done":
-                g.execute("""
+                cur = g.execute("""
                     UPDATE gest
                     SET status='open_done',
                         step=COALESCE(?, step),
@@ -119,8 +122,10 @@ def ingest_opener_done():
                     WHERE uid=?
                       AND status='open_stdby'
                 """, (r["step"], uid))
+                if cur.rowcount:
+                    log.info("[GEST ACK] uid=%s open_stdby -> open_done", uid)
             elif st == "pyramide_done":
-                g.execute("""
+                cur = g.execute("""
                     UPDATE gest
                     SET status='pyramide_done',
                         step=COALESCE(?, step),
@@ -128,6 +133,8 @@ def ingest_opener_done():
                     WHERE uid=?
                       AND status='pyramide_req'
                 """, (r["step"], uid))
+                if cur.rowcount:
+                    log.info("[GEST ACK] uid=%s pyramide_req -> pyramide_done", uid)
     finally:
         o.close()
         g.close()
@@ -217,11 +224,16 @@ def ingest_follower_requests():
     g = conn(DB_GEST)
 
     try:
+        follower_cols = table_columns(f, "follower")
+        has_fsm_cols = "req_step" in follower_cols and "done_step" in follower_cols
+
         rows = f.execute("""
             SELECT uid, status,
                    ratio_to_close,
                    ratio_to_add,
-                   reason
+                   reason,
+                   req_step,
+                   done_step
             FROM follower
             WHERE status IN ('pyramide_req','partial_req','close_req')
         """).fetchall()
@@ -234,8 +246,17 @@ def ingest_follower_requests():
             uid = r["uid"]
             st  = r["status"]
 
+            # Ignore stale follower requests that were already ACKed upstream.
+            # Without this guard, gest can be downgraded from *_done -> *_req
+            # in the same loop when follower status lags behind.
+            if has_fsm_cols:
+                req_step = int(r["req_step"] or 0)
+                done_step = int(r["done_step"] or 0)
+                if req_step <= done_step:
+                    continue
+
             if st == "pyramide_req":
-                g.execute("""
+                cur = g.execute("""
                     UPDATE gest
                     SET status='pyramide_req',
                         ratio_to_add=?,
@@ -244,9 +265,11 @@ def ingest_follower_requests():
                     WHERE uid=?
                       AND status IN ('follow','open_done','pyramide_done','partial_done','partialdone')
                 """, (r["ratio_to_add"], r["reason"], uid))
+                if cur.rowcount:
+                    log.info("[GEST REQ] uid=%s -> pyramide_req", uid)
 
             elif st == "partial_req":
-                g.execute("""
+                cur = g.execute("""
                     UPDATE gest
                     SET status='partial_req',
                         ratio_to_close=?,
@@ -255,9 +278,11 @@ def ingest_follower_requests():
                     WHERE uid=?
                       AND status IN ('follow','open_done','pyramide_done','partial_done','partialdone')
                 """, (r["ratio_to_close"], r["reason"], uid))
+                if cur.rowcount:
+                    log.info("[GEST REQ] uid=%s -> partial_req", uid)
 
             elif st == "close_req":
-                g.execute("""
+                cur = g.execute("""
                     UPDATE gest
                     SET status='close_req',
                         ratio_to_close=1.0,
@@ -266,12 +291,20 @@ def ingest_follower_requests():
                     WHERE uid=?
                       AND status IN ('follow','open_done','pyramide_done','partial_done','partialdone')
                 """, (r["reason"], uid))
+                if cur.rowcount:
+                    log.info("[GEST REQ] uid=%s -> close_req", uid)
     finally:
         f.close()
         g.close()
 
 
 def main():
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s %(message)s",
+    )
+    log.info("[START] gest loop sleep=%.3fs", LOOP_SLEEP)
+
     while True:
         try:
             ingest_triggers()
