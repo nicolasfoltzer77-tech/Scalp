@@ -42,6 +42,8 @@ def conn_follower():
     cols = {r[1] for r in c.execute("PRAGMA table_info(follower)").fetchall()}
     if "sl_hard" not in cols:
         c.execute("ALTER TABLE follower ADD COLUMN sl_hard REAL DEFAULT 0")
+    if "nb_pyramide_ack" not in cols:
+        c.execute("ALTER TABLE follower ADD COLUMN nb_pyramide_ack INTEGER DEFAULT 0")
     return c
 
 

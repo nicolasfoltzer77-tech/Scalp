@@ -130,9 +130,17 @@ def _compute_next_pyramide_step(fr_state):
       nb_pyramide=2 -> next pyramide step=4 (pyr #3)
     """
     try:
-        nb_pyr = int(fr_state["nb_pyramide"] or 0)
+        nb_pyr_ack = int(fr_state["nb_pyramide_ack"] or 0)
     except Exception:
-        nb_pyr = 0
+        nb_pyr_ack = 0
+
+    if nb_pyr_ack > 0:
+        nb_pyr = nb_pyr_ack
+    else:
+        try:
+            nb_pyr = int(fr_state["nb_pyramide"] or 0)
+        except Exception:
+            nb_pyr = 0
 
     return max(2, nb_pyr + 2)
 
@@ -146,7 +154,14 @@ def _should_pyramide(fr_state, fr_full, CFG, now):
     # only, with no coupling to partial flow and no MAE-based veto.
 
     max_adds = int(CFG.get("pyramide_max_adds", 5) or 5)
-    nb_pyr = int(fr_state["nb_pyramide"] or 0)
+    try:
+        nb_pyr_ack = int(fr_state["nb_pyramide_ack"] or 0)
+    except Exception:
+        nb_pyr_ack = 0
+    if nb_pyr_ack > 0:
+        nb_pyr = nb_pyr_ack
+    else:
+        nb_pyr = int(fr_state["nb_pyramide"] or 0)
     if nb_pyr >= max_adds:
         return (False, "max_adds_reached", None)
 
@@ -327,7 +342,10 @@ def decide_core(f, CFG, now):
                 uid
             ))
 
-            log.info("[PYRAMIDE] uid=%s ratio=%.4f mfe_atr=%.4f req_nb_pyr=%d", uid, ratio_add, float(fr["mfe_atr"] or 0.0), int(fr["nb_pyramide"] or 0) + 1)
+            current_nb_pyr = int(fr["nb_pyramide_ack"] or 0) if fr["nb_pyramide_ack"] is not None else int(fr["nb_pyramide"] or 0)
+            if current_nb_pyr <= 0:
+                current_nb_pyr = int(fr["nb_pyramide"] or 0)
+            log.info("[PYRAMIDE] uid=%s ratio=%.4f mfe_atr=%.4f req_nb_pyr=%d", uid, ratio_add, float(fr["mfe_atr"] or 0.0), current_nb_pyr + 1)
             continue
         else:
             log.info(
@@ -335,7 +353,7 @@ def decide_core(f, CFG, now):
                 uid,
                 why,
                 fr["mfe_atr"],
-                fr["nb_pyramide"],
+                (fr["nb_pyramide_ack"] if "nb_pyramide_ack" in fr.keys() else fr["nb_pyramide"]),
                 ratio_or_req,
             )
 
