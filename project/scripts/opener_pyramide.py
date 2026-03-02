@@ -157,17 +157,20 @@ def ingest_pyramide_req():
 
             # Idempotence hard-stop:
             # ne pas redéclencher en boucle la même pyramide_req.
-            # On autorise une nouvelle pyramide uniquement si gest.ts_status_update
-            # a changé (nouvelle requête follower -> gest).
+            # Important: plusieurs pyramides successives peuvent être émises dans
+            # la même seconde; gest.ts_status_update a une granularité seconde et
+            # ne doit donc pas bloquer un nouveau step valide.
+            # On scope l'idempotence à (uid, step).
             if req_ts > 0:
                 already_ingested = o.execute("""
                     SELECT 1
                     FROM opener
                     WHERE uid=?
+                      AND step=?
                       AND exec_type='pyramide'
                       AND ts_open >= ?
                     LIMIT 1
-                """, (uid, req_ts)).fetchone()
+                """, (uid, req_step, req_ts)).fetchone()
                 if already_ingested:
                     continue
 
