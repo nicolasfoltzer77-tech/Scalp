@@ -32,6 +32,7 @@ follower:
   pyramide_atr_trigger: 0.45
   pyramide_cooldown_s: 20
   pyramide_qty_ratio: 0.15
+  pyramide_base_qty_pct: 25
   pyramide_max_adds: 10
   pyramide_atr_step: 0.25
   pyramide_mfe_step: 0.25
@@ -46,6 +47,7 @@ follower:
   partial_mfe_atr: 1.10
   tp_dyn_atr_trigger: 1.45
   partial_close_ratio: 0.25
+  partial_base_qty_pct: 30
   min_partial_qty: 0.0
 
   # ==========================================================
