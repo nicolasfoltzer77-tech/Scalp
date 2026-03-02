@@ -145,6 +145,19 @@ def _side_sign(side):
     return 1.0 if side == "buy" else -1.0
 
 
+def _is_favorable_move(side, candidate, current):
+    """
+    Dynamic levels must only move in the trade-favorable direction:
+      - buy  => level can only increase
+      - sell => level can only decrease
+    """
+    if side == "buy":
+        return float(candidate) > float(current)
+    if side == "sell":
+        return float(candidate) < float(current)
+    return False
+
+
 def _be_level(price_open, side, atr, CFG):
     """
     Break-even safety offset:
@@ -432,11 +445,61 @@ def arm_take_profit(f, fr, CFG, now):
     if atr is None:
         log.warning("[RISK] skip tp arm (atr<=0) uid=%s", fr["uid"])
         return
+    px = _price_from_row(fr) or price_open
     sign = _side_sign(side)
     tp_mult = float(CFG.get("tp_dyn_atr_mult", 1.0) or 1.0)
-    tp = price_open + (sign * atr * tp_mult)
+    tp = px + (sign * atr * tp_mult)
     _set_level_once(f, fr["uid"], "tp_dyn", tp, now)
     log.info("[TP_ARMED] uid=%s tp_dyn=%.6f", fr["uid"], tp)
+
+
+def ratchet_dynamic_levels(f, fr, CFG, now):
+    """
+    Keep dynamic TP/SL truly dynamic by following price in favorable direction only.
+    - sl_trail follows market with ATR offset and never loosens.
+    - tp_dyn follows market with ATR offset and never comes back.
+    """
+    price = _price_from_row(fr)
+    if price is None:
+        return
+
+    side = _norm_side(_row_get(fr, "side"))
+    sign = _side_sign(side)
+    atr = _resolve_positive_atr(fr)
+    if atr is None:
+        return
+
+    sl_trail = _row_get(fr, "sl_trail")
+    if sl_trail not in (None, 0, 0.0):
+        tr_mult = float(CFG.get("sl_trail_offset_atr", 1.0) or 1.0)
+        cand_trail = float(price) - (sign * atr * tr_mult)
+        if _is_favorable_move(side, cand_trail, float(sl_trail)):
+            f.execute(
+                """
+                UPDATE follower
+                SET sl_trail=?,
+                    last_action_ts=?
+                WHERE uid=?
+                """,
+                (cand_trail, now, fr["uid"])
+            )
+            log.info("[TRAIL_RATCHET] uid=%s old=%.6f new=%.6f px=%.6f", fr["uid"], float(sl_trail), cand_trail, float(price))
+
+    tp_dyn = _row_get(fr, "tp_dyn")
+    if tp_dyn not in (None, 0, 0.0):
+        tp_mult = float(CFG.get("tp_dyn_atr_mult", 1.0) or 1.0)
+        cand_tp = float(price) + (sign * atr * tp_mult)
+        if _is_favorable_move(side, cand_tp, float(tp_dyn)):
+            f.execute(
+                """
+                UPDATE follower
+                SET tp_dyn=?,
+                    last_action_ts=?
+                WHERE uid=?
+                """,
+                (cand_tp, now, fr["uid"])
+            )
+            log.info("[TP_RATCHET] uid=%s old=%.6f new=%.6f px=%.6f", fr["uid"], float(tp_dyn), cand_tp, float(price))
 
 
 def rebalance_levels_50(f, fr, CFG, now):
@@ -452,7 +515,7 @@ def rebalance_levels_50(f, fr, CFG, now):
 
     # IMPORTANT: hard SL is immutable after arming (only one-time at open).
     # Rebalance applies only to dynamic levels.
-    for col in ("sl_be", "sl_trail", "tp_dyn"):
+    for col in ("sl_be",):
         level = _row_get(fr, col)
         if level in (None, 0, 0.0):
             continue
@@ -470,4 +533,5 @@ def manage_risk(f, fr, CFG, now):
     arm_break_even(f, fr, CFG, now)
     arm_trailing(f, fr, CFG, now)
     arm_take_profit(f, fr, CFG, now)
+    ratchet_dynamic_levels(f, fr, CFG, now)
     rebalance_levels_50(f, fr, CFG, now)
