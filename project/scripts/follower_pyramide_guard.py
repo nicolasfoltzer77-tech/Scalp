@@ -80,7 +80,6 @@ def guard_pyramide_fsm(*, g, f, now):
             f.execute("""
                 UPDATE follower
                 SET status='follow',
-                    nb_pyramide = nb_pyramide + 1,
                     step=COALESCE(?, step),
                     last_action_ts=?
                 WHERE uid=? AND status='pyramide_req'
