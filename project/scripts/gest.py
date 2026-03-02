@@ -112,7 +112,6 @@ def ingest_opener_done():
         for r in rows:
             uid = r["uid"]
             st  = r["status"]
-
             if st == "open_done":
                 cur = g.execute("""
                     UPDATE gest
@@ -251,6 +250,12 @@ def ingest_follower_requests():
             uid = r["uid"]
             st  = r["status"]
 
+            g_state = g.execute(
+                "SELECT step FROM gest WHERE uid=? LIMIT 1",
+                (uid,),
+            ).fetchone()
+            g_step = int(g_state["step"] or 0) if g_state else 0
+
             # Ignore stale follower requests that were already ACKed upstream.
             # Without this guard, gest can be downgraded from *_done -> *_req
             # in the same loop when follower status lags behind.
@@ -258,6 +263,12 @@ def ingest_follower_requests():
                 req_step = int(r["req_step"] or 0)
                 done_step = int(r["done_step"] or 0)
                 if req_step <= done_step:
+                    continue
+
+                # Anti-downgrade guard:
+                # if gest is already at an equal/newer step, follower's *_req is stale
+                # (common race: opener ACK lands before follower.done_step refresh).
+                if req_step <= g_step:
                     continue
 
             if st == "pyramide_req":
