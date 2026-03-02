@@ -74,7 +74,9 @@ def sync_fsm_status(g, f, now):
 
         # ACK done (pyramide / partial) : follower doit repasser en follow,
         # recopier le step canonique et rafraîchir le snapshot de quantité.
-        if g_status in ("pyramide_done", "partial_done"):
+        # Important: n'ack que depuis un état *_req pour éviter les doubles incréments
+        # lorsque gest reste sur *_done pendant plusieurs ticks de boucle follower.
+        if g_status in ("pyramide_done", "partial_done") and status in ("pyramide_req", "partial_req"):
             qty_snapshot = float(
                 gr["qty_open"]
                 if gr["qty_open"] is not None
@@ -98,6 +100,7 @@ def sync_fsm_status(g, f, now):
                         END,
                         qty_open_snapshot=?,
                         nb_pyramide=COALESCE(nb_pyramide, 0) + 1,
+                        nb_pyramide_ack=COALESCE(nb_pyramide_ack, 0) + 1,
                         reason=?,
                         last_action_ts=?
                     WHERE uid=?
