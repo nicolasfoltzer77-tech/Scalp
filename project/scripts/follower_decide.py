@@ -342,9 +342,19 @@ def decide_core(f, CFG, now):
                 uid
             ))
 
-            current_nb_pyr = int(fr["nb_pyramide_ack"] or 0) if fr["nb_pyramide_ack"] is not None else int(fr["nb_pyramide"] or 0)
-            if current_nb_pyr <= 0:
-                current_nb_pyr = int(fr["nb_pyramide"] or 0)
+            nb_pyr_ack = None
+            if "nb_pyramide_ack" in fr.keys():
+                try:
+                    nb_pyr_ack = int(fr["nb_pyramide_ack"] or 0)
+                except Exception:
+                    nb_pyr_ack = 0
+
+            try:
+                nb_pyr = int(fr["nb_pyramide"] or 0)
+            except Exception:
+                nb_pyr = 0
+
+            current_nb_pyr = nb_pyr_ack if (nb_pyr_ack is not None and nb_pyr_ack > 0) else nb_pyr
             log.info("[PYRAMIDE] uid=%s ratio=%.4f mfe_atr=%.4f req_nb_pyr=%d", uid, ratio_add, float(fr["mfe_atr"] or 0.0), current_nb_pyr + 1)
             continue
         else:
