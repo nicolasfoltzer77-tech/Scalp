@@ -55,6 +55,21 @@ def _add_ratio(CFG, nb_pyr):
             pass
     return float(CFG.get("pyramide_qty_ratio", 0.0) or 0.0)
 
+
+def _max_adds(CFG, opt3):
+    """
+    Resolve max pyramids with backward-compatible fallbacks.
+
+    Priority:
+    1) option3_safe_build.max_adds_total
+    2) follower.pyramide_max_adds
+    3) safe default = 4 (matches expected 3-4 adds behavior)
+    """
+    try:
+        return int(opt3.get("max_adds_total", CFG.get("pyramide_max_adds", 4)) or 4)
+    except Exception:
+        return 4
+
 def advanced_actions(f, e, CFG, now):
 
     for fr in f.execute("""
@@ -89,7 +104,7 @@ def advanced_actions(f, e, CFG, now):
                 if int(fr["nb_partial"] or 0) >= 1 and not allow_after_partial:
                     pass
                 else:
-                    max_adds = int(o.get("max_adds_total", 2))
+                    max_adds = _max_adds(CFG, o)
                     nb_pyr = int(fr["nb_pyramide"] or 0)
 
                     if nb_pyr < max_adds and mfe_atr is not None:
@@ -144,7 +159,7 @@ def advanced_actions(f, e, CFG, now):
         # PARTIAL — bloque jusqu'à dernière pyramide si OPT3
         # ====================================================
         if _enabled(CFG) and bool(_opt3(CFG).get("partial_only_after_last_add", True)):
-            max_adds = int(_opt3(CFG).get("max_adds_total", 2))
+            max_adds = _max_adds(CFG, _opt3(CFG))
             if int(fr["nb_pyramide"] or 0) < max_adds:
                 continue
 
