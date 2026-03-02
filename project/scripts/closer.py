@@ -13,6 +13,7 @@ Règles :
 import sqlite3
 import time
 import logging
+import yaml
 from pathlib import Path
 
 ROOT = Path("/opt/scalp/project")
@@ -29,6 +30,33 @@ logging.basicConfig(
     format="%(asctime)s CLOSER %(levelname)s %(message)s"
 )
 log = logging.getLogger("CLOSER")
+
+CONF_PATH = ROOT / "conf/follower.yaml"
+
+
+def _f(x, d=0.0):
+    try:
+        if x is None:
+            return d
+        return float(x)
+    except Exception:
+        return d
+
+
+def _load_sizing_cfg():
+    try:
+        with open(CONF_PATH, "r", encoding="utf-8") as f:
+            cfg = yaml.safe_load(f) or {}
+    except Exception:
+        return {"partial_base_qty_pct": 30.0}
+
+    follower_cfg = cfg.get("follower") if isinstance(cfg, dict) else {}
+    if not isinstance(follower_cfg, dict):
+        follower_cfg = {}
+
+    return {
+        "partial_base_qty_pct": _f(follower_cfg.get("partial_base_qty_pct"), 30.0),
+    }
 
 
 def conn(db):
@@ -94,6 +122,12 @@ def ingest_from_gest():
 
     try:
         gest_cols = _table_columns(g, "gest")
+        cfg = _load_sizing_cfg()
+        partial_base_qty_pct = _f(cfg.get("partial_base_qty_pct"), 30.0)
+        if partial_base_qty_pct <= 0:
+            partial_base_qty_pct = 30.0
+        partial_base_qty_ratio = partial_base_qty_pct / 100.0
+
         rows = g.execute("""
             SELECT
                 uid,
@@ -127,7 +161,13 @@ def ingest_from_gest():
             qty_open_exec = float(exec_pos.get(uid, 0.0))
             qty_open_ref = qty_open_exec if qty_open_exec > 0 else qty_open
             qty_to_close = float(r["qty_to_close"] or 0.0) if "qty_to_close" in gest_cols else 0.0
-            if qty_to_close > 0:
+            if stat == "partial_req":
+                qty_base = qty_open_ref * partial_base_qty_ratio
+                if qty_to_close > 0:
+                    qty = min(qty_to_close, qty_base)
+                else:
+                    qty = qty_base * ratio_to_close
+            elif qty_to_close > 0:
                 qty = qty_to_close
             elif stat == "close_req" and ratio_to_close <= 0:
                 qty = qty_open_ref
@@ -187,8 +227,8 @@ def ingest_from_gest():
                         qty_to_close,
                     )
                 else:
-                    log.info("[SKIP] uid=%s type=%s step=%s qty<=0 ratio=%.6f qty_open=%.6f qty_open_exec=%.6f qty_to_close=%.6f",
-                             uid, exec_type, step, ratio_to_close, qty_open, qty_open_exec, qty_to_close)
+                    log.info("[SKIP] uid=%s type=%s step=%s qty<=0 ratio=%.6f base_pct=%.2f qty_open=%.6f qty_open_exec=%.6f qty_to_close=%.6f",
+                             uid, exec_type, step, ratio_to_close, partial_base_qty_pct, qty_open, qty_open_exec, qty_to_close)
                 continue
 
             if existing:

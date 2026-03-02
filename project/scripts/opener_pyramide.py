@@ -5,6 +5,7 @@ import sqlite3
 import time
 import math
 import logging
+import yaml
 from pathlib import Path
 
 from opener_sizing import apply_contract_constraints
@@ -17,6 +18,23 @@ DB_CONTRACTS = ROOT / "data/contracts.db"
 DB_EXEC      = ROOT / "data/exec.db"
 
 log = logging.getLogger("OPENER")
+
+CONF_PATH = ROOT / "conf/follower.yaml"
+
+def _load_sizing_cfg():
+    try:
+        with open(CONF_PATH, "r", encoding="utf-8") as f:
+            cfg = yaml.safe_load(f) or {}
+    except Exception:
+        return {"pyramide_base_qty_pct": 25.0}
+
+    follower_cfg = cfg.get("follower") if isinstance(cfg, dict) else {}
+    if not isinstance(follower_cfg, dict):
+        follower_cfg = {}
+
+    return {
+        "pyramide_base_qty_pct": _f(follower_cfg.get("pyramide_base_qty_pct"), 25.0),
+    }
 
 def _conn(p: Path):
     c = sqlite3.connect(str(p), timeout=10)
@@ -60,6 +78,12 @@ def ingest_pyramide_req():
             ratio  = _f(r["ratio_to_add"], 0.0)
             req_ts = int(r["ts_status_update"] or 0)
             req_step = int(r["step"] or 0)
+
+            cfg = _load_sizing_cfg()
+            pyramide_base_qty_pct = _f(cfg.get("pyramide_base_qty_pct"), 25.0)
+            if pyramide_base_qty_pct <= 0:
+                pyramide_base_qty_pct = 25.0
+            pyramide_base_qty_ratio = pyramide_base_qty_pct / 100.0
 
             if not uid or not instId or side not in ("buy", "sell") or ratio <= 0:
                 log.info(
@@ -132,8 +156,9 @@ def ingest_pyramide_req():
             if step_size <= 0:
                 step_size = 1.0
 
-            # sizing pyramide (ratio)
-            qty_raw = qty_pos * ratio
+            # sizing pyramide (ratio appliqué sur la quantité de base configurable)
+            qty_base = qty_pos * pyramide_base_qty_ratio
+            qty_raw = qty_base * ratio
 
             # --- scale up AU-DESSUS du min notional + step ---
             notional = qty_raw * price
@@ -196,8 +221,8 @@ def ingest_pyramide_req():
             """, (uid, instId, side, qty_norm, ts, price, step,
                   ratio, _f(qty_raw, 0.0), qty_norm))
 
-            log.info("[PYR_STDBY] uid=%s inst=%s side=%s step=%d ratio=%.4f qty_pos=%.10f qty=%.10f price=%.10f",
-                     uid, instId, side, step, ratio, qty_pos, qty_norm, price)
+            log.info("[PYR_STDBY] uid=%s inst=%s side=%s step=%d ratio=%.4f base_pct=%.2f qty_pos=%.10f qty_base=%.10f qty=%.10f price=%.10f",
+                     uid, instId, side, step, ratio, pyramide_base_qty_pct, qty_pos, qty_base, qty_norm, price)
 
         o.commit()
         g.commit()
