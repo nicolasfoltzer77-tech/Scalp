@@ -108,6 +108,23 @@ def _pyramide_required_mfe_atr(next_step, CFG):
     return first_trigger + atr_step * (next_step - 2)
 
 
+def _as_bool(value, default=False):
+    """Parse booleans robustly from YAML/env mixed config payloads."""
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value != 0
+    if isinstance(value, str):
+        norm = value.strip().lower()
+        if norm in {"1", "true", "yes", "y", "on"}:
+            return True
+        if norm in {"0", "false", "no", "n", "off", ""}:
+            return False
+    return default
+
+
 def _compute_next_pyramide_step(fr_state):
     """
     Returns the next pyramide index as a logical step in the pyramide ladder.
@@ -186,7 +203,7 @@ def _should_pyramide(fr_state, fr_full, CFG, now):
 
     # Optional cumulative pyramiding guard:
     # for add #2+ require extra MFE progress since last pyramide.
-    enforce_progress = bool(CFG.get("pyramide_require_progress_since_last", False))
+    enforce_progress = _as_bool(CFG.get("pyramide_require_progress_since_last", False), default=False)
     if enforce_progress and next_step >= 3:
         last_pyr_mfe = fr_full["last_pyramide_mfe_atr"] if "last_pyramide_mfe_atr" in fr_full.keys() else None
         if last_pyr_mfe is not None:
