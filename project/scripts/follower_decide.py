@@ -146,18 +146,20 @@ def _compute_next_pyramide_step(fr_state):
       nb_pyramide=1 -> next pyramide step=3 (pyr #2)
       nb_pyramide=2 -> next pyramide step=4 (pyr #3)
     """
+    # Keep pyramide ladder monotonic even when ack counters are temporarily
+    # out of sync (race follower/gest/exec). Using max() avoids re-requesting
+    # the same pyramide step and keeps multi-pyramide chaining stable.
     try:
         nb_pyr_ack = int(fr_state["nb_pyramide_ack"] or 0)
     except Exception:
         nb_pyr_ack = 0
 
-    if nb_pyr_ack > 0:
-        nb_pyr = nb_pyr_ack
-    else:
-        try:
-            nb_pyr = int(fr_state["nb_pyramide"] or 0)
-        except Exception:
-            nb_pyr = 0
+    try:
+        nb_pyr_raw = int(fr_state["nb_pyramide"] or 0)
+    except Exception:
+        nb_pyr_raw = 0
+
+    nb_pyr = max(nb_pyr_ack, nb_pyr_raw)
 
     return max(2, nb_pyr + 2)
 
@@ -175,10 +177,12 @@ def _should_pyramide(fr_state, fr_full, CFG, now):
         nb_pyr_ack = int(fr_state["nb_pyramide_ack"] or 0)
     except Exception:
         nb_pyr_ack = 0
-    if nb_pyr_ack > 0:
-        nb_pyr = nb_pyr_ack
-    else:
-        nb_pyr = int(fr_state["nb_pyramide"] or 0)
+    try:
+        nb_pyr_raw = int(fr_state["nb_pyramide"] or 0)
+    except Exception:
+        nb_pyr_raw = 0
+
+    nb_pyr = max(nb_pyr_ack, nb_pyr_raw)
     if nb_pyr >= max_adds:
         return (False, "max_adds_reached", None)
 
