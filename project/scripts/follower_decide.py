@@ -93,19 +93,9 @@ def _pyramide_required_mfe_atr(next_step, CFG):
     if next_step <= 1:
         return 0.0
 
-    # Backward compatible behavior:
-    # - legacy config used pyramide_mfe_base/pyramide_mfe_step
-    # - simplified config uses pyramide_atr_trigger/pyramide_atr_step
-    if "pyramide_mfe_base" in CFG and "pyramide_atr_step" not in CFG:
-        base = float(CFG.get("pyramide_mfe_base", 0.20) or 0.20)
-        step = float(CFG.get("pyramide_mfe_step", 0.25) or 0.25)
-        return base + step * (next_step - 1)
-
-    first_trigger = float(CFG.get("pyramide_atr_trigger", 0.45) or 0.45)
-    atr_step = float(
-        CFG.get("pyramide_atr_step", CFG.get("pyramide_mfe_step", 0.25)) or 0.25
-    )
-    return first_trigger + atr_step * (next_step - 2)
+    # Requested behavior: hard ladder regardless of legacy config values.
+    # pyr #1 (step 2): 0.45, then +0.25 each add.
+    return 0.45 + 0.25 * (next_step - 2)
 
 
 def _as_bool(value, default=False):
