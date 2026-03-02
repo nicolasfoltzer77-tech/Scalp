@@ -11,6 +11,7 @@ from follower_ingest import ingest_open_done
 from follower_fsm_sync import sync_fsm_status
 from follower_sync_steps import sync_done_steps
 from follower_purge_closed import purge_closed
+from follower_pyramide_guard import guard_pyramide_fsm
 
 from follower_sync_mfemae import sync_mfemae
 from follower_risk import manage_risk
@@ -109,6 +110,9 @@ def main():
             f = conn_follower()
             try:
                 sync_fsm_status(g, f, now)
+                # Garde-fou explicite pour débloquer les states pyramide_req
+                # désynchronisés avec gest (et appliquer la policy deep pyramide).
+                guard_pyramide_fsm(g=g, f=f, now=now)
                 f.commit()
             finally:
                 g.close()
