@@ -54,12 +54,74 @@ def ingest_open_done(g, f, now):
 
         # Existe déjà ?
         fr = f.execute("""
-            SELECT uid, ts_follow
+            SELECT
+                uid,
+                ts_follow,
+                step,
+                done_step,
+                side,
+                instId
             FROM follower
             WHERE uid=?
         """, (uid,)).fetchone()
 
         if fr:
+            step_in = int(r["step"] or 0)
+            step_cur = int(fr["step"] or 0)
+            done_cur = int(fr["done_step"] or 0)
+            side_cur = str(fr["side"] or "").strip().lower()
+            side_in = str(r["side"] or "").strip().lower()
+            inst_cur = str(fr["instId"] or "")
+            inst_in = str(r["instId"] or "")
+
+            # Nouveau cycle (UID réutilisé): il faut purger les niveaux dynamiques
+            # et les compteurs de fermeture pour éviter des close_req fantômes.
+            is_new_cycle = (
+                step_in < step_cur
+                or done_cur > step_in
+                or side_cur != side_in
+                or inst_cur != inst_in
+            )
+
+            if is_new_cycle:
+                f.execute("""
+                    UPDATE follower
+                    SET status='follow',
+                        instId=?,
+                        side=?,
+                        step=?,
+                        req_step=?,
+                        done_step=?,
+                        atr_signal=?,
+                        sl_hard=?,
+                        sl_be=0,
+                        sl_trail=0,
+                        tp_dyn=0,
+                        reason=NULL,
+                        reason_close=NULL,
+                        price_to_close=0,
+                        qty_to_close=0,
+                        qty_to_close_ratio=0,
+                        ratio_to_close=0,
+                        qty_to_add_ratio=0,
+                        ratio_to_add=NULL,
+                        ratio_closed=0,
+                        ratio_exposed=0,
+                        last_action_ts=?
+                    WHERE uid=?
+                """, (
+                    r["instId"],
+                    r["side"],
+                    step_in,
+                    step_in,
+                    step_in,
+                    atr_signal,
+                    sl_hard,
+                    now,
+                    uid
+                ))
+                continue
+
             # Sync non destructif : ne pas toucher ts_follow (invariant MFE/MAE)
             f.execute("""
                 UPDATE follower
