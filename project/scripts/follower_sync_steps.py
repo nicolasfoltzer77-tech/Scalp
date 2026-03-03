@@ -42,6 +42,27 @@ def sync_done_steps(*, f):
             WHERE uid=?
         """, (int(r["done_step"] or 0), r["uid"]))
 
+    # Keep follower pyramide counters aligned with real executor fills.
+    # This avoids follower-side drift when gest/fsm transiently over-acks.
+    pyr_rows = e.execute("""
+        SELECT
+            uid,
+            COUNT(*) AS nb_pyramide_done
+        FROM exec
+        WHERE status='done'
+          AND type='pyramide'
+        GROUP BY uid
+    """).fetchall()
+
+    for p in pyr_rows:
+        nb_pyr_done = int(p["nb_pyramide_done"] or 0)
+        f.execute("""
+            UPDATE follower
+            SET nb_pyramide_ack=?,
+                nb_pyramide=?
+            WHERE uid=?
+        """, (nb_pyr_done, nb_pyr_done, p["uid"]))
+
     # Materialize current exec position in follower for downstream risk/decision reads
     pos_rows = e.execute("""
         SELECT
@@ -76,4 +97,3 @@ def sync_done_steps(*, f):
         ))
 
     e.close()
-
