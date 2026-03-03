@@ -27,6 +27,13 @@ DONE_ALIASES = {
 }
 
 
+def _norm_status(value):
+    try:
+        return str(value or "").strip().lower()
+    except Exception:
+        return ""
+
+
 def _safe_int(row, key, default=0):
     try:
         val = row[key]
@@ -67,6 +74,7 @@ def sync_fsm_status(g, f, now):
     for fr in rows:
         uid = fr["uid"]
         status = fr["status"]
+        status_norm = _norm_status(status)
         step = _safe_int(fr, "step", default=0)
 
         if has_gest_qty_open:
@@ -87,12 +95,13 @@ def sync_fsm_status(g, f, now):
             continue
 
         g_status = gr["status"]
+        g_status_norm = _norm_status(g_status)
         g_step = _safe_int(gr, "step", default=0)
 
         # ==================================================
         # CAS OPEN INITIAL — PRIORITAIRE, SANS AUCUNE CONDITION
         # ==================================================
-        if status == "open_stdby" and step == 0:
+        if status_norm == "open_stdby" and step == 0:
             f.execute("""
                 UPDATE follower
                 SET status='follow',
@@ -121,7 +130,7 @@ def sync_fsm_status(g, f, now):
         #
         # Ici on tolère les deux orthographes historiques:
         # pyramide_done / pyramid_done.
-        if status == "pyramide_req" and g_status in DONE_ALIASES:
+        if status_norm in ("pyramide_req", "pyramide_done") and g_status_norm in DONE_ALIASES:
             qty_open = _safe_float(gr, "qty_open", default=0.0)
             qty = _safe_float(gr, "qty", default=0.0)
             qty_snapshot = qty_open if qty_open > 0.0 else qty
@@ -144,7 +153,7 @@ def sync_fsm_status(g, f, now):
             continue
 
         # Sur partial_done, on garde l'ack strict depuis partial_req.
-        if g_status == "partial_done" and status == "partial_req":
+        if g_status_norm == "partial_done" and status_norm in ("partial_req", "partial_done"):
             qty_open = _safe_float(gr, "qty_open", default=0.0)
             qty = _safe_float(gr, "qty", default=0.0)
             qty_snapshot = qty_open if qty_open > 0.0 else qty
