@@ -27,12 +27,37 @@ DONE_ALIASES = {
 }
 
 
+def _safe_int(row, key, default=0):
+    try:
+        val = row[key]
+    except Exception:
+        return int(default)
+    try:
+        return int(val or 0)
+    except Exception:
+        return int(default)
+
+
+def _safe_float(row, key, default=0.0):
+    try:
+        val = row[key]
+    except Exception:
+        return float(default)
+    try:
+        return float(val or 0.0)
+    except Exception:
+        return float(default)
+
+
 def sync_fsm_status(g, f, now):
     """
     g : connection gest.db (read)
     f : connection follower.db (write)
     now : timestamp ms
     """
+
+    gest_cols = {r[1] for r in g.execute("PRAGMA table_info(gest)").fetchall()}
+    has_gest_qty_open = "qty_open" in gest_cols
 
     rows = f.execute("""
         SELECT *
@@ -42,19 +67,27 @@ def sync_fsm_status(g, f, now):
     for fr in rows:
         uid = fr["uid"]
         status = fr["status"]
-        step = fr["step"]
+        step = _safe_int(fr, "step", default=0)
 
-        gr = g.execute("""
-            SELECT status, step, qty, qty_open
-            FROM gest
-            WHERE uid=?
-        """, (uid,)).fetchone()
+        if has_gest_qty_open:
+            gr = g.execute("""
+                SELECT status, step, qty, qty_open
+                FROM gest
+                WHERE uid=?
+            """, (uid,)).fetchone()
+        else:
+            # Compat schéma legacy: certains déploiements n'ont pas gest.qty_open.
+            gr = g.execute("""
+                SELECT status, step, qty
+                FROM gest
+                WHERE uid=?
+            """, (uid,)).fetchone()
 
         if not gr:
             continue
 
         g_status = gr["status"]
-        g_step = int(gr["step"] or 0)
+        g_step = _safe_int(gr, "step", default=0)
 
         # ==================================================
         # CAS OPEN INITIAL — PRIORITAIRE, SANS AUCUNE CONDITION
@@ -75,8 +108,8 @@ def sync_fsm_status(g, f, now):
         # CAS POST-OPEN (PYRAMIDE / PARTIAL / CLOSE)
         # → ICI seulement on utilisera req_step / done_step
         # ==================================================
-        req_step = fr["req_step"]
-        done_step = fr["done_step"]
+        req_step = _safe_int(fr, "req_step", default=0)
+        done_step = _safe_int(fr, "done_step", default=0)
 
         # ACK done (pyramide / partial) : follower doit repasser en follow,
         # recopier le step canonique et rafraîchir le snapshot de quantité.
@@ -89,11 +122,9 @@ def sync_fsm_status(g, f, now):
         # Ici on tolère les deux orthographes historiques:
         # pyramide_done / pyramid_done.
         if status == "pyramide_req" and g_status in DONE_ALIASES:
-            qty_snapshot = float(
-                gr["qty_open"]
-                if gr["qty_open"] is not None
-                else (gr["qty"] if gr["qty"] is not None else 0.0)
-            )
+            qty_open = _safe_float(gr, "qty_open", default=0.0)
+            qty = _safe_float(gr, "qty", default=0.0)
+            qty_snapshot = qty_open if qty_open > 0.0 else qty
 
             f.execute("""
                 UPDATE follower
@@ -114,11 +145,9 @@ def sync_fsm_status(g, f, now):
 
         # Sur partial_done, on garde l'ack strict depuis partial_req.
         if g_status == "partial_done" and status == "partial_req":
-            qty_snapshot = float(
-                gr["qty_open"]
-                if gr["qty_open"] is not None
-                else (gr["qty"] if gr["qty"] is not None else 0.0)
-            )
+            qty_open = _safe_float(gr, "qty_open", default=0.0)
+            qty = _safe_float(gr, "qty", default=0.0)
+            qty_snapshot = qty_open if qty_open > 0.0 else qty
 
             f.execute("""
                 UPDATE follower
