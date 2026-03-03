@@ -201,10 +201,17 @@ def ingest_pyramide_req():
 
             step = req_step
 
-            # anti-dup opener PK (uid, exec_type, step)
+            # anti-dup strict: only block if a pending stdby already exists.
+            #
+            # Why not block on any row?
+            # opener keeps historical `pyramide_done` rows at the same `(uid, step)`
+            # after ACK (step is shifted to N+1). A new valid pyramide request then
+            # reuses this step value from gest and must be allowed; otherwise the
+            # second pyramide is silently skipped forever.
             if o.execute("""
                 SELECT 1 FROM opener
                 WHERE uid=? AND exec_type='pyramide' AND step=?
+                  AND status='pyramide_stdby'
                 LIMIT 1
             """, (uid, step)).fetchone():
                 continue
