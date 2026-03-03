@@ -252,10 +252,16 @@ def ingest_follower_requests():
             g_step = int(g_state["step"] or 0) if g_state else 0
             g_status = g_state["status"] if g_state else None
 
-            # Contrat FSM strict:
-            # - les *_req viennent uniquement de follower quand gest est déjà "follow"
-            # - les transitions *_req -> *_done viennent ensuite d'opener/closer
-            if g_status != "follow":
+            # Contrat FSM pratique:
+            # - état canonique = "follow"
+            # - mais tolérer les états ACK (open_done/pyramide_done/partial_done)
+            #   évite un deadlock de course quand follower repasse brièvement à
+            #   follow puis enchaîne un nouveau *_req avant que le mirror gest
+            #   n'ait eu le temps de remettre explicitement gest.status=follow.
+            #   Dans ce cas, gest doit accepter le nouveau *_req au lieu de
+            #   bloquer indéfiniment la ligne en pyramide_req côté follower.
+            ready_statuses = {"follow", "open_done", "pyramide_done", "partial_done", "partialdone"}
+            if g_status not in ready_statuses:
                 continue
 
             # Ignore stale follower requests that were already ACKed upstream.
@@ -283,7 +289,7 @@ def ingest_follower_requests():
                         reason=?,
                         ts_status_update=strftime('%s','now')*1000
                     WHERE uid=?
-                      AND status='follow'
+                      AND status IN ('follow','open_done','pyramide_done','partial_done','partialdone')
                 """, (r["ratio_to_add"], r["reason"], uid))
                 if cur.rowcount:
                     log.info("[GEST REQ] uid=%s -> pyramide_req", uid)
@@ -296,7 +302,7 @@ def ingest_follower_requests():
                         reason=?,
                         ts_status_update=strftime('%s','now')*1000
                     WHERE uid=?
-                      AND status='follow'
+                      AND status IN ('follow','open_done','pyramide_done','partial_done','partialdone')
                 """, (r["ratio_to_close"], r["reason"], uid))
                 if cur.rowcount:
                     log.info("[GEST REQ] uid=%s -> partial_req", uid)
@@ -309,7 +315,7 @@ def ingest_follower_requests():
                         reason=?,
                         ts_status_update=strftime('%s','now')*1000
                     WHERE uid=?
-                      AND status='follow'
+                      AND status IN ('follow','open_done','pyramide_done','partial_done','partialdone')
                 """, (r["reason"], uid))
                 if cur.rowcount:
                     log.info("[GEST REQ] uid=%s -> close_req", uid)
