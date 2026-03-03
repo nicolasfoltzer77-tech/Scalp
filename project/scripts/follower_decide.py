@@ -305,7 +305,7 @@ def decide_core(f, CFG, now):
                 close_reason = "TP_DYN"
 
             if close_reason:
-                f.execute("""
+                cur = f.execute("""
                     UPDATE follower
                     SET status='close_req',
                         qty_to_close_ratio=1.0,
@@ -315,7 +315,11 @@ def decide_core(f, CFG, now):
                         last_decision_ts=?,
                         reason=?
                     WHERE uid=?
+                      AND status='follow'
                 """, (now, now, close_reason, uid))
+                if cur.rowcount == 0:
+                    log.info("[DECIDE_SKIP] uid=%s why=stale_status_close_req", uid)
+                    continue
                 log.info("[CLOSE_REQ] uid=%s reason=%s price_now=%.8f", uid, close_reason, float(price_now))
                 continue
 
@@ -329,7 +333,7 @@ def decide_core(f, CFG, now):
         if ok:
             ratio_add = float(ratio_or_req)
 
-            f.execute("""
+            cur = f.execute("""
                 UPDATE follower
                 SET status='pyramide_req',
                     qty_to_add_ratio=?,
@@ -342,6 +346,7 @@ def decide_core(f, CFG, now):
                     last_pyramide_mfe_atr=?,
                     reason='PYRAMIDE_SIMPLE'
                 WHERE uid=?
+                  AND status='follow'
             """, (
                 ratio_add,
                 ratio_add,
@@ -352,6 +357,10 @@ def decide_core(f, CFG, now):
                 float(fr["mfe_atr"] or 0.0),
                 uid
             ))
+
+            if cur.rowcount == 0:
+                log.info("[DECIDE_SKIP] uid=%s why=stale_status_pyramide_req", uid)
+                continue
 
             nb_pyr_ack = None
             if "nb_pyramide_ack" in fr.keys():
@@ -441,7 +450,7 @@ def decide_core(f, CFG, now):
                 )
                 continue
 
-            f.execute("""
+            cur = f.execute("""
                 UPDATE follower
                 SET status='partial_req',
                     qty_to_close_ratio=?,
@@ -454,6 +463,7 @@ def decide_core(f, CFG, now):
                     last_partial_mfe_atr=?,
                     reason='TP_PARTIAL'
                 WHERE uid=?
+                  AND status='follow'
             """, (
                 ratio_cfg,
                 ratio_cfg,
@@ -463,6 +473,10 @@ def decide_core(f, CFG, now):
                 float(fr["mfe_atr"] or 0.0),
                 uid
             ))
+
+            if cur.rowcount == 0:
+                log.info("[DECIDE_SKIP] uid=%s why=stale_status_partial_req", uid)
+                continue
 
             log.info(
                 "[PARTIAL] uid=%s ratio=%.4f mfe_atr=%.4f",
