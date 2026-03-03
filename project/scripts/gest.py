@@ -251,10 +251,11 @@ def ingest_follower_requests():
             st  = r["status"]
 
             g_state = g.execute(
-                "SELECT step FROM gest WHERE uid=? LIMIT 1",
+                "SELECT status, step FROM gest WHERE uid=? LIMIT 1",
                 (uid,),
             ).fetchone()
             g_step = int(g_state["step"] or 0) if g_state else 0
+            g_status = g_state["status"] if g_state else None
 
             # Ignore stale follower requests that were already ACKed upstream.
             # Without this guard, gest can be downgraded from *_done -> *_req
@@ -269,6 +270,16 @@ def ingest_follower_requests():
                 # if gest is already at an equal/newer step, follower's *_req is stale
                 # (common race: opener ACK lands before follower.done_step refresh).
                 if req_step <= g_step:
+                    continue
+            else:
+                # Legacy schemas may not have req_step/done_step, so stale follower
+                # requests can race after an upstream ACK and downgrade gest
+                # from *_done back to *_req. Prevent that downgrade explicitly.
+                if st == "pyramide_req" and g_status == "pyramide_done":
+                    continue
+                if st == "partial_req" and g_status == "partial_done":
+                    continue
+                if st == "close_req" and g_status == "close_done":
                     continue
 
             if st == "pyramide_req":
