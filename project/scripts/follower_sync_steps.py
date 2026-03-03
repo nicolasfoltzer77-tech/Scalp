@@ -50,7 +50,7 @@ def sync_done_steps(*, f):
             COUNT(*) AS nb_pyramide_done
         FROM exec
         WHERE status='done'
-          AND type='pyramide'
+          AND exec_type='pyramide'
         GROUP BY uid
     """).fetchall()
 
