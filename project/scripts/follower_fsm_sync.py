@@ -21,6 +21,12 @@ import logging
 log = logging.getLogger("FOLLOWER_FSM_SYNC")
 
 
+DONE_ALIASES = {
+    "pyramide_done",
+    "pyramid_done",  # tolérance legacy
+}
+
+
 def sync_fsm_status(g, f, now):
     """
     g : connection gest.db (read)
@@ -74,47 +80,36 @@ def sync_fsm_status(g, f, now):
 
         # ACK done (pyramide / partial) : follower doit repasser en follow,
         # recopier le step canonique et rafraîchir le snapshot de quantité.
-        # Pour pyramide_done, on force le reset vers follow dès qu'on détecte
-        # un état non-follow côté follower afin d'éviter les blocages FSM.
-        if g_status == "pyramide_done" and status != "follow":
+        #
+        # Règle de déblocage demandée en prod:
+        # - si follower est en *_req
+        # - il lit UNIQUEMENT gest.status
+        # - dès que gest passe en *_done correspondant, follower revient en follow
+        #
+        # Ici on tolère les deux orthographes historiques:
+        # pyramide_done / pyramid_done.
+        if status == "pyramide_req" and g_status in DONE_ALIASES:
             qty_snapshot = float(
                 gr["qty_open"]
                 if gr["qty_open"] is not None
                 else (gr["qty"] if gr["qty"] is not None else 0.0)
             )
 
-            # Compteurs pyramide incrémentés uniquement si l'on sort effectivement
-            # d'un état pyramide_req pour éviter tout double-compte.
-            if status == "pyramide_req":
-                f.execute("""
-                    UPDATE follower
-                    SET status='follow',
-                        step=?,
-                        req_step=CASE
-                            WHEN done_step IS NULL THEN req_step
-                            ELSE done_step
-                        END,
-                        qty_open_snapshot=?,
-                        nb_pyramide=COALESCE(nb_pyramide, 0) + 1,
-                        nb_pyramide_ack=COALESCE(nb_pyramide_ack, 0) + 1,
-                        reason='PYRAMIDE_DONE_ACK',
-                        last_action_ts=?
-                    WHERE uid=?
-                """, (g_step, qty_snapshot, now, uid))
-            else:
-                f.execute("""
-                    UPDATE follower
-                    SET status='follow',
-                        step=?,
-                        req_step=CASE
-                            WHEN done_step IS NULL THEN req_step
-                            ELSE done_step
-                        END,
-                        qty_open_snapshot=?,
-                        reason='PYRAMIDE_DONE_FORCE_RESET',
-                        last_action_ts=?
-                    WHERE uid=?
-                """, (g_step, qty_snapshot, now, uid))
+            f.execute("""
+                UPDATE follower
+                SET status='follow',
+                    step=?,
+                    req_step=CASE
+                        WHEN done_step IS NULL THEN req_step
+                        ELSE done_step
+                    END,
+                    qty_open_snapshot=?,
+                    nb_pyramide=COALESCE(nb_pyramide, 0) + 1,
+                    nb_pyramide_ack=COALESCE(nb_pyramide_ack, 0) + 1,
+                    reason='PYRAMIDE_DONE_ACK',
+                    last_action_ts=?
+                WHERE uid=?
+            """, (g_step, qty_snapshot, now, uid))
             continue
 
         # Sur partial_done, on garde l'ack strict depuis partial_req.
