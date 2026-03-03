@@ -56,55 +56,40 @@ def process_exec():
 
     sanitize_forbidden_states(f)
 
-    for ex in e.execute("""
-        SELECT uid, exec_type, step
+    # IMPORTANT:
+    # Plusieurs lignes `exec(done)` existent par uid (open + pyramides + partials).
+    # Une itération brute peut réécrire un step plus ancien selon l'ordre de scan
+    # SQLite. On matérialise donc le step terminal par uid (= max step done).
+    done_rows = e.execute("""
+        SELECT
+            uid,
+            MAX(COALESCE(done_step, step)) AS max_done_step
         FROM exec
         WHERE status='done'
-    """):
+        GROUP BY uid
+    """).fetchall()
+
+    for ex in done_rows:
 
         uid  = ex["uid"]
-        etyp = ex["exec_type"]
-        step = int(ex["step"] or 0)
+        step = int(ex["max_done_step"] or 0)
 
         fr = f.execute("SELECT status, step FROM follower WHERE uid=?", (uid,)).fetchone()
         if not fr:
             continue
 
-        # =====================================================
-        # OPEN terminé → follower passe follow
-        # =====================================================
-        if etyp in ("open","pyramide"):
-            f.execute("""
-                UPDATE follower
-                SET status='follow',
-                    step=?,
-                    ts_updated=?
-                WHERE uid=?
-            """,(step, now_ms(), uid))
+        # Ne jamais faire régresser follower.step (sécurité anti-race).
+        fr_step = int(fr["step"] or 0)
+        if step < fr_step:
+            continue
 
-        # =====================================================
-        # PARTIAL exécuté → demander prochaine étape à GEST
-        # =====================================================
-        elif etyp == "partial":
-            f.execute("""
-                UPDATE follower
-                SET status='follow',
-                    step=?,
-                    ts_updated=?
-                WHERE uid=?
-            """,(step, now_ms(), uid))
-
-        # =====================================================
-        # CLOSE exécuté → fin de vie
-        # =====================================================
-        elif etyp == "close":
-            f.execute("""
-                UPDATE follower
-                SET status='follow',
-                    step=?,
-                    ts_updated=?
-                WHERE uid=?
-            """,(step, now_ms(), uid))
+        f.execute("""
+            UPDATE follower
+            SET status='follow',
+                step=?,
+                ts_updated=?
+            WHERE uid=?
+        """, (step, now_ms(), uid))
 
     f.commit()
     e.close(); f.close(); g.close()
@@ -121,4 +106,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
