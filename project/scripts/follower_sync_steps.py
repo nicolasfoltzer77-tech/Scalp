@@ -36,11 +36,16 @@ def sync_done_steps(*, f):
     """).fetchall()
 
     for r in rows:
+        done_step = int(r["done_step"] or 0)
         f.execute("""
             UPDATE follower
-            SET done_step=?
+            SET done_step=?,
+                step=CASE
+                    WHEN COALESCE(step, 0) < ? THEN ?
+                    ELSE step
+                END
             WHERE uid=?
-        """, (int(r["done_step"] or 0), r["uid"]))
+        """, (done_step, done_step, done_step, r["uid"]))
 
     # Keep follower pyramide counters aligned with real executor fills.
     # This avoids follower-side drift when gest/fsm transiently over-acks.
