@@ -26,6 +26,12 @@ DONE_ALIASES = {
     "pyramid_done",  # tolérance legacy
 }
 
+REQ_TO_DONE = {
+    "pyramide_req": DONE_ALIASES,
+    "partial_req": {"partial_done"},
+    "close_req": {"close_done"},
+}
+
 
 def _norm_status(value):
     try:
@@ -120,20 +126,29 @@ def sync_fsm_status(g, f, now):
         req_step = _safe_int(fr, "req_step", default=0)
         done_step = _safe_int(fr, "done_step", default=0)
 
-        # ACK done (pyramide / partial) : follower doit repasser en follow,
-        # recopier le step canonique et rafraîchir le snapshot de quantité.
+        # ACK done (pyramide / partial / close) : follower doit repasser en
+        # follow dès que gest confirme le *_done correspondant.
         #
         # Règle de déblocage demandée en prod:
         # - si follower est en *_req
         # - il lit UNIQUEMENT gest.status
         # - dès que gest passe en *_done correspondant, follower revient en follow
         #
-        # Ici on tolère les deux orthographes historiques:
-        # pyramide_done / pyramid_done.
-        if status_norm in ("pyramide_req", "pyramide_done") and g_status_norm in DONE_ALIASES:
+        # Tolérance orthographe legacy : pyramide_done / pyramid_done.
+        expected_done = REQ_TO_DONE.get(status_norm)
+        if expected_done and g_status_norm in expected_done:
             qty_open = _safe_float(gr, "qty_open", default=0.0)
             qty = _safe_float(gr, "qty", default=0.0)
             qty_snapshot = qty_open if qty_open > 0.0 else qty
+
+            if status_norm == "pyramide_req":
+                reason = "PYRAMIDE_DONE_ACK"
+            elif status_norm == "partial_req":
+                reason = "PARTIAL_DONE_ACK"
+            elif status_norm == "close_req":
+                reason = "CLOSE_DONE_ACK"
+            else:
+                reason = "DONE_ACK"
 
             f.execute("""
                 UPDATE follower
@@ -144,33 +159,18 @@ def sync_fsm_status(g, f, now):
                         ELSE done_step
                     END,
                     qty_open_snapshot=?,
-                    nb_pyramide=COALESCE(nb_pyramide, 0) + 1,
-                    nb_pyramide_ack=COALESCE(nb_pyramide_ack, 0) + 1,
-                    reason='PYRAMIDE_DONE_ACK',
-                    last_action_ts=?
-                WHERE uid=?
-            """, (g_step, qty_snapshot, now, uid))
-            continue
-
-        # Sur partial_done, on garde l'ack strict depuis partial_req.
-        if g_status_norm == "partial_done" and status_norm in ("partial_req", "partial_done"):
-            qty_open = _safe_float(gr, "qty_open", default=0.0)
-            qty = _safe_float(gr, "qty", default=0.0)
-            qty_snapshot = qty_open if qty_open > 0.0 else qty
-
-            f.execute("""
-                UPDATE follower
-                SET status='follow',
-                    step=?,
-                    req_step=CASE
-                        WHEN done_step IS NULL THEN req_step
-                        ELSE done_step
+                    nb_pyramide=CASE
+                        WHEN ?='pyramide_req' THEN COALESCE(nb_pyramide, 0) + 1
+                        ELSE nb_pyramide
                     END,
-                    qty_open_snapshot=?,
-                    reason='PARTIAL_DONE_ACK',
+                    nb_pyramide_ack=CASE
+                        WHEN ?='pyramide_req' THEN COALESCE(nb_pyramide_ack, 0) + 1
+                        ELSE nb_pyramide_ack
+                    END,
+                    reason=?,
                     last_action_ts=?
                 WHERE uid=?
-            """, (g_step, qty_snapshot, now, uid))
+            """, (g_step, qty_snapshot, status_norm, status_norm, reason, now, uid))
             continue
 
         if req_step != done_step:
