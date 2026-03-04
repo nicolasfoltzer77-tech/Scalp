@@ -23,16 +23,30 @@ def run(conn: sqlite3.Connection, out: dict) -> dict:
         return {"status": "skipped", "reason": "missing exec_type"}
 
     close = steps[steps["exec_type"].astype(str).str.lower() == "close"].copy()
-    if close.empty:
-        return {"status": "skipped", "reason": "no close steps"}
 
     reason_col = db.pick_first(close.columns, ["reason", "close_reason", "exit_reason", "status"])
-    pnl_col = db.find_pnl_col(close.columns)
-    if not reason_col or not pnl_col:
-        return {"status": "skipped", "reason": "missing close reason or pnl"}
+    if close.empty or not reason_col:
+        trades = db.load_table(conn, "recorder")
+        reason_col = db.pick_first(trades.columns, ["reason_close", "close_reason", "exit_reason", "reason", "status"])
+        pnl_col = db.find_pnl_col(trades.columns)
+        if not reason_col or not pnl_col:
+            return {"status": "skipped", "reason": "missing close reason or pnl"}
+        trades[pnl_col] = pd.to_numeric(trades[pnl_col], errors="coerce")
+        g = trades.groupby(reason_col, dropna=False, observed=False)[pnl_col]
+    else:
+        pnl_col = db.find_pnl_col(close.columns)
+        if not pnl_col:
+            trades = db.load_table(conn, "recorder")
+            tid_steps = db.find_trade_id_col(close.columns)
+            tid_trades = db.find_trade_id_col(trades.columns)
+            trades_pnl_col = db.find_pnl_col(trades.columns)
+            if not tid_steps or not tid_trades or not trades_pnl_col:
+                return {"status": "skipped", "reason": "missing close reason or pnl"}
+            close = close.merge(trades[[tid_trades, trades_pnl_col]], left_on=tid_steps, right_on=tid_trades, how="left")
+            pnl_col = trades_pnl_col
 
-    close[pnl_col] = pd.to_numeric(close[pnl_col], errors="coerce")
-    g = close.groupby(reason_col)[pnl_col]
+        close[pnl_col] = pd.to_numeric(close[pnl_col], errors="coerce")
+        g = close.groupby(reason_col, dropna=False, observed=False)[pnl_col]
     metrics = pd.DataFrame({
         "count": g.size(),
         "avg_pnl": g.mean(),

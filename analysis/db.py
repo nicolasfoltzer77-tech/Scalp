@@ -67,7 +67,7 @@ def find_step_col(cols: Iterable[str]) -> Optional[str]:
 
 
 def find_pnl_col(cols: Iterable[str]) -> Optional[str]:
-    return pick_first(cols, ["pnl_net", "pnl", "net_pnl", "realized_pnl"])
+    return pick_first(cols, ["pnl_net", "pnl", "pnl_realized", "net_pnl", "realized_pnl"])
 
 
 def find_open_close_time_cols(cols: Iterable[str]) -> tuple[Optional[str], Optional[str]]:
@@ -77,7 +77,7 @@ def find_open_close_time_cols(cols: Iterable[str]) -> tuple[Optional[str], Optio
 
 
 def find_step_time_col(cols: Iterable[str]) -> Optional[str]:
-    return pick_first(cols, ["ts", "timestamp", "time", "created_at", "event_time"])
+    return pick_first(cols, ["ts_exec", "ts", "timestamp", "time", "created_at", "event_time"])
 
 
 def to_datetime_series(s: pd.Series) -> pd.Series:
@@ -102,7 +102,7 @@ def compute_basic_metrics(df: pd.DataFrame, pnl_col: str, group_cols: list[str])
         return pd.DataFrame(columns=group_cols + ["trades", "winrate", "expectancy", "profit_factor", "avg_pnl"])
 
     rows = []
-    for keys, sub in df.groupby(group_cols, dropna=False):
+    for keys, sub in df.groupby(group_cols, dropna=False, observed=False):
         pnl = pd.to_numeric(sub[pnl_col], errors="coerce").dropna()
         if pnl.empty:
             continue
