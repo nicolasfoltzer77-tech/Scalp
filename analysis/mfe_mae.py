@@ -8,71 +8,60 @@ if __package__ in (None, ""):
 
 import matplotlib.pyplot as plt
 import pandas as pd
-try:
-    import seaborn as sns
-except Exception:  # optional plotting dependency
-    sns = None
+import seaborn as sns
 import sqlite3
 
 from analysis import db
 
 
 def run(conn: sqlite3.Connection, out: dict) -> dict:
-    trades = db.load_table(conn, "recorder")
-    steps = db.load_table(conn, "recorder_steps")
+    trades, table = db.load_first_table(conn, ["recorder", "recorder_trades"])
+    if trades is None:
+        return {"status": "skipped", "reason": "trades table not found"}
 
-    tid_t = db.find_trade_id_col(trades.columns)
-    tid_s = db.find_trade_id_col(steps.columns)
-    pnl_step_col = db.find_pnl_col(steps.columns)
+    entry_col = db.pick_first(trades.columns, ["entry", "entry_price", "price_open"])
+    mfe_col = db.pick_first(trades.columns, ["mfe_price"])
+    mae_col = db.pick_first(trades.columns, ["mae_price"])
+    uid_col = db.find_trade_id_col(trades.columns)
 
-    if not tid_t or not tid_s or not pnl_step_col:
-        return {"status": "skipped", "reason": "missing trade id or step pnl column"}
+    if not entry_col or not mfe_col or not mae_col:
+        return {"status": "skipped", "reason": "missing entry/mfe/mae columns", "table": table}
 
-    step_pnl = steps[[tid_s, pnl_step_col]].copy()
-    step_pnl[pnl_step_col] = pd.to_numeric(step_pnl[pnl_step_col], errors="coerce")
-    agg = step_pnl.groupby(tid_s)[pnl_step_col].agg(mfe="max", mae="min").reset_index()
+    work = trades.copy()
+    for col in [entry_col, mfe_col, mae_col]:
+        work[col] = pd.to_numeric(work[col], errors="coerce")
 
-    merged = trades.merge(agg, left_on=tid_t, right_on=tid_s, how="left")
-    merged.to_csv(out["csv"] / "mfe_mae_per_trade.csv", index=False)
+    base = work[entry_col].replace(0, pd.NA)
+    work["mfe_pct"] = (work[mfe_col] - work[entry_col]) / base
+    work["mae_pct"] = (work[mae_col] - work[entry_col]) / base
 
-    # Distributions and scatter
-    if sns:
-        sns.set_theme(style="whitegrid")
-    for col, name in [("mfe", "mfe_distribution.png"), ("mae", "mae_distribution.png")]:
-        plt.figure(figsize=(8, 4))
-        if sns:
-            sns.histplot(merged[col].dropna(), kde=True, bins=40)
-        else:
-            plt.hist(merged[col].dropna(), bins=40)
-        plt.title(f"{col.upper()} distribution")
-        plt.tight_layout()
-        plt.savefig(out["charts"] / name)
-        plt.close()
+    export_cols = [c for c in [uid_col, entry_col, mfe_col, mae_col] if c]
+    work[export_cols + ["mfe_pct", "mae_pct"]].to_csv(out["csv"] / "mfe_mae_metrics.csv", index=False)
 
-    plt.figure(figsize=(6, 6))
-    if sns:
-        sns.scatterplot(data=merged, x="mae", y="mfe", alpha=0.5)
-    else:
-        plt.scatter(merged["mae"], merged["mfe"], alpha=0.5)
-    plt.title("MAE vs MFE")
+    sns.set_theme(style="whitegrid")
+
+    plt.figure(figsize=(7, 6))
+    sns.scatterplot(data=work, x="mae_pct", y="mfe_pct", alpha=0.45)
+    plt.axhline(0, color="grey", lw=1)
+    plt.axvline(0, color="grey", lw=1)
+    plt.title("MAE% vs MFE%")
+    plt.xlabel("mae_pct")
+    plt.ylabel("mfe_pct")
     plt.tight_layout()
     plt.savefig(out["charts"] / "mfe_mae_scatter.png")
     plt.close()
 
-    groups = {
-        "symbol": db.find_symbol_col(merged.columns),
-        "leverage_bucket": None,
-        "dec_mode": db.find_dec_mode_col(merged.columns),
-        "step": db.find_step_col(merged.columns),
-    }
-    lev_col = db.find_leverage_col(merged.columns)
-    if lev_col:
-        merged["leverage_bucket"] = db.leverage_bucket(merged[lev_col])
-        groups["leverage_bucket"] = "leverage_bucket"
+    for col, out_name, title in [
+        ("mfe_pct", "mfe_distribution.png", "MFE% Distribution"),
+        ("mae_pct", "mae_distribution.png", "MAE% Distribution"),
+    ]:
+        plt.figure(figsize=(8, 4))
+        series = work[col].dropna()
+        sns.histplot(series, kde=True, bins=40)
+        plt.title(title)
+        plt.xlabel(col)
+        plt.tight_layout()
+        plt.savefig(out["charts"] / out_name)
+        plt.close()
 
-    for label, gcol in groups.items():
-        if gcol:
-            (merged.groupby(gcol, dropna=False)["mfe"].mean().reset_index(name="avg_mfe")
-             .to_csv(out["csv"] / f"avg_mfe_by_{label}.csv", index=False))
-
-    return {"status": "ok", "rows": len(merged)}
+    return {"status": "ok", "rows": int(work[["mfe_pct", "mae_pct"]].dropna().shape[0]), "table": table}

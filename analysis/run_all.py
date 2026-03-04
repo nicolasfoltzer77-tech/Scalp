@@ -13,7 +13,7 @@ from analysis import db
 from analysis import mfe_mae, expectancy, pyramiding, exit_reasons, leverage_analysis
 from analysis import coin_analysis, time_analysis, equity_curve, edge_decay, clustering
 from analysis import entry_efficiency, step_analysis, move_vs_fees, volatility_analysis, trade_clustering
-from analysis import range_analysis, dashboard
+from analysis import range_analysis, atr_analysis, signal_quality, duration_analysis, dashboard
 
 
 MODULES = [
@@ -28,6 +28,9 @@ MODULES = [
     ("edge_decay", edge_decay.run),
     ("clustering", clustering.run),
     ("entry_efficiency", entry_efficiency.run),
+    ("atr_analysis", atr_analysis.run),
+    ("signal_quality", signal_quality.run),
+    ("duration_analysis", duration_analysis.run),
     ("step_analysis", step_analysis.run),
     ("move_vs_fees", move_vs_fees.run),
     ("volatility_analysis", volatility_analysis.run),
