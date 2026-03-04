@@ -83,13 +83,15 @@ def fmt(v, n=4):
 def lev_bucket(v):
     if v is None:
         return "UNK"
-    if v < 5:
-        return "<5"
-    if v < 10:
-        return "5-9"
-    if v < 20:
-        return "10-19"
-    return "20+"
+    if v <= 0:
+        return "<=0"
+    if v > 20:
+        return "21+"
+
+    lv = int(v)
+    start = ((lv - 1) // 3) * 3 + 1
+    end = min(start + 2, 20)
+    return f"{start}-{end}"
 
 
 # ============================================================
@@ -232,6 +234,16 @@ for r in step_rows:
         }
     )
 
+if step_rows:
+    for t in trades:
+        entries = steps_by_uid.get(t["uid"], [])
+        if not entries:
+            continue
+
+        t["step"] = max((e["step"] for e in entries), default=t["step"])
+        t["pyramide"] = sum(1 for e in entries if e["exec_type"] == "pyramide")
+        t["partial"] = sum(1 for e in entries if e["exec_type"] == "partial")
+
 # ============================================================
 # GLOBAL
 # ============================================================
@@ -263,7 +275,7 @@ for t in trades:
 for mode, xs in sorted(by_mode.items(), key=lambda x: avg(x[1]), reverse=True):
     print(
         f"{mode:12s} | n={len(xs):4d} | win={winrate(xs) * 100:6.2f}% "
-        f"| exp={fmt(avg(xs))} | pf={pf(xs):.2f}"
+        f"| exp={fmt(avg(xs))} | pnl={fmt(sum(xs))} | pf={pf(xs):.2f}"
     )
 
 # ============================================================
@@ -277,33 +289,13 @@ by_lev = defaultdict(list)
 for t in trades:
     by_lev[t["lev_bucket"]].append(t["pnl_net"])
 
-for bucket in ["<5", "5-9", "10-19", "20+", "UNK"]:
+for bucket in ["1-3", "4-6", "7-9", "10-12", "13-15", "16-18", "19-20", "21+", "<=0", "UNK"]:
     xs = by_lev.get(bucket, [])
     if not xs:
         continue
     print(
         f"{bucket:6s} | n={len(xs):4d} | win={winrate(xs) * 100:6.2f}% "
         f"| exp={fmt(avg(xs))} | pf={pf(xs):.2f}"
-    )
-
-# ============================================================
-# TYPE D’ENTRÉE × STEP FINAL × LEVIER
-# ============================================================
-
-print("\nTYPE D’ENTRÉE × STEP FINAL × LEVIER")
-print("=" * 80)
-
-grid = defaultdict(list)
-for t in trades:
-    key = (t["mode"], t["step"], t["lev_bucket"])
-    grid[key].append(t["pnl_net"])
-
-for (mode, step, bucket), xs in sorted(grid.items()):
-    if len(xs) < 3:
-        continue
-    print(
-        f"{mode:12s} | step={step:<2d} | lev={bucket:5s} | n={len(xs):4d} "
-        f"| win={winrate(xs) * 100:6.2f}% | exp={fmt(avg(xs))} | pf={pf(xs):.2f}"
     )
 
 # ============================================================
@@ -319,9 +311,9 @@ else:
     exec_counter = Counter()
     reason_counter = Counter()
     close_reason_counter = Counter()
+    close_reason_pnls = defaultdict(list)
 
     by_exec = defaultdict(list)
-    by_exec_lev = defaultdict(list)
     golden_pnls = []
     nongolden_pnls = []
     close_mfe = []
@@ -340,7 +332,6 @@ else:
                 reason_counter[e["reason"]] += 1
 
             by_exec[e["exec_type"]].append(pnl)
-            by_exec_lev[(e["exec_type"], bucket)].append(pnl)
 
             if e["golden"]:
                 golden_pnls.append(pnl)
@@ -350,34 +341,23 @@ else:
             if e["exec_type"] == "close":
                 if e["reason"]:
                     close_reason_counter[e["reason"]] += 1
+                    close_reason_pnls[e["reason"]].append(pnl)
                 if e["mfe_atr"] is not None:
                     close_mfe.append(float(e["mfe_atr"]))
                 if e["mae_atr"] is not None:
                     close_mae.append(float(e["mae_atr"]))
 
-    print("Exec types (volume d'events):")
-    for exec_type, n in exec_counter.most_common():
-        print(f"  - {exec_type:10s}: {n}")
-
     print("\nImpact net par exec_type (sur trades contenant l'event):")
     for exec_type, xs in sorted(by_exec.items(), key=lambda x: avg(x[1]), reverse=True):
         print(
             f"  - {exec_type:10s} | n={len(xs):4d} | win={winrate(xs) * 100:6.2f}% "
-            f"| exp={fmt(avg(xs))} | pf={pf(xs):.2f}"
+            f"| exp={fmt(avg(xs))} | pnl={fmt(sum(xs))} | pf={pf(xs):.2f}"
         )
 
     print("\nClose reasons (top 10):")
     for reason, n in close_reason_counter.most_common(10):
-        print(f"  - {reason:20s}: {n}")
-
-    print("\nImpact exec_type × levier (n>=3):")
-    for (exec_type, bucket), xs in sorted(by_exec_lev.items()):
-        if len(xs) < 3:
-            continue
-        print(
-            f"  - {exec_type:10s} | lev={bucket:5s} | n={len(xs):4d} "
-            f"| exp={fmt(avg(xs))} | pf={pf(xs):.2f}"
-        )
+        reason_xs = close_reason_pnls.get(reason, [])
+        print(f"  - {reason:20s}: {n:4d} | pnl={fmt(sum(reason_xs))}")
 
     if close_mfe or close_mae:
         print("\nStats close ATR:")
