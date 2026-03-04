@@ -76,7 +76,6 @@ def ingest_pyramide_req():
             instId = r["instId"]
             side   = r["side"]
             ratio  = _f(r["ratio_to_add"], 0.0)
-            req_ts = int(r["ts_status_update"] or 0)
             req_step = int(r["step"] or 0)
 
             cfg = _load_sizing_cfg()
@@ -180,24 +179,10 @@ def ingest_pyramide_req():
                          uid, instId, _f(qty_raw, 0.0), price, min_usdt)
                 continue
 
-            # Idempotence hard-stop:
-            # ne pas redéclencher en boucle la même pyramide_req.
-            # Important: plusieurs pyramides successives peuvent être émises dans
-            # la même seconde; gest.ts_status_update a une granularité seconde et
-            # ne doit donc pas bloquer un nouveau step valide.
-            # On scope l'idempotence à (uid, step).
-            if req_ts > 0:
-                already_ingested = o.execute("""
-                    SELECT 1
-                    FROM opener
-                    WHERE uid=?
-                      AND step=?
-                      AND exec_type='pyramide'
-                      AND ts_open >= ?
-                    LIMIT 1
-                """, (uid, req_step, req_ts)).fetchone()
-                if already_ingested:
-                    continue
+            # Idempotence: on ne bloque que s'il existe déjà un pending stdby
+            # pour ce (uid, step). Les rows historiques `pyramide_done` au même
+            # step doivent rester compatibles (sinon la pyramide suivante est
+            # ignorée à cause de la granularité seconde de gest.ts_status_update).
 
             step = req_step
 
