@@ -12,6 +12,7 @@ import json
 from analysis import db
 from analysis import mfe_mae, expectancy, pyramiding, exit_reasons, leverage_analysis
 from analysis import coin_analysis, time_analysis, equity_curve, edge_decay, clustering
+from analysis import entry_efficiency, step_analysis, move_vs_fees, volatility_analysis, trade_clustering
 
 
 MODULES = [
@@ -25,6 +26,11 @@ MODULES = [
     ("equity_curve", equity_curve.run),
     ("edge_decay", edge_decay.run),
     ("clustering", clustering.run),
+    ("entry_efficiency", entry_efficiency.run),
+    ("step_analysis", step_analysis.run),
+    ("move_vs_fees", move_vs_fees.run),
+    ("volatility_analysis", volatility_analysis.run),
+    ("trade_clustering", trade_clustering.run),
 ]
 
 

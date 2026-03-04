@@ -29,6 +29,11 @@ def ensure_output_dirs(output_root: str | Path = OUTPUT_ROOT) -> dict[str, Path]
     return {"root": root, "csv": csv_dir, "charts": chart_dir, "reports": report_dir}
 
 
+def list_tables(conn: sqlite3.Connection) -> list[str]:
+    q = "SELECT name FROM sqlite_master WHERE type='table'"
+    return [r[0] for r in conn.execute(q).fetchall()]
+
+
 def table_columns(conn: sqlite3.Connection, table: str) -> list[str]:
     q = f"PRAGMA table_info({table})"
     return [r[1] for r in conn.execute(q).fetchall()]
@@ -42,8 +47,19 @@ def pick_first(available: Iterable[str], candidates: Iterable[str]) -> Optional[
     return None
 
 
+def first_existing_table(conn: sqlite3.Connection, candidates: Iterable[str]) -> Optional[str]:
+    return pick_first(list_tables(conn), candidates)
+
+
 def load_table(conn: sqlite3.Connection, table: str) -> pd.DataFrame:
     return pd.read_sql_query(f"SELECT * FROM {table}", conn)
+
+
+def load_first_table(conn: sqlite3.Connection, candidates: Iterable[str]) -> tuple[Optional[pd.DataFrame], Optional[str]]:
+    table = first_existing_table(conn, candidates)
+    if not table:
+        return None, None
+    return load_table(conn, table), table
 
 
 def find_trade_id_col(cols: Iterable[str]) -> Optional[str]:
@@ -52,6 +68,22 @@ def find_trade_id_col(cols: Iterable[str]) -> Optional[str]:
 
 def find_symbol_col(cols: Iterable[str]) -> Optional[str]:
     return pick_first(cols, ["symbol", "instId", "coin", "pair"])
+
+
+def find_side_col(cols: Iterable[str]) -> Optional[str]:
+    return pick_first(cols, ["side", "position_side", "direction", "trade_side"])
+
+
+def find_price_col(cols: Iterable[str], kind: str) -> Optional[str]:
+    if kind == "entry":
+        return pick_first(cols, ["entry_price", "open_price", "price_open", "px_entry", "avg_entry_price"])
+    if kind == "close":
+        return pick_first(cols, ["close_price", "exit_price", "price_close", "px_exit", "avg_exit_price"])
+    if kind == "high":
+        return pick_first(cols, ["high_price", "max_price", "price_high", "trade_high"])
+    if kind == "low":
+        return pick_first(cols, ["low_price", "min_price", "price_low", "trade_low"])
+    return None
 
 
 def find_leverage_col(cols: Iterable[str]) -> Optional[str]:
@@ -68,6 +100,10 @@ def find_step_col(cols: Iterable[str]) -> Optional[str]:
 
 def find_pnl_col(cols: Iterable[str]) -> Optional[str]:
     return pick_first(cols, ["pnl_net", "pnl", "pnl_realized", "net_pnl", "realized_pnl"])
+
+
+def find_fee_col(cols: Iterable[str]) -> Optional[str]:
+    return pick_first(cols, ["fees", "fee", "commission", "total_fee", "fees_paid"])
 
 
 def find_open_close_time_cols(cols: Iterable[str]) -> tuple[Optional[str], Optional[str]]:
