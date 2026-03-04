@@ -1,12 +1,17 @@
 from __future__ import annotations
 
-import argparse
-import json
+import sys
 from pathlib import Path
 
-from . import db
-from . import mfe_mae, expectancy, pyramiding, exit_reasons, leverage_analysis
-from . import coin_analysis, time_analysis, equity_curve, edge_decay, clustering
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+import argparse
+import json
+
+from analysis import db
+from analysis import mfe_mae, expectancy, pyramiding, exit_reasons, leverage_analysis
+from analysis import coin_analysis, time_analysis, equity_curve, edge_decay, clustering
 
 
 MODULES = [

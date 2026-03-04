@@ -1,5 +1,11 @@
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 import matplotlib.pyplot as plt
 import pandas as pd
 try:
@@ -8,7 +14,7 @@ except Exception:  # optional plotting dependency
     sns = None
 import sqlite3
 
-from . import db
+from analysis import db
 
 
 def run(conn: sqlite3.Connection, out: dict) -> dict:
