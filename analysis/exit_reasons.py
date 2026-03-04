@@ -19,17 +19,25 @@ from analysis import db
 
 def run(conn: sqlite3.Connection, out: dict) -> dict:
     steps = db.load_table(conn, "recorder_steps")
-    if "exec_type" not in steps.columns:
-        return {"status": "skipped", "reason": "missing exec_type"}
+    close = pd.DataFrame()
+    reason_col = None
+    pnl_col = None
+    if "exec_type" in steps.columns:
+        close = steps[steps["exec_type"].astype(str).str.lower() == "close"].copy()
+        if not close.empty:
+            reason_col = db.pick_first(close.columns, ["reason", "close_reason", "exit_reason", "status", "reason_close"])
+            pnl_col = db.find_pnl_col(close.columns)
 
-    close = steps[steps["exec_type"].astype(str).str.lower() == "close"].copy()
-    if close.empty:
-        return {"status": "skipped", "reason": "no close steps"}
-
-    reason_col = db.pick_first(close.columns, ["reason", "close_reason", "exit_reason", "status"])
-    pnl_col = db.find_pnl_col(close.columns)
-    if not reason_col or not pnl_col:
-        return {"status": "skipped", "reason": "missing close reason or pnl"}
+    # Fallback to recorder table (e.g. reason_close + pnl) when close-step data is unavailable.
+    if close.empty or not reason_col or not pnl_col:
+        trades = db.load_table(conn, "recorder")
+        reason_col = db.pick_first(trades.columns, ["reason_close", "close_reason", "exit_reason", "status", "reason"])
+        pnl_col = db.find_pnl_col(trades.columns)
+        if not reason_col or not pnl_col:
+            return {"status": "skipped", "reason": "missing close reason or pnl"}
+        close = trades[[reason_col, pnl_col]].copy()
+        close = close.rename(columns={reason_col: "close_reason"})
+        reason_col = "close_reason"
 
     close[pnl_col] = pd.to_numeric(close[pnl_col], errors="coerce")
     g = close.groupby(reason_col)[pnl_col]
