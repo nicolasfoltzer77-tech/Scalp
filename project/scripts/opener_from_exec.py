@@ -32,8 +32,15 @@ def _ack_open_done():
     o = conn(DB_OPENER)
 
     try:
-        rows = e.execute("""
-            SELECT uid, exec_type, step, done_step
+        exec_cols = {
+            str(r["name"]).lower()
+            for r in e.execute("PRAGMA table_info(exec)").fetchall()
+        }
+        has_done_step = "done_step" in exec_cols
+
+        done_step_expr = "done_step" if has_done_step else "NULL AS done_step"
+        rows = e.execute(f"""
+            SELECT uid, exec_type, step, {done_step_expr}
             FROM exec
             WHERE status='done'
               AND exec_type IN ('open','pyramide')
