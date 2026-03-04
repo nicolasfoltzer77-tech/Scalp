@@ -337,6 +337,40 @@ def ack_exec_done():
                     WHERE uid=? AND exec_type=? AND step=? AND status=?
                 """, (status_to, step_new, now_ms(), uid, exec_type, step_new, status_from))
 
+            if (res.rowcount or 0) == 0:
+                # Fallback anti-dérive: selon les versions, le step côté exec peut
+                # être global (open+pyramide+partial), alors que closer garde un
+                # step local par requête de sortie. On valide donc la dernière
+                # ligne *_stdby disponible pour ce uid/exec_type.
+                c.execute(
+                    """
+                    UPDATE closer
+                    SET status=?, ts_exec=?
+                    WHERE uid=?
+                      AND exec_type=?
+                      AND step=(
+                          SELECT MAX(step)
+                          FROM closer
+                          WHERE uid=?
+                            AND exec_type=?
+                            AND status=?
+                            AND step<=?
+                      )
+                      AND status=?
+                    """,
+                    (
+                        status_to,
+                        now_ms(),
+                        uid,
+                        exec_type,
+                        uid,
+                        exec_type,
+                        status_from,
+                        step_new,
+                        status_from,
+                    ),
+                )
+
             if rem is None:
                 log.warning(
                     "[ACK] uid=%s req_type=%s step=%s remaining=NA -> %s (no v_exec_position row)",
