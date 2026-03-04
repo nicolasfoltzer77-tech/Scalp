@@ -7,8 +7,17 @@ DEFAULT_CHARTS = [
     "equity_curve.png",
     "drawdown_curve.png",
     "expectancy_vs_leverage.png",
+    "expectancy_vs_atr.png",
+    "expectancy_vs_duration.png",
+    "signal_expectancy_bar.png",
+    "pyramiding_edge.png",
     "pnl_by_close_reason.png",
     "pyramiding_expectancy.png",
+    "mfe_mae_scatter.png",
+    "mfe_distribution.png",
+    "mae_distribution.png",
+    "entry_efficiency_hist.png",
+    "entry_efficiency_vs_pnl.png",
     "expectancy_vs_range.png",
 ]
 
@@ -59,7 +68,7 @@ def generate_dashboard(output_root: str | Path = "analysis_output") -> Path:
       }}
       .grid {{
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
         gap: 16px;
       }}
       .card {{
