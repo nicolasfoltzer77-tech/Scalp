@@ -21,18 +21,26 @@ def run(conn: sqlite3.Connection, out: dict) -> dict:
     trades = db.load_table(conn, "recorder")
     steps = db.load_table(conn, "recorder_steps")
 
-    tid_t = db.find_trade_id_col(trades.columns)
-    tid_s = db.find_trade_id_col(steps.columns)
-    pnl_step_col = db.find_pnl_col(steps.columns)
+    # Prefer already-computed MFE/MAE columns from recorder when available.
+    mfe_col = db.pick_first(trades.columns, ["mfe_atr", "mfe_price", "mfe"])
+    mae_col = db.pick_first(trades.columns, ["mae_atr", "mae_price", "mae"])
+    if mfe_col and mae_col:
+        merged = trades.copy()
+        merged["mfe"] = pd.to_numeric(merged[mfe_col], errors="coerce")
+        merged["mae"] = pd.to_numeric(merged[mae_col], errors="coerce")
+    else:
+        tid_t = db.find_trade_id_col(trades.columns)
+        tid_s = db.find_trade_id_col(steps.columns)
+        pnl_step_col = db.find_pnl_col(steps.columns)
 
-    if not tid_t or not tid_s or not pnl_step_col:
-        return {"status": "skipped", "reason": "missing trade id or step pnl column"}
+        if not tid_t or not tid_s or not pnl_step_col:
+            return {"status": "skipped", "reason": "missing trade id or step pnl column"}
 
-    step_pnl = steps[[tid_s, pnl_step_col]].copy()
-    step_pnl[pnl_step_col] = pd.to_numeric(step_pnl[pnl_step_col], errors="coerce")
-    agg = step_pnl.groupby(tid_s)[pnl_step_col].agg(mfe="max", mae="min").reset_index()
+        step_pnl = steps[[tid_s, pnl_step_col]].copy()
+        step_pnl[pnl_step_col] = pd.to_numeric(step_pnl[pnl_step_col], errors="coerce")
+        agg = step_pnl.groupby(tid_s)[pnl_step_col].agg(mfe="max", mae="min").reset_index()
 
-    merged = trades.merge(agg, left_on=tid_t, right_on=tid_s, how="left")
+        merged = trades.merge(agg, left_on=tid_t, right_on=tid_s, how="left")
     merged.to_csv(out["csv"] / "mfe_mae_per_trade.csv", index=False)
 
     # Distributions and scatter
