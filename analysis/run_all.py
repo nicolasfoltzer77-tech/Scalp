@@ -13,6 +13,7 @@ from analysis import db
 from analysis import mfe_mae, expectancy, pyramiding, exit_reasons, leverage_analysis
 from analysis import coin_analysis, time_analysis, equity_curve, edge_decay, clustering
 from analysis import entry_efficiency, step_analysis, move_vs_fees, volatility_analysis, trade_clustering
+from analysis import range_analysis, dashboard
 
 
 MODULES = [
@@ -31,6 +32,7 @@ MODULES = [
     ("move_vs_fees", move_vs_fees.run),
     ("volatility_analysis", volatility_analysis.run),
     ("trade_clustering", trade_clustering.run),
+    ("range_analysis", range_analysis.run),
 ]
 
 
@@ -46,6 +48,9 @@ def run_all(db_path: str | None = None, output_root: str | Path = "analysis_outp
                 summary[name] = {"status": "error", "reason": str(exc)}
     finally:
         conn.close()
+
+    dashboard_path = dashboard.generate_dashboard(out["root"])
+    summary["dashboard"] = {"status": "ok", "path": str(dashboard_path)}
 
     report_path = out["reports"] / "summary_report.json"
     report_path.write_text(json.dumps(summary, indent=2))
