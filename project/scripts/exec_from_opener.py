@@ -38,11 +38,38 @@ def ingest_from_opener():
             exec_id = f"{r['uid']}:{r['exec_type']}:{r['step']}"
 
             exists = e.execute(
-                "SELECT 1 FROM exec WHERE exec_id=?",
+                "SELECT status, step, done_step FROM exec WHERE exec_id=?",
                 (exec_id,)
             ).fetchone()
 
             if exists:
+                # Reconcile stale opener stdby when an execution with the same
+                # exec_id already reached `done` (common after daemon restart
+                # or when an old req is replayed with an already consumed step).
+                #
+                # Without this branch, opener can stay forever in *_stdby while
+                # ingest_from_opener keeps skipping because exec_id exists.
+                if exists["status"] == "done":
+                    step_done = int(exists["done_step"] or exists["step"] or r["step"] or 0)
+                    o.execute(
+                        """
+                        UPDATE opener
+                        SET status = ?,
+                            step = ?
+                        WHERE uid = ?
+                          AND exec_type = ?
+                          AND step = ?
+                          AND status IN ('open_stdby', 'pyramide_stdby')
+                        """,
+                        (
+                            "open_done" if r["exec_type"] == "open" else "pyramide_done",
+                            step_done,
+                            r["uid"],
+                            r["exec_type"],
+                            int(r["step"]),
+                        ),
+                    )
+
                 log.debug(
                     "[SKIP] already ingested uid=%s step=%s",
                     r["uid"], r["step"]
@@ -81,6 +108,7 @@ def ingest_from_opener():
             )
 
         e.commit()
+        o.commit()
 
     except Exception:
         log.exception("[ERR] exec_from_opener")
