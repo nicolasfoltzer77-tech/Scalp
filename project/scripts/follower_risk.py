@@ -165,7 +165,35 @@ def _be_level(price_open, side, atr, CFG):
       - sell => slightly BELOW average open
     """
     offset_mult = float(CFG.get("sl_be_offset_atr", 0.0) or 0.0)
-    return float(price_open) + (_side_sign(side) * float(atr) * offset_mult)
+    raw_be = float(price_open) + (_side_sign(side) * float(atr) * offset_mult)
+    be_floor = _break_even_floor(price_open, side, CFG)
+    return _protective_level_with_floor(side, raw_be, be_floor)
+
+
+def _break_even_floor(price_open, side, CFG):
+    """
+    Minimal no-loss floor expressed as a price ratio around open.
+
+    Examples:
+      - 0.0012 => +0.12% for buy, -0.12% for sell.
+    This floor is meant to absorb round-trip costs (fees + slippage)
+    so a BE/TRAIL close does not systematically end net negative.
+    """
+    floor_ratio = float(CFG.get("protect_cost_floor_ratio", 0.0) or 0.0)
+    if floor_ratio <= 0.0:
+        return float(price_open)
+    return float(price_open) + (_side_sign(side) * float(price_open) * floor_ratio)
+
+
+def _protective_level_with_floor(side, candidate_level, floor_level):
+    """
+    Keep protective levels on the favorable side of the no-loss floor.
+    """
+    if side == "buy":
+        return max(float(candidate_level), float(floor_level))
+    if side == "sell":
+        return min(float(candidate_level), float(floor_level))
+    return float(candidate_level)
 
 
 def _resolve_atr(fr):
@@ -307,7 +335,9 @@ def recalc_levels_on_pyramide_fill(f, fr, CFG, now):
     sl_trail_new = None
     if sl_trail not in (None, 0, 0.0):
         tr_mult = float(CFG.get("sl_trail_offset_atr", 1.0) or 1.0)
-        sl_trail_new = price_open - (sign * atr * tr_mult)
+        be_floor = _break_even_floor(price_open, side, CFG)
+        trail_raw = price_open - (sign * atr * tr_mult)
+        sl_trail_new = _protective_level_with_floor(side, trail_raw, be_floor)
 
     f.execute(
         """
@@ -358,7 +388,9 @@ def arm_trailing(f, fr, CFG, now):
     px = _price_from_row(fr) or price_open
     sign = _side_sign(side)
     offset_mult = float(CFG.get("sl_trail_offset_atr", 1.0) or 1.0)
-    sl = px - (sign * atr * offset_mult)
+    sl_raw = px - (sign * atr * offset_mult)
+    be_floor = _break_even_floor(price_open, side, CFG)
+    sl = _protective_level_with_floor(side, sl_raw, be_floor)
 
     _set_level_once(f, fr["uid"], "sl_trail", sl, now)
     log.info("[TRAIL_ARMED] uid=%s sl_trail=%.6f", fr["uid"], sl)
@@ -472,7 +504,13 @@ def ratchet_dynamic_levels(f, fr, CFG, now):
     sl_trail = _row_get(fr, "sl_trail")
     if sl_trail not in (None, 0, 0.0):
         tr_mult = float(CFG.get("sl_trail_offset_atr", 1.0) or 1.0)
-        cand_trail = float(price) - (sign * atr * tr_mult)
+        cand_raw = float(price) - (sign * atr * tr_mult)
+        price_open = _resolve_price_open(f, fr)
+        if price_open is not None:
+            be_floor = _break_even_floor(price_open, side, CFG)
+            cand_trail = _protective_level_with_floor(side, cand_raw, be_floor)
+        else:
+            cand_trail = cand_raw
         if _is_favorable_move(side, cand_trail, float(sl_trail)):
             f.execute(
                 """
