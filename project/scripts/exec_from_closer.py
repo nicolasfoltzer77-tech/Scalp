@@ -57,7 +57,9 @@ def ingest_from_closer():
                 next_step_by_uid[uid] = int(cur["max_step"] or 0)
 
             step = max(src_step, next_step_by_uid[uid])
-            exec_id = f"{uid}:{exec_type}:{src_step}"
+            # L'identifiant doit rester cohérent avec le step réellement écrit
+            # dans exec (et non le step source provenant de closer).
+            exec_id = f"{uid}:{exec_type}:{step}"
 
             if qty <= 0:
                 continue
