@@ -21,26 +21,19 @@ DELAY_BINS = [0.0, 1.0, 5.0, 10.0, np.inf]
 DELAY_LABELS = ["0-1s", "1-5s", "5-10s", "10s+"]
 
 
-def _resolve_gest_db(conn: sqlite3.Connection) -> Path:
-    candidates: list[Path] = []
-    main_db = conn.execute("PRAGMA database_list").fetchone()
-    if main_db and len(main_db) >= 3 and main_db[2]:
-        recorder_path = Path(main_db[2])
-        candidates.append(recorder_path.with_name("gest.db"))
-    candidates.extend(
-        [
-            Path("data/gest.db"),
-            Path("/opt/scalp/project/data/gest.db"),
-        ]
-    )
+def _resolve_gest_db() -> Path:
+    candidates = [
+        Path("data/gest.db"),
+        Path("/opt/scalp/project/data/gest.db"),
+    ]
     for candidate in candidates:
         if candidate.exists():
             return candidate
-    raise FileNotFoundError(f"Unable to locate gest.db. Tried: {', '.join(str(c) for c in candidates)}")
+    raise FileNotFoundError(f"Unable to locate data/gest.db. Tried: {', '.join(str(c) for c in candidates)}")
 
 
-def _load_gest_trades(conn: sqlite3.Connection) -> tuple[pd.DataFrame, Path]:
-    gest_path = _resolve_gest_db(conn)
+def _load_gest_trades() -> tuple[pd.DataFrame, Path]:
+    gest_path = _resolve_gest_db()
     with sqlite3.connect(str(gest_path)) as gest_conn:
         tables = {
             row[0]
@@ -71,21 +64,26 @@ def _as_bool_flag(series: pd.Series) -> pd.Series:
 
 
 def _group_metrics(df: pd.DataFrame, group_col: str) -> pd.DataFrame:
-    rows = []
-    for key, sub in df.groupby(group_col, dropna=False, observed=False):
-        pnl = pd.to_numeric(sub["pnl_net"], errors="coerce").dropna()
-        if pnl.empty:
-            continue
-        rows.append(
-            {
-                group_col: key,
-                "trade_count": int(len(pnl)),
-                "winrate": float((pnl > 0).mean()),
-                "expectancy": float(pnl.mean()),
-                "avg_pnl_net": float(pnl.mean()),
-            }
+    if group_col not in df.columns or "pnl_net" not in df.columns:
+        return pd.DataFrame(columns=[group_col, "expectancy", "winrate", "trade_count"])
+
+    scoped = df[[group_col, "pnl_net"]].copy()
+    scoped["pnl_net"] = pd.to_numeric(scoped["pnl_net"], errors="coerce")
+    scoped = scoped.dropna(subset=[group_col, "pnl_net"])
+    if scoped.empty:
+        return pd.DataFrame(columns=[group_col, "expectancy", "winrate", "trade_count"])
+
+    grouped = (
+        scoped.groupby(group_col, observed=False)
+        .agg(
+            expectancy=("pnl_net", "mean"),
+            winrate=("pnl_net", lambda x: (x > 0).mean()),
+            trade_count=("pnl_net", "count"),
         )
-    return pd.DataFrame(rows)
+        .reset_index()
+    )
+    grouped["trade_count"] = grouped["trade_count"].astype(int)
+    return grouped
 
 
 def _plot_expectancy_bar(data: pd.DataFrame, x_col: str, title: str, out_path: Path) -> None:
@@ -127,13 +125,15 @@ def _score_distribution_analysis(work: pd.DataFrame, out: dict) -> dict:
             right=True,
         )
 
-        grouped = _group_metrics(scoped.dropna(subset=[f"{score_col}_bucket"]), f"{score_col}_bucket")
+        bucket_col = "score_bucket"
+        scoped[bucket_col] = scoped[f"{score_col}_bucket"]
+        grouped = _group_metrics(scoped, bucket_col)
         if grouped.empty:
             continue
 
         grouped.insert(0, "score", score_col)
         grouped = grouped.sort_values(
-            by=f"{score_col}_bucket",
+            by=bucket_col,
             key=lambda s: s.astype(str).map({label: idx for idx, label in enumerate(SCORE_LABELS)}),
         )
         score_summaries.append(grouped)
@@ -141,13 +141,15 @@ def _score_distribution_analysis(work: pd.DataFrame, out: dict) -> dict:
         if score_col in {"score_C", "score_S", "score_H"}:
             _plot_expectancy_bar(
                 grouped,
-                f"{score_col}_bucket",
+                bucket_col,
                 f"Expectancy vs {score_col} bucket",
                 out["charts"] / f"expectancy_vs_{score_col}.png",
             )
 
     combined = pd.concat(score_summaries, ignore_index=True) if score_summaries else pd.DataFrame()
-    combined.to_csv(out["csv"] / "entry_score_distribution.csv", index=False)
+    if combined.empty:
+        combined = pd.DataFrame(columns=["score", "score_bucket", "expectancy", "winrate", "trade_count"])
+    combined.to_csv(out["csv"] / "score_diagnostics.csv", index=False)
     return {"score_rows": int(len(combined))}
 
 
@@ -164,7 +166,6 @@ def _signal_flag_analysis(work: pd.DataFrame, out: dict) -> dict:
                 "trade_count": int(len(pnl)),
                 "winrate": float((pnl > 0).mean()),
                 "expectancy": float(pnl.mean()),
-                "avg_pnl_net": float(pnl.mean()),
             }
         )
 
@@ -181,9 +182,16 @@ def _entry_mode_analysis(work: pd.DataFrame, out: dict) -> dict:
         ("trigger_type", "expectancy_by_trigger_type.png"),
     ]:
         if col not in work.columns:
+            pd.DataFrame(columns=[col, "expectancy", "winrate", "trade_count"]).to_csv(
+                out["csv"] / f"{col}_expectancy.csv", index=False
+            )
             continue
         scoped = work.dropna(subset=[col]).copy()
-        summary = _group_metrics(scoped, col).sort_values("trade_count", ascending=False)
+        summary = _group_metrics(scoped, col)
+        if summary.empty:
+            summary = pd.DataFrame(columns=[col, "expectancy", "winrate", "trade_count"])
+        else:
+            summary = summary.sort_values("trade_count", ascending=False)
         summary.to_csv(out["csv"] / f"{col}_expectancy.csv", index=False)
         _plot_expectancy_bar(summary, col, f"Expectancy by {col}", out["charts"] / chart_name)
         results[col] = int(len(summary))
@@ -192,7 +200,7 @@ def _entry_mode_analysis(work: pd.DataFrame, out: dict) -> dict:
 
 def _entry_delay_analysis(work: pd.DataFrame, out: dict) -> dict:
     if "ts_signal" not in work.columns or "ts_open" not in work.columns:
-        pd.DataFrame(columns=["delay_bucket", "trade_count", "winrate", "expectancy", "avg_pnl_net"]).to_csv(
+        pd.DataFrame(columns=["delay_bucket", "trade_count", "winrate", "expectancy"]).to_csv(
             out["csv"] / "entry_delay_expectancy.csv", index=False
         )
         _plot_expectancy_bar(
@@ -241,7 +249,17 @@ def _best_entry_conditions(work: pd.DataFrame, out: dict) -> dict:
         scoped[flag] = _as_bool_flag(scoped[flag]).astype(int)
     scoped = scoped.dropna(subset=features)
 
-    summary = _group_metrics(scoped, features)
+    # Keep this optional output resilient without impacting required diagnostics.
+    if "pnl_net" not in scoped.columns or scoped.empty:
+        pd.DataFrame().to_csv(out["csv"] / "best_entry_conditions.csv", index=False)
+        return {"best_conditions": 0}
+
+    grouped = scoped.groupby(features, observed=False).agg(
+        expectancy=("pnl_net", "mean"),
+        winrate=("pnl_net", lambda x: (x > 0).mean()),
+        trade_count=("pnl_net", "count"),
+    )
+    summary = grouped.reset_index()
     if summary.empty:
         summary.to_csv(out["csv"] / "best_entry_conditions.csv", index=False)
         return {"best_conditions": 0}
@@ -254,7 +272,7 @@ def _best_entry_conditions(work: pd.DataFrame, out: dict) -> dict:
 
 def run(conn: sqlite3.Connection, out: dict) -> dict:
     try:
-        work, gest_path = _load_gest_trades(conn)
+        work, gest_path = _load_gest_trades()
     except Exception as exc:
         return {"status": "skipped", "reason": str(exc)}
 
