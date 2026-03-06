@@ -39,6 +39,30 @@ DEFAULT_CHARTS = [
     "expectancy_vs_adx.png",
     "expectancy_by_regime.png",
     "expectancy_by_entry_reason.png",
+    "score_C_distribution.png",
+    "score_S_distribution.png",
+    "score_H_distribution.png",
+    "expectancy_by_signal_component.png",
+    "expectancy_by_context.png",
+    "size_vs_pnl_scatter.png",
+    "size_bucket_expectancy.png",
+    "expectancy_surface_C_S.png",
+    "time_to_mfe_vs_score_S.png",
+]
+
+CSH_DIAGNOSTICS_CHARTS = [
+    "score_C_distribution.png",
+    "score_S_distribution.png",
+    "score_H_distribution.png",
+    "expectancy_vs_score_C.png",
+    "expectancy_vs_score_S.png",
+    "expectancy_vs_score_H.png",
+    "expectancy_by_signal_component.png",
+    "expectancy_by_context.png",
+    "size_vs_pnl_scatter.png",
+    "size_bucket_expectancy.png",
+    "expectancy_surface_C_S.png",
+    "time_to_mfe_vs_score_S.png",
 ]
 
 
@@ -49,14 +73,10 @@ def _ordered_chart_names(charts_dir: Path, primary_names: Iterable[str]) -> list
     return ordered + extras
 
 
-def generate_dashboard(output_root: str | Path = "analysis_output") -> Path:
-    root = Path(output_root)
-    root.mkdir(parents=True, exist_ok=True)
-    charts_dir = root / "charts"
-    charts_dir.mkdir(parents=True, exist_ok=True)
-    chart_names = _ordered_chart_names(charts_dir, DEFAULT_CHARTS)
-
-    cards = "\n".join(
+def _render_cards(chart_names: list[str]) -> str:
+    if not chart_names:
+        return '      <p>No charts found in analysis_output/charts</p>'
+    return "\n".join(
         (
             f'      <article class="card">\n'
             f"        <h2>{name}</h2>\n"
@@ -65,6 +85,20 @@ def generate_dashboard(output_root: str | Path = "analysis_output") -> Path:
         )
         for name in chart_names
     )
+
+
+def generate_dashboard(output_root: str | Path = "analysis_output") -> Path:
+    root = Path(output_root)
+    root.mkdir(parents=True, exist_ok=True)
+    charts_dir = root / "charts"
+    charts_dir.mkdir(parents=True, exist_ok=True)
+
+    all_charts = _ordered_chart_names(charts_dir, DEFAULT_CHARTS)
+    csh_charts = [name for name in CSH_DIAGNOSTICS_CHARTS if name in all_charts]
+    core_charts = [name for name in all_charts if name not in set(csh_charts)]
+
+    core_cards = _render_cards(core_charts)
+    csh_cards = _render_cards(csh_charts)
 
     html = f"""<!doctype html>
 <html lang=\"en\">
@@ -85,6 +119,9 @@ def generate_dashboard(output_root: str | Path = "analysis_output") -> Path:
       }}
       h1 {{
         margin-top: 0;
+      }}
+      .section-title {{
+        margin: 30px 0 12px;
       }}
       .grid {{
         display: grid;
@@ -111,8 +148,11 @@ def generate_dashboard(output_root: str | Path = "analysis_output") -> Path:
   </head>
   <body>
     <h1>Trading Bot Analysis Dashboard</h1>
-    <div class=\"grid\">
-{cards if cards else '      <p>No charts found in analysis_output/charts</p>'}
+    <h2 class=\"section-title\">Core Diagnostics</h2>
+    <div class=\"grid\">{core_cards}
+    </div>
+    <h2 class=\"section-title\">C/S/H Diagnostics</h2>
+    <div class=\"grid\">{csh_cards}
     </div>
   </body>
 </html>
