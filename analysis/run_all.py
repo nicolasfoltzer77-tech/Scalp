@@ -14,6 +14,7 @@ from analysis import mfe_mae, expectancy, pyramiding, exit_reasons, leverage_ana
 from analysis import coin_analysis, time_analysis, equity_curve, edge_decay, clustering
 from analysis import entry_efficiency, step_analysis, move_vs_fees, volatility_analysis, trade_clustering
 from analysis import range_analysis, atr_analysis, signal_quality, duration_analysis, dashboard
+from analysis import profit_capture, timing_analysis, entry_timing, entry_delay_analysis, volatility_edge
 
 
 MODULES = [
@@ -28,6 +29,11 @@ MODULES = [
     ("edge_decay", edge_decay.run),
     ("clustering", clustering.run),
     ("entry_efficiency", entry_efficiency.run),
+    ("profit_capture", profit_capture.run),
+    ("timing_analysis", timing_analysis.run),
+    ("entry_timing", entry_timing.run),
+    ("entry_delay_analysis", entry_delay_analysis.run),
+    ("volatility_edge", volatility_edge.run),
     ("atr_analysis", atr_analysis.run),
     ("signal_quality", signal_quality.run),
     ("duration_analysis", duration_analysis.run),
