@@ -19,6 +19,13 @@ DEFAULT_CHARTS = [
     "entry_efficiency_hist.png",
     "entry_efficiency_vs_pnl.png",
     "expectancy_vs_range.png",
+    "profit_capture_distribution.png",
+    "mfe_vs_realized_pnl.png",
+    "time_to_mfe_distribution.png",
+    "time_to_mae_distribution.png",
+    "time_to_mfe_vs_pnl.png",
+    "entry_efficiency_histogram.png",
+    "expectancy_vs_entry_delay.png",
 ]
 
 
