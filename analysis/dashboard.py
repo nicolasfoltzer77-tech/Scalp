@@ -32,6 +32,13 @@ DEFAULT_CHARTS = [
     "signal_flag_expectancy.png",
     "expectancy_by_dec_mode.png",
     "expectancy_by_trigger_type.png",
+    "expectancy_vs_score_of.png",
+    "expectancy_vs_score_mo.png",
+    "expectancy_vs_score_br.png",
+    "expectancy_vs_rsi.png",
+    "expectancy_vs_adx.png",
+    "expectancy_by_regime.png",
+    "expectancy_by_entry_reason.png",
 ]
 
 
