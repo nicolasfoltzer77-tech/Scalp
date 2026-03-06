@@ -26,6 +26,12 @@ DEFAULT_CHARTS = [
     "time_to_mfe_vs_pnl.png",
     "entry_efficiency_histogram.png",
     "expectancy_vs_entry_delay.png",
+    "expectancy_vs_score_C.png",
+    "expectancy_vs_score_S.png",
+    "expectancy_vs_score_H.png",
+    "signal_flag_expectancy.png",
+    "expectancy_by_dec_mode.png",
+    "expectancy_by_trigger_type.png",
 ]
 
 
