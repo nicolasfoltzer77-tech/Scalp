@@ -45,12 +45,17 @@ def sync_mfemae(f, m):
     Matching STRICT par uid (design actuel)
     """
 
+    follower_cols = {r["name"] for r in f.execute("PRAGMA table_info(follower)").fetchall()}
+
     rows = m.execute("""
         SELECT
             uid,
             mfe,
             mae,
-            atr
+            atr,
+            mfe_ts,
+            mae_ts,
+            ts_updated
         FROM mfe_mae
         WHERE atr IS NOT NULL
           AND atr > 0
@@ -65,19 +70,39 @@ def sync_mfemae(f, m):
         mfe_atr = (r["mfe"] or 0.0) / r["atr"]
         mae_atr = abs(r["mae"] or 0.0) / r["atr"]
 
-        f.execute("""
-            UPDATE follower
-            SET
-                mfe_atr = ?,
-                mae_atr = ?,
-                ts_updated = ?
-            WHERE uid = ?
-        """, (
-            mfe_atr,
-            mae_atr,
-            now,
-            r["uid"]
-        ))
+        set_parts = ["mfe_atr = ?", "mae_atr = ?"]
+        params = [mfe_atr, mae_atr]
+
+        if "mfe_price" in follower_cols:
+            set_parts.append("mfe_price = ?")
+            params.append(r["mfe"])
+
+        if "mae_price" in follower_cols:
+            set_parts.append("mae_price = ?")
+            params.append(r["mae"])
+
+        if "atr_signal" in follower_cols:
+            set_parts.append("atr_signal = ?")
+            params.append(r["atr"])
+
+        if "mfe_ts" in follower_cols:
+            set_parts.append("mfe_ts = ?")
+            params.append(r["mfe_ts"])
+
+        if "mae_ts" in follower_cols:
+            set_parts.append("mae_ts = ?")
+            params.append(r["mae_ts"])
+
+        if "ts_updated" in follower_cols:
+            set_parts.append("ts_updated = ?")
+            params.append(r["ts_updated"] if r["ts_updated"] is not None else now)
+
+        params.append(r["uid"])
+
+        f.execute(
+            f"UPDATE follower SET {', '.join(set_parts)} WHERE uid = ?",
+            tuple(params),
+        )
 
 # ============================================================
 # MODE STANDALONE (DEBUG UNIQUEMENT)
@@ -92,4 +117,3 @@ if __name__ == "__main__":
     f.commit()
     f.close()
     m.close()
-

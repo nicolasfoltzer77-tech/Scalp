@@ -236,7 +236,12 @@ def ingest_follower_requests():
                    ratio_to_add,
                    reason,
                    req_step,
-                   done_step
+                   done_step,
+                   mfe_price,
+                   mae_price,
+                   atr_signal,
+                   mfe_ts,
+                   mae_ts
             FROM follower
             WHERE status IN ('pyramide_req','partial_req','close_req')
         """).fetchall()
@@ -313,12 +318,25 @@ def ingest_follower_requests():
                     SET status='close_req',
                         ratio_to_close=1.0,
                         reason=?,
+                        mfe_price=COALESCE(?, mfe_price),
+                        mae_price=COALESCE(?, mae_price),
+                        atr_signal=COALESCE(?, atr_signal),
+                        mfe_ts=COALESCE(?, mfe_ts),
+                        mae_ts=COALESCE(?, mae_ts),
                         ts_status_update=strftime('%s','now')*1000
                     WHERE uid=?
                       AND status IN ('follow','open_done','pyramide_done','partial_done','partialdone')
-                """, (r["reason"], uid))
+                """, (
+                    r["reason"],
+                    r["mfe_price"],
+                    r["mae_price"],
+                    r["atr_signal"],
+                    r["mfe_ts"],
+                    r["mae_ts"],
+                    uid,
+                ))
                 if cur.rowcount:
-                    log.info("[GEST REQ] uid=%s -> close_req", uid)
+                    log.info("[GEST REQ] uid=%s -> close_req mfe=%s mae=%s atr=%s", uid, r["mfe_price"], r["mae_price"], r["atr_signal"])
     finally:
         f.close()
         g.close()
