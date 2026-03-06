@@ -15,7 +15,7 @@ from analysis import coin_analysis, time_analysis, equity_curve, edge_decay, clu
 from analysis import entry_efficiency, step_analysis, move_vs_fees, volatility_analysis, trade_clustering
 from analysis import range_analysis, atr_analysis, signal_quality, duration_analysis, dashboard
 from analysis import profit_capture, timing_analysis, entry_timing, entry_delay_analysis, volatility_edge
-from analysis import entry_decision_diagnostics
+from analysis import entry_decision_diagnostics, entry_pipeline_analysis
 
 
 MODULES = [
@@ -44,6 +44,7 @@ MODULES = [
     ("trade_clustering", trade_clustering.run),
     ("range_analysis", range_analysis.run),
     ("entry_decision_diagnostics", entry_decision_diagnostics.run),
+    ("entry_pipeline_analysis", entry_pipeline_analysis.run),
 ]
 
 
