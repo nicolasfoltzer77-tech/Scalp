@@ -3,11 +3,9 @@
 
 import sqlite3
 import time
-import uuid
 import yaml
 import logging
 from pathlib import Path
-from datetime import datetime
 
 ROOT = Path("/opt/scalp/project")
 
@@ -116,17 +114,10 @@ def purge_expired_triggers(t, now):
             log.info("[TTL_EXPIRE] %s", r["uid"])
 
 
-def build_uid(instId, side):
-    base = instId.split("/")[0]
-    hhmmss = datetime.utcnow().strftime("%H%M%S")
-    u4 = uuid.uuid4().hex[:4]
-    return f"{base}-{side}-{hhmmss}-{u4}"
-
-
 def load_dec_fires():
     with conn(DB_DEC) as c:
         return c.execute("""
-            SELECT instId, side, atr, dec_mode, score_C, ctx
+            SELECT uid, instId, side, atr, dec_mode, score_C, ctx
             FROM v_dec_fire
             WHERE fire = 1
         """).fetchall()
@@ -158,8 +149,8 @@ def write_triggers():
             if instid_active(instId) or trigger_active(instId):
                 continue
 
-            uid = build_uid(instId, side)
-            if uid_exists_anywhere(uid):
+            uid = r["uid"]
+            if not uid or uid_exists_anywhere(uid):
                 continue
 
             sc = abs(scoreC)

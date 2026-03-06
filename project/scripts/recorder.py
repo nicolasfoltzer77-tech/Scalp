@@ -27,6 +27,7 @@ from pathlib import Path
 ROOT = Path("/opt/scalp/project")
 
 DB_GEST = ROOT / "data/gest.db"
+DB_TRIG = ROOT / "data/triggers.db"
 DB_EXEC = ROOT / "data/exec.db"
 DB_REC  = ROOT / "data/recorder.db"
 
@@ -112,6 +113,48 @@ def ensure_recorder_steps():
 # ============================================================
 # LOAD PNL (SOURCE DE VÉRITÉ)
 # ============================================================
+
+
+def ensure_trade_lineage_view():
+    c = conn(DB_REC)
+    c.execute("""
+        CREATE VIEW IF NOT EXISTS v_trade_lineage AS
+        SELECT
+            r.uid,
+            r.instId,
+            r.side,
+            r.ts_signal,
+            r.ts_open,
+            r.ts_close,
+            r.pnl_net
+        FROM recorder r
+    """)
+    c.commit()
+    c.close()
+
+
+def validate_uid_lineage(uid, check_recorder=False):
+    if not uid:
+        return
+
+    t_uid = uid
+    with conn(DB_TRIG) as t:
+        tr = t.execute("SELECT uid FROM triggers WHERE uid=? LIMIT 1", (uid,)).fetchone()
+        if tr and tr["uid"]:
+            t_uid = tr["uid"]
+
+    with conn(DB_GEST) as g:
+        gr = g.execute("SELECT uid FROM gest WHERE uid=? LIMIT 1", (uid,)).fetchone()
+        g_uid = gr["uid"] if gr else uid
+
+    if check_recorder:
+        with conn(DB_REC) as r:
+            rr = r.execute("SELECT uid FROM recorder WHERE uid=? LIMIT 1", (uid,)).fetchone()
+            r_uid = rr["uid"] if rr else uid
+    else:
+        r_uid = uid
+
+    assert t_uid == g_uid == r_uid, f"UID lineage mismatch: trigger={t_uid} gest={g_uid} recorder={r_uid}"
 
 def load_trade_metrics(uid):
     c = conn(DB_EXEC)
@@ -330,6 +373,8 @@ def record_trade(g):
     rec_cols = table_columns(c, "recorder")
     c.close()
 
+    validate_uid_lineage(uid, check_recorder=False)
+
     metrics = load_trade_metrics(uid)
     ts_rec = now_ms()
 
@@ -347,6 +392,7 @@ def record_trade(g):
     c.commit()
     c.close()
 
+    validate_uid_lineage(uid, check_recorder=True)
     record_steps(uid)
 
     log.info(
@@ -364,6 +410,7 @@ def record_trade(g):
 def main():
     log.info("[START] recorder FINAL (with steps)")
     ensure_recorder_steps()
+    ensure_trade_lineage_view()
 
     while True:
         try:

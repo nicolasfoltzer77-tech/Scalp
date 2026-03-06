@@ -1055,6 +1055,7 @@ TABLE snap_atr CREATE TABLE snap_atr (
     ts_updated INTEGER
 )
 TABLE snap_ctx CREATE TABLE snap_ctx (
+  uid TEXT,
   instId TEXT PRIMARY KEY,
   ctx TEXT,
   score_C REAL,
@@ -1255,6 +1256,7 @@ WHERE compression_ok=1
 VIEW v_dec_fire CREATE VIEW v_dec_fire AS
 WITH base AS (
     SELECT
+        s.uid,
         s.instId,
         s.side,
         s.ctx,
@@ -1292,7 +1294,7 @@ admission AS (
     FROM patterned
 )
 SELECT
-    instId, side, lastPr, atr_fast AS atr,
+    uid, instId, side, lastPr, atr_fast AS atr,
     dec_mode, score_C, ctx, fire
 FROM admission
 WHERE fire=1
@@ -3579,3 +3581,14 @@ SELECT
     ts_updated
 FROM wticks_extended
 ORDER BY ts_signal DESC
+
+VIEW v_trade_lineage CREATE VIEW v_trade_lineage AS
+SELECT
+    r.uid,
+    r.instId,
+    r.side,
+    r.ts_signal,
+    r.ts_open,
+    r.ts_close,
+    r.pnl_net
+FROM recorder r
