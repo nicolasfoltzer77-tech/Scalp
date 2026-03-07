@@ -1,17 +1,15 @@
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-if __package__ in (None, ""):
-    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+import logging
+import sqlite3
 
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
-import sqlite3
 
 from analysis import db
+
+log = logging.getLogger("analysis.profit_capture")
 
 
 def run(conn: sqlite3.Connection, out: dict) -> dict:
@@ -19,62 +17,57 @@ def run(conn: sqlite3.Connection, out: dict) -> dict:
     if trades is None:
         return {"status": "skipped", "reason": "trades table not found"}
 
-    required_cols = {
-        "entry": db.pick_first(trades.columns, ["entry", "entry_price", "price_open"]),
-        "mfe_price": db.pick_first(trades.columns, ["mfe_price"]),
-        "pnl": db.find_pnl_col(trades.columns),
-    }
-    if any(v is None for v in required_cols.values()):
-        return {"status": "skipped", "reason": "missing columns for profit capture", "table": table}
+    pnl_col = db.find_pnl_col(trades.columns)
+    if not pnl_col:
+        return {"status": "skipped", "reason": "missing pnl column", "table": table}
 
-    work = trades[[required_cols["entry"], required_cols["mfe_price"], required_cols["pnl"]]].copy()
-    work.columns = ["entry", "mfe_price", "pnl_net"]
-    work = work.apply(pd.to_numeric, errors="coerce")
+    work = trades.copy()
+    work["pnl_net"] = pd.to_numeric(work[pnl_col], errors="coerce")
 
-    work["mfe"] = (work["mfe_price"] - work["entry"]).abs()
-    work = work[(work["mfe_price"].notna()) & (work["mfe"] > 0)]
-    if work.empty:
-        return {"status": "skipped", "reason": "no valid rows after mfe filtering", "table": table}
+    if "profit_capture_ratio" not in work.columns:
+        if "mfe_price_distance" in work.columns:
+            work["profit_capture_ratio"] = work["pnl_net"] / pd.to_numeric(work["mfe_price_distance"], errors="coerce").replace(0, pd.NA)
+        else:
+            log.warning("profit_capture_ratio unavailable")
+            work["profit_capture_ratio"] = pd.NA
 
-    work["capture_ratio"] = work["pnl_net"] / work["mfe"]
-    entry_abs = work["entry"].abs().replace(0, pd.NA)
-    work["mfe_pct"] = (work["mfe"] / entry_abs) * 100
-    work["realized_pnl_pct"] = (work["pnl_net"] / entry_abs) * 100
+    for c in ("mfe_ratio", "mae_ratio", "profit_capture_ratio"):
+        if c in work.columns:
+            work[c] = pd.to_numeric(work[c], errors="coerce")
 
-    metrics = pd.DataFrame(
-        [
-            {
-                "metric": "average_capture_ratio",
-                "value": float(work["capture_ratio"].mean()),
-            },
-            {
-                "metric": "median_capture_ratio",
-                "value": float(work["capture_ratio"].median()),
-            },
-            {
-                "metric": "trades_used",
-                "value": int(work["capture_ratio"].notna().sum()),
-            },
-        ]
-    )
-    metrics.to_csv(out["csv"] / "profit_capture_metrics.csv", index=False)
+    metrics = work[["pnl_net", "mfe_ratio", "mae_ratio", "profit_capture_ratio"]].describe(include="all")
+    metrics.to_csv(out["csv"] / "profit_capture_metrics.csv")
 
     sns.set_theme(style="whitegrid")
-
+    vals = work["profit_capture_ratio"].dropna()
     plt.figure(figsize=(8, 4.5))
-    sns.histplot(work["capture_ratio"].dropna(), bins=40, kde=True)
-    plt.title("Profit Capture Ratio Distribution")
-    plt.xlabel("capture_ratio = pnl_net / mfe")
+    if vals.empty:
+        plt.text(0.5, 0.5, "No profit capture data", ha="center", va="center")
+        plt.axis("off")
+    else:
+        sns.histplot(vals, bins=40, kde=True)
+        plt.xlabel("profit_capture_ratio")
+    plt.title("Profit Capture Distribution")
     plt.tight_layout()
     plt.savefig(out["charts"] / "profit_capture_distribution.png")
     plt.close()
 
-    scatter = work[["mfe_pct", "realized_pnl_pct"]].dropna()
-    plt.figure(figsize=(7, 5))
-    sns.scatterplot(data=scatter, x="mfe_pct", y="realized_pnl_pct", alpha=0.45)
-    plt.title("MFE % vs Realized PnL %")
-    plt.tight_layout()
-    plt.savefig(out["charts"] / "mfe_vs_realized_pnl.png")
-    plt.close()
+    if all(c in work.columns for c in ("mfe_ratio", "pnl_net")):
+        s = work[["mfe_ratio", "pnl_net"]].dropna()
+        plt.figure(figsize=(7, 5))
+        sns.scatterplot(data=s, x="mfe_ratio", y="pnl_net", alpha=0.4)
+        plt.title("PnL vs MFE Ratio")
+        plt.tight_layout()
+        plt.savefig(out["charts"] / "pnl_vs_mfe.png")
+        plt.close()
 
-    return {"status": "ok", "rows": int(len(work)), "table": table}
+    if all(c in work.columns for c in ("mae_ratio", "pnl_net")):
+        s = work[["mae_ratio", "pnl_net"]].dropna()
+        plt.figure(figsize=(7, 5))
+        sns.scatterplot(data=s, x="mae_ratio", y="pnl_net", alpha=0.4)
+        plt.title("PnL vs MAE Ratio")
+        plt.tight_layout()
+        plt.savefig(out["charts"] / "pnl_vs_mae.png")
+        plt.close()
+
+    return {"status": "ok", "rows": int(work["pnl_net"].notna().sum()), "table": table}

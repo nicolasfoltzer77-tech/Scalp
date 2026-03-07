@@ -15,6 +15,7 @@ from analysis import coin_analysis, time_analysis, equity_curve, edge_decay, clu
 from analysis import entry_efficiency, step_analysis, move_vs_fees, volatility_analysis, trade_clustering
 from analysis import range_analysis, atr_analysis, signal_quality, duration_analysis, dashboard
 from analysis import profit_capture, timing_analysis, entry_timing, entry_delay_analysis, volatility_edge
+from analysis import entry_quality, latency_analysis
 from analysis import entry_decision_diagnostics, entry_pipeline_analysis, csh_diagnostics
 
 
@@ -30,10 +31,12 @@ MODULES = [
     ("edge_decay", edge_decay.run),
     ("clustering", clustering.run),
     ("entry_efficiency", entry_efficiency.run),
+    ("entry_quality", entry_quality.run),
     ("profit_capture", profit_capture.run),
     ("timing_analysis", timing_analysis.run),
     ("entry_timing", entry_timing.run),
     ("entry_delay_analysis", entry_delay_analysis.run),
+    ("latency_analysis", latency_analysis.run),
     ("volatility_edge", volatility_edge.run),
     ("atr_analysis", atr_analysis.run),
     ("signal_quality", signal_quality.run),
