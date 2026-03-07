@@ -19,7 +19,7 @@ from analysis import entry_quality, latency_analysis
 from analysis import performance_analysis, risk_analysis, signal_edge_analysis
 from analysis import regime_analysis, time_analysis_extended, position_sizing_analysis, strategy_stability_analysis
 from analysis import entry_decision_diagnostics, entry_pipeline_analysis, csh_diagnostics
-from analysis import edge_diagnostics
+from analysis import edge_diagnostics, edge_discovery
 
 
 MODULES = [
@@ -60,6 +60,7 @@ MODULES = [
     ("entry_pipeline_analysis", entry_pipeline_analysis.run),
     ("csh_diagnostics", csh_diagnostics.run),
     ("edge_diagnostics", edge_diagnostics.run),
+    ("edge_discovery", edge_discovery.run),
 ]
 
 
