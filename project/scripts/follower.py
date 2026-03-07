@@ -7,6 +7,8 @@ import sqlite3
 import yaml
 from pathlib import Path
 
+from db_utils import ensure_column
+
 from follower_ingest import ingest_open_done
 from follower_fsm_sync import sync_fsm_status
 from follower_sync_steps import sync_done_steps
@@ -40,11 +42,12 @@ def conn_follower():
     c.row_factory = sqlite3.Row
     c.execute("PRAGMA journal_mode=WAL;")
     c.execute("PRAGMA busy_timeout=10000;")
-    cols = {r[1] for r in c.execute("PRAGMA table_info(follower)").fetchall()}
-    if "sl_hard" not in cols:
-        c.execute("ALTER TABLE follower ADD COLUMN sl_hard REAL DEFAULT 0")
-    if "nb_pyramide_ack" not in cols:
-        c.execute("ALTER TABLE follower ADD COLUMN nb_pyramide_ack INTEGER DEFAULT 0")
+    ensure_column(c, "follower", "sl_hard", "REAL DEFAULT 0", log)
+    ensure_column(c, "follower", "nb_pyramide_ack", "INTEGER DEFAULT 0", log)
+    ensure_column(c, "follower", "entry_range_pos", "REAL", log)
+    ensure_column(c, "follower", "entry_distance_atr", "REAL", log)
+    ensure_column(c, "follower", "trigger_strength", "REAL", log)
+    ensure_column(c, "follower", "market_regime", "TEXT", log)
     return c
 
 

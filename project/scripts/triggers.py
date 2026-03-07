@@ -7,6 +7,8 @@ import yaml
 import logging
 from pathlib import Path
 
+from db_utils import ensure_column
+
 ROOT = Path("/opt/scalp/project")
 
 DB_DEC      = ROOT / "data/dec.db"
@@ -130,6 +132,15 @@ def write_triggers():
         return
 
     with conn(DB_TRIG) as t:
+        for col, typ in (
+            ("trigger_strength", "REAL"),
+            ("trigger_age_ms", "INTEGER"),
+            ("trigger_distance_atr", "REAL"),
+            ("spread_entry", "REAL"),
+            ("signal_age_ms", "INTEGER"),
+        ):
+            ensure_column(t, "triggers", col, typ, log)
+
         purge_expired_triggers(t, now)
 
         for r in rows:
@@ -165,8 +176,10 @@ def write_triggers():
                     score_of, score_mo, score_br, score_force,
                     price, atr, ts, status, ts_fire,
                     phase, fire_reason, ctx,
-                    score_ctx, dec_score_C, dec_mode, ts_created
-                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                    score_ctx, dec_score_C, dec_mode, ts_created,
+                    trigger_strength, trigger_age_ms, trigger_distance_atr,
+                    spread_entry, signal_age_ms
+                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             """, (
                 uid, instId, side,
                 f"DEC:{mode}",
@@ -176,7 +189,9 @@ def write_triggers():
                 now, "fire",
                 f"DEC:{mode}",
                 ctx,
-                scoreC, scoreC, mode, now
+                scoreC, scoreC, mode, now,
+                sc, 0, 0.0,
+                0.0, 0
             ))
 
             log.info("[FIRED] %s %s uid=%s price=%.6f", instId, side, uid, price)

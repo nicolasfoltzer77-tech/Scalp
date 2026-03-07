@@ -20,6 +20,8 @@ import logging
 import traceback
 from pathlib import Path
 
+from db_utils import ensure_column
+
 # ============================================================
 # PATHS
 # ============================================================
@@ -77,6 +79,33 @@ def last_non_null(rows, col):
         if v is not None:
             return v
     return None
+
+
+def safe_div(num, den):
+    try:
+        n = float(num)
+        d = float(den)
+        if d == 0:
+            return None
+        return n / d
+    except Exception:
+        return None
+
+
+def ensure_recorder_schema(c):
+    for col, typ in (
+        ("entry_range_pos", "REAL"),
+        ("entry_distance_atr", "REAL"),
+        ("entry_delay_ms", "INTEGER"),
+        ("mfe_ratio", "REAL"),
+        ("mae_ratio", "REAL"),
+        ("profit_capture_ratio", "REAL"),
+        ("slippage_entry", "REAL"),
+        ("slippage_exit", "REAL"),
+        ("trigger_strength", "REAL"),
+        ("market_regime", "TEXT"),
+    ):
+        ensure_column(c, "recorder", col, typ, log)
 
 # ============================================================
 # INIT recorder_steps (IDEMPOTENT)
@@ -284,6 +313,31 @@ def build_value_for_column(col, g, metrics, ts_rec):
         return rget(g, "qty", rget(g, "qty_open"))
     if col == "entry":
         return rget(g, "entry", rget(g, "avg_entry_price"))
+    if col == "entry_delay_ms":
+        ts_open = rget(g, "ts_open", rget(g, "ts_first_open"))
+        ts_signal = rget(g, "ts_signal")
+        try:
+            return int(ts_open) - int(ts_signal)
+        except Exception:
+            return rget(g, "entry_delay_ms")
+    if col == "entry_distance_atr":
+        atr = rget(g, "atr_signal")
+        entry = rget(g, "entry", rget(g, "avg_entry_price"))
+        price_signal = rget(g, "price_signal")
+        calc = safe_div(abs(float(entry) - float(price_signal)), atr) if atr is not None and entry is not None and price_signal is not None else None
+        return calc if calc is not None else rget(g, "entry_distance_atr")
+    if col == "mfe_ratio":
+        mfe_dist = rget(g, "mfe_price_distance", rget(g, "mfe_price"))
+        atr = rget(g, "atr_signal")
+        return safe_div(mfe_dist, atr)
+    if col == "mae_ratio":
+        mae_dist = rget(g, "mae_price_distance", rget(g, "mae_price"))
+        atr = rget(g, "atr_signal")
+        return safe_div(mae_dist, atr)
+    if col == "profit_capture_ratio":
+        pnl = metrics["pnl_realized"]
+        mfe_dist = rget(g, "mfe_price_distance", rget(g, "mfe_price"))
+        return safe_div(pnl, mfe_dist)
     return rget(g, col)
 
 def normalize_required(col, v):
@@ -370,6 +424,7 @@ def record_trade(g):
         c.close()
         return
 
+    ensure_recorder_schema(c)
     rec_cols = table_columns(c, "recorder")
     c.close()
 

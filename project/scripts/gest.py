@@ -6,6 +6,8 @@ import time
 import logging
 from pathlib import Path
 
+from db_utils import ensure_column
+
 ROOT = Path("/opt/scalp/project")
 
 DB_GEST     = ROOT / "data/gest.db"
@@ -51,7 +53,6 @@ def rget(row, col, default=None):
 
 
 def ensure_gest_score_columns(g):
-    existing = table_columns(g, "gest")
     required = {
         "score_C": "REAL",
         "score_S": "REAL",
@@ -61,10 +62,25 @@ def ensure_gest_score_columns(g):
         "score_mo": "REAL",
         "score_br": "REAL",
         "score_force": "REAL",
+        "entry_range_pos": "REAL",
+        "entry_distance_atr": "REAL",
+        "entry_delay_ms": "INTEGER",
+        "s_struct": "REAL",
+        "s_timing": "REAL",
+        "s_quality": "REAL",
+        "s_vol": "REAL",
+        "s_confirm": "REAL",
+        "trigger_strength": "REAL",
+        "trigger_age_ms": "INTEGER",
+        "trigger_distance_atr": "REAL",
+        "market_regime": "TEXT",
+        "market_volatility": "REAL",
+        "market_trend": "REAL",
+        "spread_entry": "REAL",
+        "signal_age_ms": "INTEGER",
     }
     for col, col_type in required.items():
-        if col not in existing:
-            g.execute(f"ALTER TABLE gest ADD COLUMN {col} {col_type}")
+        ensure_column(g, "gest", col, col_type, log)
 
 
 def load_dec_payload(d_conn, uid, inst_id):
@@ -263,6 +279,22 @@ def ingest_triggers():
                 "score_H": r["score_H"] if "score_H" in trig_cols and r["score_H"] is not None else score_h,
                 "score_M": score_m,
                 "score_force": r["score_force"] if "score_force" in trig_cols else None,
+                "s_struct": rget(r, "s_struct", rget(dec_payload, "s_struct")),
+                "s_timing": rget(r, "s_timing", rget(dec_payload, "s_timing")),
+                "s_quality": rget(r, "s_quality", rget(dec_payload, "s_quality")),
+                "s_vol": rget(r, "s_vol", rget(dec_payload, "s_vol")),
+                "s_confirm": rget(r, "s_confirm", rget(dec_payload, "s_confirm")),
+                "trigger_strength": rget(r, "trigger_strength", abs(float(score_c or 0.0))),
+                "trigger_age_ms": rget(r, "trigger_age_ms", 0),
+                "trigger_distance_atr": rget(r, "trigger_distance_atr", 0.0),
+                "spread_entry": rget(r, "spread_entry", 0.0),
+                "signal_age_ms": rget(r, "signal_age_ms", 0),
+                "market_regime": rget(r, "market_regime"),
+                "market_volatility": rget(r, "market_volatility"),
+                "market_trend": rget(r, "market_trend"),
+                "entry_range_pos": rget(r, "entry_range_pos"),
+                "entry_distance_atr": rget(r, "entry_distance_atr"),
+                "entry_delay_ms": rget(r, "entry_delay_ms"),
                 "reason": r["fire_reason"] if "fire_reason" in trig_cols else None,
                 "entry_reason": r["entry_reason"] if "entry_reason" in trig_cols else None,
                 "type_signal": trigger_type,
