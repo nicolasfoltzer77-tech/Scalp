@@ -20,8 +20,8 @@ def run(conn: sqlite3.Connection, out: dict) -> dict:
         return {"status": "skipped", "reason": "trades table not found"}
 
     fee_col = db.find_fee_col(trades.columns)
-    mfe_col = db.pick_first(trades.columns, ["mfe", "max_favorable_excursion"])
-    mae_col = db.pick_first(trades.columns, ["mae", "max_adverse_excursion"])
+    mfe_col = db.pick_first(trades.columns, ["mfe", "max_favorable_excursion", "mfe_price"])
+    mae_col = db.pick_first(trades.columns, ["mae", "max_adverse_excursion", "mae_price"])
     low_col = db.find_price_col(trades.columns, "low")
     high_col = db.find_price_col(trades.columns, "high")
     entry_col = db.find_price_col(trades.columns, "entry")
@@ -39,7 +39,6 @@ def run(conn: sqlite3.Connection, out: dict) -> dict:
     if not mae_col and low_col and high_col and entry_col:
         e = pd.to_numeric(work[entry_col], errors="coerce")
         low = pd.to_numeric(work[low_col], errors="coerce")
-        high = pd.to_numeric(work[high_col], errors="coerce")
         work["mae"] = (e - low).abs()
         mae_col = "mae"
 

@@ -78,11 +78,11 @@ def find_price_col(cols: Iterable[str], kind: str) -> Optional[str]:
     if kind == "entry":
         return pick_first(cols, ["entry", "entry_price", "open_price", "price_open", "px_entry", "avg_entry_price"])
     if kind == "close":
-        return pick_first(cols, ["close_price", "exit_price", "price_close", "px_exit", "avg_exit_price"])
+        return pick_first(cols, ["close", "close_price", "exit_price", "price_close", "px_exit", "avg_exit_price"])
     if kind == "high":
-        return pick_first(cols, ["high_price", "max_price", "price_high", "trade_high"])
+        return pick_first(cols, ["high", "high_price", "max_price", "price_high", "trade_high"])
     if kind == "low":
-        return pick_first(cols, ["low_price", "min_price", "price_low", "trade_low"])
+        return pick_first(cols, ["low", "low_price", "min_price", "price_low", "trade_low"])
     return None
 
 
@@ -103,7 +103,7 @@ def find_pnl_col(cols: Iterable[str]) -> Optional[str]:
 
 
 def find_fee_col(cols: Iterable[str]) -> Optional[str]:
-    return pick_first(cols, ["fees", "fee", "commission", "total_fee", "fees_paid"])
+    return pick_first(cols, ["fees", "fee", "fee_total", "commission", "total_fee", "fees_paid"])
 
 
 def find_open_close_time_cols(cols: Iterable[str]) -> tuple[Optional[str], Optional[str]]:

@@ -94,6 +94,14 @@ def safe_div(num, den):
 
 def ensure_recorder_schema(c):
     for col, typ in (
+        ("high", "REAL"),
+        ("low", "REAL"),
+        ("fees", "REAL"),
+        ("duration", "INTEGER"),
+        ("slippage", "REAL"),
+        ("volatility", "REAL"),
+        ("atr", "REAL"),
+        ("trend_strength", "REAL"),
         ("entry_range_pos", "REAL"),
         ("entry_distance_atr", "REAL"),
         ("entry_delay_ms", "INTEGER"),
@@ -297,6 +305,8 @@ def build_value_for_column(col, g, metrics, ts_rec):
         return metrics["pnl_pct"]
     if col in ("fee", "fee_total"):
         return metrics["fee_total"]
+    if col == "fees":
+        return metrics["fee_total"]
     if col == "ts_recorded":
         return ts_rec
     if col == "close_steps":
@@ -313,6 +323,14 @@ def build_value_for_column(col, g, metrics, ts_rec):
         return rget(g, "qty", rget(g, "qty_open"))
     if col == "entry":
         return rget(g, "entry", rget(g, "avg_entry_price"))
+    if col == "high":
+        return rget(g, "high", rget(g, "high_price", rget(g, "mfe_price")))
+    if col == "low":
+        return rget(g, "low", rget(g, "low_price", rget(g, "mae_price")))
+    if col == "atr":
+        return rget(g, "atr", rget(g, "atr_signal"))
+    if col == "trend_strength":
+        return rget(g, "trend_strength", rget(g, "score_force", rget(g, "trigger_strength")))
     if col == "entry_delay_ms":
         ts_open = rget(g, "ts_open", rget(g, "ts_first_open"))
         ts_signal = rget(g, "ts_signal")
@@ -338,6 +356,25 @@ def build_value_for_column(col, g, metrics, ts_rec):
         pnl = metrics["pnl_realized"]
         mfe_dist = rget(g, "mfe_price_distance", rget(g, "mfe_price"))
         return safe_div(pnl, mfe_dist)
+    if col == "duration":
+        ts_open = rget(g, "ts_open", rget(g, "ts_first_open"))
+        ts_close = rget(g, "ts_close", rget(g, "ts_last_close"))
+        try:
+            return int(ts_close) - int(ts_open)
+        except Exception:
+            return rget(g, "duration")
+    if col == "slippage":
+        return rget(g, "slippage", rget(g, "slippage_exit", rget(g, "slippage_entry")))
+    if col == "volatility":
+        entry = rget(g, "entry", rget(g, "avg_entry_price"))
+        high = rget(g, "high", rget(g, "high_price", rget(g, "mfe_price")))
+        low = rget(g, "low", rget(g, "low_price", rget(g, "mae_price")))
+        try:
+            if entry is None:
+                return rget(g, "volatility")
+            return abs(float(high) - float(low)) / abs(float(entry)) if float(entry) != 0 else None
+        except Exception:
+            return rget(g, "volatility")
     return rget(g, col)
 
 def normalize_required(col, v):
