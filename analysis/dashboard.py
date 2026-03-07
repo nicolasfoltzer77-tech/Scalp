@@ -2,27 +2,64 @@ from __future__ import annotations
 
 from pathlib import Path
 
-ENTRY_QUALITY_CHARTS = [
-    "expectancy_vs_entry_distance.png",
-    "expectancy_vs_range_pos.png",
-    "mfe_vs_score_C.png",
-]
-
-SIGNAL_QUALITY_CHARTS = [
-    "trigger_strength_vs_pnl.png",
-    "signal_age_vs_pnl.png",
-]
-
-EXECUTION_QUALITY_CHARTS = [
-    "entry_delay_vs_pnl.png",
-    "expectancy_vs_entry_delay.png",
-]
-
-PROFIT_CAPTURE_CHARTS = [
-    "profit_capture_distribution.png",
-    "pnl_vs_mfe.png",
-    "pnl_vs_mae.png",
-]
+SECTIONS: dict[str, list[str]] = {
+    "PERFORMANCE": [
+        "equity_curve.png",
+        "drawdown_curve.png",
+        "rolling_sharpe.png",
+        "rolling_expectancy.png",
+        "rolling_winrate.png",
+    ],
+    "RISK": [
+        "drawdown_distribution.png",
+        "max_dd_duration.png",
+        "tail_risk.png",
+    ],
+    "SIGNAL EDGE": [
+        "expectancy_vs_score.png",
+        "winrate_vs_score.png",
+        "profit_factor_vs_score.png",
+        "score_distribution.png",
+        "score_calibration_curve.png",
+    ],
+    "ENTRY": [
+        "entry_distance_vs_pnl.png",
+        "entry_efficiency.png",
+        "entry_vs_midprice.png",
+    ],
+    "EXECUTION": [
+        "entry_delay_vs_pnl.png",
+        "latency_vs_pnl.png",
+        "slippage_distribution.png",
+    ],
+    "PROFIT CAPTURE": [
+        "pnl_vs_mfe.png",
+        "pnl_vs_mae.png",
+        "profit_capture_ratio.png",
+        "mfe_distribution.png",
+        "mae_distribution.png",
+    ],
+    "REGIME": [
+        "expectancy_vs_volatility.png",
+        "expectancy_vs_atr.png",
+        "expectancy_vs_trend.png",
+    ],
+    "TIME": [
+        "pnl_by_hour.png",
+        "pnl_by_weekday.png",
+        "expectancy_by_hour.png",
+    ],
+    "SIZING": [
+        "size_vs_pnl.png",
+        "leverage_vs_pnl.png",
+        "expectancy_vs_size_bucket.png",
+    ],
+    "STABILITY": [
+        "rolling_profit_factor.png",
+        "rolling_expectancy_stability.png",
+        "edge_decay.png",
+    ],
+}
 
 
 def _render_cards(names: list[str], charts_dir: Path) -> str:
@@ -30,10 +67,11 @@ def _render_cards(names: list[str], charts_dir: Path) -> str:
     for name in names:
         if not (charts_dir / name).exists():
             continue
+        title = name.rsplit(".", 1)[0].replace("_", " ").title()
         out.append(
             f'      <article class="card">\n'
-            f"        <h3>{name}</h3>\n"
-            f'        <img src="charts/{name}" alt="{name}" loading="lazy" />\n'
+            f"        <h3>{title}</h3>\n"
+            f'        <img src="charts/{name}" alt="{title}" loading="lazy" />\n'
             "      </article>"
         )
     return "\n".join(out) if out else "      <p>No charts available.</p>"
@@ -48,6 +86,8 @@ def generate_dashboard(output_root: str | Path = "analysis_output") -> Path:
     root.mkdir(parents=True, exist_ok=True)
     charts_dir = root / "charts"
     charts_dir.mkdir(parents=True, exist_ok=True)
+
+    sections_html = "\n    ".join(_section(title, _render_cards(charts, charts_dir)) for title, charts in SECTIONS.items())
 
     html = f"""<!doctype html>
 <html lang=\"en\">
@@ -65,11 +105,8 @@ def generate_dashboard(output_root: str | Path = "analysis_output") -> Path:
     </style>
   </head>
   <body>
-    <h1>Trading Bot Analysis Dashboard</h1>
-    {_section('ENTRY QUALITY', _render_cards(ENTRY_QUALITY_CHARTS, charts_dir))}
-    {_section('SIGNAL QUALITY', _render_cards(SIGNAL_QUALITY_CHARTS, charts_dir))}
-    {_section('EXECUTION QUALITY', _render_cards(EXECUTION_QUALITY_CHARTS, charts_dir))}
-    {_section('PROFIT CAPTURE', _render_cards(PROFIT_CAPTURE_CHARTS, charts_dir))}
+    <h1>Professional Quant Research Dashboard</h1>
+    {sections_html}
   </body>
 </html>
 """

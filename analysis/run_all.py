@@ -17,6 +17,8 @@ from analysis import range_analysis, atr_analysis, signal_quality, duration_anal
 from analysis import profit_capture, timing_analysis, entry_timing, entry_delay_analysis, volatility_edge
 from analysis import entry_quality, latency_analysis
 from analysis import entry_decision_diagnostics, entry_pipeline_analysis, csh_diagnostics
+from analysis import performance_analysis, risk_analysis, signal_edge_analysis, regime_analysis
+from analysis import time_analysis_extended, position_sizing_analysis, strategy_stability_analysis
 
 
 MODULES = [
@@ -49,6 +51,13 @@ MODULES = [
     ("entry_decision_diagnostics", entry_decision_diagnostics.run),
     ("entry_pipeline_analysis", entry_pipeline_analysis.run),
     ("csh_diagnostics", csh_diagnostics.run),
+    ("performance_analysis", performance_analysis.run),
+    ("risk_analysis", risk_analysis.run),
+    ("signal_edge_analysis", signal_edge_analysis.run),
+    ("regime_analysis", regime_analysis.run),
+    ("time_analysis_extended", time_analysis_extended.run),
+    ("position_sizing_analysis", position_sizing_analysis.run),
+    ("strategy_stability_analysis", strategy_stability_analysis.run),
 ]
 
 
