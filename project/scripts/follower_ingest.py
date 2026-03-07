@@ -31,10 +31,20 @@ def ingest_open_done(g, f, now):
             entry,
             atr_signal,
             qty,
-            lev
+            lev,
+            score_C,
+            score_S,
+            score_H,
+            score_M
         FROM gest
         WHERE status='open_done'
     """).fetchall()
+
+    # Keep follower aligned with score lineage for downstream analytics.
+    follower_cols = {r[1] for r in f.execute("PRAGMA table_info(follower)").fetchall()}
+    for col in ("score_C", "score_S", "score_H", "score_M"):
+        if col not in follower_cols:
+            f.execute(f"ALTER TABLE follower ADD COLUMN {col} REAL")
 
     if not rows:
         return
@@ -92,6 +102,10 @@ def ingest_open_done(g, f, now):
                         step=?,
                         req_step=?,
                         done_step=?,
+                        score_C=?,
+                        score_S=?,
+                        score_H=?,
+                        score_M=?,
                         atr_signal=?,
                         sl_hard=?,
                         sl_be=0,
@@ -128,6 +142,10 @@ def ingest_open_done(g, f, now):
                     step_in,
                     step_in,
                     step_in,
+                    r["score_C"],
+                    r["score_S"],
+                    r["score_H"],
+                    r["score_M"],
                     atr_signal,
                     sl_hard,
                     now,
@@ -142,6 +160,10 @@ def ingest_open_done(g, f, now):
                     instId=?,
                     side=?,
                     step=?,
+                    score_C=COALESCE(?, score_C),
+                    score_S=COALESCE(?, score_S),
+                    score_H=COALESCE(?, score_H),
+                    score_M=COALESCE(?, score_M),
                     req_step=CASE
                         WHEN COALESCE(req_step, 0) < COALESCE(?, 0) THEN COALESCE(?, 0)
                         ELSE req_step
@@ -161,6 +183,10 @@ def ingest_open_done(g, f, now):
                 r["instId"],
                 r["side"],
                 r["step"] or 0,
+                r["score_C"],
+                r["score_S"],
+                r["score_H"],
+                r["score_M"],
                 r["step"] or 0,
                 r["step"] or 0,
                 r["step"] or 0,
@@ -185,6 +211,10 @@ def ingest_open_done(g, f, now):
                 qty_ratio,
                 nb_partial,
                 nb_pyramide,
+                score_C,
+                score_S,
+                score_H,
+                score_M,
                 atr_signal,
                 sl_hard,
                 req_step,
@@ -203,6 +233,10 @@ def ingest_open_done(g, f, now):
             1.0,
             0,
             0,
+            r["score_C"],
+            r["score_S"],
+            r["score_H"],
+            r["score_M"],
             atr_signal,
             sl_hard,
             r["step"] or 0,
