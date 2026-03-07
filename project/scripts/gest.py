@@ -68,35 +68,64 @@ def ensure_gest_score_columns(g):
 
 
 def load_dec_payload(d_conn, uid, inst_id):
-    objects = {r["name"] for r in d_conn.execute("SELECT name FROM sqlite_master WHERE type IN ('table','view')").fetchall()}
-    if "v_dec_score_s" not in objects:
-        return None
+    log.info("GEST DEC LOOKUP: uid=%s instId=%s", uid, inst_id)
 
-    dec_cols = table_columns(d_conn, "v_dec_score_s")
-    wanted_cols = [
-        "uid", "instId", "score_C", "ctx", "dec_mode", "compression_ok",
-        "momentum_ok", "prebreak_ok", "pullback_ok", "score_S",
-        "s_struct", "s_quality", "s_vol", "s_confirm",
-    ]
-    select_cols = [c for c in wanted_cols if c in dec_cols]
-    if not select_cols:
-        return None
+    try:
+        objects = {
+            r["name"]
+            for r in d_conn.execute("SELECT name FROM sqlite_master WHERE type IN ('table','view')").fetchall()
+        }
+        if "v_dec_score_s" not in objects:
+            log.info("GEST DEC MISSING")
+            return None
 
-    query = f"SELECT {', '.join(select_cols)} FROM v_dec_score_s WHERE uid=? LIMIT 1"
-    row = d_conn.execute(query, (uid,)).fetchone()
-    if row:
-        return row
+        dec_cols = table_columns(d_conn, "v_dec_score_s")
+        wanted_cols = [
+            "uid", "instId", "score_C", "ctx", "dec_mode", "compression_ok",
+            "momentum_ok", "prebreak_ok", "pullback_ok", "score_S",
+            "s_struct", "s_quality", "s_vol", "s_confirm",
+        ]
+        select_cols = [c for c in wanted_cols if c in dec_cols]
+        if not select_cols:
+            log.info("GEST DEC MISSING")
+            return None
 
-    if "instId" in dec_cols:
+        row = None
+        if "uid" in dec_cols:
+            query = f"SELECT {', '.join(select_cols)} FROM v_dec_score_s WHERE uid=? LIMIT 1"
+            row = d_conn.execute(query, (uid,)).fetchone()
+        if row:
+            log.info("GEST DEC OK")
+            return row
+
+        if "instId" in dec_cols:
+            id_col = "instId"
+        elif "instId_s" in dec_cols:
+            id_col = "instId_s"
+        else:
+            log.warning("DEC payload missing for uid=%s instId=%s", uid, inst_id)
+            log.info("GEST DEC MISSING")
+            return None
+
         query = f"""
             SELECT {', '.join(select_cols)}
             FROM v_dec_score_s
-            WHERE instId=?
+            WHERE {id_col}=?
             ORDER BY COALESCE(ts_updated, 0) DESC
             LIMIT 1
         """
-        return d_conn.execute(query, (inst_id,)).fetchone()
-    return None
+        row = d_conn.execute(query, (inst_id,)).fetchone()
+        if row:
+            log.info("GEST DEC OK")
+            return row
+
+        log.warning("DEC payload missing for uid=%s instId=%s", uid, inst_id)
+        log.info("GEST DEC MISSING")
+        return None
+    except Exception as exc:
+        log.warning("DEC payload lookup failed for uid=%s instId=%s err=%s", uid, inst_id, exc)
+        log.info("GEST DEC MISSING")
+        return None
 
 
 def resolve_score_h(t_conn, inst_id, trigger_type, dec_mode):
