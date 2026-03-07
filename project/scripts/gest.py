@@ -10,6 +10,7 @@ ROOT = Path("/opt/scalp/project")
 
 DB_GEST     = ROOT / "data/gest.db"
 DB_TRIGGERS = ROOT / "data/triggers.db"
+DB_DEC      = ROOT / "data/dec.db"
 DB_FOLLOWER = ROOT / "data/follower.db"
 DB_OPENER   = ROOT / "data/opener.db"
 DB_CLOSER   = ROOT / "data/closer.db"
@@ -33,15 +34,127 @@ def table_columns(conn_, table):
     return {r["name"] for r in rows}
 
 
+def clamp01(value, default=0.0):
+    try:
+        x = float(value)
+    except (TypeError, ValueError):
+        x = float(default)
+    return max(0.0, min(1.0, x))
+
+
+def rget(row, col, default=None):
+    try:
+        return row[col]
+    except Exception:
+        return default
+
+
+def ensure_gest_score_columns(g):
+    existing = table_columns(g, "gest")
+    required = {
+        "score_C": "REAL",
+        "score_S": "REAL",
+        "score_H": "REAL",
+        "score_M": "REAL",
+        "score_of": "REAL",
+        "score_mo": "REAL",
+        "score_br": "REAL",
+        "score_force": "REAL",
+    }
+    for col, col_type in required.items():
+        if col not in existing:
+            g.execute(f"ALTER TABLE gest ADD COLUMN {col} {col_type}")
+
+
+def load_dec_payload(d_conn, uid, inst_id):
+    objects = {r["name"] for r in d_conn.execute("SELECT name FROM sqlite_master WHERE type IN ('table','view')").fetchall()}
+    if "v_dec_score_s" not in objects:
+        return None
+
+    dec_cols = table_columns(d_conn, "v_dec_score_s")
+    wanted_cols = [
+        "uid", "instId", "score_C", "ctx", "dec_mode", "compression_ok",
+        "momentum_ok", "prebreak_ok", "pullback_ok", "score_S",
+        "s_struct", "s_quality", "s_vol", "s_confirm",
+    ]
+    select_cols = [c for c in wanted_cols if c in dec_cols]
+    if not select_cols:
+        return None
+
+    query = f"SELECT {', '.join(select_cols)} FROM v_dec_score_s WHERE uid=? LIMIT 1"
+    row = d_conn.execute(query, (uid,)).fetchone()
+    if row:
+        return row
+
+    if "instId" in dec_cols:
+        query = f"""
+            SELECT {', '.join(select_cols)}
+            FROM v_dec_score_s
+            WHERE instId=?
+            ORDER BY COALESCE(ts_updated, 0) DESC
+            LIMIT 1
+        """
+        return d_conn.execute(query, (inst_id,)).fetchone()
+    return None
+
+
+def resolve_score_h(t_conn, inst_id, trigger_type, dec_mode):
+    trig_tables = {r["name"] for r in t_conn.execute("SELECT name FROM sqlite_master WHERE type IN ('table','view')")}
+    if "historical_scores_v2" in trig_tables:
+        hist_cols = table_columns(t_conn, "historical_scores_v2")
+        h_col = "score_H" if "score_H" in hist_cols else ("score_H_final" if "score_H_final" in hist_cols else None)
+        if h_col and all(c in hist_cols for c in ("instId", "type_signal", "ctx")):
+            row = t_conn.execute(
+                f"""
+                SELECT {h_col} AS score_H
+                FROM historical_scores_v2
+                WHERE instId=? AND type_signal=? AND ctx=?
+                ORDER BY COALESCE(ts_updated, 0) DESC
+                LIMIT 1
+                """,
+                (inst_id, trigger_type, dec_mode),
+            ).fetchone()
+            if row and row["score_H"] is not None:
+                return clamp01(row["score_H"], default=0.5)
+
+    if "v_score_H" in trig_tables:
+        v_cols = table_columns(t_conn, "v_score_H")
+        if "score_H" in v_cols:
+            filters = []
+            params = []
+            if "instId" in v_cols:
+                filters.append("instId=?")
+                params.append(inst_id)
+            if "trigger_type" in v_cols:
+                filters.append("trigger_type=?")
+                params.append(trigger_type)
+            if "dec_mode" in v_cols:
+                filters.append("dec_mode=?")
+                params.append(dec_mode)
+
+            where_clause = f"WHERE {' AND '.join(filters)}" if filters else ""
+            row = t_conn.execute(
+                f"SELECT score_H FROM v_score_H {where_clause} LIMIT 1",
+                tuple(params),
+            ).fetchone()
+            if row and row["score_H"] is not None:
+                return clamp01(row["score_H"], default=0.5)
+
+    return 0.5
+
+
 # -------------------------------------------------
 # TRIGGERS → open_req (create trade)
 # -------------------------------------------------
 def ingest_triggers():
     t = conn(DB_TRIGGERS)
+    d = conn(DB_DEC)
     g = conn(DB_GEST)
 
     try:
         trig_cols = table_columns(t, "triggers")
+        gest_cols = table_columns(g, "gest")
+        ensure_gest_score_columns(g)
         gest_cols = table_columns(g, "gest")
 
         rows = t.execute("""
@@ -57,6 +170,39 @@ def ingest_triggers():
             if g.execute("SELECT 1 FROM gest WHERE uid=?", (uid,)).fetchone():
                 continue
 
+            dec_payload = load_dec_payload(d, uid, r["instId"])
+
+            score_s = rget(r, "score_S")
+            if score_s is None and dec_payload is not None:
+                score_s = rget(dec_payload, "score_S")
+            if score_s is None:
+                s_struct = rget(r, "s_struct", rget(dec_payload, "s_struct", 0.0))
+                s_quality = rget(r, "s_quality", rget(dec_payload, "s_quality", 0.0))
+                s_vol = rget(r, "s_vol", rget(dec_payload, "s_vol", 0.0))
+                s_confirm = rget(r, "s_confirm", rget(dec_payload, "s_confirm", 0.0))
+                score_s = (
+                    0.40 * float(s_struct or 0.0)
+                    + 0.30 * float(s_quality or 0.0)
+                    + 0.20 * float(s_vol or 0.0)
+                    + 0.10 * float(s_confirm or 0.0)
+                )
+            score_s = clamp01(score_s)
+
+            trigger_type = (
+                rget(r, "trigger_type")
+                or rget(r, "type_signal")
+                or rget(r, "phase")
+            )
+            dec_mode = rget(r, "dec_mode", rget(dec_payload, "dec_mode"))
+            score_h = resolve_score_h(t, r["instId"], trigger_type, dec_mode)
+            score_m = clamp01(rget(r, "score_M", 0.5), default=0.5)
+
+            score_c = rget(r, "score_C")
+            if score_c is None:
+                score_c = rget(r, "dec_score_C")
+            if score_c is None:
+                score_c = rget(dec_payload, "score_C")
+
             values = {
                 "uid": uid,
                 "instId": r["instId"],
@@ -67,17 +213,25 @@ def ingest_triggers():
                 "ts_signal": r["ts"] if "ts" in trig_cols else None,
                 "ts_open": r["ts_fire"] if "ts_fire" in trig_cols else None,
                 # Scores/rationale propagated for opener sizing compatibility.
-                "score_C": r["score_C"] if "score_C" in trig_cols else None,
+                "score_C": score_c,
                 "dec_score_C": r["dec_score_C"] if "dec_score_C" in trig_cols else None,
-                "score_S": r["score_S"] if "score_S" in trig_cols else None,
+                "score_S": score_s,
                 "score_of": r["score_of"] if "score_of" in trig_cols else None,
-                "score_H": r["score_H"] if "score_H" in trig_cols else None,
+                "score_mo": r["score_mo"] if "score_mo" in trig_cols else None,
+                "score_br": r["score_br"] if "score_br" in trig_cols else None,
+                "score_H": r["score_H"] if "score_H" in trig_cols and r["score_H"] is not None else score_h,
+                "score_M": score_m,
                 "score_force": r["score_force"] if "score_force" in trig_cols else None,
                 "reason": r["fire_reason"] if "fire_reason" in trig_cols else None,
                 "entry_reason": r["entry_reason"] if "entry_reason" in trig_cols else None,
-                "type_signal": r["trigger_type"] if "trigger_type" in trig_cols else None,
-                "dec_mode": r["dec_mode"] if "dec_mode" in trig_cols else None,
-                "dec_ctx": r["ctx"] if "ctx" in trig_cols else None,
+                "type_signal": trigger_type,
+                "trigger_type": trigger_type,
+                "dec_mode": dec_mode,
+                "dec_ctx": r["ctx"] if "ctx" in trig_cols else rget(dec_payload, "ctx"),
+                "momentum_ok": rget(r, "momentum_ok", rget(dec_payload, "momentum_ok")),
+                "prebreak_ok": rget(r, "prebreak_ok", rget(dec_payload, "prebreak_ok")),
+                "pullback_ok": rget(r, "pullback_ok", rget(dec_payload, "pullback_ok")),
+                "compression_ok": rget(r, "compression_ok", rget(dec_payload, "compression_ok")),
                 "status": "open_stdby",
                 "step": 0,
                 "ts_created": now_ms,
@@ -90,8 +244,18 @@ def ingest_triggers():
                 f"INSERT INTO gest ({', '.join(insert_cols)}) VALUES ({placeholders})",
                 tuple(values[c] for c in insert_cols),
             )
+            log.info(
+                "GEST INSERT: uid=%s instId=%s C=%.4f S=%.4f H=%.4f M=%.4f",
+                uid,
+                r["instId"],
+                float(score_c or 0.0),
+                float(score_s or 0.0),
+                float(values["score_H"] or 0.5),
+                float(score_m or 0.5),
+            )
     finally:
         t.close()
+        d.close()
         g.close()
 
 
