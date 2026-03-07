@@ -2,59 +2,103 @@ from __future__ import annotations
 
 from pathlib import Path
 
-ENTRY_QUALITY_CHARTS = [
-    "expectancy_vs_entry_distance.png",
-    "expectancy_vs_range_pos.png",
-    "mfe_vs_score_C.png",
-]
+SECTIONS: dict[str, list[str]] = {
+    "Performance": [
+        "equity_curve.png",
+        "drawdown_curve.png",
+        "rolling_sharpe.png",
+        "rolling_expectancy.png",
+        "rolling_winrate.png",
+    ],
+    "Risk": [
+        "drawdown_distribution.png",
+        "max_dd_duration.png",
+        "tail_risk.png",
+    ],
+    "Signal Edge": [
+        "expectancy_vs_score.png",
+        "winrate_vs_score.png",
+        "profit_factor_vs_score.png",
+        "score_distribution.png",
+        "score_calibration_curve.png",
+    ],
+    "Entry": [
+        "entry_distance_vs_pnl.png",
+        "entry_efficiency.png",
+        "entry_vs_midprice.png",
+    ],
+    "Execution": [
+        "entry_delay_vs_pnl.png",
+        "latency_vs_pnl.png",
+        "slippage_distribution.png",
+    ],
+    "Profit Capture": [
+        "pnl_vs_mfe.png",
+        "pnl_vs_mae.png",
+        "profit_capture_ratio.png",
+        "mfe_distribution.png",
+        "mae_distribution.png",
+    ],
+    "Regime": [
+        "expectancy_vs_volatility.png",
+        "expectancy_vs_atr.png",
+        "expectancy_vs_trend.png",
+    ],
+    "Time": [
+        "pnl_by_hour.png",
+        "pnl_by_weekday.png",
+        "expectancy_by_hour.png",
+    ],
+    "Sizing": [
+        "size_vs_pnl.png",
+        "leverage_vs_pnl.png",
+        "expectancy_vs_size_bucket.png",
+    ],
+    "Stability": [
+        "rolling_profit_factor.png",
+        "rolling_expectancy.png",
+        "edge_decay.png",
+    ],
+}
 
-SIGNAL_QUALITY_CHARTS = [
-    "trigger_strength_vs_pnl.png",
-    "signal_age_vs_pnl.png",
-]
 
-EXECUTION_QUALITY_CHARTS = [
-    "entry_delay_vs_pnl.png",
-    "expectancy_vs_entry_delay.png",
-]
-
-PROFIT_CAPTURE_CHARTS = [
-    "profit_capture_distribution.png",
-    "pnl_vs_mfe.png",
-    "pnl_vs_mae.png",
-]
+def _card(name: str) -> str:
+    return (
+        f'      <article class="card">\n'
+        f"        <h3>{name}</h3>\n"
+        f'        <img src="graphs/{name}" alt="{name}" loading="lazy" />\n'
+        "      </article>"
+    )
 
 
-def _render_cards(names: list[str], charts_dir: Path) -> str:
-    out = []
-    for name in names:
-        if not (charts_dir / name).exists():
-            continue
-        out.append(
-            f'      <article class="card">\n'
-            f"        <h3>{name}</h3>\n"
-            f'        <img src="charts/{name}" alt="{name}" loading="lazy" />\n'
-            "      </article>"
-        )
-    return "\n".join(out) if out else "      <p>No charts available.</p>"
-
-
-def _section(title: str, cards: str) -> str:
-    return f'<h2 class="section-title">{title}</h2>\n    <div class="grid">{cards}\n    </div>'
+def _render_section(title: str, filenames: list[str], available: set[str]) -> str:
+    cards = [_card(n) for n in filenames if n in available]
+    body = "\n".join(cards) if cards else "      <p>No charts available.</p>"
+    return f'<h2 class="section-title">{title}</h2>\n    <div class="grid">{body}\n    </div>'
 
 
 def generate_dashboard(output_root: str | Path = "analysis_output") -> Path:
     root = Path(output_root)
     root.mkdir(parents=True, exist_ok=True)
+    graphs_dir = root / "graphs"
     charts_dir = root / "charts"
-    charts_dir.mkdir(parents=True, exist_ok=True)
+    source_dir = graphs_dir if graphs_dir.exists() else charts_dir
+    source_dir.mkdir(parents=True, exist_ok=True)
+
+    available = {p.name for p in source_dir.glob("*.png")}
+    rendered = [_render_section(title, names, available) for title, names in SECTIONS.items()]
+
+    categorized = {name for names in SECTIONS.values() for name in names}
+    extras = sorted(available - categorized)
+    if extras:
+        rendered.append(_render_section("Additional Graphs", extras, available))
 
     html = f"""<!doctype html>
 <html lang=\"en\">
   <head>
     <meta charset=\"utf-8\" />
     <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />
-    <title>Analysis Dashboard</title>
+    <title>Quant Research Dashboard</title>
     <style>
       body {{ font-family: Inter, Arial, sans-serif; margin: 0; padding: 24px; background: #f5f7fa; color: #1f2937; }}
       .section-title {{ margin: 28px 0 10px; }}
@@ -65,11 +109,8 @@ def generate_dashboard(output_root: str | Path = "analysis_output") -> Path:
     </style>
   </head>
   <body>
-    <h1>Trading Bot Analysis Dashboard</h1>
-    {_section('ENTRY QUALITY', _render_cards(ENTRY_QUALITY_CHARTS, charts_dir))}
-    {_section('SIGNAL QUALITY', _render_cards(SIGNAL_QUALITY_CHARTS, charts_dir))}
-    {_section('EXECUTION QUALITY', _render_cards(EXECUTION_QUALITY_CHARTS, charts_dir))}
-    {_section('PROFIT CAPTURE', _render_cards(PROFIT_CAPTURE_CHARTS, charts_dir))}
+    <h1>Professional Quant Research Dashboard</h1>
+    {'\n    '.join(rendered)}
   </body>
 </html>
 """

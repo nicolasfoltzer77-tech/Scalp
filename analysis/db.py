@@ -22,11 +22,12 @@ def connect_db(db_path: Optional[str | Path] = None) -> sqlite3.Connection:
 def ensure_output_dirs(output_root: str | Path = OUTPUT_ROOT) -> dict[str, Path]:
     root = Path(output_root)
     csv_dir = root / "csv"
+    graph_dir = root / "graphs"
     chart_dir = root / "charts"
     report_dir = root / "reports"
-    for p in (root, csv_dir, chart_dir, report_dir):
+    for p in (root, csv_dir, graph_dir, chart_dir, report_dir):
         p.mkdir(parents=True, exist_ok=True)
-    return {"root": root, "csv": csv_dir, "charts": chart_dir, "reports": report_dir}
+    return {"root": root, "csv": csv_dir, "graphs": graph_dir, "charts": graph_dir, "reports": report_dir}
 
 
 def list_tables(conn: sqlite3.Connection) -> list[str]:
