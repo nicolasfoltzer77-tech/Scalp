@@ -110,7 +110,7 @@ def generate_dashboard(output_root: str | Path = "analysis_output") -> Path:
   </head>
   <body>
     <h1>Professional Quant Research Dashboard</h1>
-    {"\n".join(rendered)}
+    {"".join(rendered)}
   </body>
 </html>
 """
