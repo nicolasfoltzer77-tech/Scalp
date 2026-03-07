@@ -2931,7 +2931,7 @@ TABLE recorder CREATE TABLE recorder (
     wt_peak_price REAL,
 
     ts_recorded INTEGER NOT NULL
-, fee_total REAL DEFAULT 0, score_of    REAL, score_mo    REAL, score_br    REAL, score_force REAL, mfe_price REAL, mfe_ts INTEGER, mae_price REAL, mae_ts INTEGER, pnl_realized REAL, close_steps INTEGER, atr_signal REAL, price_exec_close REAL, score_H REAL, score_M REAL, nb_partial INTEGER DEFAULT 0, nb_pyramide INTEGER DEFAULT 0, mfe_atr REAL DEFAULT 0.0, mae_atr REAL DEFAULT 0.0, golden INTEGER DEFAULT 0, golden_ts INTEGER, last_action_ts INTEGER, last_pyramide_mfe_atr REAL, first_partial_mfe_atr REAL, trigger_type TEXT, dec_mode TEXT, momentum_ok INTEGER DEFAULT 0, prebreak_ok INTEGER DEFAULT 0, pullback_ok INTEGER DEFAULT 0, compression_ok INTEGER DEFAULT 0, dec_ctx TEXT, dec_score_C REAL)
+, fee_total REAL DEFAULT 0, score_of    REAL, score_mo    REAL, score_br    REAL, score_force REAL, mfe_price REAL, mfe_ts INTEGER, mae_price REAL, mae_ts INTEGER, pnl_realized REAL, close_steps INTEGER, atr_signal REAL, price_exec_close REAL, score_H REAL, score_M REAL, nb_partial INTEGER DEFAULT 0, nb_pyramide INTEGER DEFAULT 0, mfe_atr REAL DEFAULT 0.0, mae_atr REAL DEFAULT 0.0, golden INTEGER DEFAULT 0, golden_ts INTEGER, last_action_ts INTEGER, last_pyramide_mfe_atr REAL, first_partial_mfe_atr REAL, trigger_type TEXT, dec_mode TEXT, momentum_ok INTEGER DEFAULT 0, prebreak_ok INTEGER DEFAULT 0, pullback_ok INTEGER DEFAULT 0, compression_ok INTEGER DEFAULT 0, dec_ctx TEXT, dec_score_C REAL, high REAL, low REAL, fees REAL, duration INTEGER, slippage REAL, volatility REAL, atr REAL, trend_strength REAL)
 TABLE recorder_steps CREATE TABLE recorder_steps (
     uid              TEXT NOT NULL,
     step             INTEGER NOT NULL,
