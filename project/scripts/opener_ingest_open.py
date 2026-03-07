@@ -98,7 +98,7 @@ def ingest_open_req():
                    {score_h_expr} AS score_H,
                    {step_expr} AS step
             FROM gest
-            WHERE status='open_stdby'
+            WHERE status='open_req'
         """).fetchall()
 
         if not rows:
