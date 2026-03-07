@@ -16,6 +16,7 @@ DB_OPENER   = ROOT / "data/opener.db"
 DB_CLOSER   = ROOT / "data/closer.db"
 
 LOOP_SLEEP = 0.2
+LOG_PATH = ROOT / "logs/gest.log"
 
 log = logging.getLogger("GEST")
 
@@ -161,14 +162,25 @@ def ingest_triggers():
             SELECT *
             FROM triggers
             WHERE status='fire'
+            ORDER BY ts
+            LIMIT 10
         """).fetchall()
+        log.info("GEST POLL → found %d triggers", len(rows))
 
         now_ms = int(time.time() * 1000)
 
         for r in rows:
             uid = r["uid"]
             if g.execute("SELECT 1 FROM gest WHERE uid=?", (uid,)).fetchone():
+                log.info("GEST SKIP duplicate uid uid=%s", uid)
                 continue
+
+            log.info(
+                "GEST CONSUME: uid=%s instId=%s side=%s",
+                uid,
+                rget(r, "instId"),
+                rget(r, "side"),
+            )
 
             dec_payload = load_dec_payload(d, uid, r["instId"])
 
@@ -232,7 +244,7 @@ def ingest_triggers():
                 "prebreak_ok": rget(r, "prebreak_ok", rget(dec_payload, "prebreak_ok")),
                 "pullback_ok": rget(r, "pullback_ok", rget(dec_payload, "pullback_ok")),
                 "compression_ok": rget(r, "compression_ok", rget(dec_payload, "compression_ok")),
-                "status": "open_stdby",
+                "status": "open_req",
                 "step": 0,
                 "ts_created": now_ms,
                 "ts_updated": now_ms,
@@ -245,7 +257,7 @@ def ingest_triggers():
                 tuple(values[c] for c in insert_cols),
             )
             log.info(
-                "GEST INSERT: uid=%s instId=%s C=%.4f S=%.4f H=%.4f M=%.4f",
+                "GEST INSERT OK: uid=%s instId=%s C=%.4f S=%.4f H=%.4f M=%.4f",
                 uid,
                 r["instId"],
                 float(score_c or 0.0),
@@ -253,6 +265,8 @@ def ingest_triggers():
                 float(values["score_H"] or 0.5),
                 float(score_m or 0.5),
             )
+
+        g.commit()
     finally:
         t.close()
         d.close()
@@ -507,9 +521,12 @@ def ingest_follower_requests():
 
 
 def main():
+    LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
     logging.basicConfig(
         level=logging.INFO,
+        filename=str(LOG_PATH),
         format="%(asctime)s %(levelname)s %(name)s %(message)s",
+        force=True,
     )
     log.info("[START] gest loop sleep=%.3fs", LOOP_SLEEP)
 
