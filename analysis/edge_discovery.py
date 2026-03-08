@@ -171,6 +171,21 @@ def run(conn: sqlite3.Connection, out: dict) -> dict:
     }
 
     output_tables: list[str] = []
+
+    base_cols = [
+        "coin",
+        "hour_of_day",
+        "volatility_bucket",
+        "score_C_bucket",
+        "score_S_bucket",
+        "score_H_bucket",
+        "leverage_bucket",
+        "pnl_net",
+    ]
+    base_csv = tables_dir / "edge_discovery_base_data.csv"
+    work[base_cols].to_csv(base_csv, index=False)
+    output_tables.append(str(base_csv.relative_to(out["root"])))
+
     all_single_regimes: list[pd.DataFrame] = []
     for name, cols in grouped_specs.items():
         metrics = _compute_metrics(work, cols).sort_values("expectancy", ascending=False)
