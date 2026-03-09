@@ -1,59 +1,49 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+"""Meta-engine trigger loop: DEC view -> GEST open requests."""
+
+from __future__ import annotations
+
+import hashlib
+import logging
 import sqlite3
 import time
-import yaml
-import logging
+from datetime import UTC, datetime
 from pathlib import Path
 
+import yaml
+
 from db_utils import ensure_column
+from position_sizing import compute_position_size
+from signal_reader import MetaSignal, read_tradable_meta_signals
 
 ROOT = Path("/opt/scalp/project")
-
-DB_DEC      = ROOT / "data/dec.db"
-DB_TRIG     = ROOT / "data/triggers.db"
-DB_GEST     = ROOT / "data/gest.db"
-DB_RECORDER = ROOT / "data/recorder.db"
-DB_TICKS    = ROOT / "data/t.db"
-
+DB_DEC = ROOT / "data/dec.db"
+DB_GEST = ROOT / "data/gest.db"
 CONF_YAML = ROOT / "conf/triggers.yaml"
 LOG = ROOT / "logs/triggers.log"
 
-CFG = yaml.safe_load(open(CONF_YAML)).get("triggers", {})
+CFG = (yaml.safe_load(CONF_YAML.read_text()) if CONF_YAML.exists() else {}).get("triggers", {})
 ENGINE_SLEEP = float(CFG.get("engine_sleep", 0.5))
-ARM_TTL_MS   = int(CFG.get("arm_ttl_ms", 120000))
+MAX_SIGNALS_PER_CYCLE = int(CFG.get("max_signals_per_cycle", 10))
+BASE_POSITION_SIZE = float(CFG.get("base_position_size", 100.0))
+DEFAULT_SIDE = str(CFG.get("default_side", "buy")).lower()
+DEFAULT_SESSION = str(CFG.get("session", "auto"))
 
-# Un coin est bloqué uniquement si un trade est réellement en cours.
-# Les états terminaux (ex: close_done) ne doivent pas empêcher un nouveau trigger.
-ACTIVE_GEST_STATUSES = (
-    "armed",
-    "fire",
-    "opened",
-    "open_stdby",
-    "open_done",
-    "follow",
-    "pyramide_req",
-    "pyramide_stdby",
-    "pyramide_done",
-    "partial_req",
-    "partial_stdby",
-    "partial_done",
-    "close_req",
-    "close_stdby",
-    "to_close",
-)
-
-logging.basicConfig(filename=str(LOG),
+logging.basicConfig(
+    filename=str(LOG),
     level=logging.INFO,
-    format="%(asctime)s TRIG %(levelname)s %(message)s")
+    format="%(asctime)s TRIG %(levelname)s %(message)s",
+)
 log = logging.getLogger("TRIG")
 
 
-def now_ms():
+def now_ms() -> int:
     return int(time.time() * 1000)
 
-def conn(db):
+
+def conn(db: Path) -> sqlite3.Connection:
     c = sqlite3.connect(str(db), timeout=10)
     c.row_factory = sqlite3.Row
     c.execute("PRAGMA journal_mode=WAL;")
@@ -61,147 +51,126 @@ def conn(db):
     return c
 
 
-# 🔥 PRIX LIVE DIRECT (sans vue)
-def live_price(instId):
-    with conn(DB_TICKS) as c:
-        r = c.execute("""
-            SELECT lastPr
-            FROM ticks_hist
-            WHERE instId=?
-            ORDER BY ts_ms DESC
-            LIMIT 1
-        """, (instId,)).fetchone()
-        return float(r["lastPr"]) if r else None
+def ensure_gest_meta_columns(g: sqlite3.Connection) -> None:
+    for col, typ in (
+        ("meta_score", "REAL"),
+        ("meta_score_norm", "REAL"),
+        ("position_size", "REAL"),
+        ("session", "TEXT"),
+        ("signal_source", "TEXT"),
+    ):
+        ensure_column(g, "gest", col, typ, log)
 
 
-def uid_exists_anywhere(uid):
+def build_session() -> str:
+    if DEFAULT_SESSION != "auto":
+        return DEFAULT_SESSION
+    now = datetime.now(UTC)
+    return f"{now:%Y%m%d}_h{now.hour:02d}"
+
+
+def build_uid(ts_ms: int, symbol: str, side: str) -> str:
+    payload = f"{ts_ms}:{symbol}:{side}".encode("utf-8")
+    digest = hashlib.sha1(payload).hexdigest()[:12]
+    return f"meta_{ts_ms}_{digest}"
+
+
+def is_symbol_already_active(g: sqlite3.Connection, symbol: str) -> bool:
+    row = g.execute(
+        """
+        SELECT 1
+        FROM gest
+        WHERE instId=?
+          AND status IN ('armed','fire','opened','open_stdby','open_done','follow','close_req','close_stdby','to_close')
+        LIMIT 1
+        """,
+        (symbol,),
+    ).fetchone()
+    return row is not None
+
+
+def ingest_signal_to_gest(g: sqlite3.Connection, signal: MetaSignal, *, side: str, ts_ms: int, session: str) -> bool:
+    if is_symbol_already_active(g, signal.inst_id):
+        return False
+
+    uid = build_uid(ts_ms, signal.inst_id, side)
+    if g.execute("SELECT 1 FROM gest WHERE uid=? LIMIT 1", (uid,)).fetchone():
+        return False
+
+    position_size = compute_position_size(BASE_POSITION_SIZE, signal.meta_score_norm)
+    if position_size <= 0:
+        return False
+
+    g.execute(
+        """
+        INSERT INTO gest (
+            uid, instId, side,
+            ts_signal, reason, entry_reason, type_signal,
+            meta_score, meta_score_norm, position_size,
+            session, signal_source,
+            status, step, ts_created, ts_updated
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open_stdby', 0, ?, ?)
+        """,
+        (
+            uid,
+            signal.inst_id,
+            side,
+            ts_ms,
+            "meta_engine",
+            f"meta_rank:{signal.strength}",
+            signal.strength,
+            signal.meta_score,
+            signal.meta_score_norm,
+            position_size,
+            session,
+            "meta_engine",
+            ts_ms,
+            ts_ms,
+        ),
+    )
+    log.info(
+        "[OPEN_REQ] uid=%s symbol=%s side=%s meta=%.4f norm=%.4f size=%.4f session=%s",
+        uid,
+        signal.inst_id,
+        side,
+        signal.meta_score,
+        signal.meta_score_norm,
+        position_size,
+        session,
+    )
+    return True
+
+
+def run_cycle() -> int:
+    signals = read_tradable_meta_signals(
+        DB_DEC,
+        limit=MAX_SIGNALS_PER_CYCLE,
+        min_norm_score=0.60,
+    )
+    if not signals:
+        return 0
+
+    inserted = 0
+    ts_ms = now_ms()
+    session = build_session()
+
     with conn(DB_GEST) as g:
-        if g.execute("SELECT 1 FROM gest WHERE uid=? LIMIT 1", (uid,)).fetchone():
-            return True
-    with conn(DB_RECORDER) as r:
-        if r.execute("SELECT 1 FROM recorder WHERE uid=? LIMIT 1", (uid,)).fetchone():
-            return True
-    return False
+        ensure_gest_meta_columns(g)
+        for signal in signals:
+            if ingest_signal_to_gest(g, signal, side=DEFAULT_SIDE, ts_ms=ts_ms, session=session):
+                inserted += 1
+        g.commit()
+
+    return inserted
 
 
-def instid_active(instId):
-    with conn(DB_GEST) as g:
-        placeholders = ",".join("?" for _ in ACTIVE_GEST_STATUSES)
-        return g.execute("""
-            SELECT 1 FROM gest
-            WHERE instId=?
-              AND status IN (""" + placeholders + """)
-            LIMIT 1
-        """, (instId, *ACTIVE_GEST_STATUSES)).fetchone() is not None
-
-
-def trigger_active(instId):
-    with conn(DB_TRIG) as t:
-        return t.execute("""
-            SELECT 1 FROM triggers
-            WHERE instId=?
-              AND status='fire'
-            LIMIT 1
-        """, (instId,)).fetchone() is not None
-
-
-def purge_expired_triggers(t, now):
-    rows = t.execute("""
-        SELECT uid, ts FROM triggers WHERE status='fire'
-    """).fetchall()
-
-    for r in rows:
-        if now - int(r["ts"]) > ARM_TTL_MS:
-            t.execute("UPDATE triggers SET status='trig_cancel' WHERE uid=?", (r["uid"],))
-            log.info("[TTL_EXPIRE] %s", r["uid"])
-
-
-def load_dec_fires():
-    with conn(DB_DEC) as c:
-        return c.execute("""
-            SELECT uid, instId, side, atr, dec_mode, score_C, ctx
-            FROM v_dec_fire
-            WHERE fire = 1
-        """).fetchall()
-
-
-def write_triggers():
-    now = now_ms()
-    rows = load_dec_fires()
-    if not rows:
-        return
-
-    with conn(DB_TRIG) as t:
-        for col, typ in (
-            ("trigger_strength", "REAL"),
-            ("trigger_age_ms", "INTEGER"),
-            ("trigger_distance_atr", "REAL"),
-            ("spread_entry", "REAL"),
-            ("signal_age_ms", "INTEGER"),
-        ):
-            ensure_column(t, "triggers", col, typ, log)
-
-        purge_expired_triggers(t, now)
-
-        for r in rows:
-            instId = r["instId"]
-            side   = r["side"]
-            atr    = r["atr"]
-            mode   = r["dec_mode"] or "DEC"
-            scoreC = float(r["score_C"] or 0.0)
-            ctx    = r["ctx"]
-
-            price = live_price(instId)  # 🔥 prix réel
-
-            if not instId or side not in ("buy", "sell"):
-                continue
-            if price is None or atr is None or atr <= 0:
-                continue
-            if instid_active(instId) or trigger_active(instId):
-                continue
-
-            uid = r["uid"]
-            if not uid or uid_exists_anywhere(uid):
-                continue
-
-            sc = abs(scoreC)
-            score_of = sc
-            score_mo = sc
-            score_br = 0.45 if mode == "MOMENTUM" else 0.30
-            score_force = min(1.0, 0.5 + sc)
-
-            t.execute("""
-                INSERT INTO triggers (
-                    uid, instId, side, entry_reason,
-                    score_of, score_mo, score_br, score_force,
-                    price, atr, ts, status, ts_fire,
-                    phase, fire_reason, ctx,
-                    score_ctx, dec_score_C, dec_mode, ts_created,
-                    trigger_strength, trigger_age_ms, trigger_distance_atr,
-                    spread_entry, signal_age_ms
-                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-            """, (
-                uid, instId, side,
-                f"DEC:{mode}",
-                score_of, score_mo, score_br, score_force,
-                price, atr,
-                now, "fire",
-                now, "fire",
-                f"DEC:{mode}",
-                ctx,
-                scoreC, scoreC, mode, now,
-                sc, 0, 0.0,
-                0.0, 0
-            ))
-
-            log.info("[FIRED] %s %s uid=%s price=%.6f", instId, side, uid, price)
-
-
-def main():
-    log.info("[START] triggers engine (DEC → TRIGGERS)")
+def main() -> None:
+    log.info("[START] trigger engine (v_meta_rank_norm -> gest)")
     while True:
         try:
-            write_triggers()
+            inserted = run_cycle()
+            if inserted:
+                log.info("[CYCLE] inserted=%d", inserted)
         except Exception:
             log.exception("[ERR]")
         time.sleep(ENGINE_SLEEP)
