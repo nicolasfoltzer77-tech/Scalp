@@ -30,7 +30,7 @@ log.info("[BOOT] dec_writer starting")
 
 try:
     from dec_ctx import load_ctx
-    from dec_atr import load_atr_map, select_atr
+    from dec_atr import refresh_snap_atr
     from dec_market import load_market_ok, market_pass
 except Exception as e:
     log.exception("[BOOT_IMPORT_ERR]")
@@ -128,7 +128,7 @@ def main():
             ts = now_ms()
 
             ctx_rows = load_ctx()
-            atr_map  = load_atr_map()
+            atr_rows = refresh_snap_atr()
             market   = load_market_ok()
 
             with conn() as c:
@@ -145,20 +145,15 @@ def main():
                         veto += 1
                         continue
 
-                    atr_fast, atr_slow, vol = select_atr(
-                        r["ctx"],
-                        atr_map.get(r["instId"])
-                    )
-
                     out.append((
                         build_uid(r["instId"], r["side"]),
                         r["instId"],
                         r["ctx"],
                         r["score_C"],
                         r["side"],
-                        atr_fast,
-                        atr_slow,
-                        vol,
+                        None,
+                        None,
+                        "UNKNOWN",
                         1,
                         ts
                     ))
@@ -173,8 +168,32 @@ def main():
                         ) VALUES (?,?,?,?,?,?,?,?,?,?)
                     """, out)
 
-            log.info("[UPDATE] ctx=%d snap=%d veto=%d",
-                     len(ctx_rows), len(out), veto)
+                c.execute("""
+                    UPDATE snap_ctx
+                    SET
+                        atr_fast = (
+                            SELECT atr_1m FROM snap_atr a
+                            WHERE a.instId = snap_ctx.instId
+                        ),
+                        atr_slow = (
+                            SELECT atr_5m FROM snap_atr a
+                            WHERE a.instId = snap_ctx.instId
+                        ),
+                        vol_regime = (
+                            SELECT vol_regime FROM snap_atr a
+                            WHERE a.instId = snap_ctx.instId
+                        )
+                """)
+
+                c.execute("""
+                    UPDATE snap_ctx
+                    SET
+                        atr_fast = COALESCE(atr_fast, atr_slow),
+                        vol_regime = COALESCE(vol_regime, 'NORMAL')
+                """)
+
+            log.info("[UPDATE] ctx=%d snap=%d veto=%d atr_rows=%d",
+                     len(ctx_rows), len(out), veto, atr_rows)
 
         except Exception:
             log.exception("[RUNTIME_ERR]")
