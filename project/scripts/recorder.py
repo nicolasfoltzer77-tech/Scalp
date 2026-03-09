@@ -112,6 +112,11 @@ def ensure_recorder_schema(c):
         ("slippage_exit", "REAL"),
         ("trigger_strength", "REAL"),
         ("market_regime", "TEXT"),
+        ("meta_score", "REAL"),
+        ("meta_score_norm", "REAL"),
+        ("position_size", "REAL"),
+        ("session", "TEXT"),
+        ("signal_source", "TEXT"),
     ):
         ensure_column(c, "recorder", col, typ, log)
 
@@ -280,6 +285,7 @@ def build_uid_snapshot(uid):
         "score_C", "score_S", "score_H", "score_M",
         "score_of", "score_mo", "score_br", "score_force",
         "trigger_type", "dec_mode", "dec_ctx", "dec_score_C",
+        "meta_score", "meta_score_norm", "position_size", "session", "signal_source",
         "entry", "qty", "lev", "margin",
         "sl_init", "tp_init",
         "ratio_to_open",
