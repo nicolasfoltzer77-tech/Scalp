@@ -1,0 +1,629 @@
+{
+  "performance_analysis": {
+    "status": "ok",
+    "rows": 7567,
+    "table": "recorder"
+  },
+  "risk_analysis": {
+    "status": "ok",
+    "rows": 7567,
+    "max_dd_duration": 7566,
+    "table": "recorder"
+  },
+  "signal_edge_analysis": {
+    "status": "ok",
+    "rows": 7567,
+    "table": "recorder",
+    "skipped_graphs": [
+      "entry_distance_vs_pnl",
+      "entry_vs_midprice",
+      "latency_vs_pnl"
+    ]
+  },
+  "regime_analysis": {
+    "status": "ok",
+    "rows": 7567,
+    "table": "recorder",
+    "skipped_graphs": [
+      "expectancy_vs_atr"
+    ]
+  },
+  "time_analysis_extended": {
+    "status": "ok",
+    "rows": 7567,
+    "table": "recorder"
+  },
+  "position_sizing_analysis": {
+    "status": "ok",
+    "rows": 7567,
+    "table": "recorder",
+    "skipped_graphs": []
+  },
+  "strategy_stability_analysis": {
+    "status": "ok",
+    "rows": 7567,
+    "table": "recorder"
+  },
+  "mfe_mae": {
+    "status": "ok",
+    "rows": 7561,
+    "table": "recorder"
+  },
+  "expectancy": {
+    "status": "ok",
+    "rows": 7567
+  },
+  "leverage_analysis": {
+    "status": "ok",
+    "rows": 1
+  },
+  "pyramiding": {
+    "status": "ok",
+    "rows": 7567
+  },
+  "exit_reasons": {
+    "status": "ok",
+    "rows": 8
+  },
+  "time_analysis": {
+    "status": "ok",
+    "rows": 1
+  },
+  "coin_analysis": {
+    "status": "ok",
+    "rows": 52
+  },
+  "equity_curve": {
+    "status": "ok",
+    "rows": 7567,
+    "max_drawdown": -5986.714005131626
+  },
+  "edge_decay": {
+    "status": "skipped",
+    "reason": "missing step trade id/pnl/time"
+  },
+  "clustering": {
+    "status": "skipped",
+    "reason": "not enough rows for clustering"
+  },
+  "entry_efficiency": {
+    "status": "ok",
+    "rows": 7119,
+    "table": "recorder"
+  },
+  "entry_quality": {
+    "status": "ok",
+    "rows": 7567,
+    "table": "recorder"
+  },
+  "profit_capture": {
+    "status": "ok",
+    "rows": 7567,
+    "table": "recorder"
+  },
+  "timing_analysis": {
+    "status": "ok",
+    "rows": 7567,
+    "table": "recorder"
+  },
+  "entry_timing": {
+    "status": "ok",
+    "rows": 7119,
+    "table": "recorder"
+  },
+  "entry_delay_analysis": {
+    "status": "ok",
+    "rows": 7567,
+    "table": "recorder"
+  },
+  "latency_analysis": {
+    "status": "ok",
+    "rows": 7567,
+    "table": "recorder"
+  },
+  "volatility_edge": {
+    "status": "ok",
+    "rows": 7567,
+    "table": "recorder"
+  },
+  "atr_analysis": {
+    "status": "ok",
+    "rows": 7567,
+    "table": "recorder"
+  },
+  "signal_quality": {
+    "status": "ok",
+    "rows": 7567,
+    "table": "recorder"
+  },
+  "duration_analysis": {
+    "status": "skipped",
+    "reason": "no valid durations",
+    "table": "recorder"
+  },
+  "step_analysis": {
+    "status": "ok",
+    "rows": 18,
+    "table": "recorder"
+  },
+  "move_vs_fees": {
+    "status": "ok",
+    "rows": 7567,
+    "table": "recorder"
+  },
+  "volatility_analysis": {
+    "status": "ok",
+    "rows": 7561,
+    "table": "recorder"
+  },
+  "trade_clustering": {
+    "status": "skipped",
+    "reason": "not enough rows for clustering",
+    "table": "recorder"
+  },
+  "range_analysis": {
+    "status": "ok",
+    "rows": 4,
+    "valid_rows": 7561
+  },
+  "entry_decision_diagnostics": {
+    "status": "ok",
+    "source": "data/gest.db",
+    "rows": 0,
+    "score_rows": 0,
+    "flag_rows": 0,
+    "dec_mode": 0,
+    "trigger_type": 0,
+    "delay_rows": 0,
+    "best_conditions": 0
+  },
+  "entry_pipeline_analysis": {
+    "status": "ok",
+    "triggers_db": "data/triggers.db",
+    "recorder_db": "data/recorder.db",
+    "dec_db_present": true,
+    "joined_rows": 0,
+    "dec_mode_rows": 0,
+    "trigger_type_rows": 0,
+    "entry_reason_rows": 0,
+    "score_rows": 0,
+    "indicator_rows": 0,
+    "flag_rows": 0,
+    "regime_rows": 0,
+    "best_conditions": 0
+  },
+  "csh_diagnostics": {
+    "status": "ok",
+    "table": "recorder",
+    "rows": 7567,
+    "columns_used": [
+      "uid",
+      "instId",
+      "side",
+      "pnl_net",
+      "entry",
+      "lev",
+      "score_C",
+      "score_S",
+      "score_H",
+      "ts_open",
+      "ts_close"
+    ],
+    "distributions": 3,
+    "score_bucket_rows": 15,
+    "signal_components": 0,
+    "contexts": 2,
+    "sizing_rows": 7567,
+    "size_pnl_corr": -0.17620122884336767,
+    "surface_cells": 25,
+    "score_calibration_rows": 15,
+    "edge_decay_rows": 0,
+    "summary_report": {
+      "best_score_ranges": [
+        {
+          "score": "score_C",
+          "score_bucket": "0.2-0.4",
+          "trade_count": 753,
+          "winrate": 0.0597609561752988,
+          "expectancy": -0.7910108481017184,
+          "profit_factor": 0.0893863900966294
+        },
+        {
+          "score": "score_H",
+          "score_bucket": "0.4-0.6",
+          "trade_count": 7567,
+          "winrate": 0.0314523589269195,
+          "expectancy": -0.7910955312347183,
+          "profit_factor": 0.0503975940523344
+        },
+        {
+          "score": "score_S",
+          "score_bucket": "0-0.2",
+          "trade_count": 7567,
+          "winrate": 0.0314523589269195,
+          "expectancy": -0.7910955312347183,
+          "profit_factor": 0.0503975940523344
+        },
+        {
+          "score": "score_C",
+          "score_bucket": "0.6-0.8",
+          "trade_count": 34,
+          "winrate": 0.0294117647058823,
+          "expectancy": -0.8776708262381999,
+          "profit_factor": 0.1170478101658783
+        },
+        {
+          "score": "score_C",
+          "score_bucket": "0.4-0.6",
+          "trade_count": 508,
+          "winrate": 0.0728346456692913,
+          "expectancy": -1.1594993848573345,
+          "profit_factor": 0.0888022369762754
+        }
+      ],
+      "worst_score_ranges": [
+        {
+          "score": "score_S",
+          "score_bucket": "0.8-1.0",
+          "trade_count": 0,
+          "winrate": NaN,
+          "expectancy": NaN,
+          "profit_factor": NaN
+        },
+        {
+          "score": "score_H",
+          "score_bucket": "0-0.2",
+          "trade_count": 0,
+          "winrate": NaN,
+          "expectancy": NaN,
+          "profit_factor": NaN
+        },
+        {
+          "score": "score_H",
+          "score_bucket": "0.2-0.4",
+          "trade_count": 0,
+          "winrate": NaN,
+          "expectancy": NaN,
+          "profit_factor": NaN
+        },
+        {
+          "score": "score_H",
+          "score_bucket": "0.6-0.8",
+          "trade_count": 0,
+          "winrate": NaN,
+          "expectancy": NaN,
+          "profit_factor": NaN
+        },
+        {
+          "score": "score_H",
+          "score_bucket": "0.8-1.0",
+          "trade_count": 0,
+          "winrate": NaN,
+          "expectancy": NaN,
+          "profit_factor": NaN
+        }
+      ],
+      "best_signal_components": [],
+      "sizing_validation_result": {
+        "status": "ok",
+        "bucket_count": 5,
+        "expectancy_monotonic_increasing": false,
+        "max_bucket_expectancy": -0.5459944628493539,
+        "min_bucket_expectancy": -1.1051455907547922
+      }
+    }
+  },
+  "edge_diagnostics": {
+    "status": "ok",
+    "rows": 7567,
+    "table": "recorder",
+    "dimensions": {
+      "volatility_bucket": "volatility_bucket",
+      "time_of_day": "time_of_day",
+      "coin": "coin"
+    },
+    "tables": [
+      "edge_diagnostics_by_volatility_bucket.csv",
+      "edge_diagnostics_by_time_of_day.csv",
+      "edge_diagnostics_by_coin.csv",
+      "edge_diagnostics_time_of_day_vs_coin.csv"
+    ],
+    "heatmaps": [
+      "edge_heatmap_time_of_day_vs_coin_expectancy.png"
+    ]
+  },
+  "edge_discovery": {
+    "status": "ok",
+    "table": "recorder",
+    "rows": 7567,
+    "tables": [
+      "tables/edge_discovery_base_data.csv",
+      "tables/edge_discovery_by_coin.csv",
+      "tables/edge_discovery_by_hour_of_day.csv",
+      "tables/edge_discovery_by_weekday.csv",
+      "tables/edge_discovery_by_date.csv",
+      "tables/edge_discovery_by_volatility_bucket.csv",
+      "tables/edge_discovery_by_score_C_bucket.csv",
+      "tables/edge_discovery_by_score_S_bucket.csv",
+      "tables/edge_discovery_by_score_H_bucket.csv",
+      "tables/edge_discovery_by_leverage_bucket.csv",
+      "tables/edge_discovery_coin_vs_hour_of_day.csv",
+      "tables/edge_discovery_volatility_vs_score_C.csv",
+      "tables/edge_discovery_leverage_vs_volatility.csv",
+      "tables/edge_discovery_feature_importance.csv"
+    ],
+    "charts": [
+      "graphs/edge_matrix_heatmap.png",
+      "graphs/expectancy_by_coin_hour.png",
+      "graphs/expectancy_by_volatility_score.png",
+      "graphs/profit_factor_by_regime.png",
+      "graphs/feature_importance_rank.png"
+    ],
+    "top_profitable_regimes": [
+      {
+        "regime_type": "hour_of_day",
+        "regime": "13",
+        "expectancy": -0.26245103926240043,
+        "profit_factor": 0.026535135970515867,
+        "winrate": 0.029411764705882353,
+        "trade_count": 68
+      },
+      {
+        "regime_type": "coin",
+        "regime": "FF/USDT",
+        "expectancy": -0.27290024412807046,
+        "profit_factor": 0.5685510645622273,
+        "winrate": 0.09090909090909091,
+        "trade_count": 11
+      },
+      {
+        "regime_type": "hour_of_day",
+        "regime": "15",
+        "expectancy": -0.3208858990011175,
+        "profit_factor": 0.02856582143630818,
+        "winrate": 0.031476997578692496,
+        "trade_count": 413
+      },
+      {
+        "regime_type": "hour_of_day",
+        "regime": "14",
+        "expectancy": -0.36502348978462595,
+        "profit_factor": 0.03960215652454335,
+        "winrate": 0.02356020942408377,
+        "trade_count": 382
+      },
+      {
+        "regime_type": "hour_of_day",
+        "regime": "16",
+        "expectancy": -0.3997601281313068,
+        "profit_factor": 0.02193609469396605,
+        "winrate": 0.019027484143763214,
+        "trade_count": 473
+      }
+    ],
+    "top_losing_regimes": [
+      {
+        "regime_type": "hour_of_day",
+        "regime": "7",
+        "expectancy": -1.7856812630864631,
+        "profit_factor": 0.05716267800643883,
+        "winrate": 0.07142857142857142,
+        "trade_count": 70
+      },
+      {
+        "regime_type": "hour_of_day",
+        "regime": "8",
+        "expectancy": -1.7474922870634018,
+        "profit_factor": 0.15054792265970415,
+        "winrate": 0.09523809523809523,
+        "trade_count": 42
+      },
+      {
+        "regime_type": "hour_of_day",
+        "regime": "12",
+        "expectancy": -1.5708437335411167,
+        "profit_factor": 0.1925786432517781,
+        "winrate": 0.11458333333333333,
+        "trade_count": 96
+      },
+      {
+        "regime_type": "hour_of_day",
+        "regime": "5",
+        "expectancy": -1.5030312441154494,
+        "profit_factor": 0.02675552484421463,
+        "winrate": 0.03142857142857143,
+        "trade_count": 350
+      },
+      {
+        "regime_type": "hour_of_day",
+        "regime": "11",
+        "expectancy": -1.4195757426854816,
+        "profit_factor": 0.17445314261386072,
+        "winrate": 0.16049382716049382,
+        "trade_count": 81
+      }
+    ],
+    "most_predictive_feature": {
+      "feature": "hour_of_day",
+      "predictive_score": 0.10302020218231979
+    }
+  },
+  "dashboard": {
+    "status": "ok",
+    "path": "analysis_output/dashboard.html"
+  },
+  "trade_count_total": 7567,
+  "trade_count_used": 7567,
+  "columns_used": [
+    "pnl_net",
+    "ts_open",
+    "ts_close"
+  ],
+  "missing_columns": [],
+  "generated_tables": [
+    "edge_diagnostics_by_coin.csv",
+    "edge_diagnostics_by_time_of_day.csv",
+    "edge_diagnostics_by_volatility_bucket.csv",
+    "edge_diagnostics_time_of_day_vs_coin.csv",
+    "tables/atr_expectancy.csv",
+    "tables/atr_expectancy_metrics.csv",
+    "tables/best_coins.csv",
+    "tables/best_entry_conditions.csv",
+    "tables/close_reason_metrics.csv",
+    "tables/coin_ranking.csv",
+    "tables/context_edge.csv",
+    "tables/csh_expectancy_by_score.csv",
+    "tables/dec_mode_expectancy.csv",
+    "tables/edge_decay_times.csv",
+    "tables/edge_diagnostics_by_coin.csv",
+    "tables/edge_diagnostics_by_time_of_day.csv",
+    "tables/edge_diagnostics_by_volatility_bucket.csv",
+    "tables/edge_diagnostics_time_of_day_vs_coin.csv",
+    "tables/edge_discovery_base_data.csv",
+    "tables/edge_discovery_by_coin.csv",
+    "tables/edge_discovery_by_date.csv",
+    "tables/edge_discovery_by_hour_of_day.csv",
+    "tables/edge_discovery_by_leverage_bucket.csv",
+    "tables/edge_discovery_by_score_C_bucket.csv",
+    "tables/edge_discovery_by_score_H_bucket.csv",
+    "tables/edge_discovery_by_score_S_bucket.csv",
+    "tables/edge_discovery_by_volatility_bucket.csv",
+    "tables/edge_discovery_by_weekday.csv",
+    "tables/edge_discovery_coin_vs_hour_of_day.csv",
+    "tables/edge_discovery_feature_importance.csv",
+    "tables/edge_discovery_leverage_vs_volatility.csv",
+    "tables/edge_discovery_volatility_vs_score_C.csv",
+    "tables/entry_delay_expectancy.csv",
+    "tables/entry_efficiency_metrics.csv",
+    "tables/entry_reason_expectancy.csv",
+    "tables/equity_drawdown_series.csv",
+    "tables/equity_summary.csv",
+    "tables/expectancy_by_date.csv",
+    "tables/expectancy_by_day_of_week.csv",
+    "tables/expectancy_by_dec_mode.csv",
+    "tables/expectancy_by_hour_of_day.csv",
+    "tables/expectancy_by_leverage_bucket.csv",
+    "tables/expectancy_by_step.csv",
+    "tables/expectancy_by_step_extended.csv",
+    "tables/expectancy_by_symbol.csv",
+    "tables/expectancy_by_weekday.csv",
+    "tables/expectancy_surface_C_S.csv",
+    "tables/expectancy_vs_entry_distance.csv",
+    "tables/expectancy_vs_range_pos.csv",
+    "tables/expectancy_vs_score_C.csv",
+    "tables/expectancy_vs_score_H.csv",
+    "tables/expectancy_vs_score_S.csv",
+    "tables/feature_importance.csv",
+    "tables/latency_analysis_summary.csv",
+    "tables/leverage_bucket_metrics.csv",
+    "tables/mfe_mae_metrics.csv",
+    "tables/move_vs_fees_metrics.csv",
+    "tables/performance_analysis.csv",
+    "tables/position_sizing_analysis.csv",
+    "tables/profit_capture_metrics.csv",
+    "tables/pyramiding_expectancy.csv",
+    "tables/range_expectancy.csv",
+    "tables/regime_analysis.csv",
+    "tables/regime_expectancy.csv",
+    "tables/regime_rank.csv",
+    "tables/risk_analysis.csv",
+    "tables/score_calibration.csv",
+    "tables/score_diagnostics.csv",
+    "tables/score_performance.csv",
+    "tables/signal_component_edge.csv",
+    "tables/signal_edge_analysis.csv",
+    "tables/signal_flag_expectancy.csv",
+    "tables/signal_quality_summary.csv",
+    "tables/size_bucket_expectancy.csv",
+    "tables/sizing_validation.csv",
+    "tables/strategy_stability_analysis.csv",
+    "tables/technical_indicator_performance.csv",
+    "tables/time_analysis_extended.csv",
+    "tables/time_duration_metrics.csv",
+    "tables/trade_summary.csv",
+    "tables/trigger_trade_dataset.csv",
+    "tables/trigger_type_expectancy.csv",
+    "tables/volatility_expectancy.csv",
+    "tables/worst_coins.csv"
+  ],
+  "generated_graphs": [
+    "graphs/drawdown_curve.png",
+    "graphs/drawdown_distribution.png",
+    "graphs/edge_decay.png",
+    "graphs/edge_heatmap_time_of_day_vs_coin_expectancy.png",
+    "graphs/edge_matrix_heatmap.png",
+    "graphs/entry_delay_vs_pnl.png",
+    "graphs/entry_efficiency.png",
+    "graphs/entry_efficiency_hist.png",
+    "graphs/entry_efficiency_histogram.png",
+    "graphs/entry_efficiency_vs_pnl.png",
+    "graphs/equity_curve.png",
+    "graphs/expectancy_by_coin_hour.png",
+    "graphs/expectancy_by_context.png",
+    "graphs/expectancy_by_dec_mode.png",
+    "graphs/expectancy_by_entry_reason.png",
+    "graphs/expectancy_by_hour.png",
+    "graphs/expectancy_by_regime.png",
+    "graphs/expectancy_by_signal_component.png",
+    "graphs/expectancy_by_trigger_type.png",
+    "graphs/expectancy_by_volatility_score.png",
+    "graphs/expectancy_surface_C_S.png",
+    "graphs/expectancy_vs_atr.png",
+    "graphs/expectancy_vs_entry_delay.png",
+    "graphs/expectancy_vs_entry_distance.png",
+    "graphs/expectancy_vs_leverage.png",
+    "graphs/expectancy_vs_range.png",
+    "graphs/expectancy_vs_range_pos.png",
+    "graphs/expectancy_vs_score.png",
+    "graphs/expectancy_vs_score_C.png",
+    "graphs/expectancy_vs_score_H.png",
+    "graphs/expectancy_vs_score_S.png",
+    "graphs/expectancy_vs_score_br.png",
+    "graphs/expectancy_vs_score_mo.png",
+    "graphs/expectancy_vs_score_of.png",
+    "graphs/expectancy_vs_size_bucket.png",
+    "graphs/expectancy_vs_step.png",
+    "graphs/expectancy_vs_trend.png",
+    "graphs/expectancy_vs_volatility.png",
+    "graphs/feature_importance_rank.png",
+    "graphs/leverage_vs_pnl.png",
+    "graphs/mae_distribution.png",
+    "graphs/max_dd_duration.png",
+    "graphs/mfe_distribution.png",
+    "graphs/mfe_mae_scatter.png",
+    "graphs/mfe_vs_fees.png",
+    "graphs/mfe_vs_score_C.png",
+    "graphs/pnl_by_close_reason.png",
+    "graphs/pnl_by_hour.png",
+    "graphs/pnl_by_weekday.png",
+    "graphs/pnl_vs_mae.png",
+    "graphs/pnl_vs_mfe.png",
+    "graphs/profit_capture_distribution.png",
+    "graphs/profit_capture_ratio.png",
+    "graphs/profit_factor_by_regime.png",
+    "graphs/profit_factor_vs_score.png",
+    "graphs/pyramiding_expectancy.png",
+    "graphs/rolling_expectancy.png",
+    "graphs/rolling_profit_factor.png",
+    "graphs/rolling_sharpe.png",
+    "graphs/rolling_winrate.png",
+    "graphs/score_C_distribution.png",
+    "graphs/score_H_distribution.png",
+    "graphs/score_S_distribution.png",
+    "graphs/score_calibration_curve.png",
+    "graphs/score_distribution.png",
+    "graphs/score_expectancy_curve.png",
+    "graphs/signal_flag_expectancy.png",
+    "graphs/size_bucket_expectancy.png",
+    "graphs/size_vs_pnl.png",
+    "graphs/size_vs_pnl_scatter.png",
+    "graphs/slippage_distribution.png",
+    "graphs/tail_risk.png",
+    "graphs/time_to_mae_distribution.png",
+    "graphs/time_to_mfe_distribution.png",
+    "graphs/time_to_mfe_vs_pnl.png",
+    "graphs/time_to_mfe_vs_score_S.png",
+    "graphs/trigger_strength_vs_pnl.png",
+    "graphs/winrate_vs_score.png"
+  ]
+}

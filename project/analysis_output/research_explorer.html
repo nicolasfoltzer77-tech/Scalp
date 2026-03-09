@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Research Explorer</title>
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+    <style>
+      body { font-family: Inter, Arial, sans-serif; margin: 0; background: #f5f7fa; color: #1f2937; }
+      .page { max-width: 1400px; margin: 0 auto; padding: 20px; }
+      .topbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; }
+      .topbar a { color: #2563eb; text-decoration: none; font-weight: 600; }
+      .layout { display: grid; grid-template-columns: 300px 1fr; gap: 16px; align-items: start; }
+      .panel, .card { background: #fff; border-radius: 10px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07); padding: 14px; }
+      .panel h3, .card h3 { margin-top: 0; }
+      .filter-group { margin-bottom: 12px; }
+      .filter-group label { display: block; margin-bottom: 4px; font-size: 0.9rem; font-weight: 600; }
+      .filter-group select { width: 100%; min-height: 100px; border: 1px solid #d1d5db; border-radius: 8px; padding: 6px; }
+      .btn-row { display: flex; gap: 8px; margin-top: 10px; }
+      button { border: 0; border-radius: 8px; padding: 8px 10px; cursor: pointer; font-weight: 600; }
+      button.primary { background: #2563eb; color: #fff; }
+      button.secondary { background: #e5e7eb; color: #111827; }
+      .content { display: grid; gap: 16px; }
+      .summary-grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+      .metric { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; }
+      .metric .label { font-size: 0.8rem; color: #6b7280; }
+      .metric .value { font-size: 1.1rem; font-weight: 700; margin-top: 4px; }
+      .chart-grid { display: grid; gap: 12px; grid-template-columns: 1fr; }
+      .table-wrap { overflow: auto; max-height: 460px; border: 1px solid #e5e7eb; border-radius: 8px; }
+      table { border-collapse: collapse; width: 100%; font-size: 0.88rem; }
+      th, td { padding: 8px; border-bottom: 1px solid #eef2f7; text-align: left; }
+      th { position: sticky; top: 0; background: #f9fafb; }
+      #status { font-size: 0.88rem; color: #374151; }
+      @media (max-width: 980px) { .layout { grid-template-columns: 1fr; } }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <div class="topbar">
+        <h1>Research Explorer</h1>
+        <a href="dashboard.html">Back to Dashboard</a>
+      </div>
+      <div class="layout">
+        <aside class="panel">
+          <h3>1. Filter panel</h3>
+          <p id="status">Loading CSV tables…</p>
+          <div id="filters"></div>
+          <div class="btn-row">
+            <button id="applyBtn" class="primary">Apply filters</button>
+            <button id="clearBtn" class="secondary">Clear</button>
+          </div>
+        </aside>
+        <main class="content">
+          <section class="card">
+            <h3>2. Metrics summary</h3>
+            <div class="summary-grid" id="summary"></div>
+          </section>
+          <section class="card">
+            <h3>3. Heatmap</h3>
+            <div class="chart-grid">
+              <div id="heatmap_coin_hour" style="height:340px;"></div>
+              <div id="heatmap_vol_score" style="height:340px;"></div>
+              <div id="heatmap_pf_regime" style="height:340px;"></div>
+            </div>
+          </section>
+          <section class="card">
+            <h3>4. Table of regimes</h3>
+            <div class="table-wrap"><table id="regimeTable"></table></div>
+          </section>
+        </main>
+      </div>
+    </div>
+    <script>
+      const REQUIRED_FILTERS = [
+        'coin',
+        'hour_of_day',
+        'volatility_bucket',
+        'score_C_bucket',
+        'score_S_bucket',
+        'score_H_bucket',
+        'leverage_bucket',
+      ];
+
+      const FIELD_ALIASES = {
+        coin: ['coin', 'instId', 'symbol'],
+        hour_of_day: ['hour_of_day', 'hour'],
+        volatility_bucket: ['volatility_bucket', 'V_bucket'],
+        score_C_bucket: ['score_C_bucket', 'C_bucket'],
+        score_S_bucket: ['score_S_bucket', 'S_bucket'],
+        score_H_bucket: ['score_H_bucket', 'H_bucket'],
+        leverage_bucket: ['leverage_bucket', 'L_bucket'],
+      };
+
+      const TABLE_CANDIDATES = [
+        'tables/edge_discovery_raw_trades.csv',
+        'tables/edge_discovery_base_data.csv',
+        'tables/edge_discovery_coin_vs_hour_of_day.csv',
+        'tables/edge_discovery_volatility_vs_score_C.csv',
+        'tables/edge_discovery_leverage_vs_volatility.csv',
+      ];
+
+      function parseCsv(text) {
+        const lines = text.trim().split(/?
+/).filter(Boolean);
+        if (!lines.length) return [];
+        const split = (line) => {
+          const out = [];
+          let buf = '', inQuotes = false;
+          for (let i = 0; i < line.length; i += 1) {
+            const ch = line[i];
+            if (ch === '"') {
+              if (inQuotes && line[i + 1] === '"') { buf += '"'; i += 1; }
+              else { inQuotes = !inQuotes; }
+            } else if (ch === ',' && !inQuotes) {
+              out.push(buf); buf = '';
+            } else {
+              buf += ch;
+            }
+          }
+          out.push(buf);
+          return out.map((s) => s.trim());
+        };
+        const headers = split(lines[0]);
+        return lines.slice(1).map((line) => {
+          const row = {};
+          const cells = split(line);
+          headers.forEach((h, idx) => { row[h] = cells[idx] ?? ''; });
+          return row;
+        });
+      }
+
+      async function loadFirstAvailable(paths) {
+        for (const path of paths) {
+          try {
+            const r = await fetch(path);
+            if (!r.ok) continue;
+            const text = await r.text();
+            const rows = parseCsv(text);
+            if (rows.length) return { path, rows };
+          } catch (err) {
+            continue;
+          }
+        }
+        return null;
+      }
+
+      function toNumber(v) {
+        const n = Number(v);
+        return Number.isFinite(n) ? n : NaN;
+      }
+
+      function normalizeRows(rows) {
+        return rows.map((r) => {
+          const out = { ...r };
+          Object.entries(FIELD_ALIASES).forEach(([target, candidates]) => {
+            if (Object.prototype.hasOwnProperty.call(out, target) && String(out[target] ?? '') !== '') return;
+            const source = candidates.find((c) => Object.prototype.hasOwnProperty.call(out, c) && String(out[c] ?? '') !== '');
+            if (source) out[target] = out[source];
+          });
+          REQUIRED_FILTERS.forEach((f) => {
+            if (!Object.prototype.hasOwnProperty.call(out, f) || String(out[f] ?? '') === '') out[f] = 'ALL';
+          });
+          return out;
+        });
+      }
+
+      function metricsFromRows(rows) {
+        const pnlCol = ['pnl_net', 'pnl', 'net_pnl', 'realized_pnl'].find((k) => rows[0] && Object.prototype.hasOwnProperty.call(rows[0], k));
+        const winCol = ['is_win', 'win'].find((k) => rows[0] && Object.prototype.hasOwnProperty.call(rows[0], k));
+
+        const pnl = rows.map((r) => toNumber(r[pnlCol])).filter((v) => Number.isFinite(v));
+        if (pnl.length) {
+          const trade_count = pnl.length;
+          const wins = winCol
+            ? rows.filter((r) => String(r[winCol]).toLowerCase() === '1' || String(r[winCol]).toLowerCase() === 'true').length
+            : pnl.filter((v) => v > 0).length;
+          const winrate = wins / trade_count;
+          const expectancy = pnl.reduce((a, b) => a + b, 0) / pnl.length;
+          const grossProfit = pnl.filter((v) => v > 0).reduce((a, b) => a + b, 0);
+          const grossLoss = Math.abs(pnl.filter((v) => v < 0).reduce((a, b) => a + b, 0));
+          const profit_factor = grossLoss > 0 ? grossProfit / grossLoss : (grossProfit > 0 ? Infinity : NaN);
+          return { trade_count, winrate, expectancy, profit_factor };
+        }
+
+        const hasAgg = rows[0] && Object.prototype.hasOwnProperty.call(rows[0], 'trade_count') && Object.prototype.hasOwnProperty.call(rows[0], 'expectancy');
+        if (!hasAgg) {
+          return { trade_count: rows.length, winrate: NaN, expectancy: NaN, profit_factor: NaN };
+        }
+
+        const weights = rows.map((r) => Math.max(0, Math.floor(toNumber(r.trade_count))));
+        const totalTrades = weights.reduce((a, b) => a + b, 0);
+        if (!totalTrades) return { trade_count: 0, winrate: NaN, expectancy: NaN, profit_factor: NaN };
+
+        const expectancy = rows.reduce((acc, r, i) => {
+          const e = toNumber(r.expectancy);
+          return Number.isFinite(e) ? acc + e * weights[i] : acc;
+        }, 0) / totalTrades;
+
+        const weighted = (field) => {
+          const num = rows.reduce((acc, r, i) => {
+            const v = toNumber(r[field]);
+            return Number.isFinite(v) ? acc + v * weights[i] : acc;
+          }, 0);
+          const den = rows.reduce((acc, r, i) => {
+            const v = toNumber(r[field]);
+            return Number.isFinite(v) ? acc + weights[i] : acc;
+          }, 0);
+          return den > 0 ? num / den : NaN;
+        };
+
+        return {
+          trade_count: totalTrades,
+          winrate: weighted('winrate'),
+          expectancy,
+          profit_factor: weighted('profit_factor'),
+        };
+      }
+
+      function groupMetrics(rows, groupCols) {
+        const buckets = new Map();
+        for (const r of rows) {
+          const key = groupCols.map((c) => String(r[c] ?? '')).join('||');
+          if (!buckets.has(key)) buckets.set(key, []);
+          buckets.get(key).push(r);
+        }
+        const out = [];
+        for (const [key, gRows] of buckets.entries()) {
+          const parts = key.split('||');
+          const m = metricsFromRows(gRows);
+          const rec = { ...m };
+          groupCols.forEach((c, idx) => { rec[c] = parts[idx]; });
+          out.push(rec);
+        }
+        return out;
+      }
+
+      function uniqueSorted(rows, col) {
+        const vals = [...new Set(rows.map((r) => String(r[col] ?? '')).filter((v) => v !== ''))];
+        const numeric = vals.every((v) => v !== '' && !Number.isNaN(Number(v)));
+        return numeric ? vals.sort((a, b) => Number(a) - Number(b)) : vals.sort();
+      }
+
+      function formatNumber(v, digits = 4) {
+        if (v === Infinity) return '∞';
+        if (!Number.isFinite(v)) return '—';
+        return Number(v).toFixed(digits);
+      }
+
+      function renderSummary(rows) {
+        const m = metricsFromRows(rows);
+        const summary = document.getElementById('summary');
+        summary.innerHTML = '';
+        const entries = [
+          ['trade_count', m.trade_count.toLocaleString()],
+          ['winrate', Number.isFinite(m.winrate) ? `${(m.winrate * 100).toFixed(2)}%` : '—'],
+          ['expectancy', formatNumber(m.expectancy)],
+          ['profit_factor', formatNumber(m.profit_factor)],
+        ];
+        entries.forEach(([label, value]) => {
+          const el = document.createElement('div');
+          el.className = 'metric';
+          el.innerHTML = `<div class="label">${label}</div><div class="value">${value}</div>`;
+          summary.appendChild(el);
+        });
+      }
+
+      function heatmapFromGrouped(grouped, xCol, yCol, valueCol, divId, title) {
+        const xs = [...new Set(grouped.map((r) => String(r[xCol])))]
+        const ys = [...new Set(grouped.map((r) => String(r[yCol])))]
+        const z = ys.map((y) => xs.map((x) => {
+          const rec = grouped.find((g) => String(g[xCol]) === x && String(g[yCol]) === y);
+          return rec ? rec[valueCol] : null;
+        }));
+
+        Plotly.newPlot(divId, [{
+          type: 'heatmap',
+          x: xs,
+          y: ys,
+          z,
+          colorscale: 'RdYlGn',
+          hovertemplate: `${xCol}: %{x}<br>${yCol}: %{y}<br>${valueCol}: %{z:.4f}<extra></extra>`,
+        }], {
+          title,
+          margin: { t: 40, r: 20, b: 60, l: 100 },
+          xaxis: { automargin: true },
+          yaxis: { automargin: true },
+        }, { responsive: true });
+      }
+
+      function renderRegimeTable(rows) {
+        const grouped = groupMetrics(rows, REQUIRED_FILTERS).sort((a, b) => (b.expectancy || -Infinity) - (a.expectancy || -Infinity));
+        const table = document.getElementById('regimeTable');
+        const headers = [...REQUIRED_FILTERS, 'trade_count', 'winrate', 'expectancy', 'profit_factor'];
+        const thead = `<thead><tr>${headers.map((h) => `<th>${h}</th>`).join('')}</tr></thead>`;
+        const tbody = grouped.slice(0, 300).map((r) => `<tr>${headers.map((h) => {
+          const v = r[h];
+          if (['winrate'].includes(h)) return `<td>${Number.isFinite(v) ? `${(v * 100).toFixed(2)}%` : '—'}</td>`;
+          if (['expectancy', 'profit_factor'].includes(h)) return `<td>${formatNumber(v)}</td>`;
+          return `<td>${v ?? ''}</td>`;
+        }).join('')}</tr>`).join('');
+        table.innerHTML = `${thead}<tbody>${tbody}</tbody>`;
+      }
+
+      function getSelectedValues(selectEl) {
+        return [...selectEl.options].filter((o) => o.selected).map((o) => o.value);
+      }
+
+      function rowPassesFilters(row, filterState) {
+        return REQUIRED_FILTERS.every((f) => {
+          const selected = filterState[f];
+          if (!selected || !selected.length) return true;
+          return selected.includes(String(row[f] ?? ''));
+        });
+      }
+
+      function renderFilters(rows) {
+        const container = document.getElementById('filters');
+        container.innerHTML = '';
+        REQUIRED_FILTERS.forEach((f) => {
+          const group = document.createElement('div');
+          group.className = 'filter-group';
+          const label = document.createElement('label');
+          label.setAttribute('for', `filter_${f}`);
+          label.textContent = f;
+          const sel = document.createElement('select');
+          sel.id = `filter_${f}`;
+          sel.multiple = true;
+          uniqueSorted(rows, f).forEach((value) => {
+            const opt = document.createElement('option');
+            opt.value = value;
+            opt.textContent = value;
+            sel.appendChild(opt);
+          });
+          group.append(label, sel);
+          container.appendChild(group);
+        });
+      }
+
+      function drawAll(rows) {
+        renderSummary(rows);
+        const gCoinHour = groupMetrics(rows, ['coin', 'hour_of_day']);
+        heatmapFromGrouped(gCoinHour, 'hour_of_day', 'coin', 'expectancy', 'heatmap_coin_hour', 'expectancy_by_coin_hour');
+
+        const gVolScore = groupMetrics(rows, ['volatility_bucket', 'score_C_bucket']);
+        heatmapFromGrouped(gVolScore, 'score_C_bucket', 'volatility_bucket', 'expectancy', 'heatmap_vol_score', 'expectancy_by_volatility_score');
+
+        const gRegime = groupMetrics(rows, ['volatility_bucket', 'leverage_bucket']);
+        heatmapFromGrouped(gRegime, 'leverage_bucket', 'volatility_bucket', 'profit_factor', 'heatmap_pf_regime', 'profit_factor_by_regime');
+
+        renderRegimeTable(rows);
+      }
+
+      function currentFilterState() {
+        const state = {};
+        REQUIRED_FILTERS.forEach((f) => {
+          const el = document.getElementById(`filter_${f}`);
+          state[f] = el ? getSelectedValues(el) : [];
+        });
+        return state;
+      }
+
+      function wireEvents(allRows) {
+        document.getElementById('applyBtn').addEventListener('click', () => {
+          const state = currentFilterState();
+          const filtered = allRows.filter((r) => rowPassesFilters(r, state));
+          drawAll(filtered);
+          document.getElementById('status').textContent = `Showing ${filtered.length.toLocaleString()} rows after filter.`;
+        });
+
+        document.getElementById('clearBtn').addEventListener('click', () => {
+          REQUIRED_FILTERS.forEach((f) => {
+            const el = document.getElementById(`filter_${f}`);
+            if (!el) return;
+            [...el.options].forEach((o) => { o.selected = false; });
+          });
+          drawAll(allRows);
+          document.getElementById('status').textContent = `Showing all ${allRows.length.toLocaleString()} rows.`;
+        });
+      }
+
+      (async function init() {
+        const loaded = await loadFirstAvailable(TABLE_CANDIDATES);
+        const status = document.getElementById('status');
+        if (!loaded) {
+          status.textContent = 'No compatible CSV found in analysis_output/tables/. Expected raw trade-like CSV with required filter columns.';
+          return;
+        }
+
+        const rows = normalizeRows(loaded.rows);
+        if (!rows.length) {
+          status.textContent = `Loaded ${loaded.path}, but table has no rows.`;
+          return;
+        }
+
+        renderFilters(rows);
+        drawAll(rows);
+        wireEvents(rows);
+        status.textContent = `Loaded ${rows.length.toLocaleString()} rows from ${loaded.path}`;
+      })();
+    </script>
+  </body>
+</html>

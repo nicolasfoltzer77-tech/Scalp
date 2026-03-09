@@ -33,6 +33,9 @@ try:
     from dec_atr import refresh_snap_atr
     from dec_market import load_market_ok, market_pass
     from dec_range import refresh_snap_range
+    from dec_range_ext import refresh_snap_range_ext
+    from dec_signal import refresh_signal_history
+    from dec_cluster import refresh_cluster_history
 except Exception as e:
     log.exception("[BOOT_IMPORT_ERR]")
     raise
@@ -134,6 +137,11 @@ def main():
 
             if ts - last_range_refresh_ms >= int(range_refresh_interval_s * 1000):
                 range_stats = refresh_snap_range()
+                ext_rows = refresh_snap_range_ext()
+                log.info("[RANGE_EXT_REFRESH] rows=%d", ext_rows)
+                cluster_rows = refresh_cluster_history()
+                log.info("[CLUSTER_HISTORY] rows=%d", cluster_rows)
+
                 last_range_refresh_ms = ts
                 log.info(
                     "[RANGE_REFRESH] rows=%d skipped_short=%d skipped_invalid=%d lag_ms=%s stale_rows=%d is_stale=%s duration_ms=%d",
@@ -149,6 +157,8 @@ def main():
             ctx_rows = load_ctx()
             atr_rows = refresh_snap_atr()
             market   = load_market_ok()
+            signal_rows = refresh_signal_history()
+            log.info("[SIGNAL_HISTORY] rows=%d", signal_rows)
 
             with conn() as c:
                 ensure_uid_column(c)

@@ -1,0 +1,94 @@
+{
+  "best_score_ranges": [
+    {
+      "score": "score_C",
+      "score_bucket": "0.2-0.4",
+      "trade_count": 130,
+      "winrate": 0.023076923076923,
+      "expectancy": -0.336727123866663,
+      "profit_factor": 0.058372234973513
+    },
+    {
+      "score": "score_H",
+      "score_bucket": "0.4-0.6",
+      "trade_count": 2059,
+      "winrate": 0.0218552695483244,
+      "expectancy": -0.3975349169618213,
+      "profit_factor": 0.0240777965467326
+    },
+    {
+      "score": "score_S",
+      "score_bucket": "0-0.2",
+      "trade_count": 2059,
+      "winrate": 0.0218552695483244,
+      "expectancy": -0.3975349169618213,
+      "profit_factor": 0.0240777965467326
+    },
+    {
+      "score": "score_C",
+      "score_bucket": "0.4-0.6",
+      "trade_count": 169,
+      "winrate": 0.0473372781065088,
+      "expectancy": -0.4349480364377987,
+      "profit_factor": 0.069807239916853
+    },
+    {
+      "score": "score_C",
+      "score_bucket": "0.6-0.8",
+      "trade_count": 18,
+      "winrate": 0.0,
+      "expectancy": -0.9014994163837486,
+      "profit_factor": 0.0
+    }
+  ],
+  "worst_score_ranges": [
+    {
+      "score": "score_S",
+      "score_bucket": "0.8-1.0",
+      "trade_count": 0,
+      "winrate": NaN,
+      "expectancy": NaN,
+      "profit_factor": NaN
+    },
+    {
+      "score": "score_H",
+      "score_bucket": "0-0.2",
+      "trade_count": 0,
+      "winrate": NaN,
+      "expectancy": NaN,
+      "profit_factor": NaN
+    },
+    {
+      "score": "score_H",
+      "score_bucket": "0.2-0.4",
+      "trade_count": 0,
+      "winrate": NaN,
+      "expectancy": NaN,
+      "profit_factor": NaN
+    },
+    {
+      "score": "score_H",
+      "score_bucket": "0.6-0.8",
+      "trade_count": 0,
+      "winrate": NaN,
+      "expectancy": NaN,
+      "profit_factor": NaN
+    },
+    {
+      "score": "score_H",
+      "score_bucket": "0.8-1.0",
+      "trade_count": 0,
+      "winrate": NaN,
+      "expectancy": NaN,
+      "profit_factor": NaN
+    }
+  ],
+  "best_signal_components": [],
+  "sizing_validation_result": {
+    "status": "ok",
+    "bucket_count": 5,
+    "expectancy_monotonic_increasing": false,
+    "max_bucket_expectancy": -0.2441083833960322,
+    "min_bucket_expectancy": -0.5689042413644567
+  }
+}

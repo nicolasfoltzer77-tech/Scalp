@@ -1,0 +1,338 @@
+{
+  "performance_analysis": {
+    "status": "ok",
+    "rows": 2058,
+    "table": "recorder"
+  },
+  "risk_analysis": {
+    "status": "ok",
+    "rows": 2058,
+    "max_dd_duration": 2057,
+    "table": "recorder"
+  },
+  "signal_edge_analysis": {
+    "status": "ok",
+    "rows": 2058,
+    "table": "recorder",
+    "skipped_graphs": [
+      "entry_distance_vs_pnl",
+      "entry_vs_midprice",
+      "latency_vs_pnl"
+    ]
+  },
+  "regime_analysis": {
+    "status": "ok",
+    "rows": 2059,
+    "table": "recorder",
+    "skipped_graphs": [
+      "expectancy_vs_atr"
+    ]
+  },
+  "time_analysis_extended": {
+    "status": "skipped",
+    "reason": "no valid rows after time conversion",
+    "table": "recorder"
+  },
+  "position_sizing_analysis": {
+    "status": "ok",
+    "rows": 2059,
+    "table": "recorder",
+    "skipped_graphs": []
+  },
+  "strategy_stability_analysis": {
+    "status": "ok",
+    "rows": 2059,
+    "table": "recorder"
+  },
+  "mfe_mae": {
+    "status": "ok",
+    "rows": 2057,
+    "table": "recorder"
+  },
+  "expectancy": {
+    "status": "ok",
+    "rows": 2059
+  },
+  "leverage_analysis": {
+    "status": "ok",
+    "rows": 1
+  },
+  "pyramiding": {
+    "status": "ok",
+    "rows": 2059
+  },
+  "exit_reasons": {
+    "status": "ok",
+    "rows": 7
+  },
+  "time_analysis": {
+    "status": "ok",
+    "rows": 1
+  },
+  "coin_analysis": {
+    "status": "ok",
+    "rows": 42
+  },
+  "equity_curve": {
+    "status": "ok",
+    "rows": 2059,
+    "max_drawdown": -818.4547867748989
+  },
+  "edge_decay": {
+    "status": "skipped",
+    "reason": "missing step trade id/pnl/time"
+  },
+  "clustering": {
+    "status": "skipped",
+    "reason": "not enough rows for clustering"
+  },
+  "entry_efficiency": {
+    "status": "ok",
+    "rows": 1931,
+    "table": "recorder"
+  },
+  "entry_quality": {
+    "status": "ok",
+    "rows": 2059,
+    "table": "recorder"
+  },
+  "profit_capture": {
+    "status": "ok",
+    "rows": 2059,
+    "table": "recorder"
+  },
+  "timing_analysis": {
+    "status": "ok",
+    "rows": 2059,
+    "table": "recorder"
+  },
+  "entry_timing": {
+    "status": "ok",
+    "rows": 1931,
+    "table": "recorder"
+  },
+  "entry_delay_analysis": {
+    "status": "ok",
+    "rows": 2059,
+    "table": "recorder"
+  },
+  "latency_analysis": {
+    "status": "ok",
+    "rows": 2059,
+    "table": "recorder"
+  },
+  "volatility_edge": {
+    "status": "ok",
+    "rows": 2059,
+    "table": "recorder"
+  },
+  "atr_analysis": {
+    "status": "ok",
+    "rows": 2059,
+    "table": "recorder"
+  },
+  "signal_quality": {
+    "status": "ok",
+    "rows": 2059,
+    "table": "recorder"
+  },
+  "duration_analysis": {
+    "status": "skipped",
+    "reason": "no valid durations",
+    "table": "recorder"
+  },
+  "step_analysis": {
+    "status": "ok",
+    "rows": 8,
+    "table": "recorder"
+  },
+  "move_vs_fees": {
+    "status": "ok",
+    "rows": 2059,
+    "table": "recorder"
+  },
+  "volatility_analysis": {
+    "status": "ok",
+    "rows": 2057,
+    "table": "recorder"
+  },
+  "trade_clustering": {
+    "status": "skipped",
+    "reason": "not enough rows for clustering",
+    "table": "recorder"
+  },
+  "range_analysis": {
+    "status": "ok",
+    "rows": 4,
+    "valid_rows": 2057
+  },
+  "entry_decision_diagnostics": {
+    "status": "ok",
+    "source": "/opt/scalp/project/data/gest.db",
+    "rows": 0,
+    "score_rows": 0,
+    "flag_rows": 0,
+    "dec_mode": 0,
+    "trigger_type": 0,
+    "delay_rows": 0,
+    "best_conditions": 0
+  },
+  "entry_pipeline_analysis": {
+    "status": "ok",
+    "triggers_db": "project/data/triggers.db",
+    "recorder_db": "project/data/recorder.db",
+    "dec_db_present": true,
+    "joined_rows": 2,
+    "dec_mode_rows": 1,
+    "trigger_type_rows": 0,
+    "entry_reason_rows": 1,
+    "score_rows": 6,
+    "indicator_rows": 0,
+    "flag_rows": 0,
+    "regime_rows": 0,
+    "best_conditions": 0
+  },
+  "csh_diagnostics": {
+    "status": "ok",
+    "table": "recorder",
+    "rows": 2059,
+    "columns_used": [
+      "uid",
+      "instId",
+      "side",
+      "pnl_net",
+      "entry",
+      "lev",
+      "score_C",
+      "score_S",
+      "score_H",
+      "ts_open",
+      "ts_close"
+    ],
+    "distributions": 3,
+    "score_bucket_rows": 15,
+    "signal_components": 0,
+    "contexts": 2,
+    "sizing_rows": 2059,
+    "size_pnl_corr": -0.34861955875170647,
+    "surface_cells": 25,
+    "edge_decay_rows": 0,
+    "summary_report": {
+      "best_score_ranges": [
+        {
+          "score": "score_C",
+          "score_bucket": "0.2-0.4",
+          "trade_count": 130,
+          "winrate": 0.023076923076923,
+          "expectancy": -0.336727123866663,
+          "profit_factor": 0.058372234973513
+        },
+        {
+          "score": "score_H",
+          "score_bucket": "0.4-0.6",
+          "trade_count": 2059,
+          "winrate": 0.0218552695483244,
+          "expectancy": -0.3975349169618213,
+          "profit_factor": 0.0240777965467326
+        },
+        {
+          "score": "score_S",
+          "score_bucket": "0-0.2",
+          "trade_count": 2059,
+          "winrate": 0.0218552695483244,
+          "expectancy": -0.3975349169618213,
+          "profit_factor": 0.0240777965467326
+        },
+        {
+          "score": "score_C",
+          "score_bucket": "0.4-0.6",
+          "trade_count": 169,
+          "winrate": 0.0473372781065088,
+          "expectancy": -0.4349480364377987,
+          "profit_factor": 0.069807239916853
+        },
+        {
+          "score": "score_C",
+          "score_bucket": "0.6-0.8",
+          "trade_count": 18,
+          "winrate": 0.0,
+          "expectancy": -0.9014994163837486,
+          "profit_factor": 0.0
+        }
+      ],
+      "worst_score_ranges": [
+        {
+          "score": "score_S",
+          "score_bucket": "0.8-1.0",
+          "trade_count": 0,
+          "winrate": NaN,
+          "expectancy": NaN,
+          "profit_factor": NaN
+        },
+        {
+          "score": "score_H",
+          "score_bucket": "0-0.2",
+          "trade_count": 0,
+          "winrate": NaN,
+          "expectancy": NaN,
+          "profit_factor": NaN
+        },
+        {
+          "score": "score_H",
+          "score_bucket": "0.2-0.4",
+          "trade_count": 0,
+          "winrate": NaN,
+          "expectancy": NaN,
+          "profit_factor": NaN
+        },
+        {
+          "score": "score_H",
+          "score_bucket": "0.6-0.8",
+          "trade_count": 0,
+          "winrate": NaN,
+          "expectancy": NaN,
+          "profit_factor": NaN
+        },
+        {
+          "score": "score_H",
+          "score_bucket": "0.8-1.0",
+          "trade_count": 0,
+          "winrate": NaN,
+          "expectancy": NaN,
+          "profit_factor": NaN
+        }
+      ],
+      "best_signal_components": [],
+      "sizing_validation_result": {
+        "status": "ok",
+        "bucket_count": 5,
+        "expectancy_monotonic_increasing": false,
+        "max_bucket_expectancy": -0.2441083833960322,
+        "min_bucket_expectancy": -0.5689042413644567
+      }
+    }
+  },
+  "edge_diagnostics": {
+    "status": "ok",
+    "rows": 2059,
+    "table": "recorder",
+    "dimensions": {
+      "volatility_bucket": "volatility_bucket",
+      "time_of_day": "time_of_day",
+      "coin": "coin"
+    },
+    "tables": [
+      "edge_diagnostics_by_volatility_bucket.csv",
+      "edge_diagnostics_by_time_of_day.csv",
+      "edge_diagnostics_by_coin.csv",
+      "edge_diagnostics_time_of_day_vs_coin.csv"
+    ],
+    "heatmaps": [
+      "edge_heatmap_time_of_day_vs_coin_expectancy.png"
+    ]
+  },
+  "dashboard": {
+    "status": "ok",
+    "path": "analysis_output/dashboard.html"
+  }
+}

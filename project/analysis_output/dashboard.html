@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Quant Research Dashboard</title>
+    <style>
+      body { font-family: Inter, Arial, sans-serif; margin: 0; padding: 24px; background: #f5f7fa; color: #1f2937; }
+      .section-title { margin: 28px 0 10px; }
+      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+      .card { background: white; border-radius: 10px; padding: 12px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); }
+      .card img { width: 100%; height: auto; display: block; }
+      .card h3 { margin: 0 0 10px; font-size: 0.95rem; word-break: break-word; }
+    </style>
+  </head>
+  <body>
+    <h1>Professional Quant Research Dashboard</h1>
+    <p><a href="research_explorer.html">Open Research Explorer</a></p>
+    <h2 class="section-title">Performance</h2>
+    <div class="grid">      <article class="card">
+        <h3>equity_curve.png</h3>
+        <img src="graphs/equity_curve.png" alt="equity_curve.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>drawdown_curve.png</h3>
+        <img src="graphs/drawdown_curve.png" alt="drawdown_curve.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>rolling_sharpe.png</h3>
+        <img src="graphs/rolling_sharpe.png" alt="rolling_sharpe.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>rolling_expectancy.png</h3>
+        <img src="graphs/rolling_expectancy.png" alt="rolling_expectancy.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>rolling_winrate.png</h3>
+        <img src="graphs/rolling_winrate.png" alt="rolling_winrate.png" loading="lazy" />
+      </article>
+    </div><h2 class="section-title">Risk</h2>
+    <div class="grid">      <article class="card">
+        <h3>drawdown_distribution.png</h3>
+        <img src="graphs/drawdown_distribution.png" alt="drawdown_distribution.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>max_dd_duration.png</h3>
+        <img src="graphs/max_dd_duration.png" alt="max_dd_duration.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>tail_risk.png</h3>
+        <img src="graphs/tail_risk.png" alt="tail_risk.png" loading="lazy" />
+      </article>
+    </div><h2 class="section-title">Signal Edge</h2>
+    <div class="grid">      <article class="card">
+        <h3>expectancy_vs_score.png</h3>
+        <img src="graphs/expectancy_vs_score.png" alt="expectancy_vs_score.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>winrate_vs_score.png</h3>
+        <img src="graphs/winrate_vs_score.png" alt="winrate_vs_score.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>profit_factor_vs_score.png</h3>
+        <img src="graphs/profit_factor_vs_score.png" alt="profit_factor_vs_score.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>score_distribution.png</h3>
+        <img src="graphs/score_distribution.png" alt="score_distribution.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>score_calibration_curve.png</h3>
+        <img src="graphs/score_calibration_curve.png" alt="score_calibration_curve.png" loading="lazy" />
+      </article>
+    </div><h2 class="section-title">Entry</h2>
+    <div class="grid">      <article class="card">
+        <h3>entry_efficiency.png</h3>
+        <img src="graphs/entry_efficiency.png" alt="entry_efficiency.png" loading="lazy" />
+      </article>
+    </div><h2 class="section-title">Execution</h2>
+    <div class="grid">      <article class="card">
+        <h3>entry_delay_vs_pnl.png</h3>
+        <img src="graphs/entry_delay_vs_pnl.png" alt="entry_delay_vs_pnl.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>slippage_distribution.png</h3>
+        <img src="graphs/slippage_distribution.png" alt="slippage_distribution.png" loading="lazy" />
+      </article>
+    </div><h2 class="section-title">Profit Capture</h2>
+    <div class="grid">      <article class="card">
+        <h3>pnl_vs_mfe.png</h3>
+        <img src="graphs/pnl_vs_mfe.png" alt="pnl_vs_mfe.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>pnl_vs_mae.png</h3>
+        <img src="graphs/pnl_vs_mae.png" alt="pnl_vs_mae.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>profit_capture_ratio.png</h3>
+        <img src="graphs/profit_capture_ratio.png" alt="profit_capture_ratio.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>mfe_distribution.png</h3>
+        <img src="graphs/mfe_distribution.png" alt="mfe_distribution.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>mae_distribution.png</h3>
+        <img src="graphs/mae_distribution.png" alt="mae_distribution.png" loading="lazy" />
+      </article>
+    </div><h2 class="section-title">Regime</h2>
+    <div class="grid">      <article class="card">
+        <h3>expectancy_vs_volatility.png</h3>
+        <img src="graphs/expectancy_vs_volatility.png" alt="expectancy_vs_volatility.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>expectancy_vs_atr.png</h3>
+        <img src="graphs/expectancy_vs_atr.png" alt="expectancy_vs_atr.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>expectancy_vs_trend.png</h3>
+        <img src="graphs/expectancy_vs_trend.png" alt="expectancy_vs_trend.png" loading="lazy" />
+      </article>
+    </div><h2 class="section-title">Time</h2>
+    <div class="grid">      <article class="card">
+        <h3>pnl_by_hour.png</h3>
+        <img src="graphs/pnl_by_hour.png" alt="pnl_by_hour.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>pnl_by_weekday.png</h3>
+        <img src="graphs/pnl_by_weekday.png" alt="pnl_by_weekday.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>expectancy_by_hour.png</h3>
+        <img src="graphs/expectancy_by_hour.png" alt="expectancy_by_hour.png" loading="lazy" />
+      </article>
+    </div><h2 class="section-title">Sizing</h2>
+    <div class="grid">      <article class="card">
+        <h3>size_vs_pnl.png</h3>
+        <img src="graphs/size_vs_pnl.png" alt="size_vs_pnl.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>leverage_vs_pnl.png</h3>
+        <img src="graphs/leverage_vs_pnl.png" alt="leverage_vs_pnl.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>expectancy_vs_size_bucket.png</h3>
+        <img src="graphs/expectancy_vs_size_bucket.png" alt="expectancy_vs_size_bucket.png" loading="lazy" />
+      </article>
+    </div><h2 class="section-title">Stability</h2>
+    <div class="grid">      <article class="card">
+        <h3>rolling_profit_factor.png</h3>
+        <img src="graphs/rolling_profit_factor.png" alt="rolling_profit_factor.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>rolling_expectancy.png</h3>
+        <img src="graphs/rolling_expectancy.png" alt="rolling_expectancy.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>edge_decay.png</h3>
+        <img src="graphs/edge_decay.png" alt="edge_decay.png" loading="lazy" />
+      </article>
+    </div><h2 class="section-title">Additional Graphs</h2>
+    <div class="grid">      <article class="card">
+        <h3>edge_heatmap_time_of_day_vs_coin_expectancy.png</h3>
+        <img src="graphs/edge_heatmap_time_of_day_vs_coin_expectancy.png" alt="edge_heatmap_time_of_day_vs_coin_expectancy.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>edge_matrix_heatmap.png</h3>
+        <img src="graphs/edge_matrix_heatmap.png" alt="edge_matrix_heatmap.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>entry_efficiency_hist.png</h3>
+        <img src="graphs/entry_efficiency_hist.png" alt="entry_efficiency_hist.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>entry_efficiency_histogram.png</h3>
+        <img src="graphs/entry_efficiency_histogram.png" alt="entry_efficiency_histogram.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>entry_efficiency_vs_pnl.png</h3>
+        <img src="graphs/entry_efficiency_vs_pnl.png" alt="entry_efficiency_vs_pnl.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>expectancy_by_coin_hour.png</h3>
+        <img src="graphs/expectancy_by_coin_hour.png" alt="expectancy_by_coin_hour.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>expectancy_by_context.png</h3>
+        <img src="graphs/expectancy_by_context.png" alt="expectancy_by_context.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>expectancy_by_dec_mode.png</h3>
+        <img src="graphs/expectancy_by_dec_mode.png" alt="expectancy_by_dec_mode.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>expectancy_by_entry_reason.png</h3>
+        <img src="graphs/expectancy_by_entry_reason.png" alt="expectancy_by_entry_reason.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>expectancy_by_regime.png</h3>
+        <img src="graphs/expectancy_by_regime.png" alt="expectancy_by_regime.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>expectancy_by_signal_component.png</h3>
+        <img src="graphs/expectancy_by_signal_component.png" alt="expectancy_by_signal_component.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>expectancy_by_trigger_type.png</h3>
+        <img src="graphs/expectancy_by_trigger_type.png" alt="expectancy_by_trigger_type.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>expectancy_by_volatility_score.png</h3>
+        <img src="graphs/expectancy_by_volatility_score.png" alt="expectancy_by_volatility_score.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>expectancy_surface_C_S.png</h3>
+        <img src="graphs/expectancy_surface_C_S.png" alt="expectancy_surface_C_S.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>expectancy_vs_entry_delay.png</h3>
+        <img src="graphs/expectancy_vs_entry_delay.png" alt="expectancy_vs_entry_delay.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>expectancy_vs_entry_distance.png</h3>
+        <img src="graphs/expectancy_vs_entry_distance.png" alt="expectancy_vs_entry_distance.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>expectancy_vs_leverage.png</h3>
+        <img src="graphs/expectancy_vs_leverage.png" alt="expectancy_vs_leverage.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>expectancy_vs_range.png</h3>
+        <img src="graphs/expectancy_vs_range.png" alt="expectancy_vs_range.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>expectancy_vs_range_pos.png</h3>
+        <img src="graphs/expectancy_vs_range_pos.png" alt="expectancy_vs_range_pos.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>expectancy_vs_score_C.png</h3>
+        <img src="graphs/expectancy_vs_score_C.png" alt="expectancy_vs_score_C.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>expectancy_vs_score_H.png</h3>
+        <img src="graphs/expectancy_vs_score_H.png" alt="expectancy_vs_score_H.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>expectancy_vs_score_S.png</h3>
+        <img src="graphs/expectancy_vs_score_S.png" alt="expectancy_vs_score_S.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>expectancy_vs_score_br.png</h3>
+        <img src="graphs/expectancy_vs_score_br.png" alt="expectancy_vs_score_br.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>expectancy_vs_score_mo.png</h3>
+        <img src="graphs/expectancy_vs_score_mo.png" alt="expectancy_vs_score_mo.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>expectancy_vs_score_of.png</h3>
+        <img src="graphs/expectancy_vs_score_of.png" alt="expectancy_vs_score_of.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>expectancy_vs_step.png</h3>
+        <img src="graphs/expectancy_vs_step.png" alt="expectancy_vs_step.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>feature_importance_rank.png</h3>
+        <img src="graphs/feature_importance_rank.png" alt="feature_importance_rank.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>mfe_mae_scatter.png</h3>
+        <img src="graphs/mfe_mae_scatter.png" alt="mfe_mae_scatter.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>mfe_vs_fees.png</h3>
+        <img src="graphs/mfe_vs_fees.png" alt="mfe_vs_fees.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>mfe_vs_score_C.png</h3>
+        <img src="graphs/mfe_vs_score_C.png" alt="mfe_vs_score_C.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>pnl_by_close_reason.png</h3>
+        <img src="graphs/pnl_by_close_reason.png" alt="pnl_by_close_reason.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>profit_capture_distribution.png</h3>
+        <img src="graphs/profit_capture_distribution.png" alt="profit_capture_distribution.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>profit_factor_by_regime.png</h3>
+        <img src="graphs/profit_factor_by_regime.png" alt="profit_factor_by_regime.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>pyramiding_expectancy.png</h3>
+        <img src="graphs/pyramiding_expectancy.png" alt="pyramiding_expectancy.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>score_C_distribution.png</h3>
+        <img src="graphs/score_C_distribution.png" alt="score_C_distribution.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>score_H_distribution.png</h3>
+        <img src="graphs/score_H_distribution.png" alt="score_H_distribution.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>score_S_distribution.png</h3>
+        <img src="graphs/score_S_distribution.png" alt="score_S_distribution.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>score_expectancy_curve.png</h3>
+        <img src="graphs/score_expectancy_curve.png" alt="score_expectancy_curve.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>signal_flag_expectancy.png</h3>
+        <img src="graphs/signal_flag_expectancy.png" alt="signal_flag_expectancy.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>size_bucket_expectancy.png</h3>
+        <img src="graphs/size_bucket_expectancy.png" alt="size_bucket_expectancy.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>size_vs_pnl_scatter.png</h3>
+        <img src="graphs/size_vs_pnl_scatter.png" alt="size_vs_pnl_scatter.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>time_to_mae_distribution.png</h3>
+        <img src="graphs/time_to_mae_distribution.png" alt="time_to_mae_distribution.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>time_to_mfe_distribution.png</h3>
+        <img src="graphs/time_to_mfe_distribution.png" alt="time_to_mfe_distribution.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>time_to_mfe_vs_pnl.png</h3>
+        <img src="graphs/time_to_mfe_vs_pnl.png" alt="time_to_mfe_vs_pnl.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>time_to_mfe_vs_score_S.png</h3>
+        <img src="graphs/time_to_mfe_vs_score_S.png" alt="time_to_mfe_vs_score_S.png" loading="lazy" />
+      </article>
+      <article class="card">
+        <h3>trigger_strength_vs_pnl.png</h3>
+        <img src="graphs/trigger_strength_vs_pnl.png" alt="trigger_strength_vs_pnl.png" loading="lazy" />
+      </article>
+    </div>
+  </body>
+</html>

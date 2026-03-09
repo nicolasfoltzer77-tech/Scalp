@@ -16,7 +16,7 @@ import time
 from pathlib import Path
 
 ROOT = Path("/opt/scalp/project")
-DB_B = ROOT / "data/b.db"
+DB_OB = ROOT / "data/ob.db"
 DB_DEC = ROOT / "data/dec.db"
 
 LOG_PATH = ROOT / "logs/dec_range.log"
@@ -54,6 +54,7 @@ def _table_exists(c, table):
 
 def _inst_ids(c):
     if not _table_exists(c, "ohlcv_1m"):
+        log.warning("[SOURCE_MISSING] table ohlcv_1m not found in source DB")
         return []
     rows = c.execute("SELECT DISTINCT instId FROM ohlcv_1m").fetchall()
     return [r["instId"] for r in rows if r["instId"]]
@@ -148,15 +149,16 @@ def _row_from_bars(inst_id, rows, ts_now):
 
 def refresh_snap_range():
     ts_start = int(time.time() * 1000)
-    log.info("[REFRESH_START] ts=%d", ts_start)
+    log.info("[REFRESH_START] ts=%d source_db=%s", ts_start, DB_OB)
 
     inserted = 0
     skipped_invalid = 0
     skipped_short = 0
     payload = []
 
-    with conn(DB_B) as cb:
+    with conn(DB_OB) as cb:
         inst_ids = _inst_ids(cb)
+        log.info("[SOURCE] inst_count=%d", len(inst_ids))
         for inst_id in inst_ids:
             bars = _bars(cb, inst_id)
             if len(bars) < MIN_BARS:
@@ -186,8 +188,9 @@ def refresh_snap_range():
                 payload,
             )
             inserted = len(payload)
+            cd.commit()
 
-        for r in payload:
+        for r in payload[:20]:
             log.info(
                 "[ROW] instId=%s high_20=%.8f low_20=%.8f atr=%.8f bb_width=%.8f compression_ok=%d ts=%d",
                 r[0], r[1], r[2], r[3], r[4], r[5], r[6],
@@ -228,11 +231,7 @@ def check_freshness():
     if is_stale:
         log.warning(
             "[FRESHNESS_WARN] snap_range stale max_ts=%s now=%d lag_ms=%s stale_rows=%d threshold_ms=%d",
-            str(max_ts),
-            now,
-            str(lag_ms),
-            stale_rows,
-            STALE_MS,
+            str(max_ts), now, str(lag_ms), stale_rows, STALE_MS,
         )
     else:
         log.info("[FRESHNESS_OK] max_ts=%d lag_ms=%d stale_rows=%d", max_ts, lag_ms, stale_rows)
