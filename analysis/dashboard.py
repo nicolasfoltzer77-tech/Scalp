@@ -161,10 +161,22 @@ def _research_explorer_html() -> str:
         'leverage_bucket',
       ];
 
+      const FIELD_ALIASES = {
+        coin: ['coin', 'instId', 'symbol'],
+        hour_of_day: ['hour_of_day', 'hour'],
+        volatility_bucket: ['volatility_bucket', 'V_bucket'],
+        score_C_bucket: ['score_C_bucket', 'C_bucket'],
+        score_S_bucket: ['score_S_bucket', 'S_bucket'],
+        score_H_bucket: ['score_H_bucket', 'H_bucket'],
+        leverage_bucket: ['leverage_bucket', 'L_bucket'],
+      };
+
       const TABLE_CANDIDATES = [
         'tables/edge_discovery_raw_trades.csv',
         'tables/edge_discovery_base_data.csv',
         'tables/edge_discovery_coin_vs_hour_of_day.csv',
+        'tables/edge_discovery_volatility_vs_score_C.csv',
+        'tables/edge_discovery_leverage_vs_volatility.csv',
       ];
 
       function parseCsv(text) {
@@ -216,32 +228,71 @@ def _research_explorer_html() -> str:
         return Number.isFinite(n) ? n : NaN;
       }
 
+      function normalizeRows(rows) {
+        return rows.map((r) => {
+          const out = { ...r };
+          Object.entries(FIELD_ALIASES).forEach(([target, candidates]) => {
+            if (Object.prototype.hasOwnProperty.call(out, target) && String(out[target] ?? '') !== '') return;
+            const source = candidates.find((c) => Object.prototype.hasOwnProperty.call(out, c) && String(out[c] ?? '') !== '');
+            if (source) out[target] = out[source];
+          });
+          REQUIRED_FILTERS.forEach((f) => {
+            if (!Object.prototype.hasOwnProperty.call(out, f) || String(out[f] ?? '') === '') out[f] = 'ALL';
+          });
+          return out;
+        });
+      }
+
       function metricsFromRows(rows) {
         const pnlCol = ['pnl_net', 'pnl', 'net_pnl', 'realized_pnl'].find((k) => rows[0] && Object.prototype.hasOwnProperty.call(rows[0], k));
         const winCol = ['is_win', 'win'].find((k) => rows[0] && Object.prototype.hasOwnProperty.call(rows[0], k));
 
-        let pnl = rows.map((r) => toNumber(r[pnlCol])).filter((v) => Number.isFinite(v));
-        if (!pnl.length && rows[0] && Object.prototype.hasOwnProperty.call(rows[0], 'expectancy') && Object.prototype.hasOwnProperty.call(rows[0], 'trade_count')) {
-          pnl = rows.flatMap((r) => {
-            const e = toNumber(r.expectancy);
-            const c = Math.max(0, Math.floor(toNumber(r.trade_count)));
-            return Number.isFinite(e) && c > 0 ? [e] : [];
-          });
-        }
-        const trade_count = pnl.length || rows.length;
-        if (!trade_count) {
-          return { trade_count: 0, winrate: NaN, expectancy: NaN, profit_factor: NaN };
+        const pnl = rows.map((r) => toNumber(r[pnlCol])).filter((v) => Number.isFinite(v));
+        if (pnl.length) {
+          const trade_count = pnl.length;
+          const wins = winCol
+            ? rows.filter((r) => String(r[winCol]).toLowerCase() === '1' || String(r[winCol]).toLowerCase() === 'true').length
+            : pnl.filter((v) => v > 0).length;
+          const winrate = wins / trade_count;
+          const expectancy = pnl.reduce((a, b) => a + b, 0) / pnl.length;
+          const grossProfit = pnl.filter((v) => v > 0).reduce((a, b) => a + b, 0);
+          const grossLoss = Math.abs(pnl.filter((v) => v < 0).reduce((a, b) => a + b, 0));
+          const profit_factor = grossLoss > 0 ? grossProfit / grossLoss : (grossProfit > 0 ? Infinity : NaN);
+          return { trade_count, winrate, expectancy, profit_factor };
         }
 
-        const wins = winCol
-          ? rows.filter((r) => String(r[winCol]).toLowerCase() === '1' || String(r[winCol]).toLowerCase() === 'true').length
-          : pnl.filter((v) => v > 0).length;
-        const winrate = wins / trade_count;
-        const expectancy = pnl.length ? pnl.reduce((a, b) => a + b, 0) / pnl.length : NaN;
-        const grossProfit = pnl.filter((v) => v > 0).reduce((a, b) => a + b, 0);
-        const grossLoss = Math.abs(pnl.filter((v) => v < 0).reduce((a, b) => a + b, 0));
-        const profit_factor = grossLoss > 0 ? grossProfit / grossLoss : (grossProfit > 0 ? Infinity : NaN);
-        return { trade_count, winrate, expectancy, profit_factor };
+        const hasAgg = rows[0] && Object.prototype.hasOwnProperty.call(rows[0], 'trade_count') && Object.prototype.hasOwnProperty.call(rows[0], 'expectancy');
+        if (!hasAgg) {
+          return { trade_count: rows.length, winrate: NaN, expectancy: NaN, profit_factor: NaN };
+        }
+
+        const weights = rows.map((r) => Math.max(0, Math.floor(toNumber(r.trade_count))));
+        const totalTrades = weights.reduce((a, b) => a + b, 0);
+        if (!totalTrades) return { trade_count: 0, winrate: NaN, expectancy: NaN, profit_factor: NaN };
+
+        const expectancy = rows.reduce((acc, r, i) => {
+          const e = toNumber(r.expectancy);
+          return Number.isFinite(e) ? acc + e * weights[i] : acc;
+        }, 0) / totalTrades;
+
+        const weighted = (field) => {
+          const num = rows.reduce((acc, r, i) => {
+            const v = toNumber(r[field]);
+            return Number.isFinite(v) ? acc + v * weights[i] : acc;
+          }, 0);
+          const den = rows.reduce((acc, r, i) => {
+            const v = toNumber(r[field]);
+            return Number.isFinite(v) ? acc + weights[i] : acc;
+          }, 0);
+          return den > 0 ? num / den : NaN;
+        };
+
+        return {
+          trade_count: totalTrades,
+          winrate: weighted('winrate'),
+          expectancy,
+          profit_factor: weighted('profit_factor'),
+        };
       }
 
       function groupMetrics(rows, groupCols) {
@@ -414,9 +465,9 @@ def _research_explorer_html() -> str:
           return;
         }
 
-        const rows = loaded.rows.filter((r) => REQUIRED_FILTERS.every((k) => Object.prototype.hasOwnProperty.call(r, k)));
+        const rows = normalizeRows(loaded.rows);
         if (!rows.length) {
-          status.textContent = `Loaded ${loaded.path}, but required columns are missing. Needed: ${REQUIRED_FILTERS.join(', ')}`;
+          status.textContent = `Loaded ${loaded.path}, but table has no rows.`;
           return;
         }
 

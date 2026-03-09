@@ -99,6 +99,56 @@ def _plot_expectancy_bar(summary: pd.DataFrame, x_col: str, title: str, out_path
     plt.close()
 
 
+def _score_calibration_diagnostics(work: pd.DataFrame, out: dict) -> dict:
+    if "pnl_net" not in work.columns:
+        pd.DataFrame(
+            columns=["score", "score_bucket", "trade_count", "winrate", "expectancy", "profit_factor"]
+        ).to_csv(out["tables"] / "score_calibration.csv", index=False)
+        plt.figure(figsize=(8, 4.5))
+        plt.text(0.5, 0.5, "Missing pnl_net", ha="center", va="center")
+        plt.axis("off")
+        plt.tight_layout()
+        plt.savefig(out["charts"] / "score_expectancy_curve.png")
+        plt.close()
+        return {"score_calibration_rows": 0}
+
+    rows: list[pd.DataFrame] = []
+    for score_col in SCORE_COMPONENTS:
+        if score_col not in work.columns:
+            continue
+        summary = _bucket_expectancy(work, score_col)
+        if summary.empty:
+            continue
+        summary.insert(0, "score", score_col)
+        rows.append(summary)
+
+    combined = (
+        pd.concat(rows, ignore_index=True)
+        if rows
+        else pd.DataFrame(columns=["score", "score_bucket", "trade_count", "winrate", "expectancy", "profit_factor"])
+    )
+    combined.to_csv(out["tables"] / "score_calibration.csv", index=False)
+
+    plt.figure(figsize=(9, 5))
+    if combined.empty:
+        plt.text(0.5, 0.5, "No score calibration data", ha="center", va="center")
+        plt.axis("off")
+    else:
+        order = {label: idx for idx, label in enumerate(SCORE_LABELS)}
+        for score_col, sub in combined.groupby("score", observed=False):
+            ordered = sub.sort_values("score_bucket", key=lambda s: s.astype(str).map(order))
+            plt.plot(ordered["score_bucket"].astype(str), ordered["expectancy"], marker="o", label=score_col)
+        plt.axhline(0, color="black", linewidth=1)
+        plt.xlabel("Score bucket")
+        plt.ylabel("Expectancy (avg pnl_net)")
+        plt.legend()
+    plt.title("Score Expectancy Curve")
+    plt.tight_layout()
+    plt.savefig(out["charts"] / "score_expectancy_curve.png")
+    plt.close()
+    return {"score_calibration_rows": int(len(combined))}
+
+
 def _score_distributions(work: pd.DataFrame, out: dict) -> dict:
     for score_col in SCORE_COMPONENTS:
         if score_col in work.columns:
@@ -430,6 +480,7 @@ def run(conn: sqlite3.Connection, out: dict) -> dict:
     result.update(_context_edge(work, out))
     result.update(_sizing_validation(work, out))
     result.update(_score_surface(work, out))
+    result.update(_score_calibration_diagnostics(work, out))
     result.update(_edge_decay(work, out))
     summary = _summary_report(out)
     result["summary_report"] = summary
