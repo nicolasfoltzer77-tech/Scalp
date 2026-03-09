@@ -1055,14 +1055,13 @@ TABLE snap_atr CREATE TABLE snap_atr (
     ts_updated INTEGER
 )
 TABLE snap_ctx CREATE TABLE snap_ctx (
-  uid TEXT,
   instId TEXT PRIMARY KEY,
   ctx TEXT,
   score_C REAL,
   side TEXT,
   ctx_ok INTEGER,
   ts_updated INTEGER
-, atr_fast REAL, atr_slow REAL, vol_regime TEXT)
+, atr_fast REAL, atr_slow REAL, vol_regime TEXT, uid TEXT)
 TABLE snap_range CREATE TABLE snap_range (
   instId TEXT PRIMARY KEY,
   high_20 REAL,
@@ -1207,33 +1206,31 @@ SELECT
 FROM v_dec_candidates d
 VIEW v_dec_explain CREATE VIEW v_dec_explain AS
 SELECT
-  c.instId,
-  c.side,
-  c.ctx,
-  c.score_C,
+f.*,
 
-  c.lastPr,
-  c.high_20,
-  c.low_20,
-  c.atr,
+CASE
+WHEN f.atr_fast IS NOT NULL
+AND f.atr_slow IS NOT NULL
+AND (f.atr_fast/f.atr_slow) > 0.45
+THEN 1
+ELSE 0
+END AS volatility_ok,
 
-  r.compression_ok,
-  pb.prebreak_ok,
-  pl.pullback_ok,
-  mo.momentum_ok,
+CASE
 
-  CASE
-    WHEN pb.prebreak_ok = 1 THEN 'PREBREAK'
-    WHEN mo.momentum_ok = 1 THEN 'MOMENTUM'
-    WHEN pl.pullback_ok = 1 THEN 'PULLBACK'
-    ELSE 'NO_ENTRY'
-  END AS dec_mode
+WHEN f.momentum_ok=1
+AND f.breakout_zone_ok=1
+THEN 'MOMENTUM'
 
-FROM v_dec_candidates c
-LEFT JOIN snap_range r USING(instId)
-LEFT JOIN v_dec_prebreak pb USING(instId)
-LEFT JOIN v_dec_pullback pl USING(instId)
-LEFT JOIN v_dec_momentum mo USING(instId)
+WHEN f.cont_ok=1
+AND f.breakout_zone_ok=1
+THEN 'PREBREAK'
+
+ELSE 'NO_ENTRY'
+
+END AS dec_mode
+
+FROM v_dec_flags f
 VIEW v_dec_fbo CREATE VIEW v_dec_fbo AS
 SELECT *,
   CASE
@@ -1254,50 +1251,50 @@ SELECT *,
 FROM v_dec_candidates
 WHERE compression_ok=1
 VIEW v_dec_fire CREATE VIEW v_dec_fire AS
-WITH base AS (
-    SELECT
-        s.uid,
-        s.instId,
-        s.side,
-        s.ctx,
-        s.score_C,
-        s.atr_fast,
-        s.atr_slow,
-        s.vol_regime,
-        t.lastPr,
-        s.ts_updated
-    FROM snap_ctx s
-    JOIN ticks_live t   -- ✅ PRIX MARCHÉ RÉEL LOCAL
-      ON t.instId = s.instId
-    WHERE s.ctx_ok = 1
-),
-patterned AS (
-    SELECT *,
-        CASE
-            WHEN ctx='bullish' AND vol_regime='EXPAND'  THEN 'MOMENTUM'
-            WHEN ctx='bullish' AND vol_regime='NORMAL'  THEN 'CONT'
-            WHEN ctx='bearish' AND vol_regime='NORMAL'  THEN 'DRIFT'
-            WHEN ctx='bearish' AND vol_regime='COMPRESS' THEN 'PREBREAK'
-            ELSE 'IGNORE'
-        END AS dec_mode
-    FROM base
-),
-admission AS (
-    SELECT *,
-        CASE
-            WHEN dec_mode='MOMENTUM' AND ABS(score_C)>=0.45 THEN 1
-            WHEN dec_mode='PREBREAK' THEN 1
-            WHEN dec_mode='DRIFT' AND ABS(score_C)>=0.30 THEN 1
-            WHEN dec_mode='CONT'  AND ABS(score_C)>=0.30 THEN 1
-            ELSE 0
-        END AS fire
-    FROM patterned
-)
-SELECT
-    uid, instId, side, lastPr, atr_fast AS atr,
-    dec_mode, score_C, ctx, fire
-FROM admission
-WHERE fire=1
+        WITH base AS (
+            SELECT
+                s.uid,
+                s.instId,
+                s.side,
+                s.ctx,
+                s.score_C,
+                s.atr_fast,
+                s.atr_slow,
+                s.vol_regime,
+                t.lastPr,
+                s.ts_updated
+            FROM snap_ctx s
+            JOIN ticks_live t
+              ON t.instId = s.instId
+            WHERE s.ctx_ok = 1
+        ),
+        patterned AS (
+            SELECT *,
+                CASE
+                    WHEN ctx='bullish' AND vol_regime='EXPAND'  THEN 'MOMENTUM'
+                    WHEN ctx='bullish' AND vol_regime='NORMAL'  THEN 'CONT'
+                    WHEN ctx='bearish' AND vol_regime='NORMAL'  THEN 'DRIFT'
+                    WHEN ctx='bearish' AND vol_regime='COMPRESS' THEN 'PREBREAK'
+                    ELSE 'IGNORE'
+                END AS dec_mode
+            FROM base
+        ),
+        admission AS (
+            SELECT *,
+                CASE
+                    WHEN dec_mode='MOMENTUM' AND ABS(score_C)>=0.45 THEN 1
+                    WHEN dec_mode='PREBREAK' THEN 1
+                    WHEN dec_mode='DRIFT' AND ABS(score_C)>=0.30 THEN 1
+                    WHEN dec_mode='CONT'  AND ABS(score_C)>=0.30 THEN 1
+                    ELSE 0
+                END AS fire
+            FROM patterned
+        )
+        SELECT
+            uid, instId, side, lastPr, atr_fast AS atr,
+            dec_mode, score_C, ctx, fire
+        FROM admission
+        WHERE fire=1
 VIEW v_dec_fire_debug CREATE VIEW v_dec_fire_debug AS
 SELECT
   instId,
@@ -1311,73 +1308,123 @@ SELECT
 FROM snap_ctx
 WHERE ctx_ok = 1
 VIEW v_dec_flags CREATE VIEW v_dec_flags AS
+
 WITH latest_ticks AS (
-  SELECT
-    instId_s,
-    lastPr,
-    ts
-  FROM snap_ticks t1
-  WHERE ts = (
-    SELECT MAX(ts)
-    FROM snap_ticks t2
-    WHERE t2.instId_s = t1.instId_s
-  )
+    SELECT instId,lastPr,ts
+    FROM snap_ticks t1
+    WHERE ts = (
+        SELECT MAX(ts)
+        FROM snap_ticks t2
+        WHERE t2.instId = t1.instId
+    )
 )
+
 SELECT
-  c.instId,
-  c.side,
-  c.score_C,
-  c.ctx_ok,
+    c.instId,
+    c.side,
+    c.ctx,
+    c.score_C,
+    c.ctx_ok,
 
-  t.lastPr,
-  t.ts AS tick_ts,
+    c.atr_fast,
+    c.atr_slow,
 
-  r.high_20,
-  r.low_20,
-  r.atr,
-  r.bb_width,
-  r.compression_ok,
+    t.lastPr,
+    r.high_20,
+    r.low_20,
+    r.atr,
+    r.bb_width,
+    r.compression_ok,
 
-  CASE
-    WHEN r.atr IS NOT NULL
-     AND r.high_20 IS NOT NULL
-     AND r.low_20 IS NOT NULL
-     AND (
-       (c.side='buy'  AND t.lastPr > r.high_20 + r.atr*0.60) OR
-       (c.side='sell' AND t.lastPr < r.low_20  - r.atr*0.60)
-     )
-    THEN 1 ELSE 0
-  END AS cont_ok,
+/* RANGE POSITION */
 
-  CASE
-    WHEN r.atr IS NOT NULL
-     AND r.high_20 IS NOT NULL
-     AND r.low_20 IS NOT NULL
-     AND (
-       (c.side='sell' AND t.lastPr <= r.low_20  + r.atr*0.20) OR
-       (c.side='buy'  AND t.lastPr >= r.high_20 - r.atr*0.20)
-     )
-    THEN 1 ELSE 0
-  END AS trend_ok,
+CASE
+WHEN r.high_20 IS NOT NULL
+AND r.low_20 IS NOT NULL
+AND (r.high_20 - r.low_20) > 0
+THEN
 
-  CASE
-    WHEN c.ctx_ok = 1
-     AND (
-       (c.side='sell' AND c.score_C <= -0.30) OR
-       (c.side='buy'  AND c.score_C >=  0.30)
-     )
-    THEN 1 ELSE 0
-  END AS drift_ok
+(t.lastPr - r.low_20) / (r.high_20 - r.low_20)
+
+ELSE NULL
+END AS range_pos,
+
+
+/* FAKE BREAKOUT FILTER */
+
+CASE
+WHEN
+    (t.lastPr - r.low_20) / (r.high_20 - r.low_20) > 0.65
+THEN 1
+ELSE 0
+END AS breakout_zone_ok,
+
+
+/* CONTINUATION */
+
+CASE
+WHEN r.atr IS NOT NULL
+AND (
+(c.side='buy' AND t.lastPr > r.high_20 + r.atr*0.60)
+OR
+(c.side='sell' AND t.lastPr < r.low_20 - r.atr*0.60)
+)
+THEN 1 ELSE 0
+END AS cont_ok,
+
+
+/* MOMENTUM */
+
+CASE
+WHEN r.atr IS NOT NULL
+AND r.compression_ok = 1
+AND (
+(c.side='buy' AND t.lastPr > r.high_20 + r.atr*0.35)
+OR
+(c.side='sell' AND t.lastPr < r.low_20 - r.atr*0.35)
+)
+THEN 1 ELSE 0
+END AS momentum_ok,
+
+
+/* MOMENTUM SCORE */
+
+CASE
+WHEN r.atr IS NOT NULL
+THEN MIN(
+ABS(
+CASE
+WHEN c.side='buy'
+THEN t.lastPr - r.high_20
+ELSE r.low_20 - t.lastPr
+END
+)/(r.atr*2),
+1
+)
+ELSE 0
+END AS momentum_score,
+
+
+/* COMPRESSION SCORE */
+
+CASE
+WHEN r.bb_width IS NOT NULL
+AND r.atr IS NOT NULL
+THEN
+1 - MIN(r.bb_width/(r.atr*20),1)
+ELSE 0
+END AS compression_score
 
 FROM snap_ctx c
 LEFT JOIN snap_range r
-  ON r.instId = c.instId
+ON r.instId=c.instId
 LEFT JOIN latest_ticks t
-  ON t.instId_s = c.instId
+ON t.instId=c.instId
 
-WHERE c.ctx_ok = 1
-  AND c.side IS NOT NULL
-  AND t.lastPr IS NOT NULL
+WHERE
+c.ctx_ok=1
+AND c.side IS NOT NULL
+AND t.lastPr IS NOT NULL
 VIEW v_dec_market_ok CREATE VIEW v_dec_market_ok AS
 SELECT *
 FROM v_dec_candidates
@@ -1789,28 +1836,34 @@ FROM latest
 WHERE rn = 1
 VIEW v_triggers_norm CREATE VIEW v_triggers_norm AS
 SELECT
-    instId,
-    side,
-    ctx,
+    e.instId,
+    e.side,
+    e.ctx,
+    e.dec_mode AS trigger_type,
+    e.score_C,
+    e.atr,
+    e.volatility_ok,
 
-    -- déclencheur principal
-    dec_mode            AS trigger_type,
+    f.momentum_score,
+    f.compression_score,
+    f.momentum_ok,
+    f.cont_ok,
+    f.trend_ok,
+    f.drift_ok,
 
-    -- métriques
-    score_C,
-    atr,
+    (
+        0.5 * ABS(e.score_C)
+        + 0.3 * f.momentum_score
+        + 0.2 * f.compression_score
+    ) AS alpha_score,
 
-    -- état
-    fire                AS fired,
+    1 AS fired
 
-    -- flags analytiques
-    momentum_ok,
-    prebreak_ok,
-    pullback_ok,
-    compression_ok
+FROM v_dec_explain e
+JOIN v_dec_flags f
+  ON e.instId = f.instId
 
-FROM v_dec_fire
-WHERE armed = 1
+WHERE e.dec_mode IN ('PREBREAK','MOMENTUM')
 
 -- ===============================
 -- DATABASE: exec.db
@@ -2053,6 +2106,10 @@ SELECT
 FROM v_ticks_latest
 
 -- ===============================
+-- DATABASE: follow.db
+-- ===============================
+
+-- ===============================
 -- DATABASE: follower.db
 -- ===============================
 TABLE follower CREATE TABLE follower(
@@ -2063,7 +2120,7 @@ TABLE follower CREATE TABLE follower(
     tp_dyn REAL DEFAULT 0,
     atr_signal REAL DEFAULT 0,
     status TEXT NOT NULL DEFAULT 'follow'
-, reason_close TEXT, price_to_close REAL, qty_to_close REAL, close_step INTEGER DEFAULT 0, mfe_price REAL, mfe_ts INTEGER, mae_price REAL, mae_ts INTEGER, reason TEXT, ts_decision INTEGER, nb_partial INTEGER DEFAULT 0, nb_pyramide INTEGER DEFAULT 0, nb_pyramide_post_partial INTEGER DEFAULT 0, last_partial_price REAL, last_partial_ts INTEGER, last_pyramide_price REAL, last_pyramide_ts INTEGER, mfe_local REAL, mae_local REAL, vwap_local REAL, cooldown_partial_ts INTEGER, cooldown_pyramide_ts INTEGER, regime TEXT DEFAULT 'scalp', qty_ratio REAL, step INTEGER DEFAULT 0, ensure_step_column INTEGER DEFAULT 0, mfe_atr REAL DEFAULT 0.0, mae_atr REAL DEFAULT 0.0, last_pyramide_mfe_atr REAL DEFAULT 0.0, last_partial_mfe_atr REAL DEFAULT 0.0, last_action_ts INTEGER DEFAULT 0, golden INTEGER NOT NULL DEFAULT 0, golden_ts INTEGER, sl_be_price REAL, sl_be_atr REAL, sl_be_ts INTEGER, sl_trail_active INTEGER DEFAULT 0, sl_trail_start_atr REAL, sl_trail_ts INTEGER, tp_dyn_atr REAL, tp_dyn_ts INTEGER, first_partial_ts INTEGER, first_partial_mfe_atr REAL, first_pyramide_ts INTEGER, last_decision_ts, instId TEXT, side TEXT, ratio_opened REAL DEFAULT 0.0, ratio_to_open REAL, ratio_to_close REAL, ratio_closed REAL DEFAULT 0, ratio_exposed REAL DEFAULT 0, trade_free INTEGER DEFAULT 0, req_step INTEGER DEFAULT 0, done_step INTEGER DEFAULT 0, qty_to_close_ratio REAL DEFAULT 0.0, qty_to_add_ratio REAL DEFAULT 0.0, ts_updated INTEGER, ratio_to_add REAL DEFAULT NULL, qty_open_snapshot REAL DEFAULT 0.0, qty_open REAL DEFAULT 0.0, avg_price_open REAL, last_exec_type TEXT, last_step INTEGER, last_price_exec REAL, last_ts_exec INTEGER)
+, reason_close TEXT, price_to_close REAL, qty_to_close REAL, close_step INTEGER DEFAULT 0, mfe_price REAL, mfe_ts INTEGER, mae_price REAL, mae_ts INTEGER, reason TEXT, ts_decision INTEGER, nb_partial INTEGER DEFAULT 0, nb_pyramide INTEGER DEFAULT 0, nb_pyramide_post_partial INTEGER DEFAULT 0, last_partial_price REAL, last_partial_ts INTEGER, last_pyramide_price REAL, last_pyramide_ts INTEGER, mfe_local REAL, mae_local REAL, vwap_local REAL, cooldown_partial_ts INTEGER, cooldown_pyramide_ts INTEGER, regime TEXT DEFAULT 'scalp', qty_ratio REAL, step INTEGER DEFAULT 0, ensure_step_column INTEGER DEFAULT 0, mfe_atr REAL DEFAULT 0.0, mae_atr REAL DEFAULT 0.0, last_pyramide_mfe_atr REAL DEFAULT 0.0, last_partial_mfe_atr REAL DEFAULT 0.0, last_action_ts INTEGER DEFAULT 0, golden INTEGER NOT NULL DEFAULT 0, golden_ts INTEGER, sl_be_price REAL, sl_be_atr REAL, sl_be_ts INTEGER, sl_trail_active INTEGER DEFAULT 0, sl_trail_start_atr REAL, sl_trail_ts INTEGER, tp_dyn_atr REAL, tp_dyn_ts INTEGER, first_partial_ts INTEGER, first_partial_mfe_atr REAL, first_pyramide_ts INTEGER, last_decision_ts, instId TEXT, side TEXT, ratio_opened REAL DEFAULT 0.0, ratio_to_open REAL, ratio_to_close REAL, ratio_closed REAL DEFAULT 0, ratio_exposed REAL DEFAULT 0, trade_free INTEGER DEFAULT 0, req_step INTEGER DEFAULT 0, done_step INTEGER DEFAULT 0, qty_to_close_ratio REAL DEFAULT 0.0, qty_to_add_ratio REAL DEFAULT 0.0, ts_updated INTEGER, ratio_to_add REAL DEFAULT NULL, qty_open_snapshot REAL DEFAULT 0.0, qty_open REAL DEFAULT 0.0, avg_price_open REAL, last_exec_type TEXT, last_step INTEGER, last_price_exec REAL, last_ts_exec INTEGER, sl_hard REAL DEFAULT 0, nb_pyramide_ack INTEGER DEFAULT 0, score_C REAL, score_S REAL, score_H REAL, score_M REAL, entry_range_pos REAL, entry_distance_atr REAL, trigger_strength REAL, market_regime TEXT)
 INDEX idx_follower_status CREATE INDEX idx_follower_status
     ON follower(status)
 INDEX idx_follower_uid CREATE INDEX idx_follower_uid
@@ -2221,7 +2278,7 @@ TABLE gest CREATE TABLE gest (
 
     status TEXT NOT NULL,
     ts_status_update INTEGER
-, instId_raw TEXT, strength REAL, ctx TEXT, atr REAL, of_imbalance REAL, confluence REAL, ts_created INTEGER, ts_updated INTEGER, skipped_reason TEXT, fire INTEGER DEFAULT 0, score_of     REAL, score_mo     REAL, score_br     REAL, score_force  REAL, qty_open REAL, pnl_realized REAL, qty_to_close REAL, close_step INTEGER DEFAULT 0, mfe_price REAL, mfe_ts INTEGER, mae_price REAL, mae_ts INTEGER, qty_in_exec      REAL DEFAULT 0, qty_out_exec     REAL DEFAULT 0, qty_open_exec    REAL DEFAULT 0, avg_entry_price  REAL, avg_exit_price   REAL, fee_total_exec   REAL DEFAULT 0, last_exec_step   INTEGER DEFAULT 0, fsm_state TEXT, qty_in REAL DEFAULT 0, qty_out REAL DEFAULT 0, fee_exec_total REAL DEFAULT 0, ts_first_open INTEGER, ts_last_close INTEGER, step INTEGER NOT NULL DEFAULT 0, nb_partial INTEGER DEFAULT 0, nb_pyramide INTEGER DEFAULT 0, nb_pyramide_post_partial INTEGER DEFAULT 0, last_partial_price REAL, last_partial_ts INTEGER, last_pyramide_price REAL, last_pyramide_ts INTEGER, mfe_local REAL, mae_local REAL, vwap_local REAL, cooldown_partial_ts INTEGER, cooldown_pyramide_ts INTEGER, regime TEXT, score_M REAL, mfe_atr REAL, mae_atr REAL, mfe_atr_partial REAL, mfe_atr_pyramide REAL, golden INTEGER DEFAULT 0, golden_ts INTEGER, first_partial_ts INTEGER, first_partial_mfe_atr REAL, first_pyramide_ts INTEGER, last_pyramide_mfe_atr REAL, last_action_ts INTEGER, last_emit_status, last_emit_ts, trigger_type TEXT, dec_mode TEXT, momentum_ok INTEGER DEFAULT 0, prebreak_ok INTEGER DEFAULT 0, pullback_ok INTEGER DEFAULT 0, compression_ok INTEGER DEFAULT 0, dec_ctx TEXT, dec_score_C REAL, ratio_to_open REAL, ratio_to_add  REAL, ratio_to_close REAL)
+, instId_raw TEXT, strength REAL, ctx TEXT, atr REAL, of_imbalance REAL, confluence REAL, ts_created INTEGER, ts_updated INTEGER, skipped_reason TEXT, fire INTEGER DEFAULT 0, score_of     REAL, score_mo     REAL, score_br     REAL, score_force  REAL, qty_open REAL, pnl_realized REAL, qty_to_close REAL, close_step INTEGER DEFAULT 0, mfe_price REAL, mfe_ts INTEGER, mae_price REAL, mae_ts INTEGER, qty_in_exec      REAL DEFAULT 0, qty_out_exec     REAL DEFAULT 0, qty_open_exec    REAL DEFAULT 0, avg_entry_price  REAL, avg_exit_price   REAL, fee_total_exec   REAL DEFAULT 0, last_exec_step   INTEGER DEFAULT 0, fsm_state TEXT, qty_in REAL DEFAULT 0, qty_out REAL DEFAULT 0, fee_exec_total REAL DEFAULT 0, ts_first_open INTEGER, ts_last_close INTEGER, step INTEGER NOT NULL DEFAULT 0, nb_partial INTEGER DEFAULT 0, nb_pyramide INTEGER DEFAULT 0, nb_pyramide_post_partial INTEGER DEFAULT 0, last_partial_price REAL, last_partial_ts INTEGER, last_pyramide_price REAL, last_pyramide_ts INTEGER, mfe_local REAL, mae_local REAL, vwap_local REAL, cooldown_partial_ts INTEGER, cooldown_pyramide_ts INTEGER, regime TEXT, score_M REAL, mfe_atr REAL, mae_atr REAL, mfe_atr_partial REAL, mfe_atr_pyramide REAL, golden INTEGER DEFAULT 0, golden_ts INTEGER, first_partial_ts INTEGER, first_partial_mfe_atr REAL, first_pyramide_ts INTEGER, last_pyramide_mfe_atr REAL, last_action_ts INTEGER, last_emit_status, last_emit_ts, trigger_type TEXT, dec_mode TEXT, momentum_ok INTEGER DEFAULT 0, prebreak_ok INTEGER DEFAULT 0, pullback_ok INTEGER DEFAULT 0, compression_ok INTEGER DEFAULT 0, dec_ctx TEXT, dec_score_C REAL, ratio_to_open REAL, ratio_to_add  REAL, ratio_to_close REAL, s_struct REAL, s_timing REAL, s_quality REAL, s_vol REAL, s_confirm REAL, market_regime TEXT, market_volatility REAL, market_trend REAL, trigger_strength REAL, trigger_age_ms INTEGER, trigger_distance_atr REAL, range_high REAL, range_low REAL, range_pos REAL, spread REAL, orderbook_imbalance REAL, entry_range_pos REAL, entry_distance_atr REAL, entry_delay_ms INTEGER, spread_entry REAL, signal_age_ms INTEGER)
 INDEX idx_gest_instId CREATE INDEX idx_gest_instId
     ON gest(instId)
 INDEX idx_gest_price_signal CREATE INDEX idx_gest_price_signal
@@ -2931,7 +2988,7 @@ TABLE recorder CREATE TABLE recorder (
     wt_peak_price REAL,
 
     ts_recorded INTEGER NOT NULL
-, fee_total REAL DEFAULT 0, score_of    REAL, score_mo    REAL, score_br    REAL, score_force REAL, mfe_price REAL, mfe_ts INTEGER, mae_price REAL, mae_ts INTEGER, pnl_realized REAL, close_steps INTEGER, atr_signal REAL, price_exec_close REAL, score_H REAL, score_M REAL, nb_partial INTEGER DEFAULT 0, nb_pyramide INTEGER DEFAULT 0, mfe_atr REAL DEFAULT 0.0, mae_atr REAL DEFAULT 0.0, golden INTEGER DEFAULT 0, golden_ts INTEGER, last_action_ts INTEGER, last_pyramide_mfe_atr REAL, first_partial_mfe_atr REAL, trigger_type TEXT, dec_mode TEXT, momentum_ok INTEGER DEFAULT 0, prebreak_ok INTEGER DEFAULT 0, pullback_ok INTEGER DEFAULT 0, compression_ok INTEGER DEFAULT 0, dec_ctx TEXT, dec_score_C REAL, high REAL, low REAL, fees REAL, duration INTEGER, slippage REAL, volatility REAL, atr REAL, trend_strength REAL)
+, fee_total REAL DEFAULT 0, score_of    REAL, score_mo    REAL, score_br    REAL, score_force REAL, mfe_price REAL, mfe_ts INTEGER, mae_price REAL, mae_ts INTEGER, pnl_realized REAL, close_steps INTEGER, atr_signal REAL, price_exec_close REAL, score_H REAL, score_M REAL, nb_partial INTEGER DEFAULT 0, nb_pyramide INTEGER DEFAULT 0, mfe_atr REAL DEFAULT 0.0, mae_atr REAL DEFAULT 0.0, golden INTEGER DEFAULT 0, golden_ts INTEGER, last_action_ts INTEGER, last_pyramide_mfe_atr REAL, first_partial_mfe_atr REAL, trigger_type TEXT, dec_mode TEXT, momentum_ok INTEGER DEFAULT 0, prebreak_ok INTEGER DEFAULT 0, pullback_ok INTEGER DEFAULT 0, compression_ok INTEGER DEFAULT 0, dec_ctx TEXT, dec_score_C REAL, step, entry_sl_distance_atr REAL, entry_tp_distance_atr REAL, entry_range_pos REAL, mfe_ratio REAL, mae_ratio REAL, profit_capture_ratio REAL, slippage_entry REAL, slippage_exit REAL, entry_distance_atr REAL, entry_delay_ms INTEGER, trigger_strength REAL, market_regime TEXT, high REAL, low REAL, fees REAL, duration INTEGER, slippage REAL, volatility REAL, atr REAL, trend_strength REAL)
 TABLE recorder_steps CREATE TABLE recorder_steps (
     uid              TEXT NOT NULL,
     step             INTEGER NOT NULL,
@@ -3165,6 +3222,16 @@ SELECT
 FROM recorder
 WHERE pnl_net IS NOT NULL
 GROUP BY instId, side, entry_reason
+VIEW v_trade_lineage CREATE VIEW v_trade_lineage AS
+        SELECT
+            r.uid,
+            r.instId,
+            r.side,
+            r.ts_signal,
+            r.ts_open,
+            r.ts_close,
+            r.pnl_net
+        FROM recorder r
 VIEW v_trade_stats CREATE VIEW v_trade_stats AS
 SELECT
     r.uid,
@@ -3401,7 +3468,7 @@ TABLE triggers CREATE TABLE triggers (
 
     ts            INTEGER NOT NULL,
     status        TEXT NOT NULL             -- armed | fire | consumed
-, ts_fire      INTEGER, ttl_ms       INTEGER, expires_at   INTEGER, validated    INTEGER DEFAULT 0, ts_validated INTEGER, mfe_early    REAL, mae_early    REAL, phase TEXT DEFAULT 'armed', fire_reason TEXT, ctx TEXT, score_ctx REAL, pos_in_range REAL, momentum_1 REAL, momentum_acc REAL, rsi REAL, adx REAL, macdhist REAL, bb_width REAL, armed_tick_count INTEGER DEFAULT 0, regime TEXT, range_high REAL, range_low REAL, armed_ticks INTEGER DEFAULT 0, pattern TEXT, ts_arm INTEGER, ts_expire INTEGER, score_M REAL, score_H REAL, trigger_type TEXT, momentum_ok INTEGER, prebreak_ok INTEGER, pullback_ok INTEGER, compression_ok INTEGER, dec_score_C REAL, dec_mode TEXT, extra_ctx, ts_created)
+, ts_fire      INTEGER, ttl_ms       INTEGER, expires_at   INTEGER, validated    INTEGER DEFAULT 0, ts_validated INTEGER, mfe_early    REAL, mae_early    REAL, phase TEXT DEFAULT 'armed', fire_reason TEXT, ctx TEXT, score_ctx REAL, pos_in_range REAL, momentum_1 REAL, momentum_acc REAL, rsi REAL, adx REAL, macdhist REAL, bb_width REAL, armed_tick_count INTEGER DEFAULT 0, regime TEXT, range_high REAL, range_low REAL, armed_ticks INTEGER DEFAULT 0, pattern TEXT, ts_arm INTEGER, ts_expire INTEGER, score_M REAL, score_H REAL, trigger_type TEXT, momentum_ok INTEGER, prebreak_ok INTEGER, pullback_ok INTEGER, compression_ok INTEGER, dec_score_C REAL, dec_mode TEXT, extra_ctx, ts_created, trigger_strength REAL, trigger_age_ms INTEGER, trigger_distance_atr REAL, spread_entry REAL, signal_age_ms INTEGER)
 INDEX idx_triggers_instId CREATE INDEX idx_triggers_instId  ON triggers(instId)
 INDEX idx_triggers_status CREATE INDEX idx_triggers_status  ON triggers(status)
 INDEX idx_triggers_ts CREATE INDEX idx_triggers_ts      ON triggers(ts)
@@ -3429,6 +3496,10 @@ JOIN (
 ON t.instId = last.instId
 AND t.side   = last.side
 AND t.ts     = last.max_ts
+
+-- ===============================
+-- DATABASE: u.db
+-- ===============================
 
 -- ===============================
 -- DATABASE: universe.db
@@ -3517,6 +3588,10 @@ WHERE
     AND ut.tradable = 1
 
 -- ===============================
+-- DATABASE: ws.db
+-- ===============================
+
+-- ===============================
 -- DATABASE: wticks.db
 -- ===============================
 TABLE wticks CREATE TABLE wticks (
@@ -3581,14 +3656,3 @@ SELECT
     ts_updated
 FROM wticks_extended
 ORDER BY ts_signal DESC
-
-VIEW v_trade_lineage CREATE VIEW v_trade_lineage AS
-SELECT
-    r.uid,
-    r.instId,
-    r.side,
-    r.ts_signal,
-    r.ts_open,
-    r.ts_close,
-    r.pnl_net
-FROM recorder r
