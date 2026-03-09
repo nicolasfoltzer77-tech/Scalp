@@ -32,6 +32,7 @@ try:
     from dec_ctx import load_ctx
     from dec_atr import refresh_snap_atr
     from dec_market import load_market_ok, market_pass
+    from dec_range import refresh_snap_range
 except Exception as e:
     log.exception("[BOOT_IMPORT_ERR]")
     raise
@@ -41,6 +42,7 @@ ROOT = Path("/opt/scalp/project")
 DB_DEC = ROOT / "data/dec.db"
 CFG_PATH = ROOT / "conf/dec.yaml"
 LOOP_SLEEP = 2.0
+RANGE_REFRESH_INTERVAL_S = 45
 
 CFG = yaml.safe_load(open(CFG_PATH))["dec"]
 
@@ -122,10 +124,27 @@ def ensure_v_dec_fire_view(c):
 
 def main():
     log.info("[START] dec_writer loop")
+    last_range_refresh_ms = 0
+    cfg_range = CFG.get("range", {}) if isinstance(CFG, dict) else {}
+    range_refresh_interval_s = float(cfg_range.get("refresh_interval_s", RANGE_REFRESH_INTERVAL_S))
 
     while True:
         try:
             ts = now_ms()
+
+            if ts - last_range_refresh_ms >= int(range_refresh_interval_s * 1000):
+                range_stats = refresh_snap_range()
+                last_range_refresh_ms = ts
+                log.info(
+                    "[RANGE_REFRESH] rows=%d skipped_short=%d skipped_invalid=%d lag_ms=%s stale_rows=%d is_stale=%s duration_ms=%d",
+                    range_stats.get("rows", 0),
+                    range_stats.get("skipped_short", 0),
+                    range_stats.get("skipped_invalid", 0),
+                    str(range_stats.get("lag_ms")),
+                    range_stats.get("stale_rows", 0),
+                    str(range_stats.get("is_stale", False)),
+                    range_stats.get("duration_ms", 0),
+                )
 
             ctx_rows = load_ctx()
             atr_rows = refresh_snap_atr()
