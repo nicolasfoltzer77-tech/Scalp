@@ -21,13 +21,20 @@ def connect_db(db_path: Optional[str | Path] = None) -> sqlite3.Connection:
 
 def ensure_output_dirs(output_root: str | Path = OUTPUT_ROOT) -> dict[str, Path]:
     root = Path(output_root)
-    csv_dir = root / "csv"
+    table_dir = root / "tables"
     graph_dir = root / "graphs"
-    chart_dir = root / "charts"
     report_dir = root / "reports"
-    for p in (root, csv_dir, graph_dir, chart_dir, report_dir):
+    for p in (root, table_dir, graph_dir, report_dir):
         p.mkdir(parents=True, exist_ok=True)
-    return {"root": root, "csv": csv_dir, "graphs": graph_dir, "charts": graph_dir, "reports": report_dir}
+    return {
+        "root": root,
+        "tables": table_dir,
+        "graphs": graph_dir,
+        "reports": report_dir,
+        # Backward-compatible aliases used throughout analysis modules.
+        "csv": table_dir,
+        "charts": graph_dir,
+    }
 
 
 def list_tables(conn: sqlite3.Connection) -> list[str]:
@@ -135,22 +142,46 @@ def leverage_bucket(series: pd.Series) -> pd.Series:
 
 
 def compute_basic_metrics(df: pd.DataFrame, pnl_col: str, group_cols: list[str]) -> pd.DataFrame:
+    metric_cols = [
+        "trade_count",
+        "winrate",
+        "expectancy",
+        "profit_factor",
+        "avg_win",
+        "avg_loss",
+        "avg_duration",
+        # Legacy aliases retained for compatibility with existing notebooks/modules.
+        "trades",
+        "avg_pnl",
+    ]
     if df.empty:
-        return pd.DataFrame(columns=group_cols + ["trades", "winrate", "expectancy", "profit_factor", "avg_pnl"])
+        return pd.DataFrame(columns=group_cols + metric_cols)
 
     rows = []
+    duration_col = pick_first(df.columns, ["duration_s", "duration_m", "duration_min", "duration_minutes"])
     for keys, sub in df.groupby(group_cols, dropna=False, observed=False):
         pnl = pd.to_numeric(sub[pnl_col], errors="coerce").dropna()
         if pnl.empty:
             continue
-        profits = pnl[pnl > 0].sum()
-        losses = pnl[pnl < 0].sum()
-        pf = np.inf if losses == 0 and profits > 0 else (profits / abs(losses) if losses != 0 else np.nan)
+        profits = pnl[pnl > 0]
+        losses = pnl[pnl < 0]
+        gross_profit = profits.sum()
+        gross_loss = losses.sum()
+        pf = np.inf if gross_loss == 0 and gross_profit > 0 else (gross_profit / abs(gross_loss) if gross_loss != 0 else np.nan)
+
+        avg_duration = np.nan
+        if duration_col is not None:
+            avg_duration = float(pd.to_numeric(sub[duration_col], errors="coerce").dropna().mean())
+
         rec = {
-            "trades": len(pnl),
+            "trade_count": int(len(pnl)),
             "winrate": float((pnl > 0).mean()),
             "expectancy": float(pnl.mean()),
             "profit_factor": float(pf) if pd.notna(pf) else np.nan,
+            "avg_win": float(profits.mean()) if not profits.empty else np.nan,
+            "avg_loss": float(losses.mean()) if not losses.empty else np.nan,
+            "avg_duration": avg_duration,
+            "trades": int(len(pnl)),
             "avg_pnl": float(pnl.mean()),
         }
         if not isinstance(keys, tuple):
@@ -160,5 +191,5 @@ def compute_basic_metrics(df: pd.DataFrame, pnl_col: str, group_cols: list[str])
         rows.append(rec)
     out = pd.DataFrame(rows)
     if not out.empty:
-        out = out[group_cols + ["trades", "winrate", "expectancy", "profit_factor", "avg_pnl"]]
+        out = out[group_cols + metric_cols]
     return out
