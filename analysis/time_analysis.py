@@ -19,7 +19,7 @@ def run(conn: sqlite3.Connection, out: dict) -> dict:
     if not pnl_col or not oc or not cc:
         return {"status": "skipped", "reason": "missing pnl or open/close timestamps"}
 
-    duration = (db.to_datetime_series(trades[cc]) - db.to_datetime_series(trades[oc])).dt.total_seconds()
+    duration = (db.to_datetime_series(trades[cc], column_name=cc) - db.to_datetime_series(trades[oc], column_name=oc)).dt.total_seconds()
     trades["duration_s"] = duration
     bins = [0, 30, 60, 180, 600, float("inf")]
     labels = ["0-30 sec", "30-60 sec", "1-3 min", "3-10 min", "10+ min"]

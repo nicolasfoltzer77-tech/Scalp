@@ -25,7 +25,7 @@ def run(conn: sqlite3.Connection, out: dict) -> dict:
     if not tid_col or not pnl_col or not ts_col:
         return {"status": "skipped", "reason": "missing step trade id/pnl/time"}
 
-    steps["ts_dt"] = db.to_datetime_series(steps[ts_col])
+    steps["ts_dt"] = db.to_datetime_series(steps[ts_col], column_name=ts_col)
     steps[pnl_col] = pd.to_numeric(steps[pnl_col], errors="coerce")
     steps = steps.sort_values([tid_col, "ts_dt"])
 

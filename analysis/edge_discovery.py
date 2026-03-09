@@ -143,13 +143,15 @@ def run(conn: sqlite3.Connection, out: dict) -> dict:
 
     work = trades[REQUIRED_COLUMNS].copy()
     work["pnl_net"] = pd.to_numeric(work["pnl_net"], errors="coerce")
-    work["ts_open"] = db.to_datetime_series(work["ts_open"])
+    work["ts_open"] = db.to_datetime_series(work["ts_open"], column_name="ts_open")
     work = work.dropna(subset=["pnl_net", "ts_open"])
     if work.empty:
         return {"status": "skipped", "reason": "no valid rows after cleanup", "table": table}
 
     work["coin"] = work["instId"].astype(str)
     work["hour_of_day"] = work["ts_open"].dt.hour
+    work["weekday"] = work["ts_open"].dt.day_name()
+    work["date"] = work["ts_open"].dt.date
     work["volatility_bucket"] = _quantile_bucket(work["volatility"], q=5, prefix="V")
     work["leverage_bucket"] = _quantile_bucket(work["lev"], q=5, prefix="L")
     work["score_C_bucket"] = _quantile_bucket(work["score_C"], q=5, prefix="C")
@@ -163,6 +165,8 @@ def run(conn: sqlite3.Connection, out: dict) -> dict:
     grouped_specs = {
         "coin": ["coin"],
         "hour_of_day": ["hour_of_day"],
+        "weekday": ["weekday"],
+        "date": ["date"],
         "volatility_bucket": ["volatility_bucket"],
         "score_C_bucket": ["score_C_bucket"],
         "score_S_bucket": ["score_S_bucket"],
@@ -175,6 +179,8 @@ def run(conn: sqlite3.Connection, out: dict) -> dict:
     base_cols = [
         "coin",
         "hour_of_day",
+        "weekday",
+        "date",
         "volatility_bucket",
         "score_C_bucket",
         "score_S_bucket",
@@ -260,6 +266,8 @@ def run(conn: sqlite3.Connection, out: dict) -> dict:
     feature_cols = [
         "coin",
         "hour_of_day",
+        "weekday",
+        "date",
         "volatility_bucket",
         "score_C_bucket",
         "score_S_bucket",

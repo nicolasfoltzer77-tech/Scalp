@@ -31,8 +31,8 @@ def run(conn: sqlite3.Connection, out: dict) -> dict:
     work.columns = ["ts_open", "ts_signal", "pnl_net"]
     work["pnl_net"] = pd.to_numeric(work["pnl_net"], errors="coerce")
 
-    open_ts = db.to_datetime_series(work["ts_open"])
-    signal_ts = db.to_datetime_series(work["ts_signal"])
+    open_ts = db.to_datetime_series(work["ts_open"], column_name="ts_open")
+    signal_ts = db.to_datetime_series(work["ts_signal"], column_name="ts_signal")
     work["entry_delay_s"] = (open_ts - signal_ts).dt.total_seconds()
     work = work.dropna(subset=["entry_delay_s", "pnl_net"])
     work = work[work["entry_delay_s"] >= 0]

@@ -135,8 +135,8 @@ def _write_trade_summary(conn: sqlite3.Connection, out: dict) -> dict:
 
     durations = None
     if open_col and close_col:
-        open_ts = db.to_datetime_series(trades[open_col])
-        close_ts = db.to_datetime_series(trades[close_col])
+        open_ts = db.to_datetime_series(trades[open_col], column_name=open_col)
+        close_ts = db.to_datetime_series(trades[close_col], column_name=close_col)
         durations = (close_ts - open_ts).dt.total_seconds() / 60.0
 
     pnl = trades[pnl_col] if pnl_col else pd.Series(dtype="float64")
@@ -175,7 +175,7 @@ def _write_regime_rank(conn: sqlite3.Connection, out: dict) -> dict:
     work = trades[[pnl_col, symbol_col, open_col, volatility_col]].copy()
     work.columns = ["pnl", "coin", "open_time", "volatility"]
     work["pnl"] = pd.to_numeric(work["pnl"], errors="coerce")
-    work["open_time"] = db.to_datetime_series(work["open_time"])
+    work["open_time"] = db.to_datetime_series(work["open_time"], column_name="open_time")
     work["volatility"] = pd.to_numeric(work["volatility"], errors="coerce")
     work = work.dropna(subset=["pnl", "open_time", "volatility", "coin"])
 

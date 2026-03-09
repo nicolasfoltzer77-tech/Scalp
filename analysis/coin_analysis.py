@@ -21,7 +21,7 @@ def run(conn: sqlite3.Connection, out: dict) -> dict:
         return {"status": "skipped", "reason": "missing symbol or pnl"}
 
     if oc and cc:
-        trades["duration_s"] = (db.to_datetime_series(trades[cc]) - db.to_datetime_series(trades[oc])).dt.total_seconds()
+        trades["duration_s"] = (db.to_datetime_series(trades[cc], column_name=cc) - db.to_datetime_series(trades[oc], column_name=oc)).dt.total_seconds()
 
     metrics = db.compute_basic_metrics(trades, pnl_col, [symbol_col]).rename(columns={symbol_col: "symbol"})
     if "duration_s" in trades.columns:

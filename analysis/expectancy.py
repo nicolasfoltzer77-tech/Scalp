@@ -20,9 +20,10 @@ def run(conn: sqlite3.Connection, out: dict) -> dict:
 
     oc, cc = db.find_open_close_time_cols(trades.columns)
     if oc:
-        dt = db.to_datetime_series(trades[oc])
+        dt = db.to_datetime_series(trades[oc], column_name=oc)
         trades["hour_of_day"] = dt.dt.hour
-        trades["day_of_week"] = dt.dt.day_name()
+        trades["weekday"] = dt.dt.day_name()
+        trades["date"] = dt.dt.date
 
     lev_col = db.find_leverage_col(trades.columns)
     if lev_col:
@@ -34,7 +35,8 @@ def run(conn: sqlite3.Connection, out: dict) -> dict:
         "leverage_bucket": "leverage_bucket" if "leverage_bucket" in trades.columns else None,
         "step": db.find_step_col(trades.columns),
         "hour_of_day": "hour_of_day" if "hour_of_day" in trades.columns else None,
-        "day_of_week": "day_of_week" if "day_of_week" in trades.columns else None,
+        "weekday": "weekday" if "weekday" in trades.columns else None,
+        "date": "date" if "date" in trades.columns else None,
     }
 
     for name, col in groups.items():
