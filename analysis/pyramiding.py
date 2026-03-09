@@ -41,7 +41,7 @@ def run(conn: sqlite3.Connection, out: dict) -> dict:
 
     oc, cc = db.find_open_close_time_cols(merged.columns)
     if oc and cc:
-        merged["duration_seconds"] = (db.to_datetime_series(merged[cc]) - db.to_datetime_series(merged[oc])).dt.total_seconds()
+        merged["duration_seconds"] = (db.to_datetime_series(merged[cc], column_name=cc) - db.to_datetime_series(merged[oc], column_name=oc)).dt.total_seconds()
 
     merged["pyramide_bucket"] = merged["pyramide_count"].map(_bucket)
     metrics = db.compute_basic_metrics(merged, pnl_col, ["pyramide_bucket"])

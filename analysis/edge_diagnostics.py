@@ -180,7 +180,7 @@ def run(conn: sqlite3.Connection, out: dict) -> dict:
 
     time_col = open_col or close_col
     if time_col:
-        ts = db.to_datetime_series(work[time_col])
+        ts = db.to_datetime_series(work[time_col], column_name=time_col)
         hour = ts.dt.hour
         time_bucket = pd.cut(
             hour,

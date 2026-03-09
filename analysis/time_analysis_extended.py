@@ -20,29 +20,44 @@ def run(conn: sqlite3.Connection, out: dict) -> dict:
         return {"status": "skipped", "reason": reason}
 
     pnl_col = db.find_pnl_col(trades.columns)
-    tcol = db.pick_first(trades.columns, ["close_time", "ts_close", "open_time", "ts_open", "ts"])
-    if pnl_col is None or tcol is None:
-        reason = "missing pnl/time columns"
+    if pnl_col is None:
+        reason = "missing pnl column"
         log.warning(reason)
         return {"status": "skipped", "reason": reason, "table": table}
 
     work = trades.copy()
     work["pnl"] = pd.to_numeric(work[pnl_col], errors="coerce")
-    work["t"] = db.to_datetime_series(work[tcol])
+
+    if "ts_open" in work.columns:
+        work["ts_open"] = pd.to_datetime(work["ts_open"], unit="ms", utc=True, errors="coerce")
+    if "ts_close" in work.columns:
+        work["ts_close"] = pd.to_datetime(work["ts_close"], unit="ms", utc=True, errors="coerce")
+
+    tcol = db.pick_first(work.columns, ["ts_close", "ts_open", "close_time", "open_time", "ts"])
+    if tcol is None:
+        reason = "missing time columns"
+        log.warning(reason)
+        return {"status": "skipped", "reason": reason, "table": table}
+
+    work["t"] = db.to_datetime_series(work[tcol], column_name=tcol)
+    if "ts_close" in work.columns and "ts_open" in work.columns:
+        work["t"] = work["ts_close"].fillna(work["ts_open"]).fillna(work["t"])
+
     work = work.dropna(subset=["t", "pnl"])
     if work.empty:
         reason = "no valid rows after time conversion"
         log.warning(reason)
         return {"status": "skipped", "reason": reason, "table": table}
 
-    work["hour"] = work["t"].dt.hour
+    work["hour_of_day"] = work["t"].dt.hour
     work["weekday"] = work["t"].dt.day_name()
+    work["date"] = work["t"].dt.date
 
     sns.set_theme(style="whitegrid")
 
-    by_hour = work.groupby("hour", observed=False)["pnl"].sum().reset_index(name="pnl_sum")
+    by_hour = work.groupby("hour_of_day", observed=False)["pnl"].sum().reset_index(name="pnl_sum")
     plt.figure(figsize=(8, 4))
-    sns.barplot(data=by_hour, x="hour", y="pnl_sum")
+    sns.barplot(data=by_hour, x="hour_of_day", y="pnl_sum")
     plt.title("PnL by Hour")
     plt.tight_layout()
     plt.savefig(out["charts"] / "pnl_by_hour.png")
@@ -58,13 +73,13 @@ def run(conn: sqlite3.Connection, out: dict) -> dict:
     plt.savefig(out["charts"] / "pnl_by_weekday.png")
     plt.close()
 
-    expectancy = work.groupby("hour", observed=False)["pnl"].mean().reset_index(name="expectancy")
+    expectancy = work.groupby("hour_of_day", observed=False)["pnl"].mean().reset_index(name="expectancy")
     plt.figure(figsize=(8, 4))
-    sns.lineplot(data=expectancy, x="hour", y="expectancy", marker="o")
+    sns.lineplot(data=expectancy, x="hour_of_day", y="expectancy", marker="o")
     plt.title("Expectancy by Hour")
     plt.tight_layout()
     plt.savefig(out["charts"] / "expectancy_by_hour.png")
     plt.close()
 
-    work[["t", "hour", "weekday", "pnl"]].to_csv(out["csv"] / "time_analysis_extended.csv", index=False)
+    work[["t", "hour_of_day", "weekday", "date", "pnl"]].to_csv(out["csv"] / "time_analysis_extended.csv", index=False)
     return {"status": "ok", "rows": int(len(work)), "table": table}

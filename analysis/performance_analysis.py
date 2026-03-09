@@ -34,7 +34,7 @@ def run(conn: sqlite3.Connection, out: dict) -> dict:
     work[pnl_col] = pd.to_numeric(work[pnl_col], errors="coerce")
     time_col = db.pick_first(work.columns, ["close_time", "ts_close", "open_time", "ts_open", "ts"])
     if time_col:
-        work["_t"] = db.to_datetime_series(work[time_col])
+        work["_t"] = db.to_datetime_series(work[time_col], column_name=time_col)
         work = work.sort_values("_t")
 
     pnl = work[pnl_col].fillna(0.0)

@@ -44,7 +44,7 @@ def run(conn: sqlite3.Connection, out: dict) -> dict:
     df = trades.merge(pyr_count, on=tid_t, how="left")
     df["pyramide_count"] = df["pyramide_count"].fillna(0)
     if oc and cc:
-        df["duration_s"] = (db.to_datetime_series(df[cc]) - db.to_datetime_series(df[oc])).dt.total_seconds()
+        df["duration_s"] = (db.to_datetime_series(df[cc], column_name=cc) - db.to_datetime_series(df[oc], column_name=oc)).dt.total_seconds()
     else:
         df["duration_s"] = 0
 

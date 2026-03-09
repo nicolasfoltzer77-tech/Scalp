@@ -30,9 +30,9 @@ def run(conn: sqlite3.Connection, out: dict) -> dict:
     work.columns = ["ts_open", "mfe_ts", "mae_ts", "pnl_net"]
     work["pnl_net"] = pd.to_numeric(work["pnl_net"], errors="coerce")
 
-    open_ts = db.to_datetime_series(work["ts_open"])
-    mfe_ts = db.to_datetime_series(work["mfe_ts"])
-    mae_ts = db.to_datetime_series(work["mae_ts"])
+    open_ts = db.to_datetime_series(work["ts_open"], column_name="ts_open")
+    mfe_ts = db.to_datetime_series(work["mfe_ts"], column_name="mfe_ts")
+    mae_ts = db.to_datetime_series(work["mae_ts"], column_name="mae_ts")
     work["time_to_mfe"] = (mfe_ts - open_ts).dt.total_seconds()
     work["time_to_mae"] = (mae_ts - open_ts).dt.total_seconds()
 

@@ -55,7 +55,7 @@ def run(conn: sqlite3.Connection, out: dict) -> dict:
 
     df["pyramide_count"] = df.get("pyramide_count", 0).fillna(0)
     if oc and cc:
-        df["duration"] = (db.to_datetime_series(df[cc]) - db.to_datetime_series(df[oc])).dt.total_seconds()
+        df["duration"] = (db.to_datetime_series(df[cc], column_name=cc) - db.to_datetime_series(df[oc], column_name=oc)).dt.total_seconds()
     else:
         df["duration"] = 0
 

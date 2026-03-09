@@ -26,7 +26,7 @@ def run(conn: sqlite3.Connection, out: dict) -> dict:
 
     tcol = db.pick_first(trades.columns, ["close_time", "ts_close", "open_time", "ts_open", "ts"])
     if tcol:
-        trades["t"] = db.to_datetime_series(trades[tcol])
+        trades["t"] = db.to_datetime_series(trades[tcol], column_name=tcol)
         trades = trades.sort_values("t")
 
     pnl = pd.to_numeric(trades[pnl_col], errors="coerce").fillna(0.0)

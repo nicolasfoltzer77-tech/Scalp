@@ -124,12 +124,19 @@ def find_step_time_col(cols: Iterable[str]) -> Optional[str]:
     return pick_first(cols, ["ts_exec", "ts", "timestamp", "time", "created_at", "event_time"])
 
 
-def to_datetime_series(s: pd.Series) -> pd.Series:
+def to_datetime_series(s: pd.Series, column_name: Optional[str] = None) -> pd.Series:
     if s.empty:
-        return pd.to_datetime(s)
+        return pd.to_datetime(s, utc=True)
+
+    col = (column_name or s.name or "").lower()
     numeric = pd.to_numeric(s, errors="coerce")
+
+    # All timestamp-style columns in analysis datasets are stored in milliseconds.
+    if col.startswith("ts") or "_ts" in col:
+        return pd.to_datetime(numeric, unit="ms", errors="coerce", utc=True)
+
     if numeric.notna().mean() > 0.8:
-        # Heuristic: timestamps above 10^12 are ms.
+        # Fallback heuristic for non-ts columns that still contain epoch values.
         unit = "ms" if numeric.dropna().median() > 1e12 else "s"
         return pd.to_datetime(numeric, unit=unit, errors="coerce", utc=True)
     return pd.to_datetime(s, errors="coerce", utc=True)

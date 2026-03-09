@@ -24,8 +24,8 @@ def _duration_seconds(open_s: pd.Series, close_s: pd.Series) -> pd.Series:
             return delta / 1000.0
         return delta
 
-    open_dt = db.to_datetime_series(open_s)
-    close_dt = db.to_datetime_series(close_s)
+    open_dt = db.to_datetime_series(open_s, column_name=open_s.name)
+    close_dt = db.to_datetime_series(close_s, column_name=close_s.name)
     return (close_dt - open_dt).dt.total_seconds()
 
 
