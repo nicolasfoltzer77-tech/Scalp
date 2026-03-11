@@ -1,30 +1,29 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""
-SCALP — OPENER DAEMON
-Responsabilité :
-- ACK exec → opener (*_done)
-- ingest open_req
-- ingest pyramide_req
-
-UPGRADE (non-breaking):
-- try/except par étape : un crash dans ingest_open_req ne bloque plus ingest_pyramide_req
-  (et inversement). Sinon tu peux rester bloqué en pyramide_req à vie.
-"""
-
+import sqlite3
 import time
+from pathlib import Path
 import logging
 
-from opener_from_exec import ingest_exec_done
-from opener_ingest_open import ingest_open_req
-from opener_pyramide import ingest_pyramide_req
+ROOT = Path("/opt/scalp/project")
 
-LOG = "/opt/scalp/project/logs/opener.log"
-LOOP_SLEEP = 0.3
+DB_GEST   = ROOT / "data/gest.db"
+DB_OPENER = ROOT / "data/opener.db"
+
+SQL_INGEST = ROOT / "sql/opener_ingest.sql"
+SQL_ACK    = ROOT / "sql/opener_ack_exec.sql"
+
+LOOP_SLEEP = 0.2
+
+# =========================================
+# LOG
+# =========================================
+
+LOG = ROOT / "logs/opener.log"
 
 logging.basicConfig(
-    filename=LOG,
+    filename=str(LOG),
     level=logging.INFO,
     format="%(asctime)s OPENER %(levelname)s %(message)s"
 )
@@ -32,28 +31,69 @@ logging.basicConfig(
 log = logging.getLogger("OPENER")
 
 
+# =========================================
+# DB
+# =========================================
+
+def conn(db):
+
+    c = sqlite3.connect(db)
+    c.row_factory = sqlite3.Row
+
+    c.execute("PRAGMA journal_mode=WAL;")
+    c.execute("PRAGMA busy_timeout=10000;")
+
+    return c
+
+
+# =========================================
+# INGEST GEST -> OPENER
+# =========================================
+
+def ingest():
+
+    try:
+
+        with conn(DB_OPENER) as o:
+
+            o.executescript(SQL_INGEST.read_text())
+
+    except Exception:
+        log.exception("[ERR] ingest")
+
+
+# =========================================
+# ACK EXEC -> OPENER
+# =========================================
+
+def ack_exec():
+
+    try:
+
+        with conn(DB_OPENER) as o:
+
+            o.executescript(SQL_ACK.read_text())
+
+    except Exception:
+        log.exception("[ERR] ack_exec")
+
+
+# =========================================
+# MAIN LOOP
+# =========================================
+
 def main():
-    log.info("[START] opener daemon")
+
+    log.info("[START] opener")
+
     while True:
-        # 🔑 ORDRE CRITIQUE
-        try:
-            ingest_exec_done()      # exec → opener
-        except Exception:
-            log.exception("[ERR] ingest_exec_done")
 
-        try:
-            ingest_open_req()       # gest → opener (open)
-        except Exception:
-            log.exception("[ERR] ingest_open_req")
+        ack_exec()
 
-        try:
-            ingest_pyramide_req()   # gest → opener (pyramide)
-        except Exception:
-            log.exception("[ERR] ingest_pyramide_req")
+        ingest()
 
         time.sleep(LOOP_SLEEP)
 
 
 if __name__ == "__main__":
     main()
-

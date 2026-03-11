@@ -1,27 +1,22 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""
-Trigger Engine
-READ  : dec.db (v_triggers)
-WRITE : triggers.db (trigger_queue)
-"""
-
 import sqlite3
 import time
-import hashlib
 import logging
 from pathlib import Path
 
 ROOT = Path("/opt/scalp/project")
 
-DB_DEC = ROOT / "data/dec.db"
+DB_DEC  = ROOT / "data/dec.db"
 DB_TRIG = ROOT / "data/triggers.db"
 
 LOG = ROOT / "logs/triggers.log"
 
-ENGINE_SLEEP = 0.5
+ENGINE_SLEEP = 0.2
 MAX_SIGNALS_PER_CYCLE = 10
+
+ASSET_COOLDOWN_SEC = 30
 
 
 logging.basicConfig(
@@ -33,35 +28,28 @@ logging.basicConfig(
 log = logging.getLogger("TRIG")
 
 
+# ------------------------------------------------
+# helpers
+# ------------------------------------------------
+
 def now_ms():
     return int(time.time() * 1000)
 
 
 def conn(db):
+
     c = sqlite3.connect(str(db), timeout=10)
     c.row_factory = sqlite3.Row
+
     c.execute("PRAGMA journal_mode=WAL;")
+    c.execute("PRAGMA busy_timeout=10000;")
+
     return c
 
 
-def build_uid(symbol, side, ts):
-    payload = f"{symbol}:{side}:{ts}".encode()
-    return hashlib.sha1(payload).hexdigest()[:16]
-
-
-def signal_exists(db, symbol, side):
-    r = db.execute(
-        """
-        SELECT 1
-        FROM trigger_queue
-        WHERE instId=? AND side=? AND status IN ('NEW','SENT')
-        LIMIT 1
-        """,
-        (symbol, side),
-    ).fetchone()
-
-    return r is not None
-
+# ------------------------------------------------
+# read signals from DEC cache
+# ------------------------------------------------
 
 def read_signals():
 
@@ -70,20 +58,17 @@ def read_signals():
         rows = d.execute(
             """
             SELECT
+            signal_uid,
+            signal_ts,
             instId,
             side,
             entry_price,
             leverage,
-            margin_usd,
-            position_size_usd,
-            stop_price,
-            take_profit,
-            alpha,
-            market_regime,
-            session,
-            signal_ts
-            FROM v_triggers
-            ORDER BY alpha DESC
+            notional_suggestion,
+            alpha_score,
+            rank
+            FROM triggers_live
+            ORDER BY rank
             LIMIT ?
             """,
             (MAX_SIGNALS_PER_CYCLE,),
@@ -92,17 +77,76 @@ def read_signals():
     return rows
 
 
+# ------------------------------------------------
+# active trigger check
+# ------------------------------------------------
+
+def inst_active(db, instId):
+
+    r = db.execute(
+        """
+        SELECT 1
+        FROM trigger_queue
+        WHERE instId = ?
+        AND status IN ('NEW','INGESTED')
+        LIMIT 1
+        """,
+        (instId,),
+    ).fetchone()
+
+    return r is not None
+
+
+# ------------------------------------------------
+# cooldown check
+# ------------------------------------------------
+
+def cooldown_active(db, instId):
+
+    r = db.execute(
+        """
+        SELECT ts_created
+        FROM trigger_queue
+        WHERE instId = ?
+        ORDER BY ts_created DESC
+        LIMIT 1
+        """,
+        (instId,),
+    ).fetchone()
+
+    if not r:
+        return False
+
+    last_ts = r["ts_created"]
+
+    delta = (now_ms() - last_ts) / 1000
+
+    return delta < ASSET_COOLDOWN_SEC
+
+
+# ------------------------------------------------
+# insert trigger
+# ------------------------------------------------
+
 def push_trigger(db, row):
 
     symbol = row["instId"]
-    side = row["side"]
 
-    if signal_exists(db, symbol, side):
+    if inst_active(db, symbol):
         return False
 
-    ts = now_ms()
+    if cooldown_active(db, symbol):
+        return False
 
-    uid = build_uid(symbol, side, ts)
+    uid = row["signal_uid"]
+    side = row["side"]
+
+    notional = row["notional_suggestion"]
+    leverage = row["leverage"]
+
+    margin = notional / leverage if leverage else notional
+
+    ts = now_ms()
 
     db.execute(
         """
@@ -114,16 +158,11 @@ def push_trigger(db, row):
 
         entry_price,
         leverage,
+
         margin_usd,
         position_size,
 
-        stop_price,
-        take_profit,
-
         alpha,
-
-        market_regime,
-        session,
 
         status,
 
@@ -132,7 +171,7 @@ def push_trigger(db, row):
 
         )
 
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?)
         """,
         (
             uid,
@@ -140,17 +179,12 @@ def push_trigger(db, row):
             side,
 
             row["entry_price"],
-            row["leverage"],
-            row["margin_usd"],
-            row["position_size_usd"],
+            leverage,
 
-            row["stop_price"],
-            row["take_profit"],
+            margin,
+            notional,
 
-            row["alpha"],
-
-            row["market_regime"],
-            row["session"],
+            row["alpha_score"],
 
             "NEW",
 
@@ -160,14 +194,19 @@ def push_trigger(db, row):
     )
 
     log.info(
-        "NEW TRIGGER %s %s alpha=%.3f",
+        "TRIGGER %s %s rank=%d alpha=%.3f",
         symbol,
         side,
-        row["alpha"],
+        row["rank"],
+        row["alpha_score"],
     )
 
     return True
 
+
+# ------------------------------------------------
+# cycle
+# ------------------------------------------------
 
 def run_cycle():
 
@@ -189,6 +228,10 @@ def run_cycle():
 
     return inserted
 
+
+# ------------------------------------------------
+# engine
+# ------------------------------------------------
 
 def main():
 

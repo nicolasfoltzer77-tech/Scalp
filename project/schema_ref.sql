@@ -1018,55 +1018,54 @@ TABLE balance CREATE TABLE balance (
     balance_usdt REAL
 )
 TABLE cluster_history CREATE TABLE cluster_history (
-
-ts INTEGER,
-breakout_count INTEGER,
-avg_energy REAL
-
+    ts INTEGER,
+    breakout_count INTEGER,
+    avg_energy REAL
 )
 TABLE dec_breakout CREATE TABLE dec_breakout (
     instId TEXT PRIMARY KEY,
-    ts     INTEGER,
-    side   TEXT,
-    price  REAL,
+    ts INTEGER,
+    side TEXT,
+    price REAL,
     range_high REAL,
-    range_low  REAL,
+    range_low REAL,
     atr REAL,
     score_ctx REAL,
     regime TEXT,
     compression_ok INTEGER,
-    breakout_now INTEGER
-, ctx TEXT, score_C REAL, ts_updated INTEGER, high_20 REAL, low_20 REAL, bb_width REAL)
+    breakout_now INTEGER,
+    ctx TEXT,
+    score_C REAL,
+    ts_updated INTEGER,
+    high_20 REAL,
+    low_20 REAL,
+    bb_width REAL
+)
 TABLE dec_fire_log CREATE TABLE dec_fire_log (
-    ts          INTEGER NOT NULL,
-    instId      TEXT    NOT NULL,
-
-    ctx         TEXT,
-    score_dec   REAL,
-    regime      TEXT,
-
-    reason      TEXT,
-
+    ts INTEGER NOT NULL,
+    instId TEXT NOT NULL,
+    ctx TEXT,
+    score_dec REAL,
+    regime TEXT,
+    reason TEXT,
     PRIMARY KEY (ts, instId)
 )
 TABLE funding_rates CREATE TABLE funding_rates (
-
-instId TEXT,
-funding_rate REAL,
-ts INTEGER
-
+    instId TEXT,
+    funding_rate REAL,
+    ts INTEGER
 )
-TABLE range_latest CREATE TABLE range_latest(
-  instId TEXT,
-  ts INT,
-  low_20,
-  high_20,
-  low_50,
-  high_50,
-  low_100,
-  high_100,
-  low_200,
-  high_200
+TABLE range_latest CREATE TABLE range_latest (
+    instId TEXT,
+    ts INTEGER,
+    low_20 REAL,
+    high_20 REAL,
+    low_50 REAL,
+    high_50 REAL,
+    low_100 REAL,
+    high_100 REAL,
+    low_200 REAL,
+    high_200 REAL
 )
 TABLE regime_memory_history CREATE TABLE regime_memory_history (
     ts INTEGER PRIMARY KEY,
@@ -1074,131 +1073,1029 @@ TABLE regime_memory_history CREATE TABLE regime_memory_history (
     avg_energy REAL,
     breakout_count INTEGER
 )
+TABLE score_history CREATE TABLE score_history (
+    ts INTEGER NOT NULL,
+    instId TEXT NOT NULL,
+    side TEXT,
+    entry_price REAL,
+
+    breakout_energy REAL,
+    breakout_state TEXT,
+
+    orderflow_score REAL,
+    orderflow_state TEXT,
+
+    volume_delta_proxy REAL,
+    volume_delta_state TEXT,
+
+    vacuum_strength REAL,
+    liquidity_state TEXT,
+
+    volatility REAL,
+    expansion_ratio REAL,
+    volatility_regime TEXT,
+
+    whale_boost REAL,
+    whale_signal TEXT,
+
+    leadlag_state TEXT,
+    sector TEXT,
+    sector_avg_energy REAL,
+    noise_state TEXT,
+
+    meta_score REAL,
+    meta_score_norm REAL,
+    alpha_score REAL,
+    universal_alpha REAL,
+    execution_decision TEXT,
+    alpha_class INTEGER,
+
+    leverage_suggestion REAL,
+    notional_suggestion REAL,
+
+    PRIMARY KEY (ts, instId)
+)
 TABLE sector_map CREATE TABLE sector_map (
-instId TEXT PRIMARY KEY,
-sector TEXT
+    instId TEXT PRIMARY KEY,
+    sector TEXT
 )
 TABLE signal_history CREATE TABLE signal_history (
-
-instId TEXT,
-ts INTEGER,
-energy REAL
-
+    instId TEXT,
+    ts INTEGER,
+    energy REAL
 )
 TABLE snap_atr CREATE TABLE snap_atr (
     instId TEXT PRIMARY KEY,
-
-    atr_1m  REAL,
-    atr_3m  REAL,
-    atr_5m  REAL,
+    atr_1m REAL,
+    atr_3m REAL,
+    atr_5m REAL,
     atr_15m REAL,
     atr_30m REAL,
-
-    ratio_1m_5m  REAL,
+    ratio_1m_5m REAL,
     ratio_5m_15m REAL,
     ratio_5m_30m REAL,
-
-    vol_regime TEXT,        -- COMPRESS | NORMAL | EXPAND
+    vol_regime TEXT,
     ts_updated INTEGER
 )
 TABLE snap_ctx CREATE TABLE snap_ctx (
-  instId TEXT PRIMARY KEY,
-  ctx TEXT,
-  score_C REAL,
-  side TEXT,
-  ctx_ok INTEGER,
-  ts_updated INTEGER
-, atr_fast REAL, atr_slow REAL, vol_regime TEXT, uid TEXT)
+    instId TEXT PRIMARY KEY,
+    ctx TEXT,
+    score_C REAL,
+    side TEXT,
+    ctx_ok INTEGER,
+    ts_updated INTEGER,
+    atr_fast REAL,
+    atr_slow REAL,
+    vol_regime TEXT,
+    uid TEXT
+)
 TABLE snap_orderflow CREATE TABLE snap_orderflow (
-
-instId TEXT PRIMARY KEY,
-
-buy_volume REAL,
-sell_volume REAL,
-
-imbalance REAL,
-orderflow_score REAL,
-
-ts INTEGER
-
+    instId TEXT PRIMARY KEY,
+    buy_volume REAL,
+    sell_volume REAL,
+    imbalance REAL,
+    orderflow_score REAL,
+    ts INTEGER
 )
 TABLE snap_range CREATE TABLE snap_range (
-  instId TEXT PRIMARY KEY,
-  high_20 REAL,
-  low_20 REAL,
-  atr REAL,
-  bb_width REAL,
-  compression_ok INTEGER,
-  ts INTEGER
+    instId TEXT PRIMARY KEY,
+    high_20 REAL,
+    low_20 REAL,
+    atr REAL,
+    bb_width REAL,
+    compression_ok INTEGER,
+    ts INTEGER
 )
-TABLE snap_range_ext CREATE TABLE snap_range_ext(
-            instId TEXT PRIMARY KEY,
-            high50 REAL,
-            low50 REAL,
-            high100 REAL,
-            low100 REAL,
-            high200 REAL,
-            low200 REAL,
-            compression REAL,
-            volatility REAL,
-            ts INTEGER
-        )
+TABLE snap_range_ext CREATE TABLE snap_range_ext (
+    instId TEXT PRIMARY KEY,
+    high50 REAL,
+    low50 REAL,
+    high100 REAL,
+    low100 REAL,
+    high200 REAL,
+    low200 REAL,
+    compression REAL,
+    volatility REAL,
+    ts INTEGER
+)
 TABLE snap_ticks CREATE TABLE snap_ticks (
-    instId  TEXT PRIMARY KEY,
-    lastPr  REAL NOT NULL,
-    ts      INTEGER NOT NULL
+    instId TEXT,
+    lastPr REAL NOT NULL,
+    ts INTEGER NOT NULL
 )
 TABLE ticks_live CREATE TABLE ticks_live (
-    instId   TEXT PRIMARY KEY,
-    lastPr   REAL NOT NULL,
-    ts_ms    INTEGER NOT NULL
+    instId TEXT PRIMARY KEY,
+    lastPr REAL NOT NULL,
+    ts_ms INTEGER NOT NULL
 )
 TABLE trade_lifecycle CREATE TABLE trade_lifecycle (
-
-trade_id INTEGER PRIMARY KEY AUTOINCREMENT,
-
-instId TEXT,
-side TEXT,
-
-entry_price REAL,
-position_size REAL,
-
-stop_price REAL,
-tp_price REAL,
-
-trailing_stop REAL,
-
-status TEXT,
-
-open_ts INTEGER,
-update_ts INTEGER
-
+    trade_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    instId TEXT,
+    side TEXT,
+    entry_price REAL,
+    position_size REAL,
+    stop_price REAL,
+    tp_price REAL,
+    trailing_stop REAL,
+    status TEXT,
+    open_ts INTEGER,
+    update_ts INTEGER
 )
-INDEX idx_cluster_ts CREATE INDEX idx_cluster_ts
-ON cluster_history(ts)
-INDEX idx_dec_fire_log_inst CREATE INDEX idx_dec_fire_log_inst
-    ON dec_fire_log(instId)
-INDEX idx_dec_fire_log_ts CREATE INDEX idx_dec_fire_log_ts
-    ON dec_fire_log(ts)
-INDEX idx_range_inst CREATE INDEX idx_range_inst
-ON range_latest(instId)
-INDEX idx_regime_memory_ts CREATE INDEX idx_regime_memory_ts
-ON regime_memory_history(ts)
-INDEX idx_signal_hist_inst CREATE INDEX idx_signal_hist_inst
-ON signal_history(instId)
-INDEX idx_signal_hist_ts CREATE INDEX idx_signal_hist_ts
-ON signal_history(ts)
-INDEX idx_snap_atr_ts CREATE INDEX idx_snap_atr_ts
-ON snap_atr(ts_updated)
-INDEX idx_snap_ticks_ts CREATE INDEX idx_snap_ticks_ts
-ON snap_ticks(ts DESC)
+TABLE triggers_live CREATE TABLE triggers_live (
+    signal_uid TEXT PRIMARY KEY,
+    signal_ts INTEGER,
+
+    instId TEXT,
+    side TEXT,
+
+    entry_price REAL,
+    sector TEXT,
+
+    alpha_score REAL,
+    universal_alpha REAL,
+    alpha_class INTEGER,
+
+    cross_asset_score REAL,
+    z_score REAL,
+    rank INTEGER,
+
+    leverage INTEGER,
+    notional_suggestion REAL,
+    qty_suggestion REAL
+)
+INDEX idx_cluster_ts CREATE INDEX idx_cluster_ts ON cluster_history(ts)
+INDEX idx_dec_fire_log_inst CREATE INDEX idx_dec_fire_log_inst ON dec_fire_log(instId)
+INDEX idx_dec_fire_log_ts CREATE INDEX idx_dec_fire_log_ts ON dec_fire_log(ts)
+INDEX idx_range_inst CREATE INDEX idx_range_inst ON range_latest(instId)
+INDEX idx_regime_memory_ts CREATE INDEX idx_regime_memory_ts ON regime_memory_history(ts)
+INDEX idx_score_history_inst CREATE INDEX idx_score_history_inst ON score_history(instId)
+INDEX idx_score_history_ts CREATE INDEX idx_score_history_ts ON score_history(ts)
+INDEX idx_sector_map_sector CREATE INDEX idx_sector_map_sector ON sector_map(sector)
+INDEX idx_signal_hist_inst CREATE INDEX idx_signal_hist_inst ON signal_history(instId)
+INDEX idx_signal_hist_ts CREATE INDEX idx_signal_hist_ts ON signal_history(ts)
+INDEX idx_snap_atr_ts CREATE INDEX idx_snap_atr_ts ON snap_atr(ts_updated)
+INDEX idx_snap_ticks_inst_ts CREATE INDEX idx_snap_ticks_inst_ts
+ON snap_ticks(instId, ts DESC)
+INDEX idx_snap_ticks_ts CREATE INDEX idx_snap_ticks_ts ON snap_ticks(ts DESC)
 INDEX idx_ticks_live_ts CREATE INDEX idx_ticks_live_ts ON ticks_live(ts_ms)
+INDEX idx_trade_lifecycle_status CREATE INDEX idx_trade_lifecycle_status ON trade_lifecycle(status)
+INDEX idx_triggers_live_inst CREATE INDEX idx_triggers_live_inst
+ON triggers_live(instId)
+INDEX idx_triggers_live_inst_side CREATE INDEX idx_triggers_live_inst_side
+ON triggers_live(instId, side)
+INDEX idx_triggers_live_rank CREATE INDEX idx_triggers_live_rank
+ON triggers_live(rank)
+INDEX idx_triggers_live_ts CREATE INDEX idx_triggers_live_ts
+ON triggers_live(signal_ts)
+VIEW ctx_capital_flow CREATE VIEW ctx_capital_flow AS
+SELECT
+    instId,
+    breakout_energy,
+    CASE
+        WHEN breakout_energy > 1.60 THEN 'STRONG_FLOW'
+        WHEN breakout_energy > 1.30 THEN 'MODERATE_FLOW'
+        ELSE 'WEAK_FLOW'
+    END AS capital_flow_signal
+FROM f_breakout
+VIEW ctx_cascade CREATE VIEW ctx_cascade AS
+SELECT
+    instId,
+    ROUND(
+        MAX(
+            COALESCE(dist_high100, 0),
+            COALESCE(dist_low100, 0)
+        ),
+        3
+    ) AS nearest_liquidity,
+    ROUND(
+        (
+            MAX(
+                COALESCE(dist_high100, 0),
+                COALESCE(dist_low100, 0)
+            ) / 10.0
+        ) + COALESCE(volatility, 0.5),
+        3
+    ) AS cascade_strength
+FROM f_liquidity_map
+VIEW ctx_leadlag CREATE VIEW ctx_leadlag AS
+WITH latest_ticks AS (
+    SELECT
+        instId,
+        lastPr,
+        ts,
+        ROW_NUMBER() OVER (
+            PARTITION BY instId
+            ORDER BY ts DESC
+        ) AS rn
+    FROM snap_ticks
+),
+last2 AS (
+    SELECT
+        instId,
+        MAX(CASE WHEN rn = 1 THEN lastPr END) AS px_now,
+        MAX(CASE WHEN rn = 2 THEN lastPr END) AS px_prev,
+        MAX(CASE WHEN rn = 1 THEN ts END) AS ts_now
+    FROM latest_ticks
+    WHERE rn <= 2
+    GROUP BY instId
+),
+rets AS (
+    SELECT
+        instId,
+        px_now,
+        px_prev,
+        ts_now,
+        ROUND((px_now - px_prev) / NULLIF(px_prev, 0), 6) AS ret_1tick
+    FROM last2
+    WHERE px_now IS NOT NULL
+      AND px_prev IS NOT NULL
+),
+btc AS (
+    SELECT ret_1tick AS btc_ret
+    FROM rets
+    WHERE instId = 'BTC/USDT'
+),
+eth AS (
+    SELECT ret_1tick AS eth_ret
+    FROM rets
+    WHERE instId = 'ETH/USDT'
+)
+SELECT
+    r.instId,
+    r.px_now,
+    r.px_prev,
+    r.ts_now,
+    r.ret_1tick AS asset_ret_1tick,
+    COALESCE((SELECT btc_ret FROM btc), 0.0) AS btc_ret_1tick,
+    COALESCE((SELECT eth_ret FROM eth), 0.0) AS eth_ret_1tick,
+    CASE
+        WHEN (
+            COALESCE((SELECT btc_ret FROM btc), 0.0) > 0.002
+            OR COALESCE((SELECT eth_ret FROM eth), 0.0) > 0.002
+        ) AND r.ret_1tick < 0.001
+            THEN 'LAGGING_UPSIDE'
+        WHEN (
+            COALESCE((SELECT btc_ret FROM btc), 0.0) < -0.002
+            OR COALESCE((SELECT eth_ret FROM eth), 0.0) < -0.002
+        ) AND r.ret_1tick > -0.001
+            THEN 'LAGGING_DOWNSIDE'
+        WHEN ABS(r.ret_1tick - COALESCE((SELECT btc_ret FROM btc), 0.0)) < 0.0015
+            THEN 'ALIGNED_BTC'
+        WHEN ABS(r.ret_1tick - COALESCE((SELECT eth_ret FROM eth), 0.0)) < 0.0015
+            THEN 'ALIGNED_ETH'
+        ELSE 'IDIOSYNCRATIC'
+    END AS leadlag_state
+FROM rets r
+WHERE r.instId NOT IN ('BTC/USDT', 'ETH/USDT')
+VIEW ctx_market_regime CREATE VIEW ctx_market_regime AS
+SELECT
+    ROUND(AVG(breakout_energy), 3) AS avg_energy,
+    COUNT(*) AS assets,
+    CASE
+        WHEN AVG(breakout_energy) > 1.50 THEN 'TREND'
+        WHEN AVG(breakout_energy) > 1.30 THEN 'MOMENTUM'
+        WHEN AVG(breakout_energy) > 1.10 THEN 'ROTATION'
+        ELSE 'RANGE'
+    END AS market_regime
+FROM f_breakout
+VIEW ctx_sector_map CREATE VIEW ctx_sector_map AS
+SELECT
+    s.instId,
+    COALESCE(
+        sm.sector,
+        CASE
+            WHEN s.instId IN ('BTC/USDT','ETH/USDT','BNB/USDT','SOL/USDT','XRP/USDT','ADA/USDT','DOGE/USDT','LTC/USDT','TRX/USDT') THEN 'MAJORS'
+            WHEN s.instId IN ('AVAX/USDT','SUI/USDT','ATOM/USDT','NEAR/USDT','APT/USDT','SEI/USDT','TIA/USDT','INJ/USDT') THEN 'L1'
+            WHEN s.instId IN ('UNI/USDT','AAVE/USDT','CRV/USDT','ONDO/USDT','LINK/USDT','PENDLE/USDT','MKR/USDT') THEN 'DEFI'
+            WHEN s.instId IN ('PEPE/USDT','FLOKI/USDT','PNUT/USDT','PENGU/USDT','DOGE/USDT','WIF/USDT','BONK/USDT','SHIB/USDT','BOME/USDT','TURBO/USDT','MOODENG/USDT') THEN 'MEME'
+            WHEN s.instId IN ('FET/USDT','TAO/USDT','WLD/USDT','RENDER/USDT','GLM/USDT') THEN 'AI'
+            ELSE 'OTHER'
+        END
+    ) AS sector
+FROM (
+    SELECT instId FROM ticks_live
+    UNION
+    SELECT instId FROM snap_range_ext
+    UNION
+    SELECT instId FROM snap_ctx
+) s
+LEFT JOIN sector_map sm USING(instId)
+VIEW ctx_sector_rotation CREATE VIEW ctx_sector_rotation AS
+SELECT
+    m.instId,
+    m.sector,
+    ROUND(sec.avg_energy, 3) AS sector_avg_energy,
+    sec.assets
+FROM ctx_sector_map m
+JOIN (
+    SELECT
+        sm.sector,
+        COUNT(*) AS assets,
+        AVG(b.breakout_energy) AS avg_energy
+    FROM f_breakout b
+    JOIN ctx_sector_map sm USING(instId)
+    GROUP BY sm.sector
+) sec
+ON m.sector = sec.sector
+VIEW ctx_signal_side CREATE VIEW ctx_signal_side AS
+SELECT
+    t.instId,
+    CASE
+        WHEN t.lastPr > r.high50 THEN 'buy'
+        WHEN t.lastPr < r.low50 THEN 'sell'
+        WHEN (t.lastPr - r.low50) / NULLIF(r.high50 - r.low50, 0) > 0.65 THEN 'buy'
+        WHEN (t.lastPr - r.low50) / NULLIF(r.high50 - r.low50, 0) < 0.35 THEN 'sell'
+        ELSE 'neutral'
+    END AS side
+FROM ticks_live t
+JOIN snap_range_ext r USING(instId)
+VIEW exec_final CREATE VIEW exec_final AS
+SELECT
+    instId,
+    side,
+    entry_price,
+
+    breakout_energy,
+    breakout_state,
+    orderflow_score,
+    orderflow_state,
+    volume_delta_proxy,
+    volume_delta_state,
+    vacuum_strength,
+    liquidity_state,
+    liquidity_direction,
+    volatility,
+    compression,
+    expansion_ratio,
+    volatility_regime,
+    volatility_multiplier,
+    whale_boost,
+    whale_signal,
+    leadlag_state,
+    sector,
+    sector_avg_energy,
+    noise_state,
+    meta_score,
+    meta_score_norm,
+    alpha_score,
+    universal_alpha,
+    alpha_stability,
+    execution_decision,
+
+    CASE
+        WHEN alpha_score > 2.20 THEN 5
+        WHEN alpha_score > 1.90 THEN 4
+        WHEN alpha_score > 1.60 THEN 3
+        WHEN alpha_score > 1.40 THEN 2
+        ELSE 1
+    END AS alpha_class
+FROM exec_gate
+VIEW exec_gate CREATE VIEW exec_gate AS
+SELECT
+    a.*,
+    u.universal_alpha,
+    st.alpha_stability,
+    CASE
+        WHEN a.alpha_score > 1.40
+         AND a.orderflow_state <> 'AGGRESSIVE_SELL'
+         AND a.liquidity_state <> 'STRONG_VACUUM'
+         AND a.noise_state <> 'CHOPPY'
+            THEN 'EXECUTE'
+        ELSE 'SKIP'
+    END AS execution_decision
+FROM score_alpha a
+LEFT JOIN score_universal_alpha u USING(instId, side, entry_price, alpha_score)
+LEFT JOIN score_alpha_stability st USING(instId, side, alpha_score, universal_alpha)
+VIEW f_breakout CREATE VIEW f_breakout AS
+SELECT
+    r.instId,
+    COALESCE(r.compression, 0.5) AS compression,
+    COALESCE(r.volatility, 0.5) AS volatility,
+    ROUND(COALESCE(r.volatility, 0.5) / (COALESCE(r.compression, 0.5) + 0.01), 3) AS breakout_energy,
+    CASE
+        WHEN COALESCE(r.volatility, 0.5) / (COALESCE(r.compression, 0.5) + 0.01) > 2.0 THEN 'EXPLOSIVE'
+        WHEN COALESCE(r.volatility, 0.5) / (COALESCE(r.compression, 0.5) + 0.01) > 1.5 THEN 'STRONG'
+        WHEN COALESCE(r.volatility, 0.5) / (COALESCE(r.compression, 0.5) + 0.01) > 1.2 THEN 'BUILDUP'
+        ELSE 'NONE'
+    END AS breakout_state
+FROM snap_range_ext r
+VIEW f_flow CREATE VIEW f_flow AS
+SELECT
+    w.instId,
+    w.whale_signal,
+    v.volume_delta_state,
+    CASE
+        WHEN w.whale_signal = 'WHALE_ACTIVITY' THEN 1.15
+        ELSE 1.00
+    END AS whale_boost
+FROM f_whale_activity w
+LEFT JOIN f_volume_delta v USING(instId)
+VIEW f_liquidity CREATE VIEW f_liquidity AS
+SELECT
+    m.instId,
+    m.lastPr,
+    m.high200,
+    m.low200,
+    ABS(m.lastPr - m.high200) AS dist_high200,
+    ABS(m.lastPr - m.low200)  AS dist_low200,
+    ROUND(
+        MAX(ABS(m.lastPr - m.high200), ABS(m.lastPr - m.low200)),
+        3
+    ) AS vacuum_strength,
+    CASE
+        WHEN MAX(ABS(m.lastPr - m.high200), ABS(m.lastPr - m.low200)) > 2 THEN 'STRONG_VACUUM'
+        WHEN MAX(ABS(m.lastPr - m.high200), ABS(m.lastPr - m.low200)) > 1 THEN 'MEDIUM_VACUUM'
+        ELSE 'NORMAL'
+    END AS liquidity_state,
+    CASE
+        WHEN ABS(m.lastPr - m.high200) < ABS(m.lastPr - m.low200) THEN 'UPSIDE_LIQUIDITY'
+        ELSE 'DOWNSIDE_LIQUIDITY'
+    END AS liquidity_direction
+FROM f_liquidity_map m
+VIEW f_liquidity_map CREATE VIEW f_liquidity_map AS
+SELECT
+    t.instId,
+    t.lastPr,
+    r.high50,
+    r.low50,
+    r.high100,
+    r.low100,
+    r.high200,
+    r.low200,
+    COALESCE(r.compression, 0.5) AS compression,
+    COALESCE(r.volatility, 0.5) AS volatility,
+    ABS(t.lastPr - r.high100) AS dist_high100,
+    ABS(t.lastPr - r.low100)  AS dist_low100,
+    ABS(t.lastPr - r.high200) AS dist_high200,
+    ABS(t.lastPr - r.low200)  AS dist_low200
+FROM ticks_live t
+JOIN snap_range_ext r USING(instId)
+VIEW f_liquidity_wall CREATE VIEW f_liquidity_wall AS
+SELECT
+    t.instId,
+    ABS(t.lastPr - r.high50) AS dist_high50,
+    ABS(t.lastPr - r.low50)  AS dist_low50,
+    CASE
+        WHEN ABS(t.lastPr - r.high50) < 0.5 THEN 'RESISTANCE_WALL'
+        WHEN ABS(t.lastPr - r.low50)  < 0.5 THEN 'SUPPORT_WALL'
+        ELSE 'NONE'
+    END AS wall_state
+FROM ticks_live t
+JOIN snap_range_ext r USING(instId)
+VIEW f_noise CREATE VIEW f_noise AS
+SELECT
+    r.instId,
+    COALESCE(r.volatility, 0.5) AS volatility,
+    COALESCE(r.compression, 0.5) AS compression,
+    CASE
+        WHEN COALESCE(r.volatility, 0) < 0.35 AND COALESCE(r.compression, 0) > 0.60 THEN 'CHOPPY'
+        WHEN COALESCE(r.volatility, 0) < 0.25 THEN 'LOW_ACTIVITY'
+        ELSE 'NORMAL'
+    END AS noise_state
+FROM snap_range_ext r
+VIEW f_orderflow CREATE VIEW f_orderflow AS
+SELECT
+    o.instId,
+    COALESCE(o.orderflow_score, 1) AS orderflow_raw,
+    COALESCE(v.volume_delta_proxy, 0) AS volume_delta_proxy,
+    COALESCE(w.whale_signal, 'NORMAL') AS whale_signal,
+    CASE
+        WHEN COALESCE(o.orderflow_score, 1) > 1.30
+         AND COALESCE(v.volume_delta_proxy, 0) > 0.15
+            THEN 'AGGRESSIVE_BUY'
+        WHEN COALESCE(o.orderflow_score, 1) < 0.70
+         AND COALESCE(v.volume_delta_proxy, 0) < -0.15
+            THEN 'AGGRESSIVE_SELL'
+        WHEN ABS(COALESCE(v.volume_delta_proxy, 0)) < 0.05
+            THEN 'PASSIVE'
+        ELSE 'BALANCED'
+    END AS orderflow_state,
+    ROUND(
+        0.60 * COALESCE(o.orderflow_score, 1)
+        + 0.40 * (1 + COALESCE(v.volume_delta_proxy, 0)),
+        3
+    ) AS orderflow_score
+FROM snap_orderflow o
+LEFT JOIN f_volume_delta v USING(instId)
+LEFT JOIN f_whale_activity w USING(instId)
+VIEW f_volatility CREATE VIEW f_volatility AS
+SELECT
+    r.instId,
+    COALESCE(r.volatility, 0.5) AS volatility,
+    COALESCE(r.compression, 0.5) AS compression,
+    ROUND(COALESCE(r.volatility, 0.5) / (COALESCE(r.compression, 0.5) + 0.001), 3) AS expansion_ratio,
+    CASE
+        WHEN COALESCE(r.volatility, 0) > 0.80 THEN 'EXTREME'
+        WHEN COALESCE(r.volatility, 0) > 0.65 THEN 'HIGH'
+        WHEN COALESCE(r.volatility, 0) > 0.50 THEN 'MEDIUM'
+        WHEN COALESCE(r.volatility, 0) > 0.35 THEN 'NORMAL'
+        ELSE 'LOW'
+    END AS volatility_regime,
+    CASE
+        WHEN COALESCE(r.volatility, 0) > 0.80 THEN 0.40
+        WHEN COALESCE(r.volatility, 0) > 0.65 THEN 0.60
+        WHEN COALESCE(r.volatility, 0) > 0.50 THEN 0.80
+        WHEN COALESCE(r.volatility, 0) > 0.35 THEN 1.00
+        ELSE 1.20
+    END AS volatility_multiplier
+FROM snap_range_ext r
+VIEW f_volume_delta CREATE VIEW f_volume_delta AS
+SELECT
+    t.instId,
+    t.lastPr,
+    COALESCE(r.volatility, 0.5) AS volatility,
+    COALESCE(r.compression, 0.5) AS compression,
+    ROUND(COALESCE(r.volatility, 0.5) - COALESCE(r.compression, 0.5), 3) AS volume_delta_proxy,
+    CASE
+        WHEN COALESCE(r.volatility, 0) - COALESCE(r.compression, 0) > 0.45 THEN 'AGGRESSIVE_BUYERS'
+        WHEN COALESCE(r.volatility, 0) - COALESCE(r.compression, 0) < -0.10 THEN 'AGGRESSIVE_SELLERS'
+        ELSE 'NEUTRAL_FLOW'
+    END AS volume_delta_state
+FROM ticks_live t
+LEFT JOIN snap_range_ext r USING(instId)
+VIEW f_whale_activity CREATE VIEW f_whale_activity AS
+SELECT
+    r.instId,
+    COALESCE(r.volatility, 0.5) AS volatility,
+    COALESCE(r.compression, 0.5) AS compression,
+    CASE
+        WHEN COALESCE(r.volatility, 0) > 0.80 AND COALESCE(r.compression, 1) < 0.35 THEN 'WHALE_ACTIVITY'
+        ELSE 'NORMAL'
+    END AS whale_signal
+FROM snap_range_ext r
 VIEW market_latest CREATE VIEW market_latest AS
 SELECT
-instId,
-lastPr,
-ts_ms
+    instId,
+    lastPr,
+    ts_ms
 FROM ticks_live
+VIEW out_portfolio CREATE VIEW out_portfolio AS
+SELECT *
+FROM exec_final
+WHERE execution_decision = 'EXECUTE'
+VIEW out_rank CREATE VIEW out_rank AS
+WITH scored AS (
+    SELECT
+        p.instId,
+        p.side,
+        p.entry_price,
+        p.sector,
+        p.alpha_score,
+        p.universal_alpha,
+        p.alpha_class,
+        p.breakout_energy,
+        p.orderflow_score,
+        p.volume_delta_proxy,
+        p.vacuum_strength,
+        p.expansion_ratio,
+        p.whale_boost,
+        ROUND(
+            0.40 * COALESCE(p.alpha_score, 1.0)
+            + 0.20 * COALESCE(p.universal_alpha, 1.0)
+            + 0.10 * MIN(COALESCE(p.orderflow_score, 1.0), 2.0)
+            + 0.10 * (1 + MIN(COALESCE(p.volume_delta_proxy, 0), 1.0))
+            + 0.10 * (1 + MIN(COALESCE(p.vacuum_strength, 0), 2.0) / 2.0)
+            + 0.05 * MIN(COALESCE(p.expansion_ratio, 1.0), 2.0)
+            + 0.05 * COALESCE(p.whale_boost, 1.0),
+            3
+        ) AS cross_asset_score
+    FROM out_portfolio p
+),
+stats AS (
+    SELECT
+        AVG(cross_asset_score) AS mean_score,
+        sqrt(
+            CASE
+                WHEN AVG(cross_asset_score * cross_asset_score)
+                   - AVG(cross_asset_score) * AVG(cross_asset_score) < 0
+                    THEN 0
+                ELSE AVG(cross_asset_score * cross_asset_score)
+                   - AVG(cross_asset_score) * AVG(cross_asset_score)
+            END
+        ) AS std_score
+    FROM scored
+)
+SELECT
+    s.instId,
+    s.side,
+    s.entry_price,
+    s.sector,
+    s.alpha_score,
+    s.universal_alpha,
+    s.alpha_class,
+    s.cross_asset_score,
+    CASE
+        WHEN st.std_score > 0
+            THEN ROUND((s.cross_asset_score - st.mean_score) / st.std_score, 3)
+        ELSE 0
+    END AS z_score,
+    ROW_NUMBER() OVER (
+        ORDER BY s.cross_asset_score DESC, s.alpha_score DESC, s.universal_alpha DESC
+    ) AS rank
+FROM scored s
+CROSS JOIN stats st
+VIEW out_recorder CREATE VIEW out_recorder AS
+SELECT
+
+-- ==================================================
+-- SIGNAL IDENTIFIERS
+-- ==================================================
+
+REPLACE(e.instId,'/','') || '_' ||
+e.side || '_' ||
+strftime('%H%M%S','now') || '_' ||
+substr(strftime('%f','now'),4,4)           AS signal_uid,
+
+strftime('%s','now')                       AS signal_ts,
+
+
+-- ==================================================
+-- MARKET IDENTIFICATION
+-- ==================================================
+
+e.instId,
+e.side,
+e.entry_price,
+e.sector,
+
+
+-- ==================================================
+-- RANKING ENGINE
+-- ==================================================
+
+rk.rank,
+rk.z_score,
+rk.cross_asset_score,
+
+
+-- ==================================================
+-- ALPHA ENGINE
+-- ==================================================
+
+e.alpha_score,
+e.universal_alpha,
+e.alpha_class,
+
+
+-- ==================================================
+-- RISK ENGINE
+-- ==================================================
+
+rs.leverage_suggestion                     AS leverage,
+
+rs.notional_suggestion,
+
+ROUND(
+rs.notional_suggestion / NULLIF(e.entry_price,0),
+8
+)                                          AS qty_suggestion,
+
+
+-- ==================================================
+-- BREAKOUT ENGINE
+-- ==================================================
+
+e.breakout_energy,
+e.breakout_state,
+
+
+-- ==================================================
+-- ORDERFLOW ENGINE
+-- ==================================================
+
+e.orderflow_score,
+e.orderflow_state,
+
+
+-- ==================================================
+-- FLOW / VOLUME
+-- ==================================================
+
+e.volume_delta_proxy,
+e.volume_delta_state,
+
+e.whale_boost,
+e.whale_signal,
+
+
+-- ==================================================
+-- LIQUIDITY ENGINE
+-- ==================================================
+
+e.vacuum_strength,
+e.liquidity_state,
+e.liquidity_direction,
+
+
+-- ==================================================
+-- VOLATILITY ENGINE
+-- ==================================================
+
+e.volatility,
+e.compression,
+e.expansion_ratio,
+
+e.volatility_regime,
+e.volatility_multiplier,
+
+
+-- ==================================================
+-- CONTEXT
+-- ==================================================
+
+e.leadlag_state,
+e.sector_avg_energy,
+e.noise_state
+
+
+FROM exec_final e
+
+LEFT JOIN out_rank rk
+ON rk.instId = e.instId
+AND rk.side = e.side
+
+LEFT JOIN risk_sizing rs
+ON rs.instId = e.instId
+AND rs.side = e.side
+
+WHERE e.execution_decision = 'EXECUTE'
+VIEW out_trade_lifecycle CREATE VIEW out_trade_lifecycle AS
+SELECT
+    t.trade_id,
+    t.instId,
+    t.side,
+    t.entry_price,
+    t.position_size,
+    t.stop_price,
+    t.tp_price,
+    CASE
+        WHEN t.side = 'buy'
+            THEN MAX(t.stop_price, t.entry_price * 0.98)
+        ELSE MIN(t.stop_price, t.entry_price * 1.02)
+    END AS trailing_stop,
+    t.status,
+    t.open_ts,
+    strftime('%s','now') AS update_ts
+FROM trade_lifecycle t
+VIEW out_triggers CREATE VIEW out_triggers AS
+SELECT
+
+REPLACE(r.instId,'/','') || '_' ||
+r.side || '_' ||
+strftime('%H%M%S','now') || '_' ||
+substr(strftime('%f','now'),4,4) AS signal_uid,
+
+strftime('%s','now') AS signal_ts,
+
+r.instId,
+r.side,
+r.entry_price,
+r.sector,
+
+r.alpha_score,
+r.universal_alpha,
+r.alpha_class,
+
+rk.cross_asset_score,
+rk.z_score,
+rk.rank,
+
+rs.leverage_suggestion AS leverage,
+rs.notional_suggestion,
+
+ROUND(
+    rs.notional_suggestion / NULLIF(r.entry_price, 0),
+    8
+) AS qty_suggestion
+
+FROM out_rank rk
+JOIN exec_final r
+  ON r.instId = rk.instId
+ AND r.side   = rk.side
+JOIN risk_sizing rs
+  ON rs.instId = rk.instId
+ AND rs.side   = rk.side
+
+WHERE rk.rank <= 10
+  AND rk.z_score >= 0
+  AND r.execution_decision = 'EXECUTE'
+
+ORDER BY rk.rank
+VIEW risk_sizing CREATE VIEW risk_sizing AS
+SELECT
+
+instId,
+side,
+entry_price,
+sector,
+
+alpha_score,
+universal_alpha,
+alpha_class,
+
+-- leverage integer 2 → 10
+CAST(
+MIN(
+MAX(ROUND(alpha_score * 2),2),
+10
+) AS INTEGER
+) AS leverage_suggestion,
+
+ROUND(
+CASE
+WHEN alpha_class = 5 THEN universal_alpha * 1500
+WHEN alpha_class = 4 THEN universal_alpha * 1200
+WHEN alpha_class = 3 THEN universal_alpha * 900
+WHEN alpha_class = 2 THEN universal_alpha * 600
+ELSE universal_alpha * 300
+END
+,0) AS notional_suggestion
+
+FROM exec_final
+
+WHERE execution_decision='EXECUTE'
+VIEW score_alpha CREATE VIEW score_alpha AS
+SELECT
+    c.instId,
+    c.side,
+    c.entry_price,
+
+    c.breakout_energy,
+    c.breakout_state,
+
+    c.orderflow_score,
+    c.orderflow_state,
+
+    c.volume_delta_proxy,
+    c.volume_delta_state,
+
+    c.vacuum_strength,
+    c.liquidity_state,
+    c.liquidity_direction,
+
+    c.volatility,
+    c.compression,
+    c.expansion_ratio,
+    c.volatility_regime,
+    c.volatility_multiplier,
+
+    c.whale_boost,
+    c.whale_signal,
+
+    c.leadlag_state,
+    c.sector,
+    c.sector_avg_energy,
+    c.noise_state,
+
+    m.meta_score,
+    n.meta_score_norm,
+
+    ROUND(
+        0.25 * COALESCE(c.breakout_energy, 1.0)
+        + 0.20 * COALESCE(c.orderflow_score, 1.0)
+        + 0.10 * (1 + COALESCE(c.volume_delta_proxy, 0))
+        + 0.10 * (1 + COALESCE(c.vacuum_strength, 0) / 2)
+        + 0.10 * COALESCE(c.expansion_ratio, 1.0)
+        + 0.10 * COALESCE(c.whale_boost, 1.0)
+        + 0.10 * (1 + COALESCE(n.meta_score_norm, 0))
+        + 0.05 * CASE
+            WHEN c.leadlag_state LIKE 'LAGGING_%' THEN 1.10
+            ELSE 1.00
+          END,
+        3
+    ) AS alpha_score
+FROM score_components c
+LEFT JOIN score_meta m USING(instId, side, entry_price, breakout_energy, breakout_state)
+LEFT JOIN score_meta_norm n USING(instId, side, entry_price, breakout_energy, breakout_state, meta_score)
+VIEW score_alpha_stability CREATE VIEW score_alpha_stability AS
+SELECT
+    u.instId,
+    u.side,
+    u.alpha_score,
+    u.universal_alpha,
+    p.observations,
+    p.avg_energy,
+    CASE
+        WHEN COALESCE(p.observations, 0) >= 5 AND COALESCE(p.avg_energy, 0) > 1.20 THEN 'STABLE_ALPHA'
+        WHEN COALESCE(p.observations, 0) >= 3 THEN 'MEDIUM_ALPHA'
+        ELSE 'WEAK_ALPHA'
+    END AS alpha_stability
+FROM score_universal_alpha u
+LEFT JOIN score_signal_persistence p USING(instId)
+VIEW score_components CREATE VIEW score_components AS
+SELECT
+    s.instId,
+    s.side,
+    t.lastPr AS entry_price,
+
+    b.breakout_energy,
+    b.breakout_state,
+
+    o.orderflow_score,
+    o.orderflow_state,
+
+    vd.volume_delta_proxy,
+    vd.volume_delta_state,
+
+    l.vacuum_strength,
+    l.liquidity_state,
+    l.liquidity_direction,
+
+    vol.volatility,
+    vol.compression,
+    vol.expansion_ratio,
+    vol.volatility_regime,
+    vol.volatility_multiplier,
+
+    f.whale_boost,
+    f.whale_signal,
+
+    COALESCE(lag.leadlag_state, 'IDIOSYNCRATIC') AS leadlag_state,
+
+    COALESCE(sec.sector, 'OTHER') AS sector,
+    COALESCE(sec.sector_avg_energy, 1.0) AS sector_avg_energy,
+
+    COALESCE(nf.noise_state, 'NORMAL') AS noise_state
+FROM ctx_signal_side s
+LEFT JOIN ticks_live t USING(instId)
+LEFT JOIN f_breakout b USING(instId)
+LEFT JOIN f_orderflow o USING(instId)
+LEFT JOIN f_volume_delta vd USING(instId)
+LEFT JOIN f_liquidity l USING(instId)
+LEFT JOIN f_volatility vol USING(instId)
+LEFT JOIN f_flow f USING(instId)
+LEFT JOIN ctx_leadlag lag USING(instId)
+LEFT JOIN ctx_sector_rotation sec USING(instId)
+LEFT JOIN f_noise nf USING(instId)
+WHERE s.side IS NOT NULL
+  AND s.side <> 'neutral'
+  AND t.lastPr IS NOT NULL
+VIEW score_meta CREATE VIEW score_meta AS
+SELECT
+    instId,
+    side,
+    entry_price,
+    breakout_energy,
+    breakout_state,
+    ROUND(
+        0.60 * COALESCE(breakout_energy, 1.0)
+        + 0.20 * CASE
+            WHEN breakout_state = 'EXPLOSIVE' THEN 1.30
+            WHEN breakout_state = 'STRONG' THEN 1.15
+            WHEN breakout_state = 'BUILDUP' THEN 1.05
+            ELSE 0.90
+          END
+        + 0.20 * CASE
+            WHEN side = 'buy' THEN 1.00
+            ELSE 0.95
+          END,
+        3
+    ) AS meta_score
+FROM score_components
+VIEW score_meta_norm CREATE VIEW score_meta_norm AS
+SELECT
+    m.instId,
+    m.side,
+    m.entry_price,
+    m.breakout_energy,
+    m.breakout_state,
+    m.meta_score,
+    ROUND(
+        m.meta_score / NULLIF((SELECT MAX(meta_score) FROM score_meta), 0),
+        6
+    ) AS meta_score_norm
+FROM score_meta m
+VIEW score_signal_persistence CREATE VIEW score_signal_persistence AS
+SELECT
+    instId,
+    COUNT(*) AS observations,
+    ROUND(AVG(energy), 4) AS avg_energy,
+    ROUND(MAX(energy) - MIN(energy), 4) AS energy_range
+FROM signal_history
+GROUP BY instId
+VIEW score_universal_alpha CREATE VIEW score_universal_alpha AS
+SELECT
+
+a.instId,
+a.side,
+a.entry_price,
+a.alpha_score,
+
+a.whale_boost,
+a.vacuum_strength AS liquidity_boost,
+a.volatility_multiplier AS volatility_boost,
+
+ROUND(
+MIN(
+a.alpha_score
+* COALESCE(a.whale_boost,1)
+* (1 + COALESCE(a.vacuum_strength,0)*0.10)
+* COALESCE(a.volatility_multiplier,1),
+10
+)
+,3) AS universal_alpha
+
+FROM score_alpha a
 VIEW v_alpha_engine CREATE VIEW v_alpha_engine AS
 SELECT
 
@@ -1265,6 +2162,11 @@ ELSE 1.00
 END AS breakout_energy
 
 FROM snap_range_ext r
+VIEW v_breakout_energy_final CREATE VIEW v_breakout_energy_final AS
+SELECT
+instId,
+breakout_energy
+FROM v_breakout_energy
 VIEW v_breakout_engine CREATE VIEW v_breakout_engine AS
 SELECT
     b.instId,
@@ -1860,23 +2762,33 @@ t.status,
 strftime('%s','now') AS update_ts
 
 FROM trade_lifecycle t
-VIEW v_triggers_new CREATE VIEW v_triggers_new AS
-
+VIEW v_triggers CREATE VIEW v_triggers AS
 SELECT
-
 instId,
 side,
 entry_price,
-alpha_score,
-alpha_class,
-cross_asset_score,
-z_score
-
-FROM v_cross_asset_rank
-
-WHERE rank <= 10
-AND z_score >= 0
-
+qty,
+leverage,
+alpha_score AS alpha
+FROM v_triggers_new
+VIEW v_triggers_new CREATE VIEW v_triggers_new AS
+SELECT
+    signal_uid,
+    signal_ts,
+    instId,
+    side,
+    entry_price,
+    sector,
+    alpha_score,
+    universal_alpha,
+    alpha_class,
+    cross_asset_score,
+    z_score,
+    rank,
+    leverage,
+    notional_suggestion,
+    qty_suggestion
+FROM triggers_live
 ORDER BY rank
 VIEW v_universal_alpha CREATE VIEW v_universal_alpha AS
 SELECT
@@ -1958,240 +2870,122 @@ FROM snap_range_ext r
 -- ===============================
 TABLE exec CREATE TABLE exec (
     exec_id TEXT PRIMARY KEY,
-    uid TEXT NOT NULL,
-    step INTEGER NOT NULL,
+    uid TEXT,
+    instId TEXT,
+    side TEXT,
+    exec_type TEXT,
+    step INTEGER,
+    qty REAL,
+    lev REAL,
+    status TEXT,
+    price_exec REAL,
+    fee REAL,
+    reason TEXT,
+    ts_created INTEGER,
+    ts_exec INTEGER,
+    done_step INTEGER
+)
+TABLE exec_requests CREATE TABLE exec_requests (
 
-    exec_type TEXT NOT NULL,   -- open | pyramide | partial | close
+    uid TEXT NOT NULL,
+    instId TEXT NOT NULL,
     side TEXT NOT NULL,
 
     qty REAL NOT NULL,
-    price_exec REAL NOT NULL,
-    fee REAL DEFAULT 0.0,
+    lev REAL DEFAULT 1,
 
-    status TEXT NOT NULL,      -- *_stdby | *_done
-    ts_exec INTEGER NOT NULL
-, reason TEXT, regime TEXT, instId TEXT, lev REAL NOT NULL DEFAULT 1.0, pnl_realized_step REAL NOT NULL DEFAULT 0.0, sl_be REAL, sl_trail REAL, tp_dyn REAL, mfe_atr REAL, mae_atr REAL, golden INTEGER, type_signal TEXT, dec_mode TEXT, done_step INTEGER DEFAULT 0, ts_ack INTEGER)
-INDEX idx_exec_status CREATE INDEX idx_exec_status ON exec(status)
-INDEX idx_exec_type CREATE INDEX idx_exec_type
-    ON exec(exec_type)
-INDEX idx_exec_uid CREATE INDEX idx_exec_uid ON exec(uid)
-INDEX ix_exec_status CREATE INDEX ix_exec_status
-ON exec(status)
-INDEX ix_exec_uid_step CREATE INDEX ix_exec_uid_step
-ON exec(uid, step)
-VIEW v_exec_ledger CREATE VIEW v_exec_ledger AS
-SELECT
-  exec_id,
-  uid,
-  step,
-  exec_type,
-  side,
-  qty,
-  price_exec,
-  fee,
-  status,
-  ts_exec
-FROM exec
-WHERE status='done'
-/* v_exec_ledger(exec_id,uid,step,exec_type,side,qty,price_exec,fee,status,ts_exec) */
-VIEW v_exec_monitoring CREATE VIEW v_exec_monitoring AS
-SELECT
-    uid,
-    side,
-    qty_open,
-    avg_price_open,
-    last_exec_type,
-    last_step,
-    last_price_exec,
-    last_ts_exec
-FROM v_exec_position
-VIEW v_exec_perf_by_exit CREATE VIEW v_exec_perf_by_exit AS
-    SELECT
-        reason,
-        COUNT(*)                       AS n,
-        AVG(pnl_realized_step)         AS exp,
-        SUM(CASE WHEN pnl_realized_step > 0 THEN pnl_realized_step ELSE 0 END)
-        / ABS(SUM(CASE WHEN pnl_realized_step < 0 THEN pnl_realized_step ELSE 0 END)) AS pf
-    FROM exec
-    WHERE exec_type IN ('close','partial')
-    GROUP BY reason
-VIEW v_exec_perf_by_step CREATE VIEW v_exec_perf_by_step AS
-    SELECT
-        step,
-        COUNT(*)                       AS n,
-        AVG(pnl_realized_step)         AS exp,
-        SUM(CASE WHEN pnl_realized_step > 0 THEN pnl_realized_step ELSE 0 END)
-        / ABS(SUM(CASE WHEN pnl_realized_step < 0 THEN pnl_realized_step ELSE 0 END)) AS pf
-    FROM exec
-    WHERE exec_type IN ('close','partial')
-    GROUP BY step
-VIEW v_exec_perf_step_exit CREATE VIEW v_exec_perf_step_exit AS
-    SELECT
-        step,
-        reason,
-        COUNT(*)                       AS n,
-        AVG(pnl_realized_step)         AS exp
-    FROM exec
-    WHERE exec_type IN ('close','partial')
-    GROUP BY step, reason
-VIEW v_exec_pnl_uid CREATE VIEW v_exec_pnl_uid AS
-WITH p AS (
-  SELECT
-    uid,
-    side,
-    avg_price_open,
-    fee_total
-  FROM v_exec_position
-),
-out_exec AS (
-  SELECT
-    e.uid,
-    e.side,
-    e.exec_type,
-    e.qty,
-    e.price_exec
-  FROM v_exec_ledger e
-  WHERE e.exec_type IN ('partial','close')
-),
-pnl_core AS (
-  SELECT
-    o.uid,
-    SUM(
-      CASE
-        WHEN o.side='buy'  THEN o.qty * (o.price_exec - p.avg_price_open)
-        WHEN o.side='sell' THEN o.qty * (p.avg_price_open - o.price_exec)
-        ELSE 0.0
-      END
-    ) AS pnl_gross
-  FROM out_exec o
-  JOIN p ON p.uid=o.uid
-  GROUP BY o.uid
+    step INTEGER NOT NULL,
+    exec_type TEXT NOT NULL,
+
+    source TEXT,
+    reason TEXT,
+
+    ts_insert INTEGER DEFAULT (strftime('%s','now')*1000),
+
+    PRIMARY KEY(uid,exec_type,step)
+
 )
-SELECT
-  p.uid,
-  COALESCE(pc.pnl_gross,0.0) - COALESCE(p.fee_total,0.0) AS pnl_realized
-FROM p
-LEFT JOIN pnl_core pc USING(uid)
-/* v_exec_pnl_uid(uid,pnl_realized) */
+INDEX idx_exec_req_type CREATE INDEX idx_exec_req_type
+ON exec_requests(exec_type)
+INDEX idx_exec_req_uid CREATE INDEX idx_exec_req_uid
+ON exec_requests(uid)
+INDEX idx_exec_status CREATE INDEX idx_exec_status ON exec(status)
+INDEX idx_exec_uid CREATE INDEX idx_exec_uid ON exec(uid)
+INDEX idx_exec_uid_step CREATE INDEX idx_exec_uid_step ON exec(uid, step)
 VIEW v_exec_position CREATE VIEW v_exec_position AS
-WITH x AS (
-  SELECT
+
+WITH fills AS (
+
+SELECT
     uid,
+    instId,
     side,
     exec_type,
-    step,
     qty,
     price_exec,
-    fee,
-    ts_exec,
-    CASE
-      WHEN exec_type IN ('open','pyramide') THEN qty
-      WHEN exec_type IN ('partial','close') THEN -qty
-      ELSE 0
-    END AS signed_qty,
-    CASE
-      WHEN exec_type IN ('open','pyramide') THEN qty
-      ELSE 0
-    END AS qty_in,
-    CASE
-      WHEN exec_type IN ('open','pyramide') THEN qty * price_exec
-      ELSE 0
-    END AS notional_in
-  FROM v_exec_ledger
-),
-agg AS (
-  SELECT
-    uid,
-    MAX(side) AS side,
-    SUM(signed_qty) AS qty_open,
-    SUM(qty_in) AS qty_in_total,
-    SUM(notional_in) AS notional_in_total,
-    SUM(COALESCE(fee,0.0)) AS fee_total,
-    MAX(ts_exec) AS last_ts_exec
-  FROM x
-  GROUP BY uid
-),
-last_row AS (
-  SELECT
-    uid,
-    exec_type AS last_exec_type,
-    step AS last_step,
-    price_exec AS last_price_exec,
-    ts_exec AS last_ts_exec
-  FROM (
-    SELECT
-      uid, exec_type, step, price_exec, ts_exec,
-      ROW_NUMBER() OVER (PARTITION BY uid ORDER BY ts_exec DESC, step DESC) AS rn
-    FROM v_exec_ledger
-  )
-  WHERE rn = 1
-)
-SELECT
-  a.uid,
-  a.side,
-  a.qty_open,
-  CASE
-    WHEN a.qty_in_total > 0
-    THEN a.notional_in_total / a.qty_in_total
-    ELSE 0.0
-  END AS avg_price_open,
-  a.fee_total,
-  l.last_exec_type,
-  l.last_step,
-  l.last_price_exec,
-  l.last_ts_exec
-FROM agg a
-LEFT JOIN last_row l USING(uid)
-VIEW v_exec_step_exit_perf CREATE VIEW v_exec_step_exit_perf AS
-SELECT
-  step,
-  exec_type,
-  reason,
-  COUNT(*) AS n,
-  AVG(pnl_realized_step) AS exp,
-  SUM(CASE WHEN pnl_realized_step > 0 THEN pnl_realized_step ELSE 0 END)
-   / NULLIF(ABS(SUM(CASE WHEN pnl_realized_step < 0 THEN pnl_realized_step ELSE 0 END)),0) AS pf,
-  AVG(mfe_atr) AS mfe_atr,
-  AVG(mae_atr) AS mae_atr,
-  SUM(golden) AS golden_n
+    ts_exec
+
 FROM exec
-WHERE exec_type IN ('partial','close')
-GROUP BY step, exec_type, reason
-VIEW v_follower_monitoring CREATE VIEW v_follower_monitoring AS
+WHERE status='done'
+
+),
+
+agg AS (
+
 SELECT
-    uid,
-    mfe_price,
-    mae_price,
-    sl_trail,
-    tp_dyn,
-    atr_signal
-FROM follower
-WHERE status = 'follow'
-VIEW v_gest_monitoring CREATE VIEW v_gest_monitoring AS
-SELECT
-    uid,
-    instId,
-    side,
-    entry,
-    qty,
-    status,
-    ts_open
-FROM gest
-WHERE status IN (
-    'open_req',
-    'open_done',
-    'follow',
-    'partial_req',
-    'partial_done',
-    'pyramide_req',
-    'pyramide_done',
-    'close_req'
+
+uid,
+
+MAX(instId) instId,
+MAX(side) side,
+
+SUM(
+CASE
+WHEN exec_type IN ('open','pyramide')
+THEN qty
+ELSE 0
+END
+) qty_in,
+
+SUM(
+CASE
+WHEN exec_type IN ('partial','close')
+THEN qty
+ELSE 0
+END
+) qty_out,
+
+SUM(
+CASE
+WHEN exec_type IN ('open','pyramide')
+THEN qty*price_exec
+ELSE 0
+END
+) notional
+
+FROM fills
+GROUP BY uid
+
 )
-VIEW v_ticks_monitoring CREATE VIEW v_ticks_monitoring AS
+
 SELECT
-    instId,
-    lastPr
-FROM v_ticks_latest
+
+uid,
+instId,
+side,
+
+qty_in,
+qty_out,
+
+(qty_in-qty_out) qty_open,
+
+CASE
+WHEN qty_in>0
+THEN notional/qty_in
+ELSE 0
+END avg_entry_price
+
+FROM agg
 
 -- ===============================
 -- DATABASE: follow.db
@@ -2356,7 +3150,7 @@ pnl_pct REAL,
 pnl_net REAL,
 fee_total REAL
 
-, score_C REAL, score_S REAL, score_H REAL, score_M REAL, score_of REAL, score_mo REAL, score_br REAL, score_force REAL, entry_range_pos REAL, entry_distance_atr REAL, entry_delay_ms INTEGER, s_struct REAL, s_timing REAL, s_quality REAL, s_vol REAL, s_confirm REAL, trigger_strength REAL, trigger_age_ms INTEGER, trigger_distance_atr REAL, market_volatility REAL, market_trend REAL, spread_entry REAL, signal_age_ms INTEGER)
+, score_C REAL, score_S REAL, score_H REAL, score_M REAL, score_of REAL, score_mo REAL, score_br REAL, score_force REAL, entry_range_pos REAL, entry_distance_atr REAL, entry_delay_ms INTEGER, s_struct REAL, s_timing REAL, s_quality REAL, s_vol REAL, s_confirm REAL, trigger_strength REAL, trigger_age_ms INTEGER, trigger_distance_atr REAL, market_volatility REAL, market_trend REAL, spread_entry REAL, signal_age_ms INTEGER, alpha REAL, ts_created INTEGER)
 INDEX idx_gest_inst CREATE INDEX idx_gest_inst
 ON gest(instId)
 INDEX idx_gest_signal CREATE INDEX idx_gest_signal
@@ -2367,6 +3161,61 @@ INDEX idx_gest_ts CREATE INDEX idx_gest_ts
 ON gest(ts_signal)
 INDEX idx_gest_uid CREATE INDEX idx_gest_uid
 ON gest(uid)
+VIEW v_follower_decisions CREATE VIEW v_follower_decisions AS
+
+SELECT
+
+uid,
+instId,
+side,
+
+qty,
+entry_price,
+
+pnl_pct,
+
+CASE
+
+WHEN pnl_pct > 2.0
+THEN 'partial'
+
+WHEN pnl_pct > 4.0
+THEN 'close'
+
+WHEN pnl_pct > 1.2
+THEN 'pyramide'
+
+ELSE 'follow'
+
+END AS decision
+
+FROM v_follower_positions
+VIEW v_follower_positions CREATE VIEW v_follower_positions AS
+
+SELECT
+
+g.uid,
+g.instId,
+g.side,
+
+g.qty,
+g.entry_price,
+g.stop_price,
+g.take_profit,
+
+g.step,
+
+g.pnl,
+g.pnl_pct,
+
+g.universal_alpha,
+g.market_regime,
+
+g.status
+
+FROM gest g
+
+WHERE g.status='follow'
 VIEW v_gest_dashboard CREATE VIEW v_gest_dashboard AS
 SELECT
 uid,
@@ -2384,6 +3233,52 @@ session,
 ts_signal
 FROM gest
 ORDER BY ts_signal DESC
+VIEW v_opener_requests CREATE VIEW v_opener_requests AS
+
+SELECT
+    uid,
+    instId,
+    side,
+
+    COALESCE(qty, position_size) AS qty,
+
+    leverage AS lev,
+
+    COALESCE(entry_price, entry) AS price,
+
+    step,
+    ts_open,
+
+    'open' AS exec_type
+
+FROM gest
+WHERE status='open_req'
+AND COALESCE(qty, position_size) > 0
+AND COALESCE(entry_price, entry) > 0
+
+
+UNION ALL
+
+
+SELECT
+    uid,
+    instId,
+    side,
+
+    COALESCE(qty, position_size) AS qty,
+
+    1 AS lev,
+
+    COALESCE(entry_price, entry) AS price,
+
+    step,
+    ts_open,
+
+    'pyramide' AS exec_type
+
+FROM gest
+WHERE status='pyramide_req'
+AND COALESCE(qty, position_size) > 0
 
 -- ===============================
 -- DATABASE: h.db
@@ -2925,7 +3820,163 @@ TABLE opener CREATE TABLE "opener" (
     step INTEGER NOT NULL, ratio REAL, qty_raw REAL, qty_norm REAL, reject_reason TEXT,
     PRIMARY KEY (uid, exec_type, step)
 )
+VIEW v_open_budget CREATE VIEW v_open_budget AS
+SELECT
+    l.*,
+    b.balance_usdt
+FROM v_open_leverage l
+CROSS JOIN balance b
+WHERE b.id = 1
+VIEW v_open_candidates CREATE VIEW v_open_candidates AS
+SELECT
+    uid,
+    instId,
+    side,
+    entry                AS price,
+    COALESCE(score_C,0)  AS score_C,
+    COALESCE(score_S,0)  AS score_S,
+    COALESCE(score_H,0)  AS score_H,
+    COALESCE(step,0)     AS step
+FROM gest
+WHERE status='open_req'
+VIEW v_open_contract CREATE VIEW v_open_contract AS
+SELECT
+    q.*,
+    c.minTradeNum,
+    c.sizeMultiplier,
+    c.minTradeUSDT
+FROM v_open_qty_raw q
+LEFT JOIN contracts c
+ON c.symbol = REPLACE(q.instId,'/','')
+VIEW v_open_leverage CREATE VIEW v_open_leverage AS
+SELECT
+    *,
+    CAST(1 + score_global * 19 AS INTEGER) AS lev
+FROM v_open_sizing
+VIEW v_open_qty_norm CREATE VIEW v_open_qty_norm AS
+SELECT
+    *,
+
+    CASE
+        WHEN sizeMultiplier > 0
+        THEN
+            MAX(
+                minTradeNum,
+                CEIL(qty_raw / sizeMultiplier) * sizeMultiplier
+            )
+        ELSE qty_raw
+    END AS qty_norm
+
+FROM v_open_contract
+VIEW v_open_qty_raw CREATE VIEW v_open_qty_raw AS
+SELECT
+    *,
+    (balance_usdt * (0.01 + score_global * 0.09) * lev) / price
+    AS qty_raw
+FROM v_open_budget
+VIEW v_open_sizing CREATE VIEW v_open_sizing AS
+SELECT
+    c.*,
+
+    ROUND(
+        ((ABS(score_C) + score_S)/2.0) * (0.5 + score_H)
+    ,3) AS score_global
+
+FROM v_open_candidates c
+VIEW v_open_valid CREATE VIEW v_open_valid AS
+SELECT
+    uid,
+    instId,
+    side,
+    price,
+    qty_norm AS qty,
+    lev,
+    step
+FROM v_open_qty_norm
+WHERE qty_norm * price >= minTradeUSDT
+AND qty_norm > 0
 VIEW v_opener CREATE VIEW v_opener AS SELECT * FROM opener
+VIEW v_opener_debug CREATE VIEW v_opener_debug AS
+SELECT
+    status,
+    COUNT(*) AS n
+FROM gest
+GROUP BY status
+VIEW v_opener_debug_open CREATE VIEW v_opener_debug_open AS
+SELECT *
+FROM v_open_qty_norm
+ORDER BY score_global DESC
+VIEW v_opener_debug_pyramide CREATE VIEW v_opener_debug_pyramide AS
+SELECT *
+FROM v_pyramide_contract
+VIEW v_opener_open_candidates CREATE VIEW v_opener_open_candidates AS
+SELECT
+    g.uid,
+    g.instId,
+    g.side,
+    g.qty,
+    g.lev,
+    g.entry AS price,
+    g.step,
+    g.ts_open
+FROM gest g
+WHERE g.status = 'open_req'
+VIEW v_opener_partial_candidates CREATE VIEW v_opener_partial_candidates AS
+SELECT
+    g.uid,
+    g.instId,
+    g.side,
+    g.qty_to_close AS qty,
+    g.step,
+    g.ts_status_update AS ts
+FROM gest g
+WHERE g.status = 'partial_req'
+VIEW v_opener_pyramide_candidates CREATE VIEW v_opener_pyramide_candidates AS
+SELECT
+    g.uid,
+    g.instId,
+    g.side,
+    g.qty_to_add AS qty,
+    g.step,
+    g.ts_status_update AS ts
+FROM gest g
+WHERE g.status = 'pyramide_req'
+VIEW v_pyramide_candidates CREATE VIEW v_pyramide_candidates AS
+SELECT
+    uid,
+    instId,
+    side,
+    COALESCE(ratio_to_add,1.0) AS ratio,
+    step,
+    qty_open,
+    avg_entry_price
+FROM gest
+WHERE status='pyramide_req'
+VIEW v_pyramide_contract CREATE VIEW v_pyramide_contract AS
+SELECT
+    p.*,
+    c.minTradeNum,
+    c.sizeMultiplier,
+    c.minTradeUSDT
+FROM v_pyramide_sizing p
+LEFT JOIN contracts c
+ON c.symbol = REPLACE(p.instId,'/','')
+VIEW v_pyramide_sizing CREATE VIEW v_pyramide_sizing AS
+SELECT
+    p.*,
+
+    qty_open * ratio AS qty_raw
+
+FROM v_pyramide_candidates p
+VIEW v_pyramide_valid CREATE VIEW v_pyramide_valid AS
+SELECT
+    uid,
+    instId,
+    side,
+    qty_raw AS qty,
+    step
+FROM v_pyramide_contract
+WHERE qty_raw > minTradeNum
 
 -- ===============================
 -- DATABASE: recorder.db
@@ -3473,7 +4524,15 @@ TABLE triggers CREATE TABLE triggers (
     ts            INTEGER NOT NULL,
     status        TEXT NOT NULL             -- armed | fire | consumed
 , ts_fire      INTEGER, ttl_ms       INTEGER, expires_at   INTEGER, validated    INTEGER DEFAULT 0, ts_validated INTEGER, mfe_early    REAL, mae_early    REAL, phase TEXT DEFAULT 'armed', fire_reason TEXT, ctx TEXT, score_ctx REAL, pos_in_range REAL, momentum_1 REAL, momentum_acc REAL, rsi REAL, adx REAL, macdhist REAL, bb_width REAL, armed_tick_count INTEGER DEFAULT 0, regime TEXT, range_high REAL, range_low REAL, armed_ticks INTEGER DEFAULT 0, pattern TEXT, ts_arm INTEGER, ts_expire INTEGER, score_M REAL, score_H REAL, trigger_type TEXT, momentum_ok INTEGER, prebreak_ok INTEGER, pullback_ok INTEGER, compression_ok INTEGER, dec_score_C REAL, dec_mode TEXT, extra_ctx, ts_created, trigger_strength REAL, trigger_age_ms INTEGER, trigger_distance_atr REAL, spread_entry REAL, signal_age_ms INTEGER)
+INDEX idx_trigger_fifo CREATE INDEX idx_trigger_fifo
+ON trigger_queue(status, ts_created)
+INDEX idx_trigger_inst CREATE INDEX idx_trigger_inst
+ON trigger_queue(instId)
+INDEX idx_trigger_inst_ts CREATE INDEX idx_trigger_inst_ts
+ON trigger_queue(instId, ts_created DESC)
 INDEX idx_trigger_queue_status CREATE INDEX idx_trigger_queue_status
+ON trigger_queue(status)
+INDEX idx_trigger_status CREATE INDEX idx_trigger_status
 ON trigger_queue(status)
 INDEX idx_triggers_instId CREATE INDEX idx_triggers_instId  ON triggers(instId)
 INDEX idx_triggers_status CREATE INDEX idx_triggers_status  ON triggers(status)
